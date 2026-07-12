@@ -466,6 +466,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 #bottomNavBar:not(.bnav-cloud-collapsed){transition:background .4s ease,border-color .4s ease,box-shadow .35s ease!important;}
 .bnav-orb-wrap{position:absolute!important;left:50%;top:50%!important;transform:translate(-50%,-50%)!important;z-index:5!important;width:30px;height:30px;opacity:0;pointer-events:none;transition:opacity .3s ease,left .5s cubic-bezier(.4,0,.2,1);animation:bnavOrbFloat 4s ease-in-out infinite;}
 #bottomNavBar.bnav-cloud-collapsed .bnav-orb-wrap{opacity:1;pointer-events:auto;}
+.bnav-orb-wrap{display:none!important;opacity:0!important;pointer-events:none!important;} /* orb reserved for later — never show, incl. first launch */
 .bnav-orb-wrap.bnav-charging .bnav-orb{animation-name:bnavPuddleSwirl,none,bnavOrbMorph,none;transition:filter var(--bnav-hold-ms,1800ms) ease,box-shadow var(--bnav-hold-ms,1800ms) ease;filter:brightness(1.5) saturate(1.4);box-shadow:0 0 10px 2px rgba(124,106,247,0.55),0 0 26px 8px rgba(124,106,247,0.4),0 0 12px 3px rgba(0,217,168,0.16),inset 0 0 18px rgba(255,255,255,0.7);}
 .bnav-cc-backdrop{position:fixed;inset:0;background:transparent;z-index:9998;opacity:0;pointer-events:none;transition:opacity .35s ease;}
 .bnav-cc-backdrop.bnav-cc-open{opacity:1;pointer-events:auto;}
@@ -880,7 +881,8 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chatHistoryTrigger:hover{border-color:rgba(124,106,247,0.6);box-shadow:0 0 18px rgba(124,106,247,0.25);}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
-#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1);z-index:49;display:flex;flex-direction:column;}
+#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .3s ease,backdrop-filter .3s ease;z-index:49;display:flex;flex-direction:column;}
+#sec-chat #chpSidebar{background:rgba(15,14,24,0.55);backdrop-filter:blur(36px) saturate(140%);-webkit-backdrop-filter:blur(36px) saturate(140%);}
 #chpSidebar.open{width:240px;}
 #chpSidebar.fade-open{width:240px;animation:chpStoryReveal 1.1s cubic-bezier(0.22,1,0.36,1) forwards;}
 @keyframes chpStoryReveal{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -5378,7 +5380,7 @@ window.getWebAudioNode = getWebAudioNode;
 
   <!-- Whiteboard -->
   <!-- ── Notes Section ──────────────────────────────────────────── -->
-  <div class="section" id="sec-notes" style="flex-direction:row;overflow:hidden;padding:0;position:relative;isolation:isolate;">
+  <div class="section" id="sec-notes" data-mnb="col1" style="flex-direction:row;overflow:hidden;padding:0;position:relative;isolation:isolate;">
 
     <!-- COL 1: Notebooks list -->
     <div id="nbCol1" style="width:210px;min-width:210px;background:rgba(7,8,16,0.98);border-right:1px solid rgba(79,86,200,0.15);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
@@ -5391,8 +5393,9 @@ window.getWebAudioNode = getWebAudioNode;
 
     <!-- COL 2: Pages inside selected notebook -->
     <div id="nbCol2" style="width:200px;min-width:200px;background:rgba(9,10,19,0.97);border-right:1px solid rgba(79,86,200,0.12);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
-      <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.10);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-        <span id="nbPagesLabel" style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">Pages</span>
+      <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.10);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;">
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col1')" title="Back to notebooks" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
+        <span id="nbPagesLabel" style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;flex:1;">Pages</span>
         <button id="nbAddPageBtn" onclick="nbAddPage()" title="New page" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.22)'" onmouseout="this.style.background='rgba(124,106,247,0.1)'">+</button>
       </div>
       <div id="nbPageList" style="flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.12) transparent;"></div>
@@ -5401,6 +5404,7 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Main editor -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:rgba(10,11,20,0.99);">
       <div id="notesTopBar" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(79,86,200,0.10);flex-shrink:0;">
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col2')" title="Back to pages" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
         <input id="notesPageTitle" type="text" placeholder="Page title…" oninput="notesTitleChanged()" style="flex:1;background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:rgba(220,222,255,0.92);caret-color:#a78bfa;" />
         <span id="notesSaveIndicator" style="font-size:11px;color:rgba(99,102,195,0.4);font-family:'DM Sans',sans-serif;transition:opacity .3s;flex-shrink:0;"></span>
         <button id="nbLockBtn" onclick="nbToggleLock()" title="Toggle lock" style="display:none;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:13px;color:rgba(99,102,195,0.4);transition:all .15s;flex-shrink:0;" onmouseover="this.style.color='rgba(160,163,220,0.8)'" onmouseout="this.style.color='rgba(99,102,195,0.4)'">🔓</button>
@@ -9912,6 +9916,8 @@ function _drawRtBubbleOutline(){
 function renderStickyNotes(laserOnNew){
   var layer = document.getElementById('stickyNotesLayer');
   if(!layer) return;
+  layer.innerHTML = ''; // Quick Notes widget disabled on the front page — never show, even after login/note sync
+  return;
   // Read fresh from storage but don't overwrite in-memory userNotes (avoids race with saveNote)
   var _storedNotes; try{ _storedNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); }catch(e){ _storedNotes=[]; }
   // Merge: use stored as base but if in-memory has more notes (just saved), prefer that
@@ -11980,6 +11986,11 @@ function toggleAiMode(){
       container.scrollTop = container.scrollHeight;
     }
   }
+  // Reveal uses the same duration as the fade-out so the border color glides
+  // in and out symmetrically instead of snapping in one direction.
+  if(btn._fadeTimer) clearTimeout(btn._fadeTimer);
+  if(btn._resetTimer) clearTimeout(btn._resetTimer);
+  btn.style.transition = 'border-color 1.4s ease, opacity .2s';
   if(_aiMode === 'llm'){
     btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg>';
     btn.title = 'Mode: LLM — pure Groq, no context injection. Click to switch to Mini Brain';
@@ -11999,11 +12010,16 @@ function toggleAiMode(){
   }
   // Fade the colored border back to neutral after a couple seconds so the
   // highlight reads as a brief confirmation of the switch, not a permanent outline.
-  if(btn._fadeTimer) clearTimeout(btn._fadeTimer);
-  btn.style.transition = 'border-color 1.4s ease, opacity .2s';
   btn._fadeTimer = setTimeout(function(){
     btn.style.borderColor = 'rgba(255,255,255,0.15)';
-    btn.style.transition = 'all .2s';
+    // Don't touch style.transition here — changing it in the same tick as the
+    // borderColor write makes some browsers skip straight to the end state
+    // instead of animating, which is what caused the abrupt disappearance.
+    // Reset it back to the snappier hover transition only once the 1.4s
+    // fade has actually finished playing.
+    btn._resetTimer = setTimeout(function(){
+      btn.style.transition = 'all .2s';
+    }, 1450);
   }, 1800);
 }
 
@@ -17391,6 +17407,12 @@ function _nbLoad() {
   _nb.activePg = Math.min(_nb.activePg, (nb.pages||[]).length - 1);
 }
 
+// ── Mobile single-column nav (notebooks → pages → editor) ──
+function _nbSetMobileView(view) {
+  var root = document.getElementById('sec-notes');
+  if (root) root.setAttribute('data-mnb', view);
+}
+
 // ── Render ────────────────────────────────────────
 function _nbRenderAll() {
   _nbRenderNotebooks();
@@ -17415,6 +17437,7 @@ function _nbRenderNotebooks() {
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
       _nbRenderAll();
+      if (window.innerWidth <= 620) _nbSetMobileView('col2');
     };
     if (!notebook.locked) {
       d.oncontextmenu = function(e) { e.preventDefault(); _nbNotebookCtx(i, e); };
@@ -17446,7 +17469,10 @@ function _nbRenderPages() {
       '<div style="font-size:10px;color:rgba(99,102,195,0.38);margin-top:1px;">' + (page.date||'') + '</div>';
     d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.08)'; };
     d.onmouseout  = function() { if(!active) this.style.background=''; };
-    d.onclick = function() { _nbFlush(); _nb.activePg = i; _nbRenderPages(); _nbLoadEditor(); };
+    d.onclick = function() {
+      _nbFlush(); _nb.activePg = i; _nbRenderPages(); _nbLoadEditor();
+      if (window.innerWidth <= 620) _nbSetMobileView('editor');
+    };
     d.oncontextmenu = function(e) { e.preventDefault(); _nbPageCtx(i, e); };
     el.appendChild(d);
   });
@@ -17529,6 +17555,7 @@ function nbAddPage() {
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
   }
   _nbPersist(); _nbRenderPages(); _nbLoadEditor();
+  if (window.innerWidth <= 620) _nbSetMobileView('editor');
   setTimeout(function() { var t = document.getElementById('notesPageTitle'); if(t){ t.focus(); t.select(); } }, 50);
 }
 
@@ -28457,6 +28484,14 @@ function speakVoiceReply(text) {
         // Already have mic — turn off TTS now and start recording
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
         record();
+      } else if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // No getUserMedia at all — almost always means the page isn't on
+        // a secure origin (https:// or localhost). Browsers silently strip
+        // navigator.mediaDevices on insecure http:// pages, which is what
+        // makes this look like an instant "denied" with no real prompt.
+        toast(location.protocol === 'https:' ? 'Mic not supported in this browser' : 'Mic needs HTTPS — open this page with https:// to use voice');
+        _on = false;
+        window._topNavVoiceActive = false;
       } else {
         navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
           _stream = s;
@@ -28472,8 +28507,21 @@ function speakVoiceReply(text) {
           // Permission granted — now safe to turn off TTS
           if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
           record();
-        }).catch(function() {
-          toast('Mic access denied');
+        }).catch(function(err) {
+          console.error('Mic getUserMedia error:', err && err.name, err && err.message);
+          var msg = 'Mic access denied';
+          if (err) {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              msg = 'Mic blocked — allow microphone access for this site in your browser settings';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+              msg = 'No microphone found on this device';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+              msg = 'Mic is busy in another app — close it and try again';
+            } else if (err.name === 'SecurityError') {
+              msg = 'Mic blocked — this page must be loaded over HTTPS';
+            }
+          }
+          toast(msg);
           _on = false;
           window._topNavVoiceActive = false;
         });
@@ -28983,9 +29031,17 @@ fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
 #notesEditor li { margin:2px 0; }
 #notesEditor[contenteditable="false"] { cursor:default; }
 @media (max-width:620px) {
-  #nbCol2, #nbCol3 { display:none!important; }
-  #nbCol1 { width:100%!important; min-width:0!important; border-right:none!important; }
-  #sec-notes > div:last-child { display:none!important; }
+  .nb-mobile-back { display:inline-flex!important; }
+  #sec-notes[data-mnb="col1"] #nbCol2, #sec-notes[data-mnb="col1"] #nbCol3 { display:none!important; }
+  #sec-notes[data-mnb="col1"] #nbCol1 { width:100%!important; min-width:0!important; border-right:none!important; }
+  #sec-notes[data-mnb="col1"] > div:last-child { display:none!important; }
+
+  #sec-notes[data-mnb="col2"] #nbCol1, #sec-notes[data-mnb="col2"] #nbCol3 { display:none!important; }
+  #sec-notes[data-mnb="col2"] #nbCol2 { width:100%!important; min-width:0!important; border-right:none!important; }
+  #sec-notes[data-mnb="col2"] > div:last-child { display:none!important; }
+
+  #sec-notes[data-mnb="editor"] #nbCol1, #sec-notes[data-mnb="editor"] #nbCol2, #sec-notes[data-mnb="editor"] #nbCol3 { display:none!important; }
+  #sec-notes[data-mnb="editor"] > div:last-child { display:flex!important; width:100%!important; }
 }
 </style>
 
