@@ -662,6 +662,10 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      phone width — make it a proper solid drawer instead */
   #chpSidebar.open,#chpSidebar.fade-open{width:82vw!important;max-width:300px!important;box-shadow:4px 0 24px rgba(0,0,0,0.5)!important;}
   #chpSidebarInner{width:100%!important;}
+
+  /* SynBot floating chat widget was hardcoded to 380px — wider than most
+     phone screens, causing it to overflow past the left edge */
+  #synBotChat{width:calc(100vw - 32px)!important;min-width:0!important;max-width:360px!important;right:16px!important;}
   
   /* ── Bottom nav ── */
   .bnav-desktop-only{display:none!important;}
@@ -857,6 +861,7 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chpSidebar.open ~ #chatHistoryPanel, #sec-chat:has(#chpSidebar.open) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
 /* Show trigger on empty state as hamburger */
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
+#sec-chat:has(#chatEmptyState.hidden) #chatHistoryTrigger{display:none!important;}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed){width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed) .cht-ring{display:none;}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed) .cht-dot{display:none;}
@@ -12967,7 +12972,7 @@ function _checkAndShowNotesPanel(history){
   }, 500);
 }
 
-function openSavedChat(i){var c=savedChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});}else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
+function openSavedChat(i){var c=savedChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});}else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
 function saveRecentChat(label,key){if(recentChats.find(function(c){return c.key===key;}))return;recentChats.unshift({label:label.slice(0,36)+(label.length>36?'…':''),key:key});if(recentChats.length>20)recentChats.pop();renderRecentChats();persistChats();
   // Auto-open panel with fade (not slide) after message completes
   var sb=document.getElementById('chpSidebar');
@@ -13033,7 +13038,7 @@ function loadPersistedChats(){
   }
 }
 function deleteRecentChat(i){recentChats.splice(i,1);persistChats();renderRecentChats();}
-function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
+function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
 
 
 
