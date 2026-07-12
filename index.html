@@ -861,7 +861,6 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chpSidebar.open ~ #chatHistoryPanel, #sec-chat:has(#chpSidebar.open) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
 /* Show trigger on empty state as hamburger */
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
-#sec-chat:has(#chatEmptyState.hidden) #chatHistoryTrigger{display:none!important;}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed){width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.07);}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed) .cht-ring{display:none;}
 #sec-chat:has(#chatEmptyState:not(.hidden)) #chatHistoryTrigger:not(.cht-morphed) .cht-dot{display:none;}
@@ -1052,7 +1051,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .avatar.coach{background:linear-gradient(135deg,#00d9a8,#7c6af7);}
 .message-body{flex:1;padding-top:4px;}
 .message-name{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:7px;}
-.message-name-user{margin-left:-6px;}
+.message-name-user{margin-left:10px;}
+.message-group-user{padding-left:34px;}
+.message-group-user .message-text{margin-left:10px;}
 .message-text{font-size:14.5px;line-height:1.7;}
 .message-text p{margin-bottom:12px;}
 .message-text p:last-child{margin-bottom:0;}
@@ -11996,6 +11997,14 @@ function toggleAiMode(){
     btn.style.borderColor = 'rgba(255,100,30,0.5)';
     btn.style.opacity = '1';
   }
+  // Fade the colored border back to neutral after a couple seconds so the
+  // highlight reads as a brief confirmation of the switch, not a permanent outline.
+  if(btn._fadeTimer) clearTimeout(btn._fadeTimer);
+  btn.style.transition = 'border-color 1.4s ease, opacity .2s';
+  btn._fadeTimer = setTimeout(function(){
+    btn.style.borderColor = 'rgba(255,255,255,0.15)';
+    btn.style.transition = 'all .2s';
+  }, 1800);
 }
 
 // ── Groq API (proxied through Render backend — no keys in client) ──
@@ -12304,7 +12313,7 @@ function toggleAvaGlow(){
   });
 }
 var AVA_B64='data:image/webp;base64,UklGRogCAABXRUJQVlA4IHwCAABQDACdASowADAAPp1Gm0olo6IhpyyQsBOJQBWGYjdmz/uMFYL5lwHqpp465xWJjTvLO8IsB9+uspveaF4G7PViUGbDEdVs1ZHU7I1yjmzxrwSAzimy1Oz8b4zzSKtownkmLS4GLzofrBk8AAD+8ULlFTYELG6yAkmGo/HasBTl+OjZZvw4kAWnPzN8yVKi+f2uVmLAnMW1LKMgxR6Xyl9qt0WC0baYLx3OkSpqKNRdfLVJZ/mPAe1Mg85SY++griupG2XYY1PYvlA0IQefdn5y9qfhwqioSk2Fr5SH+J41lAZ0L9wustHVrCYPP9arA0inqej2ByxBMAodzQjyQxDLnLoA7nGn0D3dctWnagJ1GzaYX1eN5daMia5IXlxh+uHErdmaYvzW7q1jvpr05FMW3o9Saq8oFjkUEBTsFCEx0L2mrX1TjlZjlqt8ycJMS6FQ7QO86VQZbmYgWt+0TP8gBBAH+UayFXYbv1sXTrYIwqGttP30JNRptggnvvI/rJnIqnwHRuBEE9U0PWPlPCR5gkiuoFlojsFjtePb/G8Y1tdPpMk+cVwXrCFDB0c1LVApaOGpEz+NegXot0gDdZlY9UoD8BNVNoDvJHiDNVXfdQ/0W0TGey4XbUtXh6aoX5WvkDvkQ8RVxtKTiDpjNmP3NtZF0zNxiHJeRyfObC7V8SmU+1UVLz25IYfvq9T2Ow9zAyq/T/278SxbDsxqdGypEKuQGeo3sPkegfcpWrZ+ErFqv3gSdMx9V1bNtONc5fZE7AENzmM5J+K3n9IVecJ4+qkZ6DkTL8S7ZhyaH8FHcCl8pGZsCEcyTZEAcFusa0bmtl1BLENWB4TWoAA=';
-function addMsg(cId,role,content,isTyping,mode){var c=document.getElementById(cId),g=document.createElement('div');g.className='message-group';if(isTyping)g.id=cId+'-typing';var aiName=mode==='coach'?'AI Coach Hub':'Synapses AI';var userAvStyle=role==='user'&&currentUser?getUserAvatarStyle(currentUser.email,currentUser.color)+';color:white':'';var userAvContent=role==='user'&&currentUser?getUserAvatarContent(currentUser.email,currentUser.initial):(currentUser?currentUser.initial:'U');var avatarHtml=role==='user'?'<div class="avatar user" style="'+userAvStyle+'">'+userAvContent+'</div>':'';
+function addMsg(cId,role,content,isTyping,mode){var c=document.getElementById(cId),g=document.createElement('div');g.className='message-group'+(role==='user'?' message-group-user':'');if(isTyping)g.id=cId+'-typing';var aiName=mode==='coach'?'AI Coach Hub':'Synapses AI';var avatarHtml='';
 g.innerHTML=avatarHtml+'<div class="message-body">'+'<div class="message-name'+(role==='user'?' message-name-user':'')+'">'+(role==='ai'?aiName:(currentUser?currentUser.name:'You'))+'</div>'+(isTyping?'<div class="typing"><span></span><span></span><span></span></div>':'<div class="message-text"><p>'+fmtMD(content)+'</p></div>')+'</div>';
 c.appendChild(g);
 c.scrollTop=c.scrollHeight;
@@ -12850,28 +12859,9 @@ async function sendMessage(){
     }
     // Persist final response and refresh sidebar list
     persistChats();
-    var _sbDone=document.getElementById('chpSidebar');
-    if(_isFirstSession && _sbDone && !_sbDone.classList.contains('open')){
-      if(_vmActive && _vmSpeaking){
-        // Voice mode is active and still speaking — wait for TTS to finish before opening sidebar
-        var _sbPollId = setInterval(function(){
-          if(!_vmSpeaking){
-            clearInterval(_sbPollId);
-            if(_sbDone && !_sbDone.classList.contains('open')){
-              toggleChatHistoryPanel();
-              _sbDone.classList.add('fade-open');
-            }
-          }
-        }, 300);
-      } else if(!_vmActive) {
-        // Voice mode off — open sidebar normally after text response
-        toggleChatHistoryPanel();
-        _sbDone.classList.add('fade-open');
-      }
-      // If voice mode is on but not yet speaking (edge case), don't open sidebar at all
-    } else {
-      refreshChpList();
-    }
+    // Auto-opening the drawer after the first message was removed per user request —
+    // just keep the list data fresh in the background so it's ready whenever the user opens it.
+    refreshChpList();
   }catch(e){
     if(typeof typing !== 'undefined' && typing && typing.remove) typing.remove();
     var msg='⚠️ Error: '+e.message;
@@ -23517,10 +23507,15 @@ function _neuInjectDownloadInterceptor(frame){
 
   (function(){
     var shown = false;
+    function _synBotAllowed(){ return typeof _synBotEnabled==='undefined' || _synBotEnabled; }
+    window._tinyBotSync = function(){
+      if(!_synBotAllowed()){ canvas.style.opacity='0'; return; }
+      if(shown && !document.getElementById('cyberGreeting')) canvas.style.opacity='0.55';
+    };
     var mo = new MutationObserver(function(){
       var g = document.getElementById('cyberGreeting');
       if(g && !shown){ shown = true; canvas.style.opacity='0'; }
-      if(shown && !g){ mo.disconnect(); setTimeout(function(){ canvas.style.opacity='0.55'; }, 200); }
+      if(shown && !g){ mo.disconnect(); setTimeout(function(){ if(_synBotAllowed()) canvas.style.opacity='0.55'; }, 200); }
     });
     mo.observe(document.body, {childList:true, subtree:true});
     // If no greeting ever appears (guest), show after splash clears
@@ -23529,14 +23524,14 @@ function _neuInjectDownloadInterceptor(frame){
         setTimeout(function(){
           if(!document.getElementById('cyberGreeting') && !shown){
             splashMo.disconnect(); mo.disconnect();
-            setTimeout(function(){ canvas.style.opacity='0.55'; }, 300);
+            setTimeout(function(){ if(_synBotAllowed()) canvas.style.opacity='0.55'; }, 300);
           }
         }, 1500);
       }
     });
     splashMo.observe(document.body, {childList:true, subtree:false});
     // Safety
-    setTimeout(function(){ if(canvas.style.opacity==='0') canvas.style.opacity='0.55'; }, 12000);
+    setTimeout(function(){ if(canvas.style.opacity==='0' && _synBotAllowed()) canvas.style.opacity='0.55'; }, 12000);
   })();
 
   // Hide when big robot tooltip shows, restore when it hides
@@ -23545,7 +23540,8 @@ function _neuInjectDownloadInterceptor(frame){
     if(_rtip.classList.contains('rt-visible')){
       canvas.style.opacity='0';
     } else {
-      if(!document.getElementById('cyberGreeting')) canvas.style.opacity='0.55';
+      var _allowed = typeof _synBotEnabled==='undefined' || _synBotEnabled;
+      if(_allowed && !document.getElementById('cyberGreeting')) canvas.style.opacity='0.55';
     }
   }).observe(_rtip, {attributes:true, attributeFilter:['class']});
 })();
@@ -23580,6 +23576,7 @@ function _neuInjectDownloadInterceptor(frame){
 
   function showRobot(){
     if(!tooltip) return;
+    if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
     if(document.getElementById('appSplash')) return;
     if(document.getElementById('cyberGreeting')) return;
     var am = document.getElementById('authModal');
@@ -25148,12 +25145,17 @@ function toggleSynBot(){
     if(btn)  { btn.style.opacity='1'; btn.title='Hide nav tooltips'; }
     if(icon)   icon.innerHTML = _iconON;
     // Hide any tooltip that was showing when we toggled off
+    // Bring the tiny flying robot back if it's allowed to show right now
+    if(typeof window._tinyBotSync === 'function') window._tinyBotSync();
   } else {
     if(btn)  { btn.style.opacity='0.35'; btn.title='Show nav tooltips'; }
     if(icon)   icon.innerHTML = _iconOFF;
     // Hide the tooltip if it's showing from a nav hover
     var tooltip = document.getElementById('robotTooltip');
     if(tooltip){ tooltip.classList.add('rt-hidden'); tooltip.classList.remove('rt-visible'); }
+    // Immediately stop the tiny flying jet-boot robot too
+    var tinyCanvas = document.getElementById('tinyBotCanvas');
+    if(tinyCanvas){ tinyCanvas.style.opacity='0'; if(tinyCanvas._pause) tinyCanvas._pause(); }
   }
 }
 
