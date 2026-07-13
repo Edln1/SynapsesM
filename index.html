@@ -5418,7 +5418,7 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Main editor -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:rgba(10,11,20,0.99);">
       <div id="notesTopBar" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(79,86,200,0.10);flex-shrink:0;">
-        <button class="nb-mobile-back" onclick="_nbSetMobileView('col2')" title="Back to pages" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col1')" title="Back to notebooks" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
         <input id="notesPageTitle" type="text" placeholder="Page title…" oninput="notesTitleChanged()" style="flex:1;background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:rgba(220,222,255,0.92);caret-color:#a78bfa;" />
         <span id="notesSaveIndicator" style="font-size:11px;color:rgba(99,102,195,0.4);font-family:'DM Sans',sans-serif;transition:opacity .3s;flex-shrink:0;"></span>
         <button id="nbLockBtn" onclick="nbToggleLock()" title="Toggle lock" style="display:none;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:13px;color:rgba(99,102,195,0.4);transition:all .15s;flex-shrink:0;" onmouseover="this.style.color='rgba(160,163,220,0.8)'" onmouseout="this.style.color='rgba(99,102,195,0.4)'">🔓</button>
@@ -17483,8 +17483,7 @@ function _nbRenderNotebooks() {
   _nb.data.forEach(function(notebook, i) {
     var active = (i === _nb.activeNb);
     var d = document.createElement('div');
-    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;' +
-      (active ? 'background:rgba(124,106,247,0.12);color:rgba(220,222,255,0.9);' : 'color:rgba(170,172,210,0.7);');
+    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:rgba(170,172,210,0.7);';
     var _topRow = '<div style="display:flex;align-items:center;gap:9px;">' +
       '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
@@ -17499,8 +17498,8 @@ function _nbRenderNotebooks() {
         return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
       }).join('') + '</div>' : '';
     d.innerHTML = _topRow + _previewRow;
-    d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
-    d.onmouseout  = function() { if(!active) this.style.background=''; };
+    d.onmouseover = function() { this.style.background='rgba(124,106,247,0.12)'; };
+    d.onmouseout  = function() { this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
       _nbRenderAll();
