@@ -28848,7 +28848,8 @@ function speakVoiceReply(text) {
         // close() is async, and requesting the mic before the OS audio
         // session is truly released is what caused the constant "Mic is
         // busy" NotReadableError, every time, even on a clean first try.
-        var _micRetried = false;
+        var _micRetries = 0;
+        var _micRetryDelays = [500, 1000, 2000];
         function _requestMic() {
           return _actxClosePromise.catch(function(){}).then(function(){
             return window.median ? (
@@ -28877,9 +28878,10 @@ function speakVoiceReply(text) {
             // mic hardware yet on mobile WebViews — that teardown can lag
             // a beat behind the promise. One retry after a short delay
             // catches that gap instead of failing on the very first try.
-            if (!_micRetried && err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
-              _micRetried = true;
-              return new Promise(function(res){ setTimeout(res, 400); }).then(_requestMic);
+            if (_micRetries < _micRetryDelays.length && err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
+              var _delay = _micRetryDelays[_micRetries];
+              _micRetries++;
+              return new Promise(function(res){ setTimeout(res, _delay); }).then(_requestMic);
             }
             console.error('Mic getUserMedia error:', err && err.name, err && err.message);
             var msg = 'Mic access denied';
@@ -28894,7 +28896,7 @@ function speakVoiceReply(text) {
                 msg = 'Mic blocked — this page must be loaded over HTTPS';
               }
             }
-            toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ']' : ''));
+            toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ' retries:' + _micRetries + ']' : ''));
             _on = false;
             window._topNavVoiceActive = false;
           });
