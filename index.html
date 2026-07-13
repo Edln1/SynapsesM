@@ -6556,7 +6556,7 @@ function showCyberpunkGreeting(name){
 
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';},2200);}
-function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
+function autoResize(el){el.style.height='auto';el.style.height=Math.max(52,Math.min(el.scrollHeight,160))+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
 
 // Render server warm-up: ping on load + first input focus so server is awake before first message
 (function(){
@@ -28825,7 +28825,8 @@ function speakVoiceReply(text) {
       // session — if _actx is still open, getUserMedia fails with
       // NotReadableError ("Mic is busy"). _ttsStopAll() alone won't do this
       // here because its own guard skips cleanup once _topNavVoiceActive is true.
-      if (_actx) { try { _actx.close(); } catch(e){} _actx = null; }
+      var _actxClosePromise = Promise.resolve();
+      if (_actx) { try { _actxClosePromise = _actx.close() || Promise.resolve(); } catch(e){} _actx = null; }
       if (_stream) {
         // Already have mic — turn off TTS now and start recording
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
@@ -28842,11 +28843,17 @@ function speakVoiceReply(text) {
         // Median's wrapped WebView (no browser chrome) can silently reject a
         // plain getUserMedia() call unless mic access is first granted via
         // Median's own JS bridge — this is a no-op outside Median.
-        (window.median ? (
-          (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
-          (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
-          Promise.resolve()
-        ) : Promise.resolve()).then(function(){
+        // Wait for the TTS AudioContext to actually finish closing first —
+        // close() is async, and requesting the mic before the OS audio
+        // session is truly released is what caused the constant "Mic is
+        // busy" NotReadableError, every time, even on a clean first try.
+        _actxClosePromise.catch(function(){}).then(function(){
+          return window.median ? (
+            (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
+            (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
+            Promise.resolve()
+          ) : Promise.resolve();
+        }).then(function(){
           return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         }).then(function(s) {
           _stream = s;
@@ -28876,7 +28883,7 @@ function speakVoiceReply(text) {
               msg = 'Mic blocked — this page must be loaded over HTTPS';
             }
           }
-          toast(msg);
+          toast(msg + (err && err.name ? ' [' + err.name + ']' : ''));
           _on = false;
           window._topNavVoiceActive = false;
         });
