@@ -28698,6 +28698,16 @@ function speakVoiceReply(text) {
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
+    // Fully release the mic hardware. Previously only the MediaRecorder was
+    // stopped here while _stream's underlying track stayed live — on mobile
+    // browsers/WebViews (which only allow one consumer to hold the mic at a
+    // time), that leftover live track is exactly what makes the NEXT
+    // getUserMedia() call fail with "mic is busy", even though nothing else
+    // is actually using it.
+    if (_stream) {
+      try { _stream.getTracks().forEach(function(t) { t.stop(); }); } catch(e) {}
+      _stream = null;
+    }
     _busy = false; _busySince = 0;
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
