@@ -28825,6 +28825,7 @@ function speakVoiceReply(text) {
       // session — if _actx is still open, getUserMedia fails with
       // NotReadableError ("Mic is busy"). _ttsStopAll() alone won't do this
       // here because its own guard skips cleanup once _topNavVoiceActive is true.
+      var _actxWasPresent = !!_actx;
       var _actxClosePromise = Promise.resolve();
       if (_actx) { try { _actxClosePromise = _actx.close() || Promise.resolve(); } catch(e){} _actx = null; }
       if (_stream) {
@@ -28883,7 +28884,7 @@ function speakVoiceReply(text) {
               msg = 'Mic blocked — this page must be loaded over HTTPS';
             }
           }
-          toast(msg + (err && err.name ? ' [' + err.name + ']' : ''));
+          toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ']' : ''));
           _on = false;
           window._topNavVoiceActive = false;
         });
