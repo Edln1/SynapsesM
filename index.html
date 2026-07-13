@@ -5400,7 +5400,7 @@ window.getWebAudioNode = getWebAudioNode;
     <div id="nbCol1" style="width:210px;min-width:210px;background:rgba(7,8,16,0.98);border-right:1px solid rgba(79,86,200,0.15);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
       <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <span style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.55);">Notebooks</span>
-        <button onclick="nbQuickAdd()" oncontextmenu="nbQuickAddChooseNotebook(event)" title="New note (long-press to pick a notebook)" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
+        <button onclick="openQuickNotePopup()" title="New note" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
       </div>
       <div id="nbNotebookList" style="flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.15) transparent;"></div>
     </div>
@@ -5438,6 +5438,23 @@ window.getWebAudioNode = getWebAudioNode;
 
   </div>
   <!-- ────────────────────────────────────────────────────────────── -->
+
+  <!-- ── Quick Note Popup ── -->
+  <div id="nbQuickPopupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;align-items:center;justify-content:center;" onclick="if(event.target===this)closeQuickNotePopup()">
+    <div id="nbQuickPopup" style="width:320px;max-width:92vw;background:#0d0d16;border:1px solid rgba(124,106,247,0.3);border-radius:14px;padding:16px 16px 14px;box-shadow:0 12px 48px rgba(0,0,0,0.6);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:rgba(220,222,255,0.9);">📝 New Note</span>
+        <button onclick="closeQuickNotePopup()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:15px;padding:0;line-height:1;">✕</button>
+      </div>
+      <select id="nbQuickPopupNotebook" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:8px 10px;color:rgba(220,222,255,0.9);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;margin-bottom:8px;box-sizing:border-box;"></select>
+      <input id="nbQuickPopupTitle" type="text" placeholder="Note title…" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:9px 12px;color:rgba(230,232,255,0.95);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;outline:none;margin-bottom:8px;box-sizing:border-box;" />
+      <textarea id="nbQuickPopupBody" placeholder="Write your note…" style="width:100%;min-height:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:10px 12px;color:rgba(230,232,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="closeQuickNotePopup()" style="padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(200,200,220,0.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Cancel</button>
+        <button onclick="saveQuickNotePopup()" style="padding:7px 16px;background:rgba(124,106,247,0.18);border:1px solid rgba(124,106,247,0.4);border-radius:8px;color:#c4bbff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Save Note</button>
+      </div>
+    </div>
+  </div>
 
   <div class="section" id="sec-whiteboard"><div id="wbScrollbarY"><div id="wbScrollThumbY"></div></div><div id="wbScrollbarX"><div id="wbScrollThumbX"></div></div>
     <!-- Board Drawer: wrap slides as one unit, tab hangs below panel -->
@@ -17410,6 +17427,7 @@ var _nb = {
 };
 
 var NB_KEY = 'synapses_nb4';
+var QN_LOCK_KEY = 'synapses_qn_locked';
 
 function _nbDateStr() {
   var d = new Date(), mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -17437,7 +17455,9 @@ function _nbLoad() {
     return { id:'qn_' + (n._nbPageId || _nbId()), title:n.title||'Note', body:n.body||'', date:n.date||_nbDateStr() };
   });
   if (qnPages.length === 0) qnPages.push({ id:'qn_empty', title:'No notes yet', body:'', date:_nbDateStr() });
-  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:true, pages:qnPages });
+  // Editable by default — only locked if the user explicitly toggled lock on before
+  var _qnLocked = localStorage.getItem(QN_LOCK_KEY) === '1';
+  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:_qnLocked, pages:qnPages });
   _nb.activeNb = Math.min(_nb.activeNb, _nb.data.length - 1);
   var nb = _nb.data[_nb.activeNb];
   _nb.activePg = Math.min(_nb.activePg, (nb.pages||[]).length - 1);
@@ -17469,10 +17489,15 @@ function _nbRenderNotebooks() {
       '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
       '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
-    // Preview of the notebook's notes so you don't have to open it just to see what's inside
-    var _previewPages = (notebook.pages||[]).filter(function(p){ return p.title && p.title !== 'No notes yet'; }).slice(0,3);
-    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:rgba(150,152,190,0.45);">' +
-      _previewPages.map(function(p){ return _nbEsc(p.title||'Untitled'); }).join(' &middot; ') + '</div>' : '';
+    // Preview of the notebook's notes — each one its own clickable row, not just descriptive text
+    var _previewPages = [];
+    (notebook.pages||[]).forEach(function(p, pi){
+      if (p.title && p.title !== 'No notes yet' && _previewPages.length < 3) _previewPages.push({p:p, pi:pi});
+    });
+    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:1px;">' +
+      _previewPages.map(function(item){
+        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.color=\'rgba(196,187,255,0.9)\'" onmouseout="this.style.color=\'rgba(150,152,190,0.5)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:rgba(150,152,190,0.5);cursor:pointer;padding:1px 0;transition:color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
+      }).join('') + '</div>' : '';
     d.innerHTML = _topRow + _previewRow;
     d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
     d.onmouseout  = function() { if(!active) this.style.background=''; };
@@ -17486,6 +17511,15 @@ function _nbRenderNotebooks() {
     }
     el.appendChild(d);
   });
+}
+
+// Jump straight to a specific note from the notebook-list preview
+function nbOpenPreviewNote(nbi, pgi, e) {
+  if (e) e.stopPropagation();
+  _nbFlush();
+  _nb.activeNb = nbi; _nb.activePg = pgi;
+  _nbRenderAll();
+  if (window.innerWidth <= 620) _nbSetMobileView('editor');
 }
 
 function _nbRenderPages() {
@@ -17541,6 +17575,7 @@ function nbToggleLock() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb || nb.title !== 'Quick Notes') return;
   nb.locked = !nb.locked;
+  try { localStorage.setItem(QN_LOCK_KEY, nb.locked ? '1' : '0'); } catch(e) {}
   _nbPersist();
   _nbLoadEditor();
 }
@@ -17621,6 +17656,54 @@ function nbQuickAddChooseNotebook(e) {
   var color = colors[(_nb.data.length - 1) % colors.length];
   _nb.data.push({ id:_nbId(), title:choice, color:color, locked:false, pages:[] });
   _nbCreateNoteIn(_nb.data.length - 1);
+}
+
+// ── Quick Note popup: + opens this so the user can write the note right away ──
+function openQuickNotePopup() {
+  var sel = document.getElementById('nbQuickPopupNotebook');
+  if (sel) {
+    sel.innerHTML = _nb.data.map(function(nb, i) { return '<option value="' + i + '">' + _nbEsc(nb.title) + '</option>'; }).join('');
+    var qnIdx = 0;
+    for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
+    sel.value = qnIdx;
+  }
+  var t = document.getElementById('nbQuickPopupTitle'); if (t) t.value = '';
+  var b = document.getElementById('nbQuickPopupBody'); if (b) b.value = '';
+  var ov = document.getElementById('nbQuickPopupOverlay');
+  if (ov) ov.style.display = 'flex';
+  setTimeout(function() { if (t) t.focus(); }, 50);
+}
+
+function closeQuickNotePopup() {
+  var ov = document.getElementById('nbQuickPopupOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function saveQuickNotePopup() {
+  var sel = document.getElementById('nbQuickPopupNotebook');
+  var nbIdx = sel ? parseInt(sel.value, 10) : 0;
+  if (isNaN(nbIdx)) nbIdx = 0;
+  var titleEl = document.getElementById('nbQuickPopupTitle');
+  var bodyEl = document.getElementById('nbQuickPopupBody');
+  var title = titleEl ? titleEl.value.trim() : '';
+  var bodyRaw = bodyEl ? bodyEl.value : '';
+  if (!title && !bodyRaw.trim()) { closeQuickNotePopup(); return; }
+  _nbFlush();
+  var nb = _nb.data[nbIdx];
+  if (!nb) { closeQuickNotePopup(); return; }
+  var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
+  var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
+  nb.pages.unshift(page);
+  _nb.activeNb = nbIdx; _nb.activePg = 0;
+  if (nb.title === 'Quick Notes') {
+    var freshNotes = [];
+    try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
+    freshNotes.unshift({ title:page.title, body:bodyRaw, date:page.date, colorIdx:4 });
+    try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
+  }
+  _nbPersist(); _nbRenderAll();
+  if (typeof renderNotes === 'function') renderNotes();
+  closeQuickNotePopup();
 }
 
 function nbAddPage() {
