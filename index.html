@@ -1222,7 +1222,7 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .profile-inner{max-width:100%;margin:0;padding:28px 32px 32px;width:100%;}
 .profile-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
 .profile-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;}
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;}
+.section-card{background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.09);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:backdrop-filter;isolation:isolate;}
 .section-card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .section-card-header h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
 .empty-state{padding:32px;text-align:center;color:var(--muted);font-size:13.5px;}
@@ -1876,7 +1876,7 @@ to{opacity:0;transform:translateX(-40px);}}
 .profile-inner{max-width:100%;margin:0;padding:28px 32px 32px;width:100%;}
 .profile-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
 .profile-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;}
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;}
+.section-card{background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.09);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:backdrop-filter;isolation:isolate;}
 .section-card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .section-card-header h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
 .empty-state{padding:32px;text-align:center;color:var(--muted);font-size:13.5px;}
@@ -14110,7 +14110,7 @@ function renderProfile(){
   html+='</div>';
 
   // ── Profile card — same size as sidebar card ─────────────────
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;text-align:center;position:relative;width:210px;">';
+  html+='<div style="background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.09);border-radius:12px;overflow:hidden;margin-bottom:16px;text-align:center;position:relative;width:210px;backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:backdrop-filter;isolation:isolate;">';
   // Banner area — same 90px height as sidebar card
   html+='<div onclick="triggerAvatarUpload()" title="Change photo" style="width:100%;height:90px;background:var(--surface2);position:relative;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;">';
   if(isVideo){
@@ -23248,7 +23248,10 @@ function _neuInjectDownloadInterceptor(frame){
   <div style="padding:12px 16px;border-bottom:1px solid rgba(124,106,247,0.2);display:flex;align-items:center;gap:10px;background:rgba(124,106,247,0.06);">
     <div style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px #00d9a8;flex-shrink:0;"></div>
     <div style="font-family:Syne,sans-serif;font-size:11px;font-weight:700;color:#f0f0ff;letter-spacing:.1em;">SYN-BOT // ONLINE</div>
-    <button onclick="var _t=document.getElementById('robotTooltip');if(_t){_t.style.transition='';_t.style.opacity='';_t.style.visibility='';}document.getElementById('synBotChat').style.display='none';" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;line-height:1;padding:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">×</button>
+    <button onclick="synBotOpenAccount()" title="Account" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
+    <button onclick="var _t=document.getElementById('robotTooltip');if(_t){_t.style.transition='';_t.style.opacity='';_t.style.visibility='';}document.getElementById('synBotChat').style.display='none';" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;line-height:1;padding:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">×</button>
   </div>
   <!-- Messages -->
   <div id="synBotMsgs" style="padding:14px 14px 8px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.3) transparent;">
@@ -24124,7 +24127,8 @@ function _neuInjectDownloadInterceptor(frame){
         bubble.textContent = greeting;
         msgs.appendChild(bubble);
       }
-      setTimeout(function(){ var inp=document.getElementById('synBotInput'); if(inp) inp.focus(); }, 100);
+      // Note: intentionally not auto-focusing synBotInput here — it was forcing the
+      // mobile keyboard to pop open every time SYN-BOT opens. User taps in to type.
     }
   }
 
@@ -25204,6 +25208,29 @@ function _applySynBotVisualState(){
 }
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
+function synBotOpenAccount(){
+  // Deliberate bypass of the disabled goProfile() (which is intentionally no-op'd
+  // elsewhere in the app). This is the one entry point that still reaches account
+  // management / sign in / sign out, accessible only via the SYN-BOT panel.
+  var _chat=document.getElementById('synBotChat'); if(_chat) _chat.style.display='none';
+  if(typeof currentUser!=='undefined' && currentUser && !currentUser.isGuest){
+    if(typeof mobileAutoCollapse==='function') mobileAutoCollapse();
+    if(typeof setView==='function') setView('sec-profile');
+    var _nb=document.getElementById('nav-profile');
+    if(_nb){ _nb.classList.add('active'); if(typeof triggerNavGlow==='function') triggerNavGlow(_nb); }
+    var _tt=document.getElementById('topTitle');
+    if(_tt){ _tt.textContent='My Profile'; _tt.style.opacity='1'; _tt.style.color=''; _tt.style.letterSpacing=''; _tt.style.display=''; }
+    var _htb=document.getElementById('hubTabBar'); if(_htb) _htb.style.display='none';
+    if(currentUser.id && typeof _supabase!=='undefined'){
+      _supabase.from('profiles').select('bio,skills,avail,project,endorsements').eq('id',currentUser.id).single().then(function(r){
+        if(r.data){ var dbp=r.data; _profiles[currentUser.email]=Object.assign(getProfile(currentUser.email),{bio:dbp.bio||'',skills:dbp.skills||[],avail:dbp.avail||'open',project:dbp.project||'',endorsements:dbp.endorsements||0}); }
+        if(typeof renderProfile==='function') renderProfile();
+      });
+    } else if(typeof renderProfile==='function'){ renderProfile(); }
+  } else {
+    if(typeof showAuthModal==='function') showAuthModal();
+  }
+}
 function toggleSynBot(){
   _synBotEnabled = !_synBotEnabled;
   try{ localStorage.setItem('synapses_synbot_enabled', _synBotEnabled ? '1' : '0'); }catch(e){}
