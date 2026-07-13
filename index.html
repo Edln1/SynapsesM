@@ -693,7 +693,8 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
   input,textarea,select{font-size:16px!important;}
   /* ── Chat/coach inputs: pill style ── */
-  #sec-chat .input-box,#sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
+  #sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
+  #sec-chat .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 122px 12px 46px!important;min-height:48px!important;}
   /* ── Welcome section: dock handles search on mobile, hide standalone ── */
   .input-box::placeholder{font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:rgba(200,200,220,0.5)!important;}
   textarea::placeholder{font-size:12px!important;}
@@ -1081,6 +1082,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;}
 .input-box::placeholder{color:var(--muted);}
 #sec-chat .input-box,#sec-coach .input-box{background:transparent!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;box-shadow:0 0 0 1px rgba(124,106,247,0.3),0 4px 24px rgba(0,0,0,0.3);}
+#sec-chat .input-box{padding-right:122px!important;}
+#sec-chat .send-btn{top:auto!important;bottom:14px!important;transform:none!important;}
+#sec-chat .send-btn:hover{transform:scale(1.06)!important;}
 @keyframes synapseOrbit{0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}}
 @keyframes synapseNodePulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.4);opacity:1}}
 @keyframes chatEmptyIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
@@ -3572,7 +3576,7 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="cat-btn" id="nav-jobs" onclick="goJobs()"><span class="cat-dot"></span>🔗 Job Board</button>
         <button class="cat-btn" id="nav-world" onclick="goWorld()"><span class="cat-dot"></span>🌍 World Accelerator</button>
         <button class="cat-btn" id="nav-whiteboard" onclick="goWhiteboard()"><span class="cat-dot"></span>🎨 Whiteboard</button>
-        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>📓 My Notes</button>
+        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>My Notes</button>
         <button class="cat-btn" id="nav-profile" onclick="goProfile()"><span class="cat-dot"></span>👤 My Profile</button>
       </div>
       <div class="sidebar-section" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:14px;margin-top:8px;user-select:none;" onclick="toggleSideSection('toolItems','toolArrow')">
@@ -3998,7 +4002,7 @@ window.getWebAudioNode = getWebAudioNode;
       {icon:'🔗', label:'Job Board', fn:function(){ if(typeof goJobs==='function') goJobs(); }},
       {icon:'🌍', label:'World Accelerator', fn:function(){ if(typeof goWorld==='function') goWorld(); }},
       {icon:'🎨', label:'Whiteboard', fn:function(){ if(typeof goWhiteboard==='function') goWhiteboard(); }},
-      {icon:'📓', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
+      {icon:'', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbgcc" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbgcc)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbgcc)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbgcc)" stroke-width="1.8"/></svg>', label:'Browse Tools', fn:function(){ if(typeof showTools==='function') showTools('all'); }},
       {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }}
     ];
@@ -5746,7 +5750,7 @@ var NAV_ALL_ITEMS = [
   {id:'jobs',   icon:'🔗', label:'Jobs',        fn:'goJobs()'},
   {id:'world',  icon:'🌍', label:'World',       fn:'goWorld()'},
   {id:'whiteboard', icon:'🎨', label:'Whiteboard',  fn:'goWhiteboard()'},
-  {id:'notes',  icon:'📓', label:'My Notes',    fn:'goNotes()'},
+  {id:'notes',  icon:'',   label:'My Notes',    fn:'goNotes()'},
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
   {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat();triggerNavGlow(this)'},
@@ -5853,7 +5857,7 @@ function renderIconRail(){
     jobs:       {icon:'🔗', label:'Job Board',       fn:"goJobs()"},
     world:      {icon:'🌍', label:'World Accelerator',fn:"goWorld()"},
     whiteboard: {icon:'🎨', label:'Whiteboard',      fn:"goWhiteboard()"},
-    notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
+    notes:      {icon:'',   label:'My Notes',        fn:"goNotes()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
     chat:       {icon:'💬', label:'New Chat',        fn:"newChat()"},
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"}
@@ -6645,7 +6649,7 @@ if(_isVidMode){
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
     var fn=secMap[_lastSec];
     if(fn){fn();}else if(typeof newChat==='function'){newChat();}
   }
@@ -13040,11 +13044,8 @@ function persistChats(){
       data.chatSessions[k]={history:chatSessions[k].history||[],hasNotes:chatSessions[k].hasNotes||false};
     });
     var _json=JSON.stringify(data);
+    // Fast, complete local copy — always full-size, never trimmed.
     localStorage.setItem('synapses_chat_history',_json);
-    // Also persist to Neutralino storage so it survives app restarts
-    if(window.Neutralino && Neutralino.storage){
-      Neutralino.storage.setData('synapses_chat_history',_json).catch(function(){});
-    }
   }catch(e){
     try{
       var minimal={recentChats:recentChats,savedChats:savedChats,chatSessions:{}};
@@ -13052,22 +13053,44 @@ function persistChats(){
         var s=chatSessions[c.key];
         if(s) minimal.chatSessions[c.key]={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
       });
-      var _mjson=JSON.stringify(minimal);
-      localStorage.setItem('synapses_chat_history',_mjson);
-      if(window.Neutralino && Neutralino.storage){
-        Neutralino.storage.setData('synapses_chat_history',_mjson).catch(function(){});
-      }
+      localStorage.setItem('synapses_chat_history',JSON.stringify(minimal));
     }catch(e2){}
+  }
+  // Persist to Neutralino.storage too, so chats survive an uninstall/reinstall.
+  // Written as many SMALL pieces (one per chat, trimmed to the last 40 messages)
+  // instead of one ever-growing blob — a single oversized write can silently fail
+  // in Neutralino, and when it does, it used to freeze the ENTIRE history at
+  // whatever the last successful write was (sometimes just 1 chat). Chunking
+  // means a failure on one chat can't take the rest down with it, and trimming
+  // keeps each individual write small enough to actually succeed.
+  if(window.Neutralino && Neutralino.storage){
+    try{
+      var _idxKeys=recentChats.map(function(c){return c.key;}).concat(savedChats.map(function(c){return c.key;}));
+      var _index={recentChats:recentChats,savedChats:savedChats};
+      Neutralino.storage.setData('synapses_chat_index',JSON.stringify(_index))
+        .catch(function(err){console.warn('Neutralino chat index save failed:',err);});
+      _idxKeys.forEach(function(k){
+        var s=chatSessions[k];
+        if(!s) return;
+        var trimmed={history:(s.history||[]).slice(-40),hasNotes:s.hasNotes||false};
+        Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(trimmed))
+          .catch(function(err){
+            // Even the trimmed chunk failed (very long single messages, etc.) —
+            // retry once with a much smaller slice as a last resort so SOMETHING
+            // for this chat survives a reinstall, rather than nothing at all.
+            var smaller={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
+            Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(smaller)).catch(function(err2){console.warn('Neutralino chat chunk save failed for',k,err2);});
+          });
+      });
+    }catch(e3){}
   }
 }
 function loadPersistedChats(){
-  function _applyChats(raw){
+  function _applyChats(recents,saved,sessions){
     try{
-      if(!raw) return;
-      var data=JSON.parse(raw);
-      if(data.recentChats) recentChats=data.recentChats;
-      if(data.savedChats) savedChats=data.savedChats;
-      if(data.chatSessions) Object.assign(chatSessions,data.chatSessions);
+      if(recents) recentChats=recents;
+      if(saved) savedChats=saved;
+      if(sessions) Object.assign(chatSessions,sessions);
       renderRecentChats(); renderSavedChats();
       var _sb=document.getElementById('chpSidebar');
       if(_sb&&!_sb.classList.contains('open')&&(recentChats.length||savedChats.length)){
@@ -13076,16 +13099,49 @@ function loadPersistedChats(){
       }
     }catch(e){}
   }
-  // Prefer Neutralino.storage (persists across restarts), fall back to localStorage
-  if(window.Neutralino && Neutralino.storage){
-    Neutralino.storage.getData('synapses_chat_history').then(function(raw){
-      _applyChats(raw);
-    }).catch(function(){
-      _applyChats(localStorage.getItem('synapses_chat_history'));
-    });
-  } else {
-    _applyChats(localStorage.getItem('synapses_chat_history'));
+  function _fromLocalStorage(){
+    try{
+      var raw=localStorage.getItem('synapses_chat_history');
+      if(!raw) return null;
+      var d=JSON.parse(raw);
+      return {recentChats:d.recentChats||[],savedChats:d.savedChats||[],chatSessions:d.chatSessions||{},count:(d.recentChats||[]).length+(d.savedChats||[]).length};
+    }catch(e){ return null; }
   }
+  var local=_fromLocalStorage();
+  if(!(window.Neutralino && Neutralino.storage)){
+    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
+    return;
+  }
+  // New chunked format first (index + one key per chat).
+  Neutralino.storage.getData('synapses_chat_index').then(function(idxRaw){
+    var idx; try{ idx=JSON.parse(idxRaw); }catch(e){ idx=null; }
+    if(!idx || !((idx.recentChats||[]).length+(idx.savedChats||[]).length)){
+      // No usable chunked index — fall back to the old combined-blob key
+      // (covers installs saved before this chunking change existed) or localStorage.
+      Neutralino.storage.getData('synapses_chat_history').then(function(oldRaw){
+        var old; try{ old=JSON.parse(oldRaw); }catch(e){ old=null; }
+        var oldCount = old ? ((old.recentChats||[]).length+(old.savedChats||[]).length) : -1;
+        var localCount = local ? local.count : -1;
+        if(localCount>=oldCount && local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
+        else if(old) _applyChats(old.recentChats,old.savedChats,old.chatSessions);
+      }).catch(function(){
+        if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
+      });
+      return;
+    }
+    // Chunked index found — pull in each chat's messages individually.
+    var allKeys=(idx.recentChats||[]).map(function(c){return c.key;}).concat((idx.savedChats||[]).map(function(c){return c.key;}));
+    var sessions={};
+    Promise.all(allKeys.map(function(k){
+      return Neutralino.storage.getData('synapses_chat_sess_'+k).then(function(raw){
+        try{ sessions[k]=JSON.parse(raw); }catch(e){}
+      }).catch(function(){});
+    })).then(function(){
+      _applyChats(idx.recentChats,idx.savedChats,sessions);
+    });
+  }).catch(function(){
+    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
+  });
 }
 function deleteRecentChat(i){recentChats.splice(i,1);persistChats();renderRecentChats();}
 function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
@@ -15767,7 +15823,7 @@ function renderNotes(){
       +'<div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">'+n.date+'</div>'
       +'</div>'
       +(n.body?'<div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:8px;">'+esc(n.body)+'</div>':'')
-      +'<div>'+n.tags.map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
+      +'<div>'+(n.tags||[]).map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
       +'</div>';
   }).join('');
 }
@@ -17700,7 +17756,7 @@ function saveQuickNotePopup() {
     if (nb.title === 'Quick Notes') {
       var freshNotes = [];
       try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
-      freshNotes.unshift({ title:page.title, body:bodyRaw, date:page.date, colorIdx:4 });
+      freshNotes.unshift({ title:page.title, body:bodyRaw, tags:[], date:page.date, colorIdx:4 });
       try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
     }
     _nbPersist(); _nbRenderAll();
@@ -17722,7 +17778,7 @@ function nbAddPage() {
   if (nb.title === 'Quick Notes') {
     var freshNotes = [];
     try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'New Page', body:'', date:_nbDateStr(), colorIdx:4 });
+    freshNotes.unshift({ title:'New Page', body:'', tags:[], date:_nbDateStr(), colorIdx:4 });
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
   }
   _nbPersist(); _nbRenderPages(); _nbLoadEditor();
@@ -17878,7 +17934,7 @@ function goNotes() {
   _currentViewId = 'sec-notes';
   var _navBtn = document.getElementById('nav-notes');
   if (_navBtn) { _navBtn.classList.add('active'); triggerNavGlow(_navBtn); }
-  document.getElementById('topTitle').textContent = '📓 My Notes';
+  document.getElementById('topTitle').textContent = 'My Notes';
   document.getElementById('topTitle').style.opacity = '1';
   document.getElementById('topTitle').style.display = '';
   var _htb = document.getElementById('hubTabBar');
