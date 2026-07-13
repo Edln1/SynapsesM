@@ -5791,12 +5791,16 @@ function loadNavConfig(){
         initBnavDrag();
         var btn=document.getElementById('bnavExpandBtn');
         if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-        // Ensure top bar is visible
-        TOP_BAR_HIDDEN=false;
+        // Respect whatever the user last set via the toggle (do NOT force it visible)
         var topBar=document.querySelector('.top-bar');
         var topBtn=document.getElementById('topBarToggle');
-        if(topBar) topBar.classList.remove('hidden');
-        if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
+        if(TOP_BAR_HIDDEN){
+          if(topBar) topBar.classList.add('hidden');
+          if(topBtn){topBtn.innerHTML='▼';topBtn.title='Show top bar';}
+        } else {
+          if(topBar) topBar.classList.remove('hidden');
+          if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
+        }
       },150);
     }
   }catch(e){}
@@ -28615,6 +28619,12 @@ function speakVoiceReply(text) {
       fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
       // Don't wipe _history here — preserve conversation across toggle off/on
       _busy = false; _busySince = 0;
+      // Release the TTS audio session BEFORE requesting the mic. On mobile
+      // WebViews (Median), TTS playback and mic capture share one audio
+      // session — if _actx is still open, getUserMedia fails with
+      // NotReadableError ("Mic is busy"). _ttsStopAll() alone won't do this
+      // here because its own guard skips cleanup once _topNavVoiceActive is true.
+      if (_actx) { try { _actx.close(); } catch(e){} _actx = null; }
       if (_stream) {
         // Already have mic — turn off TTS now and start recording
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
