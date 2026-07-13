@@ -883,6 +883,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chatHistoryTrigger.cht-morphed{width:22px;height:22px;border-radius:6px;background:rgba(200,195,225,0.06);border-color:rgba(200,195,225,0.2);}
 #chatHistoryTrigger.cht-morphed:hover{background:rgba(200,195,225,0.12)!important;border-color:rgba(200,195,225,0.35)!important;box-shadow:none!important;}
 #chatHistoryTrigger:hover{border-color:rgba(124,106,247,0.6);box-shadow:0 0 18px rgba(124,106,247,0.25);}
+@media (hover:hover) and (pointer:fine){ #bnavNotesBtn:hover{background:rgba(124,106,247,0.07);} }
+#bnavNotesBtn.active{background:rgba(124,106,247,0.14)!important;}
+#bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
 #chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
@@ -3656,7 +3659,7 @@ window.getWebAudioNode = getWebAudioNode;
 </aside>
 
 <!-- Bottom Nav Bar -->
-<button id="bnavNotesBtn" onclick="goNotes()" title="My Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.07)'" onmouseout="this.style.background='transparent'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<button id="bnavNotesBtn" onclick="goNotes()" title="My Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
 <nav id="bottomNavBar" style="overflow:hidden;">
   <span style="font-size:13px;color:var(--muted);padding:0 4px;cursor:grab;flex-shrink:0;" id="bnavDragHandle">⠿</span>
   <div class="bnav-divider"></div>
@@ -4344,7 +4347,7 @@ window.getWebAudioNode = getWebAudioNode;
   <!-- Dedicated Electron drag zone - thin strip at very top, avoids all buttons -->
 <!-- Floating win-controls strip: always visible, top-right, works bar on or off -->
 <div id="winStrip" style="position:fixed;top:0;right:0;z-index:9999999;display:flex;align-items:center;gap:0;-webkit-app-region:no-drag;app-region:no-drag;">
-  <button id="topBarToggle" onclick="toggleTopBar()" title="Toggle top bar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(124,106,247,0.2)';this.style.color='rgba(255,255,255,0.9)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.35)'">▲</button>
+  <button id="topBarToggle" onclick="toggleTopBar()" title="Toggle top bar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;-webkit-app-region:no-drag;">▲</button>
   <button id="etbMin" title="Minimise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2014;</button>
   <button id="etbMax" title="Maximise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:11px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x25A1;</button>
   <button id="etbClose" title="Close" style="width:40px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='#c42b1c';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2715;</button>
@@ -17699,6 +17702,8 @@ function goNotes() {
   mobileAutoCollapse();
   // Toggle off — go back to previous page
   if (_currentViewId === 'sec-notes') {
+    var _nBtnOff = document.getElementById('bnavNotesBtn');
+    if (_nBtnOff) { _nBtnOff.classList.remove('active'); _nBtnOff.style.background = 'transparent'; }
     var prev = window._preNotesView || 'sec-welcome';
     window._preNotesView = null;
     _currentViewId = null;
@@ -17724,6 +17729,8 @@ function goNotes() {
   }
   // Toggle on — save where we are and go to notes
   window._preNotesView = _currentViewId || 'sec-welcome';
+  var _nBtnOn = document.getElementById('bnavNotesBtn');
+  if (_nBtnOn) _nBtnOn.classList.add('active');
   var _pt = document.getElementById('topTitle');
   window._preNotesTitle = _pt ? _pt.textContent : '';
   window._preNotesTitleOpacity = _pt ? _pt.style.opacity : '1';
