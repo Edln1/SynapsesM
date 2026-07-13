@@ -28848,46 +28848,58 @@ function speakVoiceReply(text) {
         // close() is async, and requesting the mic before the OS audio
         // session is truly released is what caused the constant "Mic is
         // busy" NotReadableError, every time, even on a clean first try.
-        _actxClosePromise.catch(function(){}).then(function(){
-          return window.median ? (
-            (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
-            (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
-            Promise.resolve()
-          ) : Promise.resolve();
-        }).then(function(){
-          return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        }).then(function(s) {
-          _stream = s;
-          // Keep mic stream alive when tab is backgrounded
-          document.addEventListener('visibilitychange', function() {
-            if (_stream) {
-              _stream.getTracks().forEach(function(t) {
-                if (t.readyState === 'ended') return;
-                t.enabled = true; // force re-enable in case browser muted it
-              });
+        var _micRetried = false;
+        function _requestMic() {
+          return _actxClosePromise.catch(function(){}).then(function(){
+            return window.median ? (
+              (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
+              (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
+              Promise.resolve()
+            ) : Promise.resolve();
+          }).then(function(){
+            return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          }).then(function(s) {
+            _stream = s;
+            // Keep mic stream alive when tab is backgrounded
+            document.addEventListener('visibilitychange', function() {
+              if (_stream) {
+                _stream.getTracks().forEach(function(t) {
+                  if (t.readyState === 'ended') return;
+                  t.enabled = true; // force re-enable in case browser muted it
+                });
+              }
+            });
+            // Permission granted — now safe to turn off TTS
+            if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
+            record();
+          }).catch(function(err) {
+            // close() resolving doesn't mean the OS has actually freed the
+            // mic hardware yet on mobile WebViews — that teardown can lag
+            // a beat behind the promise. One retry after a short delay
+            // catches that gap instead of failing on the very first try.
+            if (!_micRetried && err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
+              _micRetried = true;
+              return new Promise(function(res){ setTimeout(res, 400); }).then(_requestMic);
             }
+            console.error('Mic getUserMedia error:', err && err.name, err && err.message);
+            var msg = 'Mic access denied';
+            if (err) {
+              if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                msg = 'Mic blocked — allow microphone access for this site in your browser settings';
+              } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                msg = 'No microphone found on this device';
+              } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                msg = 'Mic is busy in another app — close it and try again';
+              } else if (err.name === 'SecurityError') {
+                msg = 'Mic blocked — this page must be loaded over HTTPS';
+              }
+            }
+            toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ']' : ''));
+            _on = false;
+            window._topNavVoiceActive = false;
           });
-          // Permission granted — now safe to turn off TTS
-          if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
-          record();
-        }).catch(function(err) {
-          console.error('Mic getUserMedia error:', err && err.name, err && err.message);
-          var msg = 'Mic access denied';
-          if (err) {
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-              msg = 'Mic blocked — allow microphone access for this site in your browser settings';
-            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-              msg = 'No microphone found on this device';
-            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-              msg = 'Mic is busy in another app — close it and try again';
-            } else if (err.name === 'SecurityError') {
-              msg = 'Mic blocked — this page must be loaded over HTTPS';
-            }
-          }
-          toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ']' : ''));
-          _on = false;
-          window._topNavVoiceActive = false;
-        });
+        }
+        _requestMic();
       }
     } else {
       stopAll();
