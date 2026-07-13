@@ -25872,11 +25872,11 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 1 (original)
-  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 2
+  '5lBVRGIEfjYm5Ogzz9mV7oLSZGmiULkGMSCGjLpcC2MNxstp', // key 1 (new, forefront)
+  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 2 (original)
+  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 3
 ];
-var _humeKeyIdx = parseInt(localStorage.getItem('humeKeyIdx') || '0', 10);
-if (isNaN(_humeKeyIdx) || _humeKeyIdx < 0 || _humeKeyIdx >= _humeKeys.length) _humeKeyIdx = 0;
+var _humeKeyIdx = 0; // forced back to 0 so the new forefront key is tried first, even if an old rotation was saved
 function _humeGetKey() { return _humeKeys[_humeKeyIdx] || ''; }
 function _humeRotateKey() {
   if (_humeKeys.length < 2) return; // nothing to rotate to
@@ -28638,7 +28638,16 @@ function speakVoiceReply(text) {
         _on = false;
         window._topNavVoiceActive = false;
       } else {
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+        // Median's wrapped WebView (no browser chrome) can silently reject a
+        // plain getUserMedia() call unless mic access is first granted via
+        // Median's own JS bridge — this is a no-op outside Median.
+        (window.median ? (
+          (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
+          (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
+          Promise.resolve()
+        ) : Promise.resolve()).then(function(){
+          return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }).then(function(s) {
           _stream = s;
           // Keep mic stream alive when tab is backgrounded
           document.addEventListener('visibilitychange', function() {
