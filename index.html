@@ -17494,9 +17494,9 @@ function _nbRenderNotebooks() {
     (notebook.pages||[]).forEach(function(p, pi){
       if (p.title && p.title !== 'No notes yet' && _previewPages.length < 3) _previewPages.push({p:p, pi:pi});
     });
-    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:1px;">' +
+    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:3px;margin-top:2px;">' +
       _previewPages.map(function(item){
-        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.color=\'rgba(196,187,255,0.9)\'" onmouseout="this.style.color=\'rgba(150,152,190,0.5)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;color:rgba(150,152,190,0.5);cursor:pointer;padding:1px 0;transition:color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
+        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
       }).join('') + '</div>' : '';
     d.innerHTML = _topRow + _previewRow;
     d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
@@ -17687,23 +17687,30 @@ function saveQuickNotePopup() {
   var bodyEl = document.getElementById('nbQuickPopupBody');
   var title = titleEl ? titleEl.value.trim() : '';
   var bodyRaw = bodyEl ? bodyEl.value : '';
-  if (!title && !bodyRaw.trim()) { closeQuickNotePopup(); return; }
-  _nbFlush();
-  var nb = _nb.data[nbIdx];
-  if (!nb) { closeQuickNotePopup(); return; }
-  var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
-  var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
-  nb.pages.unshift(page);
-  _nb.activeNb = nbIdx; _nb.activePg = 0;
-  if (nb.title === 'Quick Notes') {
-    var freshNotes = [];
-    try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
-    freshNotes.unshift({ title:page.title, body:bodyRaw, date:page.date, colorIdx:4 });
-    try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
-  }
-  _nbPersist(); _nbRenderAll();
-  if (typeof renderNotes === 'function') renderNotes();
+  // Close the popup FIRST — no matter what happens below, the window disappears now.
   closeQuickNotePopup();
+  if (!title && !bodyRaw.trim()) { return; }
+  try {
+    _nbFlush();
+    var nb = _nb.data[nbIdx];
+    if (!nb) return;
+    var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
+    var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
+    nb.pages.unshift(page);
+    _nb.activeNb = nbIdx; _nb.activePg = 0;
+    if (nb.title === 'Quick Notes') {
+      var freshNotes = [];
+      try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
+      freshNotes.unshift({ title:page.title, body:bodyRaw, date:page.date, colorIdx:4 });
+      try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
+    }
+    _nbPersist(); _nbRenderAll();
+    if (typeof renderNotes === 'function') renderNotes();
+    if (typeof showToast === 'function') showToast('📝 Note saved!');
+  } catch (err) {
+    console.error('saveQuickNotePopup error:', err);
+    if (typeof showToast === 'function') showToast('⚠️ Note may not have saved — check console');
+  }
 }
 
 function nbAddPage() {
