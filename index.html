@@ -881,8 +881,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chatHistoryTrigger:hover{border-color:rgba(124,106,247,0.6);box-shadow:0 0 18px rgba(124,106,247,0.25);}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
-#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .3s ease,backdrop-filter .3s ease;z-index:49;display:flex;flex-direction:column;}
-#sec-chat #chpSidebar{background:rgba(15,14,24,0.55);backdrop-filter:blur(36px) saturate(140%);-webkit-backdrop-filter:blur(36px) saturate(140%);}
+#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease;z-index:49;display:flex;flex-direction:column;}
+/* Two states: light/original on the "what's on your mind" welcome screen, opaque frosted glass once an actual conversation is showing so message text can't bleed through. .chp-heavy-glass is a JS-applied fallback for mobile webviews that don't support :has(), and is only toggled on when messages are present. */
+#sec-chat:has(#chatEmptyState.hidden) #chpSidebar,#chpSidebar.chp-heavy-glass{background:rgba(0,0,0,0.97);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);}
 #chpSidebar.open{width:240px;}
 #chpSidebar.fade-open{width:240px;animation:chpStoryReveal 1.1s cubic-bezier(0.22,1,0.36,1) forwards;}
 @keyframes chpStoryReveal{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -1044,7 +1045,8 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .qc-icon{font-size:22px;margin-bottom:8px;}
 .qc-title{font-family:'Syne',sans-serif;font-size:13.5px;font-weight:700;margin-bottom:4px;}
 .qc-desc{font-size:12px;color:var(--muted);line-height:1.5;}
-.chat-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:32px 0;}
+.chat-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:32px 0;scrollbar-width:none;-ms-overflow-style:none;}
+#chatContainer::-webkit-scrollbar{width:0;height:0;display:none;}
 
 
 .message-group{max-width:800px;margin:0 auto 28px;padding:0 24px;display:flex;gap:14px;animation:fadeUp .3s ease;}
@@ -1249,7 +1251,7 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 #chatEmptyState p{font-size:13px;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase;font-size:10px;font-weight:500;}
 #sec-chat{position:relative;}
 .chat-messages{position:relative;z-index:1;}
-#chatContainer:empty{pointer-events:none;}
+#chatContainer:not(:has(.message-group)){pointer-events:none;}
 .chat-item{margin:2px 8px;padding:8px 12px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;transition:background .2s,color .2s;display:flex;align-items:center;gap:6px;}
 .chat-item:hover{background:var(--surface2);color:var(--text);}
 .chat-item-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;}
@@ -2204,9 +2206,12 @@ to{opacity:0;transform:translateX(-40px);}}
             _ghosts.forEach(function(g){ if(g.parentNode) g.parentNode.removeChild(g); });
             // Trim any chat containers that have grown large
             var _cc = document.getElementById('chatContainer');
-            if(_cc && _cc.children.length > 80){
-              var _rem = _cc.children.length - 80;
-              for(var _i = 0; _i < _rem; _i++) if(_cc.firstChild) _cc.removeChild(_cc.firstChild);
+            if(_cc){
+              var _msgs = _cc.querySelectorAll('.message-group');
+              if(_msgs.length > 80){
+                var _rem = _msgs.length - 80;
+                for(var _i = 0; _i < _rem; _i++) if(_msgs[_i] && _msgs[_i].parentNode) _msgs[_i].parentNode.removeChild(_msgs[_i]);
+              }
             }
             // Trim room messages DOM
             var _rm = document.getElementById('roomMessages');
@@ -2355,7 +2360,7 @@ to{opacity:0;transform:translateX(-40px);}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
-<script>window._supabase=supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL');</script>
+<script>try{window._supabase=(typeof supabase!=='undefined')?supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL'):null;}catch(e){console.warn('Supabase init failed (CDN may be slow/blocked) — continuing without sync:',e);window._supabase=null;}</script>
 
 <script>
 // Instant avatar pre-load — runs before body paints, no flash
@@ -12443,6 +12448,12 @@ function toggleChatHistoryPanel(){
   var trigger = document.getElementById('chatHistoryTrigger');
   var panel = document.getElementById('chatHistoryPanel');
   if(!sidebar||!list) return;
+  var _cc = document.getElementById('chatContainer');
+  var _hasMsgs = !!(_cc && _cc.querySelectorAll('.message-group').length>0);
+  sidebar.classList.toggle('chp-heavy-glass', _hasMsgs);
+  sidebar.style.background = _hasMsgs ? 'rgba(0,0,0,0.97)' : '';
+  sidebar.style.backdropFilter = _hasMsgs ? 'blur(40px)' : '';
+  sidebar.style.webkitBackdropFilter = _hasMsgs ? 'blur(40px)' : '';
   var isOpen = sidebar.classList.contains('open');
   if(isOpen){ closeChatHistoryPanel(); return; }
   // Build list
@@ -12869,9 +12880,12 @@ async function sendMessage(){
     if(chatHistory.length>100) chatHistory=chatHistory.slice(chatHistory.length-100);
     // Trim rendered DOM messages to prevent memory bloat over long sessions
     var _cc=document.getElementById('chatContainer');
-    if(_cc&&_cc.children.length>60){
-      var _toRemove=_cc.children.length-60;
-      for(var _i=0;_i<_toRemove;_i++) if(_cc.firstChild) _cc.removeChild(_cc.firstChild);
+    if(_cc){
+      var _msgEls=_cc.querySelectorAll('.message-group');
+      if(_msgEls.length>60){
+        var _toRemove=_msgEls.length-60;
+        for(var _i=0;_i<_toRemove;_i++) if(_msgEls[_i] && _msgEls[_i].parentNode) _msgEls[_i].parentNode.removeChild(_msgEls[_i]);
+      }
     }
     // Persist final response and refresh sidebar list
     persistChats();
@@ -16052,7 +16066,7 @@ async function confirmWorldApproach(){
   function updateBeamsVisibility(){
     var container=document.getElementById('chatContainer');
     if(!container)return;
-    var hasMessages=container.children.length>0;
+    var hasMessages=container.querySelectorAll('.message-group').length>0;
     var wasHidden = emptyState && emptyState.classList.contains('hidden');
     wrap.classList.toggle('hidden',hasMessages);
     if(emptyState) emptyState.classList.toggle('hidden',hasMessages);
@@ -16060,6 +16074,15 @@ async function confirmWorldApproach(){
     if(wasHidden && !hasMessages) restartEmptyStateAnims();
     // Sync notes toggle visibility with empty state
     if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility();
+    // Mirror hasMessages onto the sidebar directly, since some mobile webviews don't
+    // support the :has() selector the CSS rule relies on for the heavy-glass state.
+    var _chpSb = document.getElementById('chpSidebar');
+    if(_chpSb){
+      _chpSb.classList.toggle('chp-heavy-glass', hasMessages);
+      _chpSb.style.background = hasMessages ? 'rgba(0,0,0,0.97)' : '';
+      _chpSb.style.backdropFilter = hasMessages ? 'blur(40px)' : '';
+      _chpSb.style.webkitBackdropFilter = hasMessages ? 'blur(40px)' : '';
+    }
   }
 
   // Observe chatContainer for new messages
@@ -25160,30 +25183,31 @@ function synBotRefreshQuick(){
   _synBotQuickPage = (_synBotQuickPage + 1) % globalSets.length;
 }
 
-var _synBotEnabled = true;
+var _synBotEnabled = (function(){ try{ var v = localStorage.getItem('synapses_synbot_enabled'); return v===null ? true : v==='1'; }catch(e){ return true; } })();
 var _iconON  = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#7c6af7"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>';
 var _iconOFF = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/><line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#555"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>';
-function toggleSynBot(){
-  _synBotEnabled = !_synBotEnabled;
+function _applySynBotVisualState(){
   var btn  = document.getElementById('synBotToggleBtn');
   var icon = document.getElementById('synBotToggleIcon');
-  // Only toggle icon appearance — bottom-right bot is unaffected
   if(_synBotEnabled){
     if(btn)  { btn.style.opacity='1'; btn.title='Hide nav tooltips'; }
     if(icon)   icon.innerHTML = _iconON;
-    // Hide any tooltip that was showing when we toggled off
-    // Bring the tiny flying robot back if it's allowed to show right now
     if(typeof window._tinyBotSync === 'function') window._tinyBotSync();
   } else {
     if(btn)  { btn.style.opacity='0.35'; btn.title='Show nav tooltips'; }
     if(icon)   icon.innerHTML = _iconOFF;
-    // Hide the tooltip if it's showing from a nav hover
     var tooltip = document.getElementById('robotTooltip');
     if(tooltip){ tooltip.classList.add('rt-hidden'); tooltip.classList.remove('rt-visible'); }
-    // Immediately stop the tiny flying jet-boot robot too
     var tinyCanvas = document.getElementById('tinyBotCanvas');
     if(tinyCanvas){ tinyCanvas.style.opacity='0'; if(tinyCanvas._pause) tinyCanvas._pause(); }
   }
+}
+document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
+if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
+function toggleSynBot(){
+  _synBotEnabled = !_synBotEnabled;
+  try{ localStorage.setItem('synapses_synbot_enabled', _synBotEnabled ? '1' : '0'); }catch(e){}
+  _applySynBotVisualState();
 }
 
 function synBotReply(msg){
@@ -25855,7 +25879,7 @@ function _buildVoicePicker() {
   // ── Inject styles ──────────────────────────────────────────────────────────
   var style = document.createElement('style');
   style.textContent = [
-    '#dgVoicePanel{position:fixed;top:114px;right:12px;z-index:9999;display:none;flex-direction:column;gap:0;width:210px;',
+    '#dgVoicePanel{position:absolute;top:44px;right:8px;z-index:9999;display:none;flex-direction:column;gap:0;width:210px;',
       'background:rgba(10,11,22,0.97);border:1px solid rgba(79,86,200,0.28);border-radius:14px;',
       'box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(79,86,200,0.07);',
       'backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);overflow:hidden;}',
@@ -25890,7 +25914,7 @@ function _buildVoicePicker() {
     '#dgVoicePanel .vp-item .vp-desc{font-size:10.5px;color:rgba(140,145,200,0.35);overflow:hidden;text-overflow:ellipsis;}',
 
     // Toggle button above the voice btn
-    '#dgVoiceToggle{position:fixed;top:82px;right:14px;z-index:9999;display:none;',
+    '#dgVoiceToggle{position:absolute;top:8px;right:10px;z-index:9999;display:none;',
       'align-items:center;gap:4px;padding:3px 8px 3px 6px;border-radius:99px;',
       'background:rgba(79,86,200,0.13);border:1px solid rgba(99,102,195,0.28);',
       'color:rgba(160,165,220,0.75);font-size:11px;font-family:\'DM Sans\',sans-serif;',
@@ -25909,7 +25933,8 @@ function _buildVoicePicker() {
       '<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>' +
     '</svg>' +
     '<span id="dgVoiceToggleLabel">Voice</span>';
-  document.body.appendChild(toggle);
+  var _dgHost = document.getElementById('chatContainer') || document.body;
+  _dgHost.appendChild(toggle);
 
   // ── Panel ──────────────────────────────────────────────────────────────────
   var panel = document.createElement('div');
@@ -25925,7 +25950,7 @@ function _buildVoicePicker() {
       '<div class="vp-tab" data-provider="hume">Hume</div>' +
     '</div>' +
     '<div class="vp-list" id="dgVoiceList"></div>';
-  document.body.appendChild(panel);
+  _dgHost.appendChild(panel);
 
   // ── Populate list — re-rendered whenever the provider tab changes ─────────
   var list = document.getElementById('dgVoiceList');
@@ -26017,7 +26042,13 @@ function _buildVoicePicker() {
   var cc = document.getElementById('chatContainer');
   if (cc) {
     new MutationObserver(function() {
-      var show = cc.children.length > 0;
+      // A chat switch (openSavedChat/openRecentChat/blankNewChat) wipes
+      // chatContainer's innerHTML, which detaches the toggle/panel since
+      // they now live inside it (so they scroll away with the messages
+      // instead of floating fixed on screen). Re-attach if that happened.
+      if (!cc.contains(toggle)) cc.appendChild(toggle);
+      if (!cc.contains(panel)) cc.appendChild(panel);
+      var show = cc.querySelectorAll('.message-group').length > 0;
       toggle.style.display = show ? 'flex' : 'none';
       if (!show) { panel.style.display = 'none'; _panelOpen = false; }
     }).observe(cc, { childList: true, subtree: false });
@@ -26028,7 +26059,11 @@ function _buildVoicePicker() {
   window._dgPickerSetView = function(id) {
     var onChat = id === 'sec-chat';
     var cc2 = document.getElementById('chatContainer');
-    var hasChat = cc2 && cc2.children.length > 0;
+    if (cc2) {
+      if (!cc2.contains(toggle)) cc2.appendChild(toggle);
+      if (!cc2.contains(panel)) cc2.appendChild(panel);
+    }
+    var hasChat = cc2 && cc2.querySelectorAll('.message-group').length > 0;
     toggle.style.display = (onChat && hasChat) ? 'flex' : 'none';
     if (!onChat) { panel.style.display = 'none'; _panelOpen = false; }
   };
