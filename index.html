@@ -21467,6 +21467,31 @@ function _tnvClearGlideTimer(){
   if(_tnvGlideTimer){ clearTimeout(_tnvGlideTimer); _tnvGlideTimer = null; }
 }
 
+// The status toast (#tnvToast) anchors itself to the mic button's position
+// at the moment it's shown, and never re-checks after that. That's fine
+// while the button is stationary, but the button moves — container fade
+// (±16px), glide-to-center, glide-home, fade-out-centered — and if the
+// toast is on screen during any of that, it's left pointing at wherever the
+// button used to be. This polls the button's live position every frame for
+// `ms` and keeps the toast locked to it, matching the exact anchor math
+// toast() itself uses, so it never gets orphaned mid-move.
+function _tnvTrackToastDuring(ms){
+  var toastEl = document.getElementById('tnvToast');
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!toastEl || !btn) return;
+  var start = (window.performance && performance.now) ? performance.now() : Date.now();
+  function step(now){
+    if(!toastEl.classList.contains('show')) return; // dismissed mid-move — nothing to follow
+    var r = btn.getBoundingClientRect();
+    toastEl.style.top = (r.bottom + 12) + 'px';
+    toastEl.style.left = (r.left + r.width / 2) + 'px';
+    toastEl.style.transform = 'translateX(-50%)';
+    toastEl.style.bottom = 'auto';
+    if(now - start < ms) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 function _tnvGlideToCenter(){
   var btn = document.getElementById('topNavVoiceBtn');
   var bar = document.querySelector('.top-bar');
@@ -21490,6 +21515,7 @@ function _tnvGlideToCenter(){
   btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
+  _tnvTrackToastDuring(500);
 }
 
 function _tnvGlideHome(){
@@ -21512,34 +21538,12 @@ function _tnvGlideHome(){
   btn.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1)';
   btn.style.transform = 'translate(0,0)';
   _tnvCentered = false;
+  _tnvTrackToastDuring(450);
   btn.addEventListener('transitionend', function _cleanup(e){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     btn.style.transition = '';
     btn.style.transform = '';
   }, {once:true});
-}
-
-// Used when voice turns off while the button is already centered and the top
-// bar is still hidden: just fade it out in place, then silently swap it back
-// into .top-actions (already opacity:0 there, so the swap is invisible) —
-// no need to travel back across the screen just to disappear.
-function _tnvFadeOutCentered(){
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn || !_tnvCentered) return;
-  btn.style.transition = 'opacity .25s ease, transform .25s ease';
-  btn.style.opacity = '0';
-  btn.style.transform = 'translate(-50%,-50%) scale(0.6)';
-  setTimeout(function(){
-    btn.classList.remove('tnv-centered');
-    btn.style.transition = '';
-    btn.style.transform = '';
-    btn.style.opacity = '';
-    if(_tnvHomeParent){
-      if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === _tnvHomeParent) _tnvHomeParent.insertBefore(btn, _tnvHomeNextSibling);
-      else _tnvHomeParent.appendChild(btn);
-    }
-    _tnvCentered = false;
-  }, 260);
 }
 
 function toggleTopBar(){
@@ -21557,9 +21561,12 @@ function toggleTopBar(){
     if(htb) htb.style.display='none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='none';
     // Everything (mic included) fades out together right now, in sync, via
-    // the plain .top-actions container rule. Only if speech-to-speech is
-    // live do we then, after a short pause, pull the mic out and glide it
-    // to center — a deliberate second beat, not part of the initial hide.
+    // the plain .top-actions container rule — which shifts the mic by
+    // ~16px if it's still an in-flow child, so keep the toast glued to it
+    // through that motion too. Only if speech-to-speech is live do we then,
+    // after a short pause, pull the mic out and glide it to center — a
+    // deliberate second beat, not part of the initial hide.
+    _tnvTrackToastDuring(300);
     if(window._topNavVoiceActive){
       _tnvGlideTimer = setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
     }
@@ -21571,6 +21578,7 @@ function toggleTopBar(){
     var onHub=document.getElementById('sec-hub')&&document.getElementById('sec-hub').classList.contains('active');
     if(htb) htb.style.display=onHub?'flex':'none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='';
+    _tnvTrackToastDuring(300);
     if(_tnvCentered) _tnvGlideHome();
   }
 }
@@ -26050,6 +26058,17 @@ function _setTtsProvider(p) {
 var _ws = null;
 var _wsReady = false;
 var _wsResolvers = []; // resolvers waiting for audio chunks from current request
+// Set right before any deliberate _wsClose() so the onclose handler below can
+// tell "we closed this on purpose" apart from "the connection actually died".
+// Necessary because ws.close() called with no arguments is NOT reliably
+// reported back as close code 1000 across browsers — Chromium and others
+// frequently report 1005 ("no status received") for a plain no-arg close,
+// so code-sniffing alone (e.g. `e.code !== 1000`) misclassifies completely
+// normal closes (switching voices, switching provider, stopping TTS) as
+// failures. That was silently rotating the Hume API key on ordinary use,
+// which is why Hume would eventually land on a dead/wrong key and stop
+// working even though nothing was actually broken.
+var _wsIntentionalClose = false;
 
 // ── Web Audio state ────────────────────────────────────────────────────────────
 var _actx = null;
@@ -26847,17 +26866,23 @@ function _wsOpen() {
     // onclose for a failed connection, so rotating in both handlers was
     // cancelling itself out (rotate forward here, rotate back there).
     if (_ttsProvider === 'hume') console.error('[Hume TTS] WebSocket error', e);
-    _wsReady = false; _ws = null; setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    _wsReady = false; _ws = null;
+    if (!_wsIntentionalClose) setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
   _ws.onclose = function (e) {
-    // Code 1000 = normal/clean close, leave the key alone. Anything else
-    // (auth failure, out of credits, etc.) rotates to the next key before
-    // the automatic reconnect below tries again.
+    // Was this us calling _wsClose() on purpose (switching voice/provider,
+    // stopping TTS, navigating away)? If so, don't rotate keys and don't
+    // bother auto-reconnecting — there's nothing to heal from and no reason
+    // to open a fresh socket nobody asked for. Only treat it as a real
+    // failure (rotate + reconnect) when we did NOT initiate the close.
+    var wasIntentional = _wsIntentionalClose;
+    _wsIntentionalClose = false;
     if (_ttsProvider === 'hume') {
-      console.warn('[Hume TTS] WebSocket closed — code:', e.code, 'reason:', e.reason || '(none given)');
-      if (e.code !== 1000) _humeRotateKey();
+      console.warn('[Hume TTS] WebSocket closed — code:', e.code, 'reason:', e.reason || '(none given)', wasIntentional ? '(intentional close, not rotating)' : '(unexpected close)');
+      if (!wasIntentional) _humeRotateKey();
     }
-    _wsReady = false; _ws = null; setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    _wsReady = false; _ws = null;
+    if (!wasIntentional) setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
 }
 
@@ -26881,7 +26906,7 @@ function _downsample48to24(arrayBuf) {
   } catch (e) { return arrayBuf; }
 }
 
-function _wsClose() { if (_ws) { try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
+function _wsClose() { if (_ws) { _wsIntentionalClose = true; try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
 
 
 // ── Web Audio: schedule a raw PCM chunk ───────────────────────────────────────
@@ -27425,19 +27450,19 @@ function speakVoiceReply(text) {
 
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
   // and — if the top bar icons are already collapsed when this changes —
-  // kicks off the same delayed glide-to-center / fade-out-in-place the mic
-  // button uses in toggleTopBar(), so turning speech-to-speech on/off while
-  // already collapsed behaves the same as toggling the bar while it's on.
+  // kicks off the same delayed glide-to-center the mic button uses in
+  // toggleTopBar(). Note: turning speech-to-speech OFF while the mic is
+  // already centered does NOT send it away — it deliberately stays put in
+  // the middle of the header, visible and clickable, so there's still a way
+  // to get back into speech-to-speech even with every other icon collapsed.
+  // It only leaves that spot when the top bar itself is shown again (see the
+  // _tnvGlideHome() call in toggleTopBar's "show" branch).
   function _setTopNavVoiceActive(v) {
     window._topNavVoiceActive = v;
     document.body.classList.toggle('voice-live', !!v);
-    if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
+    if(v && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
       _tnvClearGlideTimer();
-      if(v){
-        _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
-      } else if(_tnvCentered){
-        _tnvFadeOutCentered();
-      }
+      _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
     }
   }
 
