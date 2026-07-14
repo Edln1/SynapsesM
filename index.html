@@ -862,6 +862,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 
 
 #chatHistoryPanel{position:absolute;top:16px;left:16px;z-index:51;pointer-events:auto;transition:opacity .3s;}
+/* User toggle (SYN-BOT header hamburger icon) — wins over every state-based
+   opacity rule below, since it's a deliberate on/off, not a state transition. */
+body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #chatEmptyState:not(.hidden) ~ * #chatHistoryPanel, #chatEmptyState:not(.hidden) + #chatHistoryPanel{opacity:0;pointer-events:none;}
 #chpSidebar.open ~ #chatHistoryPanel, #sec-chat:has(#chpSidebar.open) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
 /* Show trigger on empty state as hamburger */
@@ -23295,7 +23298,10 @@ function _neuInjectDownloadInterceptor(frame){
   <div style="padding:12px 16px;border-bottom:1px solid rgba(124,106,247,0.2);display:flex;align-items:center;gap:10px;background:rgba(124,106,247,0.06);">
     <div style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px #00d9a8;flex-shrink:0;"></div>
     <div style="font-family:Syne,sans-serif;font-size:11px;font-weight:700;color:#f0f0ff;letter-spacing:.1em;">SYN-BOT // ONLINE</div>
-    <button onclick="synBotOpenAccount()" title="Account" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+    <button id="synBotHistoryToggle" onclick="toggleChatHistoryVisibility()" title="Hide past-chats button" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button onclick="synBotOpenAccount()" title="Account" style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
     <button onclick="var _t=document.getElementById('robotTooltip');if(_t){_t.style.transition='';_t.style.opacity='';_t.style.visibility='';}document.getElementById('synBotChat').style.display='none';" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;line-height:1;padding:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">×</button>
@@ -25260,6 +25266,25 @@ function _applySynBotVisualState(){
 }
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
+
+// ── Past-chats button visibility toggle (SYN-BOT header hamburger icon) ────
+function _applyChatHistoryVisibility(){
+  var hidden = false;
+  try { hidden = localStorage.getItem('synapses_hideChatHistoryBtn') === '1'; } catch(e){}
+  document.body.classList.toggle('hide-chat-history', hidden);
+  var btn = document.getElementById('synBotHistoryToggle');
+  if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+}
+function toggleChatHistoryVisibility(){
+  var hidden = !document.body.classList.contains('hide-chat-history');
+  document.body.classList.toggle('hide-chat-history', hidden);
+  try { localStorage.setItem('synapses_hideChatHistoryBtn', hidden ? '1' : '0'); } catch(e){}
+  var btn = document.getElementById('synBotHistoryToggle');
+  if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+}
+document.addEventListener('DOMContentLoaded', _applyChatHistoryVisibility);
+if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applyChatHistoryVisibility,0);
+
 function synBotOpenAccount(){
   // Deliberate bypass of the disabled goProfile() (which is intentionally no-op'd
   // elsewhere in the app). This is the one entry point that still reaches account
@@ -27298,6 +27323,16 @@ function speakVoiceReply(text) {
     document.body.classList.toggle('voice-live', !!v);
   }
 
+  // True while Ava's realistic avatar is connected and on screen. Used to
+  // suppress cosmetic status toasts (reply text, "one moment...", empty-reply,
+  // LLM error) that would otherwise clutter the avatar view — her face and
+  // lip-sync already communicate that she's responding. Mic-permission /
+  // browser-support errors are NOT gated by this, since those need to reach
+  // the user regardless of avatar state.
+  function _avatarLive() {
+    return typeof _avaAvatarConnected !== 'undefined' && !!_avaAvatarConnected;
+  }
+
   // ── Watchdog: auto-reset if _busy gets stuck for >8s with no audio ──────
   setInterval(function() {
     if (!_on || !_busy) { _busySince = 0; return; }
@@ -27930,18 +27965,24 @@ function speakVoiceReply(text) {
     _busy = true;
     btnState('speak');
     if(window.avaTvSetState) window.avaTvSetState('speak');
-    toast(text);
-    // Show live search indicator if this reply used Tavily
-    if (window._voiceUsedSearch) {
+    if (!_avatarLive()) {
+      toast(text);
+      // Show live search indicator if this reply used Tavily
+      if (window._voiceUsedSearch) {
+        window._voiceUsedSearch = false;
+        setTimeout(function() {
+          if (_toast) {
+            var badge = document.createElement('div');
+            badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
+            badge.textContent = '🌐 live search';
+            _toast.querySelector('.toast-inner').appendChild(badge);
+          }
+        }, 50);
+      }
+    } else {
+      // Avatar's on screen — no toast, but still clear the flag so it
+      // doesn't carry over and wrongly badge a later non-avatar reply.
       window._voiceUsedSearch = false;
-      setTimeout(function() {
-        if (_toast) {
-          var badge = document.createElement('div');
-          badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
-          badge.textContent = '🌐 live search';
-          _toast.querySelector('.toast-inner').appendChild(badge);
-        }
-      }, 50);
     }
     var clean = text
       .replace(/\*[^*]*\*/g, '')  // remove *actions* and *narration*
@@ -28349,7 +28390,7 @@ function speakVoiceReply(text) {
         return ctrl.signal;
       })()
     }).then(function(r) {
-      if (r.status === 429) { toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
+      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -28368,7 +28409,7 @@ function speakVoiceReply(text) {
               try { _mem0Save(text, reply); } catch(e) {}
               // avaBrain.afterReply deactivated
               speak(reply);
-            } else { console.log('[Voice] Empty reply from LLM'); toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
+            } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
             return;
           }
           buf += decoder.decode(res.value, { stream: true });
@@ -28381,10 +28422,10 @@ function speakVoiceReply(text) {
             try { var j = JSON.parse(data); var d = j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content; if (d) { if (!full) console.log('[Voice] First token: ' + (Date.now()-_t0) + 'ms'); full += d; window._avaLastReply = full.trim(); } } catch(e) {}
           });
           readChunk();
-        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
       }
       readChunk();
-    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
     }); // end _voiceSearchPromise.then
   }
 
