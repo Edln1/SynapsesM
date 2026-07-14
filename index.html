@@ -1699,12 +1699,15 @@ to{opacity:0;transform:translateX(-40px);}}
 
 /* top-bar-toggle replaced by #winStrip */
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
-.top-actions>*{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
-.top-bar.hidden .top-actions>*{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
-/* While speech-to-speech (top-nav voice) is active, keep its button visible
-   and clickable even when the top bar icons are collapsed — everything else
-   in .top-actions still hides normally. */
-body.voice-live .top-bar.hidden .top-actions>#topNavVoiceBtn{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;}
+.top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
+/* Voice button lives OUTSIDE .top-actions now (see markup) specifically so it
+   can have its own independent show/hide instead of fighting the group's
+   parent-level opacity — that's what keeps the group's fade a single smooth
+   unit like before, instead of janky per-icon transitions. */
+#topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.top-bar.hidden #topNavVoiceBtn{opacity:0;transform:translateY(-16px);pointer-events:none;}
+body.voice-live .top-bar.hidden #topNavVoiceBtn{opacity:1;transform:translateY(0);pointer-events:auto;}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -2366,7 +2369,12 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
-#chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
+#chatFlowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
+/* flowCanvas (the original star/particle background) is handled separately
+   below — hidden by default, shown only when the day/night toggle is on the
+   sun (easyview) side. */
+#flowCanvas{display:none;}
+html[data-theme="easyview"] #flowCanvas{display:block!important;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -4530,34 +4538,36 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="hub-tab-btn" id="hub-tab-coach" onclick="switchHubTab('coach')" title="Advisor" style="padding:8px 12px;font-size:14px;">🎯</button>
         <div style="flex:1;"></div>
     </div>
+    <!-- Global voice activity button — lives OUTSIDE .top-actions on purpose,
+         see CSS notes near #topNavVoiceBtn, so it can hide/show independently
+         without breaking the rest of the group's single smooth fade. -->
+    <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;color:rgba(160,165,220,0.5);margin-left:6px;margin-right:2px;">
+      <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+      <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
+        <defs>
+          <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
+          <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
+          <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
+          <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
+          <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
+          <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
+          <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
+          <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
+        </g>
+      </svg>
+    </button>
     <div class="top-actions" style="padding-right:148px;">
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
-      <!-- Global voice activity button -->
-      <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;transition:border-color .25s,background .25s,box-shadow .25s;color:rgba(160,165,220,0.5);margin-left:6px;margin-right:2px;">
-        <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-          <line x1="8" y1="23" x2="16" y2="23"/>
-        </svg>
-        <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
-          <defs>
-            <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-          <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
-            <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
-            <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
-            <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
-            <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
-            <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
-            <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
-            <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
-          </g>
-        </svg>
-      </button>
       <!-- Robot hover toggle -->
       <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
         <svg id="synBotToggleIcon" width="15" height="15" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16209,7 +16219,7 @@ async function confirmWorldApproach(){
 // Canvas
 
 /* SYNAPSES HOME ANIMATION — DO NOT CHANGE: indigo/purple floating particles with connecting lines on flowCanvas. Restore from this code if lost. */
-(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});init();draw();})();
+(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});init();draw();})();
 
 /* CHAT PAGE PARTICLES — same design as home page */
 (function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
@@ -27190,10 +27200,18 @@ function _scheduleChunk(arrayBuf) {
     // can't see. Only applied once per utterance — _playbackTime already
     // carries the offset forward for every chunk after the first, so adding
     // it again here would compound the delay.
+    // NOTE: this used to add a delay here to sync audio to the avatar's video
+    // render lag, but referenced two variables (_avaMeasuredDelaySec,
+    // _AVA_RENDER_FUDGE_SEC) that were never actually declared anywhere in
+    // this file — every time the avatar was connected, this line threw a
+    // ReferenceError on the first chunk of every utterance, silently caught
+    // by the try/catch around this whole function, which meant that chunk's
+    // src.start()/onended never ran at all. That's what was making replies
+    // feel like they took forever whenever your own TTS was combined with
+    // the avatar — audio scheduling was quietly failing every time, not the
+    // reply itself being slow. Zero delay here until a real sync mechanism
+    // is built.
     var avaDelay = 0;
-    if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected && _playbackTime <= _actx.currentTime) {
-      avaDelay = Math.max(0, _avaMeasuredDelaySec + _AVA_RENDER_FUDGE_SEC);
-    }
 
     var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay;
     src.start(startAt);
@@ -28136,12 +28154,16 @@ function speakVoiceReply(text) {
     _busy = true;
     btnState('speak');
     if(window.avaTvSetState) window.avaTvSetState('speak');
-    toast(text);
+    // Skip the reply-text toast while the avatar video is up — it renders
+    // right over her, and her face + lip-sync already show she's replying,
+    // so the toast is pure screen-blocking clutter in that case.
+    var _avatarUp = !!(typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected);
+    if (!_avatarUp) toast(text);
     // Show live search indicator if this reply used Tavily
     if (window._voiceUsedSearch) {
       window._voiceUsedSearch = false;
       setTimeout(function() {
-        if (_toast) {
+        if (_toast && !_avatarUp) {
           var badge = document.createElement('div');
           badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
           badge.textContent = '🌐 live search';
@@ -28741,6 +28763,13 @@ function speakVoiceReply(text) {
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
     toastHide();
+    // Clear the stored last-message text too, not just hide the toast — the
+    // hover-to-peek feature on the mic button re-shows whatever's in here
+    // any time it's hovered, with no check that this session's conversation
+    // is the one that produced it. Without this, deactivating then hovering
+    // right after reactivating can pop up a message from BEFORE you turned
+    // it off, looking like a random stale toast.
+    _toastFull = '';
     if (typeof _ttsStopAll === 'function') _ttsStopAll();
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
