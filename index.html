@@ -1699,8 +1699,13 @@ to{opacity:0;transform:translateX(-40px);}}
 
 /* top-bar-toggle replaced by #winStrip */
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
-.top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
-.top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}body.topbar-hidden .hub-panel.active{padding-top:12px;}
+.top-actions>*{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.top-bar.hidden .top-actions>*{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
+/* While speech-to-speech (top-nav voice) is active, keep its button visible
+   and clickable even when the top bar icons are collapsed — everything else
+   in .top-actions still hides normally. */
+body.voice-live .top-bar.hidden .top-actions>#topNavVoiceBtn{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;}
+body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
 
@@ -26063,9 +26068,10 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  '5lBVRGIEfjYm5Ogzz9mV7oLSZGmiULkGMSCGjLpcC2MNxstp', // key 1 (new, forefront)
-  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 2 (original)
-  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 3
+  'Gno4HeB41aMg2PB87xI0oLz6n2ZGaydoX5PKhcZOUhwxG6OM', // key 1 (newest, forefront)
+  '5lBVRGIEfjYm5Ogzz9mV7oLSZGmiULkGMSCGjLpcC2MNxstp', // key 2
+  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 3 (original)
+  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 4
 ];
 var _humeKeyIdx = 0; // forced back to 0 so the new forefront key is tried first, even if an old rotation was saved
 function _humeGetKey() { return _humeKeys[_humeKeyIdx] || ''; }
@@ -26102,6 +26108,9 @@ function _setTtsProvider(p) {
 var _ws = null;
 var _wsReady = false;
 var _wsResolvers = []; // resolvers waiting for audio chunks from current request
+var _wsIntentionalClose = false; // set right before we call _ws.close() ourselves, so
+                                  // onerror/onclose can tell "we did this" apart from
+                                  // a real network drop and skip key rotation + auto-reconnect
 
 // ── Web Audio state ────────────────────────────────────────────────────────────
 var _actx = null;
@@ -26787,6 +26796,7 @@ function _ttsStopAll() {
 // ── WebSocket management ───────────────────────────────────────────────────────
 function _wsOpen() {
   if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
+  _wsIntentionalClose = false; // safety net: never let a stale flag suppress a future real close
   try {
     if (_ttsProvider === 'hume') {
       // Hume Octave streaming WS. Using no_binary=true so ALL audio arrives as
@@ -26899,9 +26909,20 @@ function _wsOpen() {
     // onclose for a failed connection, so rotating in both handlers was
     // cancelling itself out (rotate forward here, rotate back there).
     if (_ttsProvider === 'hume') console.error('[Hume TTS] WebSocket error', e);
-    _wsReady = false; _ws = null; setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    _wsReady = false; _ws = null;
+    if (_wsIntentionalClose) return; // we closed this on purpose, don't reconnect it
+    setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
   _ws.onclose = function (e) {
+    // If WE called _wsClose(), this close is expected — skip key rotation
+    // AND skip the auto-reconnect below entirely, then clear the flag so it
+    // doesn't leak into the next, unrelated close event.
+    if (_wsIntentionalClose) {
+      if (_ttsProvider === 'hume') console.log('[Hume TTS] WebSocket closed intentionally — code:', e.code);
+      _wsIntentionalClose = false;
+      _wsReady = false; _ws = null;
+      return;
+    }
     // Code 1000 = normal/clean close, leave the key alone. Anything else
     // (auth failure, out of credits, etc.) rotates to the next key before
     // the automatic reconnect below tries again.
@@ -26933,7 +26954,7 @@ function _downsample48to24(arrayBuf) {
   } catch (e) { return arrayBuf; }
 }
 
-function _wsClose() { if (_ws) { try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
+function _wsClose() { if (_ws) { _wsIntentionalClose = true; try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
 
 
 // ── Web Audio: schedule a raw PCM chunk ───────────────────────────────────────
@@ -27474,6 +27495,14 @@ function speakVoiceReply(text) {
   var _on = false;
   var _busy = false;
   var _busySince = 0;
+
+  // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive.
+  // CSS uses this class to exempt the voice button from being hidden when
+  // the top bar icons are collapsed (see .top-bar.hidden.voice-live rule).
+  function _setTopNavVoiceActive(v) {
+    window._topNavVoiceActive = v;
+    document.body.classList.toggle('voice-live', !!v);
+  }
 
   // ── Watchdog: auto-reset if _busy gets stuck for >8s with no audio ──────
   setInterval(function() {
@@ -28694,7 +28723,7 @@ function speakVoiceReply(text) {
 
   function stopAll() {
     _on = false;
-    window._topNavVoiceActive = false;
+    _setTopNavVoiceActive(false);
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
@@ -28716,9 +28745,72 @@ function speakVoiceReply(text) {
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
+    _stopBgAudio(true);
+  }
+  window.addEventListener('pagehide', function(){ try { stopAll(); } catch(e){} });
+
+  // ── Background Audio (Median): keep listening while the app is minimized ──
+  // The live getUserMedia()/MediaRecorder pipeline above gets suspended by the
+  // OS the instant the app backgrounds — that's true even inside Median's
+  // WebView. Median's separate Background Audio plugin runs a native mic
+  // session instead, but it's a single continuous recording with an
+  // on-device transcript delivered only when you stop it — there's no live
+  // streaming or mid-session "user paused" signal. So this works as
+  // "voicemail mode": while minimized we record + transcribe everything,
+  // then feed the whole transcript into ask() the moment the app comes back
+  // to the foreground.
+  var _bgAudioActive = false;  // true while a Median background session is open
+  var _wasOnBeforeBG = false;  // remembers voice mode was on when we backgrounded
+
+  function _hasBgAudio() {
+    return !!(window.median && window.median.backgroundAudio && window.median.backgroundAudio.startRecording);
   }
 
-  window._topNavVoiceActive = false;
+  function _startBgAudio() {
+    if (!_hasBgAudio() || _bgAudioActive) return;
+    // Background Audio owns its own native mic session and can't share the
+    // mic with a live getUserMedia() stream — release ours first.
+    if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
+    if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
+    _recorder = null;
+    if (_stream) { try { _stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _stream = null; }
+    _busy = false; _busySince = 0;
+
+    median.backgroundAudio.checkPermission().then(function(p) {
+      return p.granted ? p : median.backgroundAudio.requestPermission();
+    }).then(function(p) {
+      if (!p.granted) { console.warn('[BG Voice] mic permission not granted'); return null; }
+      return median.backgroundAudio.startRecording({ format: 'm4a', enableTranscription: true, sttLanguage: 'en-US' });
+    }).then(function(result) {
+      if (result && result.success) { _bgAudioActive = true; console.log('[BG Voice] background recording started'); }
+    }).catch(function(e) { console.error('[BG Voice] start failed', e); });
+  }
+
+  function _stopBgAudio(discard) {
+    if (!_hasBgAudio() || !_bgAudioActive) return;
+    _bgAudioActive = false;
+    median.backgroundAudio.stopRecording().then(function(result) {
+      var text = result && result.transcript ? result.transcript.trim() : '';
+      console.log('[BG Voice] session ended, transcript:', text || '(empty)');
+      if (discard) return; // app-level stopAll() — don't resume or reply
+      if (text) { ask(text); } else if (_on) { record(); }
+    }).catch(function(e) {
+      console.error('[BG Voice] stop failed', e);
+      if (!discard && _on) record();
+    });
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (!_hasBgAudio()) return; // outside the Median app — existing tab-hidden handling above still applies
+    if (document.visibilityState === 'hidden') {
+      if (_on && !_bgAudioActive) { _wasOnBeforeBG = true; _startBgAudio(); }
+    } else if (document.visibilityState === 'visible') {
+      if (_wasOnBeforeBG) { _wasOnBeforeBG = false; _stopBgAudio(false); }
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────
+
+  _setTopNavVoiceActive(false);
   window._openTranscript = function() {
     var existing = document.getElementById('_cosmicArchiveOverlay');
     if (existing) { existing.remove(); return; }
@@ -28814,7 +28906,7 @@ function speakVoiceReply(text) {
   window._clearCompanionMemory = function() { localStorage.removeItem(_memKey); _history = []; };
   window.toggleTopNavVoice = function() {
     _on = !_on;
-    window._topNavVoiceActive = _on;
+    _setTopNavVoiceActive(_on);
     if (_on) {
       // Silently wake the Render server so first search isn't cold
       fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
@@ -28839,7 +28931,7 @@ function speakVoiceReply(text) {
         // makes this look like an instant "denied" with no real prompt.
         toast(location.protocol === 'https:' ? 'Mic not supported in this browser' : 'Mic needs HTTPS — open this page with https:// to use voice');
         _on = false;
-        window._topNavVoiceActive = false;
+        _setTopNavVoiceActive(false);
       } else {
         // Median's wrapped WebView (no browser chrome) can silently reject a
         // plain getUserMedia() call unless mic access is first granted via
@@ -28898,7 +28990,7 @@ function speakVoiceReply(text) {
             }
             toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ' retries:' + _micRetries + ']' : ''));
             _on = false;
-            window._topNavVoiceActive = false;
+            _setTopNavVoiceActive(false);
           });
         }
         _requestMic();
