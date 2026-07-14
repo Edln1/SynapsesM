@@ -28745,70 +28745,8 @@ function speakVoiceReply(text) {
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
-    _stopBgAudio(true);
   }
   window.addEventListener('pagehide', function(){ try { stopAll(); } catch(e){} });
-
-  // ── Background Audio (Median): keep listening while the app is minimized ──
-  // The live getUserMedia()/MediaRecorder pipeline above gets suspended by the
-  // OS the instant the app backgrounds — that's true even inside Median's
-  // WebView. Median's separate Background Audio plugin runs a native mic
-  // session instead, but it's a single continuous recording with an
-  // on-device transcript delivered only when you stop it — there's no live
-  // streaming or mid-session "user paused" signal. So this works as
-  // "voicemail mode": while minimized we record + transcribe everything,
-  // then feed the whole transcript into ask() the moment the app comes back
-  // to the foreground.
-  var _bgAudioActive = false;  // true while a Median background session is open
-  var _wasOnBeforeBG = false;  // remembers voice mode was on when we backgrounded
-
-  function _hasBgAudio() {
-    return !!(window.median && window.median.backgroundAudio && window.median.backgroundAudio.startRecording);
-  }
-
-  function _startBgAudio() {
-    if (!_hasBgAudio() || _bgAudioActive) return;
-    // Background Audio owns its own native mic session and can't share the
-    // mic with a live getUserMedia() stream — release ours first.
-    if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
-    if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
-    _recorder = null;
-    if (_stream) { try { _stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} _stream = null; }
-    _busy = false; _busySince = 0;
-
-    median.backgroundAudio.checkPermission().then(function(p) {
-      return p.granted ? p : median.backgroundAudio.requestPermission();
-    }).then(function(p) {
-      if (!p.granted) { console.warn('[BG Voice] mic permission not granted'); return null; }
-      return median.backgroundAudio.startRecording({ format: 'm4a', enableTranscription: true, sttLanguage: 'en-US' });
-    }).then(function(result) {
-      if (result && result.success) { _bgAudioActive = true; console.log('[BG Voice] background recording started'); }
-    }).catch(function(e) { console.error('[BG Voice] start failed', e); });
-  }
-
-  function _stopBgAudio(discard) {
-    if (!_hasBgAudio() || !_bgAudioActive) return;
-    _bgAudioActive = false;
-    median.backgroundAudio.stopRecording().then(function(result) {
-      var text = result && result.transcript ? result.transcript.trim() : '';
-      console.log('[BG Voice] session ended, transcript:', text || '(empty)');
-      if (discard) return; // app-level stopAll() — don't resume or reply
-      if (text) { ask(text); } else if (_on) { record(); }
-    }).catch(function(e) {
-      console.error('[BG Voice] stop failed', e);
-      if (!discard && _on) record();
-    });
-  }
-
-  document.addEventListener('visibilitychange', function() {
-    if (!_hasBgAudio()) return; // outside the Median app — existing tab-hidden handling above still applies
-    if (document.visibilityState === 'hidden') {
-      if (_on && !_bgAudioActive) { _wasOnBeforeBG = true; _startBgAudio(); }
-    } else if (document.visibilityState === 'visible') {
-      if (_wasOnBeforeBG) { _wasOnBeforeBG = false; _stopBgAudio(false); }
-    }
-  });
-  // ────────────────────────────────────────────────────────────────────────
 
   _setTopNavVoiceActive(false);
   window._openTranscript = function() {
