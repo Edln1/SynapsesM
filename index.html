@@ -1698,29 +1698,22 @@ to{opacity:0;transform:translateX(-40px);}}
 
 /* top-bar-toggle replaced by #winStrip */
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
-/* Per-child (not container-level) opacity: a parent's opacity:0 can never be
-   overridden by a child's own opacity, so hiding .top-actions as one block
-   would make the voice-live exception below impossible while #topNavVoiceBtn
-   sits at its original position as .top-actions' first child. */
-.top-actions>*{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
-.top-bar.hidden .top-actions>*{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
-/* Exception: while speech-to-speech is live and the top bar icons are
-   collapsed, don't just leave the mic sitting alone at its normal spot in
-   .top-actions with a bunch of invisible-but-still-occupying-space siblings
-   around it — float it out to the center of the top bar instead, as its own
-   deliberate state, with a little pop-in flourish. Reverts to its normal
-   in-flow position the moment either condition stops being true. */
-@keyframes tnvPopCenter{from{transform:translate(-50%,-50%) scale(0.6);opacity:0;}to{transform:translate(-50%,-50%) scale(1);opacity:1;}}
-body.voice-live .top-bar.hidden .top-actions>#topNavVoiceBtn{
-  position:absolute!important;
-  top:50%!important;
-  left:50%!important;
-  margin:0!important;
-  opacity:1!important;
-  pointer-events:auto!important;
-  transform:translate(-50%,-50%) scale(1)!important;
-  animation:tnvPopCenter .35s cubic-bezier(0.22,1,0.36,1)!important;
-}
+/* Container-level fade: every icon (mic included) hides together, in one
+   synced motion — same simple behavior as the original. No per-child rule
+   here on purpose, so the default (speech-to-speech off) case is always
+   perfectly in sync and never fights with the voice-centering logic below,
+   which only ever touches the mic AFTER JS has physically moved it out of
+   .top-actions (see _tnvGlideToCenter in the script). A parent's opacity:0
+   can never be overridden by a child's own opacity, so as long as the mic
+   might still be a child of .top-actions, don't try to CSS-exempt it. */
+.top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
+/* Styling for the mic button only once JS has reparented it out of
+   .top-actions and directly under .top-bar, to float it centered while
+   speech-to-speech stays live and the rest of the top bar is collapsed.
+   Position itself (the glide) is driven by JS via inline transform/opacity —
+   this just establishes the positioning context. */
+#topNavVoiceBtn.tnv-centered{position:absolute!important;top:50%!important;left:50%!important;margin:0!important;z-index:5;pointer-events:auto!important;}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -21454,12 +21447,108 @@ function _updateDragZones(){
   var zL=document.getElementById('etbDragZoneL');
   if(zL) zL.style.right='136px';
 }
+// ── Voice-mic glide (speech-to-speech "float to center" behavior) ──────────
+// The mic button (#topNavVoiceBtn) normally lives inside .top-actions and
+// hides together with every other top-bar icon (see the plain .top-actions
+// container-fade CSS). The ONLY time it behaves differently is while
+// speech-to-speech is live AND the top bar icons are collapsed: after a
+// short pause, the mic physically leaves .top-actions (so it's immune to
+// the container's opacity:0) and glides to the center of the top bar using
+// the FLIP technique (measure First position, apply Last position, invert
+// with a transform, then animate the transform away) so the motion is a
+// real glide across the screen, not an instant snap.
+var _tnvGlideTimer = null;
+var _tnvCentered = false;
+var _tnvHomeParent = null;
+var _tnvHomeNextSibling = null;
+var TNV_GLIDE_DELAY = 700; // ms — pause before the mic starts gliding to center (spec: .5–1s)
+
+function _tnvClearGlideTimer(){
+  if(_tnvGlideTimer){ clearTimeout(_tnvGlideTimer); _tnvGlideTimer = null; }
+}
+
+function _tnvGlideToCenter(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  var bar = document.querySelector('.top-bar');
+  if(!btn || !bar || _tnvCentered) return;
+  // Bail if state changed during the delay (bar reopened / voice went off).
+  if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
+  if(!window._topNavVoiceActive) return;
+  var first = btn.getBoundingClientRect();
+  _tnvHomeParent = btn.parentNode;
+  _tnvHomeNextSibling = btn.nextSibling;
+  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
+  btn.classList.add('tnv-centered');
+  _tnvCentered = true;
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.transition = 'none';
+  btn.style.opacity = '0';
+  btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
+  void btn.offsetWidth; // flush layout so the "from" state actually paints
+  btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
+  btn.style.opacity = '1';
+  btn.style.transform = 'translate(-50%,-50%) scale(1)';
+}
+
+function _tnvGlideHome(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || !_tnvCentered) return;
+  var first = btn.getBoundingClientRect();
+  btn.classList.remove('tnv-centered');
+  btn.style.transition = 'none';
+  btn.style.transform = 'none';
+  if(_tnvHomeParent){
+    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === _tnvHomeParent) _tnvHomeParent.insertBefore(btn, _tnvHomeNextSibling);
+    else _tnvHomeParent.appendChild(btn);
+  }
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.transform = 'translate('+dx+'px,'+dy+'px)';
+  btn.style.opacity = '1';
+  void btn.offsetWidth;
+  btn.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1)';
+  btn.style.transform = 'translate(0,0)';
+  _tnvCentered = false;
+  btn.addEventListener('transitionend', function _cleanup(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    btn.style.transition = '';
+    btn.style.transform = '';
+  }, {once:true});
+}
+
+// Used when voice turns off while the button is already centered and the top
+// bar is still hidden: just fade it out in place, then silently swap it back
+// into .top-actions (already opacity:0 there, so the swap is invisible) —
+// no need to travel back across the screen just to disappear.
+function _tnvFadeOutCentered(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || !_tnvCentered) return;
+  btn.style.transition = 'opacity .25s ease, transform .25s ease';
+  btn.style.opacity = '0';
+  btn.style.transform = 'translate(-50%,-50%) scale(0.6)';
+  setTimeout(function(){
+    btn.classList.remove('tnv-centered');
+    btn.style.transition = '';
+    btn.style.transform = '';
+    btn.style.opacity = '';
+    if(_tnvHomeParent){
+      if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === _tnvHomeParent) _tnvHomeParent.insertBefore(btn, _tnvHomeNextSibling);
+      else _tnvHomeParent.appendChild(btn);
+    }
+    _tnvCentered = false;
+  }, 260);
+}
+
 function toggleTopBar(){
   TOP_BAR_HIDDEN = !TOP_BAR_HIDDEN;
   var bar = document.querySelector('.top-bar');
   var btn = document.getElementById('topBarToggle');
   var htb = document.querySelector('.hub-tab-bar');
   try{localStorage.setItem('synapses_topbar_hidden',TOP_BAR_HIDDEN?'1':'0');}catch(e){}
+  _tnvClearGlideTimer();
   if(TOP_BAR_HIDDEN){
     bar.classList.add('hidden');
     document.body.classList.add('topbar-hidden');
@@ -21467,6 +21556,13 @@ function toggleTopBar(){
     btn.title = 'Show top icons';
     if(htb) htb.style.display='none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='none';
+    // Everything (mic included) fades out together right now, in sync, via
+    // the plain .top-actions container rule. Only if speech-to-speech is
+    // live do we then, after a short pause, pull the mic out and glide it
+    // to center — a deliberate second beat, not part of the initial hide.
+    if(window._topNavVoiceActive){
+      _tnvGlideTimer = setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+    }
   } else {
     bar.classList.remove('hidden');
     document.body.classList.remove('topbar-hidden');
@@ -21475,6 +21571,7 @@ function toggleTopBar(){
     var onHub=document.getElementById('sec-hub')&&document.getElementById('sec-hub').classList.contains('active');
     if(htb) htb.style.display=onHub?'flex':'none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='';
+    if(_tnvCentered) _tnvGlideHome();
   }
 }
 
@@ -27326,12 +27423,22 @@ function speakVoiceReply(text) {
   var _busy = false;
   var _busySince = 0;
 
-  // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive.
-  // CSS uses this class to exempt the voice button from being hidden when
-  // the top bar icons are collapsed (see .top-bar.hidden.voice-live rule).
+  // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
+  // and — if the top bar icons are already collapsed when this changes —
+  // kicks off the same delayed glide-to-center / fade-out-in-place the mic
+  // button uses in toggleTopBar(), so turning speech-to-speech on/off while
+  // already collapsed behaves the same as toggling the bar while it's on.
   function _setTopNavVoiceActive(v) {
     window._topNavVoiceActive = v;
     document.body.classList.toggle('voice-live', !!v);
+    if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
+      _tnvClearGlideTimer();
+      if(v){
+        _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+      } else if(_tnvCentered){
+        _tnvFadeOutCentered();
+      }
+    }
   }
 
   // True while Ava's realistic avatar is connected and on screen. Used to
