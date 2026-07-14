@@ -2375,7 +2375,9 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
-#chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
+#chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas{opacity:0;transition:opacity 1.4s ease;}
+#chatBeamsWrap{display:none!important;}
+html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -6698,6 +6700,11 @@ var _currentViewId=null;function setView(id){
   var wasAlreadyActive = el.classList.contains('active');
   el.classList.add('active');
   if(!wasAlreadyActive){ el.style.animation='none';el.offsetHeight;el.style.animation=''; }
+  if(!wasAlreadyActive && (localStorage.getItem('_appTheme')||'purple')==='easyview'){
+    var _reinitMap={'sec-welcome':'_reinitFlowCanvas','sec-chat':'_reinitChatFlowCanvas','sec-jobs':'_reinitJobsFlowCanvas','sec-room':'_reinitRoomFlowCanvas'};
+    var _rfn=_reinitMap[id];
+    if(_rfn && window[_rfn]) setTimeout(window[_rfn], 30);
+  }
   document.querySelectorAll('.cat-btn').forEach(function(b){
     b.classList.remove('active');b.classList.remove('nav-glow');
     b.classList.remove('nav-glow-hold');b.style.boxShadow='';b.style.animation='';
@@ -16144,16 +16151,16 @@ async function confirmWorldApproach(){
 // Canvas
 
 /* SYNAPSES HOME ANIMATION — DO NOT CHANGE: indigo/purple floating particles with connecting lines on flowCanvas. Restore from this code if lost. */
-(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});init();draw();})();
+(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitFlowCanvas=init;init();draw();})();
 
 /* CHAT PAGE PARTICLES — same design as home page */
-(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitChatFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* JOB BOARD PARTICLES */
-(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitJobsFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* COMMUNITY ROOM PARTICLES */
-(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitRoomFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 
 /* SYNAPSES LOGIN ANIMATION — DO NOT CHANGE: Layer 1 = rising diagonal blurred light beams on authBeamsCanvas. Layer 2 = same particle network as home page on authDotCanvas. Both run simultaneously. Restore from this code if lost. */
@@ -23083,6 +23090,16 @@ function _openNeutralinoWebview(url){
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
+    if(t==='easyview'){
+      // Canvases sit at 0x0 while hidden (display:none), so re-measure and
+      // reinit whichever ones now have visible dimensions in sun mode.
+      setTimeout(function(){
+        if(window._reinitFlowCanvas) window._reinitFlowCanvas();
+        if(window._reinitChatFlowCanvas) window._reinitChatFlowCanvas();
+        if(window._reinitJobsFlowCanvas) window._reinitJobsFlowCanvas();
+        if(window._reinitRoomFlowCanvas) window._reinitRoomFlowCanvas();
+      }, 50);
+    }
   }
 
   window._applyTheme = applyTheme;
@@ -26025,6 +26042,7 @@ var _humeKeys = [
 var _humeKeyIdx = parseInt(localStorage.getItem('humeKeyIdx') || '0', 10);
 if (isNaN(_humeKeyIdx) || _humeKeyIdx < 0 || _humeKeyIdx >= _humeKeys.length) _humeKeyIdx = 0;
 function _humeGetKey() { return _humeKeys[_humeKeyIdx] || ''; }
+var _humeFailStreak = 0; // consecutive non-intentional close/error events since the last successful open
 function _humeRotateKey() {
   if (_humeKeys.length < 2) return; // nothing to rotate to
   _humeKeyIdx = (_humeKeyIdx + 1) % _humeKeys.length;
@@ -26776,7 +26794,7 @@ function _wsOpen() {
     _wsReady = false;
   } catch(e) { _ws = null; _wsReady = false; return; }
 
-  _ws.onopen = function () { _wsReady = true; if (_ttsProvider === 'hume') console.log('[Hume TTS] WebSocket connected'); };
+  _ws.onopen = function () { _wsReady = true; if (_ttsProvider === 'hume') { _humeFailStreak = 0; console.log('[Hume TTS] WebSocket connected'); } };
 
   _ws.onmessage = function (evt) {
     if (typeof evt.data === 'string') {
@@ -26879,7 +26897,24 @@ function _wsOpen() {
     _wsIntentionalClose = false;
     if (_ttsProvider === 'hume') {
       console.warn('[Hume TTS] WebSocket closed — code:', e.code, 'reason:', e.reason || '(none given)', wasIntentional ? '(intentional close, not rotating)' : '(unexpected close)');
-      if (!wasIntentional) _humeRotateKey();
+      if (!wasIntentional) {
+        _humeFailStreak++;
+        _humeRotateKey();
+        // Every key has now failed once in a row with nothing succeeding in
+        // between — this isn't a transient blip, Hume is genuinely down for
+        // us (dead keys, bad auth, account issue, etc). Previously we'd just
+        // keep silently retrying forever with no visible sign anything was
+        // wrong, which looked exactly like "the feature doesn't work" with
+        // zero clue why. Surface it and fall back to Deepgram so voice still
+        // works, instead of hanging silently on a dead provider.
+        if (_humeFailStreak >= _humeKeys.length) {
+          console.error('[Hume TTS] all ' + _humeKeys.length + ' key(s) failed to connect — falling back to Deepgram.');
+          try { showToast('Hume voice unavailable — switched to Deepgram'); } catch(e2) {}
+          _humeFailStreak = 0;
+          _setTtsProvider('deepgram');
+          return;
+        }
+      }
     }
     _wsReady = false; _ws = null;
     if (!wasIntentional) setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
