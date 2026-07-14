@@ -599,7 +599,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .sidebar-move-btn:hover{background:var(--surface2);color:var(--text);}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 
-.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;}
+.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
 #etbBtns button{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -1698,15 +1698,29 @@ to{opacity:0;transform:translateX(-40px);}}
 
 /* top-bar-toggle replaced by #winStrip */
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
-.top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
-.top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
-/* Voice button lives OUTSIDE .top-actions in the markup (see below) specifically
-   so it can have its own independent show/hide instead of fighting the group's
-   parent-level opacity — same movement/timing as the rest, but with an
-   exception so it stays visible while speech-to-speech is live. */
-#topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);position:relative;}
-.top-bar.hidden #topNavVoiceBtn{opacity:0;transform:translateY(-16px);pointer-events:none;}
-body.voice-live .top-bar.hidden #topNavVoiceBtn{opacity:1;transform:translateY(0);pointer-events:auto;}
+/* Per-child (not container-level) opacity: a parent's opacity:0 can never be
+   overridden by a child's own opacity, so hiding .top-actions as one block
+   would make the voice-live exception below impossible while #topNavVoiceBtn
+   sits at its original position as .top-actions' first child. */
+.top-actions>*{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+.top-bar.hidden .top-actions>*{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
+/* Exception: while speech-to-speech is live and the top bar icons are
+   collapsed, don't just leave the mic sitting alone at its normal spot in
+   .top-actions with a bunch of invisible-but-still-occupying-space siblings
+   around it — float it out to the center of the top bar instead, as its own
+   deliberate state, with a little pop-in flourish. Reverts to its normal
+   in-flow position the moment either condition stops being true. */
+@keyframes tnvPopCenter{from{transform:translate(-50%,-50%) scale(0.6);opacity:0;}to{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+body.voice-live .top-bar.hidden .top-actions>#topNavVoiceBtn{
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  margin:0!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  transform:translate(-50%,-50%) scale(1)!important;
+  animation:tnvPopCenter .35s cubic-bezier(0.22,1,0.36,1)!important;
+}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -4532,35 +4546,32 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="hub-tab-btn" id="hub-tab-coach" onclick="switchHubTab('coach')" title="Advisor" style="padding:8px 12px;font-size:14px;">🎯</button>
         <div style="flex:1;"></div>
     </div>
-    <!-- Global voice activity button — lives OUTSIDE .top-actions on purpose,
-         see CSS notes near #topNavVoiceBtn, so it can hide/show independently
-         without breaking the rest of the group's single smooth fade. -->
-    <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;color:rgba(160,165,220,0.5);margin-left:6px;margin-right:2px;">
-      <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-        <line x1="12" y1="19" x2="12" y2="23"/>
-        <line x1="8" y1="23" x2="16" y2="23"/>
-      </svg>
-      <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
-        <defs>
-          <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
-          <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
-          <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
-          <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
-          <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
-          <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
-          <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
-          <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
-        </g>
-      </svg>
-    </button>
     <div class="top-actions" style="padding-right:148px;">
+      <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;color:rgba(160,165,220,0.5);margin-right:2px;">
+        <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
+          <defs>
+            <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
+            <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
+            <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
+            <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
+            <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
+            <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
+            <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
+            <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
+          </g>
+        </svg>
+      </button>
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
       <!-- Robot hover toggle -->
       <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
@@ -27779,7 +27790,11 @@ function speakVoiceReply(text) {
   }
   function toastHide() { if (_toast) _toast.classList.remove('show'); }
 
-  // Hovering the voice button brings back the last bubble if user dismissed it
+  // Hovering the voice button brings back the last bubble if user dismissed it.
+  // Desktop-only: touchscreens fire a synthetic mouseenter on tap with no
+  // matching mouseleave ever following, so this would show a toast that then
+  // never gets a hide event — exactly what was getting "stuck" on mobile.
+  if (window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)
   (function() {
     var _hoverTimer = null;
     var _hideTimer = null;
@@ -28566,6 +28581,9 @@ function speakVoiceReply(text) {
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
     toastHide();
+    _toastFull = ''; // clear stored text too, not just hide — otherwise the
+                      // hover-peek feature below can resurrect this stale
+                      // reply after the user reactivates voice mode.
     if (typeof _ttsStopAll === 'function') _ttsStopAll();
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
