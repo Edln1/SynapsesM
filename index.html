@@ -5419,7 +5419,7 @@ window.getWebAudioNode = getWebAudioNode;
     <div id="nbCol1" style="width:210px;min-width:210px;background:rgba(7,8,16,0.98);border-right:1px solid rgba(79,86,200,0.15);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
       <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <span style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.55);">Notebooks</span>
-        <button onclick="nbAddNotebook()" title="New notebook" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
+        <button onclick="openQuickNotePopup()" title="New note" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
       </div>
       <div id="nbNotebookList" style="flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.15) transparent;"></div>
     </div>
@@ -5437,7 +5437,7 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Main editor -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:rgba(10,11,20,0.99);">
       <div id="notesTopBar" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(79,86,200,0.10);flex-shrink:0;">
-        <button class="nb-mobile-back" onclick="_nbSetMobileView('col2')" title="Back to pages" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col1')" title="Back to notebooks" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
         <input id="notesPageTitle" type="text" placeholder="Page title…" oninput="notesTitleChanged()" style="flex:1;background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:rgba(220,222,255,0.92);caret-color:#a78bfa;" />
         <span id="notesSaveIndicator" style="font-size:11px;color:rgba(99,102,195,0.4);font-family:'DM Sans',sans-serif;transition:opacity .3s;flex-shrink:0;"></span>
         <button id="nbLockBtn" onclick="nbToggleLock()" title="Toggle lock" style="display:none;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:13px;color:rgba(99,102,195,0.4);transition:all .15s;flex-shrink:0;" onmouseover="this.style.color='rgba(160,163,220,0.8)'" onmouseout="this.style.color='rgba(99,102,195,0.4)'">🔓</button>
@@ -5457,6 +5457,23 @@ window.getWebAudioNode = getWebAudioNode;
 
   </div>
   <!-- ────────────────────────────────────────────────────────────── -->
+
+  <!-- ── Quick Note Popup ── -->
+  <div id="nbQuickPopupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;align-items:center;justify-content:center;" onclick="if(event.target===this)closeQuickNotePopup()">
+    <div id="nbQuickPopup" style="width:320px;max-width:92vw;background:#0d0d16;border:1px solid rgba(124,106,247,0.3);border-radius:14px;padding:16px 16px 14px;box-shadow:0 12px 48px rgba(0,0,0,0.6);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:rgba(220,222,255,0.9);">📝 New Note</span>
+        <button onclick="closeQuickNotePopup()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:15px;padding:0;line-height:1;">✕</button>
+      </div>
+      <select id="nbQuickPopupNotebook" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:8px 10px;color:rgba(220,222,255,0.9);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;margin-bottom:8px;box-sizing:border-box;"></select>
+      <input id="nbQuickPopupTitle" type="text" placeholder="Note title…" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:9px 12px;color:rgba(230,232,255,0.95);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;outline:none;margin-bottom:8px;box-sizing:border-box;" />
+      <textarea id="nbQuickPopupBody" placeholder="Write your note…" style="width:100%;min-height:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:10px 12px;color:rgba(230,232,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button onclick="closeQuickNotePopup()" style="padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(200,200,220,0.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Cancel</button>
+        <button onclick="saveQuickNotePopup()" style="padding:7px 16px;background:rgba(124,106,247,0.18);border:1px solid rgba(124,106,247,0.4);border-radius:8px;color:#c4bbff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Save Note</button>
+      </div>
+    </div>
+  </div>
 
   <div class="section" id="sec-whiteboard"><div id="wbScrollbarY"><div id="wbScrollThumbY"></div></div><div id="wbScrollbarX"><div id="wbScrollThumbX"></div></div>
     <!-- Board Drawer: wrap slides as one unit, tab hangs below panel -->
@@ -15770,7 +15787,7 @@ function renderNotes(){
       +'<div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">'+n.date+'</div>'
       +'</div>'
       +(n.body?'<div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:8px;">'+esc(n.body)+'</div>':'')
-      +'<div>'+n.tags.map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
+      +'<div>'+(n.tags||[]).map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
       +'</div>';
   }).join('');
 }
@@ -16151,16 +16168,16 @@ async function confirmWorldApproach(){
 // Canvas
 
 /* SYNAPSES HOME ANIMATION — DO NOT CHANGE: indigo/purple floating particles with connecting lines on flowCanvas. Restore from this code if lost. */
-(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitFlowCanvas=init;init();draw();})();
+(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?26:60;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(now){now=now||performance.now();if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitFlowCanvas=init;init();draw();})();
 
 /* CHAT PAGE PARTICLES — same design as home page */
-(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitChatFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?26:60;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(now){now=now||performance.now();if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitChatFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* JOB BOARD PARTICLES */
-(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitJobsFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?26:60;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(now){now=now||performance.now();if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitJobsFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* COMMUNITY ROOM PARTICLES */
-(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitRoomFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?26:60;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(now){now=now||performance.now();if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitRoomFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 
 /* SYNAPSES LOGIN ANIMATION — DO NOT CHANGE: Layer 1 = rising diagonal blurred light beams on authBeamsCanvas. Layer 2 = same particle network as home page on authDotCanvas. Both run simultaneously. Restore from this code if lost. */
@@ -17430,6 +17447,7 @@ var _nb = {
 };
 
 var NB_KEY = 'synapses_nb4';
+var QN_LOCK_KEY = 'synapses_qn_locked';
 
 function _nbDateStr() {
   var d = new Date(), mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -17457,7 +17475,9 @@ function _nbLoad() {
     return { id:'qn_' + (n._nbPageId || _nbId()), title:n.title||'Note', body:n.body||'', date:n.date||_nbDateStr() };
   });
   if (qnPages.length === 0) qnPages.push({ id:'qn_empty', title:'No notes yet', body:'', date:_nbDateStr() });
-  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:true, pages:qnPages });
+  // Editable by default — only locked if the user explicitly toggled lock on before
+  var _qnLocked = localStorage.getItem(QN_LOCK_KEY) === '1';
+  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:_qnLocked, pages:qnPages });
   _nb.activeNb = Math.min(_nb.activeNb, _nb.data.length - 1);
   var nb = _nb.data[_nb.activeNb];
   _nb.activePg = Math.min(_nb.activePg, (nb.pages||[]).length - 1);
@@ -17476,6 +17496,11 @@ function _nbRenderAll() {
   _nbLoadEditor();
 }
 
+// Track which notebooks are expanded (accordion). Defaults to the active notebook only.
+if (!_nb.expanded) _nb.expanded = {};
+
+var _NB_PAGE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b8fd9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
 function _nbRenderNotebooks() {
   var el = document.getElementById('nbNotebookList');
   if (!el) return;
@@ -17483,13 +17508,23 @@ function _nbRenderNotebooks() {
   _nb.data.forEach(function(notebook, i) {
     var active = (i === _nb.activeNb);
     var d = document.createElement('div');
-    d.style.cssText = 'display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;' +
-      (active ? 'background:rgba(124,106,247,0.12);color:rgba(220,222,255,0.9);' : 'color:rgba(170,172,210,0.7);');
-    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
+    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:rgba(170,172,210,0.7);';
+    var _topRow = '<div style="display:flex;align-items:center;gap:9px;">' +
+      '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
-      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span>';
-    d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
-    d.onmouseout  = function() { if(!active) this.style.background=''; };
+      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
+    // Preview of the notebook's notes — each one its own clickable row, not just descriptive text
+    var _previewPages = [];
+    (notebook.pages||[]).forEach(function(p, pi){
+      if (p.title && p.title !== 'No notes yet' && _previewPages.length < 3) _previewPages.push({p:p, pi:pi});
+    });
+    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:3px;margin-top:2px;">' +
+      _previewPages.map(function(item){
+        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
+      }).join('') + '</div>' : '';
+    d.innerHTML = _topRow + _previewRow;
+    d.onmouseover = function() { this.style.background='rgba(124,106,247,0.12)'; };
+    d.onmouseout  = function() { this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
       _nbRenderAll();
@@ -17502,6 +17537,9 @@ function _nbRenderNotebooks() {
   });
 }
 
+// Legacy col2 page list is no longer shown — pages now render inline inside
+// _nbRenderNotebooks(). Kept as a thin alias so every existing call site
+// (add/delete/rename page, save debounce, etc.) still refreshes the visible accordion.
 function _nbRenderPages() {
   var el = document.getElementById('nbPageList');
   var lbl = document.getElementById('nbPagesLabel');
@@ -17555,6 +17593,7 @@ function nbToggleLock() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb || nb.title !== 'Quick Notes') return;
   nb.locked = !nb.locked;
+  try { localStorage.setItem(QN_LOCK_KEY, nb.locked ? '1' : '0'); } catch(e) {}
   _nbPersist();
   _nbLoadEditor();
 }
@@ -17607,12 +17646,112 @@ function nbAddPage() {
   if (nb.title === 'Quick Notes') {
     var freshNotes = [];
     try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'New Page', body:'', date:_nbDateStr(), colorIdx:4 });
+    freshNotes.unshift({ title:'New Page', body:'', tags:[], date:_nbDateStr(), colorIdx:4 });
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
   }
   _nbPersist(); _nbRenderPages(); _nbLoadEditor();
   if (window.innerWidth <= 620) _nbSetMobileView('editor');
   setTimeout(function() { var t = document.getElementById('notesPageTitle'); if(t){ t.focus(); t.select(); } }, 50);
+}
+
+function _nbCreateNoteIn(nbIdx) {
+  _nbFlush();
+  _nb.activeNb = nbIdx;
+  var nb = _nb.data[nbIdx];
+  var page = { id:_nbId(), title:'', body:'', date:_nbDateStr() };
+  nb.pages.unshift(page); _nb.activePg = 0;
+  if (nb.title === 'Quick Notes') {
+    var freshNotes = [];
+    try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
+    freshNotes.unshift({ title:'', body:'', date:_nbDateStr(), colorIdx:4 });
+    try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
+  }
+  _nbPersist(); _nbRenderAll();
+  _nbSetMobileView('editor');
+  setTimeout(function() { var ed = document.getElementById('notesEditor'); if (ed) ed.focus(); }, 60);
+}
+
+function nbOpenPreviewNote(nbi, pgi, e) {
+  if (e) e.stopPropagation();
+  _nbFlush();
+  _nb.activeNb = nbi; _nb.activePg = pgi;
+  _nbRenderAll();
+  if (window.innerWidth <= 620) _nbSetMobileView('editor');
+}
+
+function nbQuickAdd() {
+  var qnIdx = 0;
+  for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
+  _nbCreateNoteIn(qnIdx);
+}
+
+function nbQuickAddChooseNotebook(e) {
+  if (e) e.preventDefault();
+  var list = _nb.data.map(function(nb, i) { return (i + 1) + '. ' + nb.title; }).join('\n');
+  var choice = prompt('Add this note to which notebook?\n' + list + '\n\nType a number, or type a new name to create one:', '1');
+  if (!choice) return;
+  choice = choice.trim();
+  var idx = parseInt(choice, 10);
+  if (!isNaN(idx) && _nb.data[idx - 1]) { _nbCreateNoteIn(idx - 1); return; }
+  // Not a valid number — treat it as a new notebook name
+  var colors = ['#7c6af7','#e85d96','#f97316','#38bdf8','#a855f7','#facc15'];
+  var color = colors[(_nb.data.length - 1) % colors.length];
+  _nb.data.push({ id:_nbId(), title:choice, color:color, locked:false, pages:[] });
+  _nbCreateNoteIn(_nb.data.length - 1);
+}
+
+function openQuickNotePopup() {
+  var sel = document.getElementById('nbQuickPopupNotebook');
+  if (sel) {
+    sel.innerHTML = _nb.data.map(function(nb, i) { return '<option value="' + i + '">' + _nbEsc(nb.title) + '</option>'; }).join('');
+    var qnIdx = 0;
+    for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
+    sel.value = qnIdx;
+  }
+  var t = document.getElementById('nbQuickPopupTitle'); if (t) t.value = '';
+  var b = document.getElementById('nbQuickPopupBody'); if (b) b.value = '';
+  var ov = document.getElementById('nbQuickPopupOverlay');
+  if (ov) ov.style.display = 'flex';
+  setTimeout(function() { if (t) t.focus(); }, 50);
+}
+
+function closeQuickNotePopup() {
+  var ov = document.getElementById('nbQuickPopupOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function saveQuickNotePopup() {
+  var sel = document.getElementById('nbQuickPopupNotebook');
+  var nbIdx = sel ? parseInt(sel.value, 10) : 0;
+  if (isNaN(nbIdx)) nbIdx = 0;
+  var titleEl = document.getElementById('nbQuickPopupTitle');
+  var bodyEl = document.getElementById('nbQuickPopupBody');
+  var title = titleEl ? titleEl.value.trim() : '';
+  var bodyRaw = bodyEl ? bodyEl.value : '';
+  // Close the popup FIRST — no matter what happens below, the window disappears now.
+  closeQuickNotePopup();
+  if (!title && !bodyRaw.trim()) { return; }
+  try {
+    _nbFlush();
+    var nb = _nb.data[nbIdx];
+    if (!nb) return;
+    var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
+    var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
+    nb.pages.unshift(page);
+    _nb.activeNb = nbIdx; _nb.activePg = 0;
+    if (nb.title === 'Quick Notes') {
+      var freshNotes = [];
+      try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
+      freshNotes.unshift({ title:page.title, body:bodyRaw, tags:[], date:page.date, colorIdx:4 });
+      try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
+    }
+    _nbPersist(); _nbRenderAll();
+    if (typeof renderNotes === 'function') renderNotes();
+    if (typeof showToast === 'function') showToast('📝 Note saved!');
+  } catch (err) {
+    console.error('saveQuickNotePopup error:', err);
+    if (typeof showToast === 'function') showToast('⚠️ Note may not have saved — check console');
+  }
 }
 
 function nbDeletePage() {
@@ -17763,7 +17902,7 @@ function goNotes() {
   _currentViewId = 'sec-notes';
   var _navBtn = document.getElementById('nav-notes');
   if (_navBtn) { _navBtn.classList.add('active'); triggerNavGlow(_navBtn); }
-  document.getElementById('topTitle').textContent = '📓 My Notes';
+  document.getElementById('topTitle').textContent = 'My Notes';
   document.getElementById('topTitle').style.opacity = '1';
   document.getElementById('topTitle').style.display = '';
   var _htb = document.getElementById('hubTabBar');
@@ -26036,8 +26175,9 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 1 (original)
-  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 2
+  'avOZrFup8wzbOKlRDbScdDhIWS8XVrTF6zLgzFrdaR0GPKg2', // key 1 (new, prioritized)
+  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 2 (original)
+  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 3
 ];
 var _humeKeyIdx = parseInt(localStorage.getItem('humeKeyIdx') || '0', 10);
 if (isNaN(_humeKeyIdx) || _humeKeyIdx < 0 || _humeKeyIdx >= _humeKeys.length) _humeKeyIdx = 0;
