@@ -693,8 +693,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
   input,textarea,select{font-size:16px!important;}
   /* ── Chat/coach inputs: pill style ── */
-  #sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
-  #sec-chat .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 122px 12px 46px!important;min-height:48px!important;}
+  #sec-chat .input-box,#sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
   /* ── Welcome section: dock handles search on mobile, hide standalone ── */
   .input-box::placeholder{font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:rgba(200,200,220,0.5)!important;}
   textarea::placeholder{font-size:12px!important;}
@@ -1082,9 +1081,6 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;}
 .input-box::placeholder{color:var(--muted);}
 #sec-chat .input-box,#sec-coach .input-box{background:transparent!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;box-shadow:0 0 0 1px rgba(124,106,247,0.3),0 4px 24px rgba(0,0,0,0.3);}
-#sec-chat .input-box{padding-right:122px!important;}
-#sec-chat .send-btn{top:auto!important;bottom:10px!important;transform:none!important;}
-#sec-chat .send-btn:hover{transform:scale(1.06)!important;}
 @keyframes synapseOrbit{0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}}
 @keyframes synapseNodePulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.4);opacity:1}}
 @keyframes chatEmptyIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
@@ -1701,19 +1697,13 @@ to{opacity:0;transform:translateX(-40px);}}
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
 .top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
-/* Voice button lives OUTSIDE .top-actions now (see markup) specifically so it
-   can have its own independent show/hide instead of fighting the group's
-   parent-level opacity — that's what keeps the group's fade a single smooth
-   unit like before, instead of janky per-icon transitions. */
+/* Voice button lives OUTSIDE .top-actions in the markup (see below) specifically
+   so it can have its own independent show/hide instead of fighting the group's
+   parent-level opacity — same movement/timing as the rest, but with an
+   exception so it stays visible while speech-to-speech is live. */
 #topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);position:relative;}
 .top-bar.hidden #topNavVoiceBtn{opacity:0;transform:translateY(-16px);pointer-events:none;}
 body.voice-live .top-bar.hidden #topNavVoiceBtn{opacity:1;transform:translateY(0);pointer-events:auto;}
-/* Mic <-> wave icon crossfade. Both icons stay in the DOM and are stacked via
-   absolute positioning so toggling between them fades/scales smoothly instead
-   of the old instant display:none/block swap, which had no transition at all
-   (that's what read as "laggy"/non-smooth). */
-#tnvMicIcon,#tnvWaveIcon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1);opacity:1;transition:opacity .18s ease,transform .18s ease;display:block!important;}
-#tnvMicIcon.tnv-icon-off,#tnvWaveIcon.tnv-icon-off{opacity:0;transform:translate(-50%,-50%) scale(.6);pointer-events:none;}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -2375,12 +2365,7 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
-#chatFlowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
-/* flowCanvas (the original star/particle background) is handled separately
-   below — hidden by default, shown only when the day/night toggle is on the
-   sun (easyview) side. */
-#flowCanvas{display:none;}
-html[data-theme="easyview"] #flowCanvas{display:block!important;}
+#chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -3595,7 +3580,7 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="cat-btn" id="nav-jobs" onclick="goJobs()"><span class="cat-dot"></span>🔗 Job Board</button>
         <button class="cat-btn" id="nav-world" onclick="goWorld()"><span class="cat-dot"></span>🌍 World Accelerator</button>
         <button class="cat-btn" id="nav-whiteboard" onclick="goWhiteboard()"><span class="cat-dot"></span>🎨 Whiteboard</button>
-        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>My Notes</button>
+        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>📓 My Notes</button>
         <button class="cat-btn" id="nav-profile" onclick="goProfile()"><span class="cat-dot"></span>👤 My Profile</button>
       </div>
       <div class="sidebar-section" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:14px;margin-top:8px;user-select:none;" onclick="toggleSideSection('toolItems','toolArrow')">
@@ -4021,7 +4006,7 @@ window.getWebAudioNode = getWebAudioNode;
       {icon:'🔗', label:'Job Board', fn:function(){ if(typeof goJobs==='function') goJobs(); }},
       {icon:'🌍', label:'World Accelerator', fn:function(){ if(typeof goWorld==='function') goWorld(); }},
       {icon:'🎨', label:'Whiteboard', fn:function(){ if(typeof goWhiteboard==='function') goWhiteboard(); }},
-      {icon:'', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
+      {icon:'📓', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbgcc" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbgcc)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbgcc)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbgcc)" stroke-width="1.8"/></svg>', label:'Browse Tools', fn:function(){ if(typeof showTools==='function') showTools('all'); }},
       {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }}
     ];
@@ -4554,7 +4539,7 @@ window.getWebAudioNode = getWebAudioNode;
         <line x1="12" y1="19" x2="12" y2="23"/>
         <line x1="8" y1="23" x2="16" y2="23"/>
       </svg>
-      <svg id="tnvWaveIcon" class="tnv-icon-off" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+      <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
         <defs>
           <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
@@ -5425,7 +5410,7 @@ window.getWebAudioNode = getWebAudioNode;
     <div id="nbCol1" style="width:210px;min-width:210px;background:rgba(7,8,16,0.98);border-right:1px solid rgba(79,86,200,0.15);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
       <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <span style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.55);">Notebooks</span>
-        <button onclick="openQuickNotePopup()" title="New note" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
+        <button onclick="nbAddNotebook()" title="New notebook" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
       </div>
       <div id="nbNotebookList" style="flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.15) transparent;"></div>
     </div>
@@ -5443,7 +5428,7 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Main editor -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:rgba(10,11,20,0.99);">
       <div id="notesTopBar" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(79,86,200,0.10);flex-shrink:0;">
-        <button class="nb-mobile-back" onclick="_nbSetMobileView('col1')" title="Back to notebooks" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col2')" title="Back to pages" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
         <input id="notesPageTitle" type="text" placeholder="Page title…" oninput="notesTitleChanged()" style="flex:1;background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:rgba(220,222,255,0.92);caret-color:#a78bfa;" />
         <span id="notesSaveIndicator" style="font-size:11px;color:rgba(99,102,195,0.4);font-family:'DM Sans',sans-serif;transition:opacity .3s;flex-shrink:0;"></span>
         <button id="nbLockBtn" onclick="nbToggleLock()" title="Toggle lock" style="display:none;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:13px;color:rgba(99,102,195,0.4);transition:all .15s;flex-shrink:0;" onmouseover="this.style.color='rgba(160,163,220,0.8)'" onmouseout="this.style.color='rgba(99,102,195,0.4)'">🔓</button>
@@ -5463,23 +5448,6 @@ window.getWebAudioNode = getWebAudioNode;
 
   </div>
   <!-- ────────────────────────────────────────────────────────────── -->
-
-  <!-- ── Quick Note Popup ── -->
-  <div id="nbQuickPopupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;align-items:center;justify-content:center;" onclick="if(event.target===this)closeQuickNotePopup()">
-    <div id="nbQuickPopup" style="width:320px;max-width:92vw;background:#0d0d16;border:1px solid rgba(124,106,247,0.3);border-radius:14px;padding:16px 16px 14px;box-shadow:0 12px 48px rgba(0,0,0,0.6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <span style="font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:rgba(220,222,255,0.9);">📝 New Note</span>
-        <button onclick="closeQuickNotePopup()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:15px;padding:0;line-height:1;">✕</button>
-      </div>
-      <select id="nbQuickPopupNotebook" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:8px 10px;color:rgba(220,222,255,0.9);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;margin-bottom:8px;box-sizing:border-box;"></select>
-      <input id="nbQuickPopupTitle" type="text" placeholder="Note title…" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:9px 12px;color:rgba(230,232,255,0.95);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;outline:none;margin-bottom:8px;box-sizing:border-box;" />
-      <textarea id="nbQuickPopupBody" placeholder="Write your note…" style="width:100%;min-height:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:10px 12px;color:rgba(230,232,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button onclick="closeQuickNotePopup()" style="padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(200,200,220,0.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Cancel</button>
-        <button onclick="saveQuickNotePopup()" style="padding:7px 16px;background:rgba(124,106,247,0.18);border:1px solid rgba(124,106,247,0.4);border-radius:8px;color:#c4bbff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Save Note</button>
-      </div>
-    </div>
-  </div>
 
   <div class="section" id="sec-whiteboard"><div id="wbScrollbarY"><div id="wbScrollThumbY"></div></div><div id="wbScrollbarX"><div id="wbScrollThumbX"></div></div>
     <!-- Board Drawer: wrap slides as one unit, tab hangs below panel -->
@@ -5771,7 +5739,7 @@ var NAV_ALL_ITEMS = [
   {id:'jobs',   icon:'🔗', label:'Jobs',        fn:'goJobs()'},
   {id:'world',  icon:'🌍', label:'World',       fn:'goWorld()'},
   {id:'whiteboard', icon:'🎨', label:'Whiteboard',  fn:'goWhiteboard()'},
-  {id:'notes',  icon:'',   label:'My Notes',    fn:'goNotes()'},
+  {id:'notes',  icon:'📓', label:'My Notes',    fn:'goNotes()'},
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
   {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat();triggerNavGlow(this)'},
@@ -5833,16 +5801,12 @@ function loadNavConfig(){
         initBnavDrag();
         var btn=document.getElementById('bnavExpandBtn');
         if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-        // Respect whatever the user last set via the toggle (do NOT force it visible)
+        // Ensure top bar is visible
+        TOP_BAR_HIDDEN=false;
         var topBar=document.querySelector('.top-bar');
         var topBtn=document.getElementById('topBarToggle');
-        if(TOP_BAR_HIDDEN){
-          if(topBar) topBar.classList.add('hidden');
-          if(topBtn){topBtn.innerHTML='▼';topBtn.title='Show top bar';}
-        } else {
-          if(topBar) topBar.classList.remove('hidden');
-          if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
-        }
+        if(topBar) topBar.classList.remove('hidden');
+        if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
       },150);
     }
   }catch(e){}
@@ -5878,7 +5842,7 @@ function renderIconRail(){
     jobs:       {icon:'🔗', label:'Job Board',       fn:"goJobs()"},
     world:      {icon:'🌍', label:'World Accelerator',fn:"goWorld()"},
     whiteboard: {icon:'🎨', label:'Whiteboard',      fn:"goWhiteboard()"},
-    notes:      {icon:'',   label:'My Notes',        fn:"goNotes()"},
+    notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
     chat:       {icon:'💬', label:'New Chat',        fn:"newChat()"},
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"}
@@ -6577,7 +6541,7 @@ function showCyberpunkGreeting(name){
 
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';},2200);}
-function autoResize(el){el.style.height='auto';el.style.height=Math.max(52,Math.min(el.scrollHeight,160))+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
 
 // Render server warm-up: ping on load + first input focus so server is awake before first message
 (function(){
@@ -6670,7 +6634,7 @@ if(_isVidMode){
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
     var fn=secMap[_lastSec];
     if(fn){fn();}else if(typeof newChat==='function'){newChat();}
   }
@@ -13065,8 +13029,11 @@ function persistChats(){
       data.chatSessions[k]={history:chatSessions[k].history||[],hasNotes:chatSessions[k].hasNotes||false};
     });
     var _json=JSON.stringify(data);
-    // Fast, complete local copy — always full-size, never trimmed.
     localStorage.setItem('synapses_chat_history',_json);
+    // Also persist to Neutralino storage so it survives app restarts
+    if(window.Neutralino && Neutralino.storage){
+      Neutralino.storage.setData('synapses_chat_history',_json).catch(function(){});
+    }
   }catch(e){
     try{
       var minimal={recentChats:recentChats,savedChats:savedChats,chatSessions:{}};
@@ -13074,44 +13041,22 @@ function persistChats(){
         var s=chatSessions[c.key];
         if(s) minimal.chatSessions[c.key]={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
       });
-      localStorage.setItem('synapses_chat_history',JSON.stringify(minimal));
+      var _mjson=JSON.stringify(minimal);
+      localStorage.setItem('synapses_chat_history',_mjson);
+      if(window.Neutralino && Neutralino.storage){
+        Neutralino.storage.setData('synapses_chat_history',_mjson).catch(function(){});
+      }
     }catch(e2){}
-  }
-  // Persist to Neutralino.storage too, so chats survive an uninstall/reinstall.
-  // Written as many SMALL pieces (one per chat, trimmed to the last 40 messages)
-  // instead of one ever-growing blob — a single oversized write can silently fail
-  // in Neutralino, and when it does, it used to freeze the ENTIRE history at
-  // whatever the last successful write was (sometimes just 1 chat). Chunking
-  // means a failure on one chat can't take the rest down with it, and trimming
-  // keeps each individual write small enough to actually succeed.
-  if(window.Neutralino && Neutralino.storage){
-    try{
-      var _idxKeys=recentChats.map(function(c){return c.key;}).concat(savedChats.map(function(c){return c.key;}));
-      var _index={recentChats:recentChats,savedChats:savedChats};
-      Neutralino.storage.setData('synapses_chat_index',JSON.stringify(_index))
-        .catch(function(err){console.warn('Neutralino chat index save failed:',err);});
-      _idxKeys.forEach(function(k){
-        var s=chatSessions[k];
-        if(!s) return;
-        var trimmed={history:(s.history||[]).slice(-40),hasNotes:s.hasNotes||false};
-        Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(trimmed))
-          .catch(function(err){
-            // Even the trimmed chunk failed (very long single messages, etc.) —
-            // retry once with a much smaller slice as a last resort so SOMETHING
-            // for this chat survives a reinstall, rather than nothing at all.
-            var smaller={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
-            Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(smaller)).catch(function(err2){console.warn('Neutralino chat chunk save failed for',k,err2);});
-          });
-      });
-    }catch(e3){}
   }
 }
 function loadPersistedChats(){
-  function _applyChats(recents,saved,sessions){
+  function _applyChats(raw){
     try{
-      if(recents) recentChats=recents;
-      if(saved) savedChats=saved;
-      if(sessions) Object.assign(chatSessions,sessions);
+      if(!raw) return;
+      var data=JSON.parse(raw);
+      if(data.recentChats) recentChats=data.recentChats;
+      if(data.savedChats) savedChats=data.savedChats;
+      if(data.chatSessions) Object.assign(chatSessions,data.chatSessions);
       renderRecentChats(); renderSavedChats();
       var _sb=document.getElementById('chpSidebar');
       if(_sb&&!_sb.classList.contains('open')&&(recentChats.length||savedChats.length)){
@@ -13120,49 +13065,16 @@ function loadPersistedChats(){
       }
     }catch(e){}
   }
-  function _fromLocalStorage(){
-    try{
-      var raw=localStorage.getItem('synapses_chat_history');
-      if(!raw) return null;
-      var d=JSON.parse(raw);
-      return {recentChats:d.recentChats||[],savedChats:d.savedChats||[],chatSessions:d.chatSessions||{},count:(d.recentChats||[]).length+(d.savedChats||[]).length};
-    }catch(e){ return null; }
-  }
-  var local=_fromLocalStorage();
-  if(!(window.Neutralino && Neutralino.storage)){
-    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-    return;
-  }
-  // New chunked format first (index + one key per chat).
-  Neutralino.storage.getData('synapses_chat_index').then(function(idxRaw){
-    var idx; try{ idx=JSON.parse(idxRaw); }catch(e){ idx=null; }
-    if(!idx || !((idx.recentChats||[]).length+(idx.savedChats||[]).length)){
-      // No usable chunked index — fall back to the old combined-blob key
-      // (covers installs saved before this chunking change existed) or localStorage.
-      Neutralino.storage.getData('synapses_chat_history').then(function(oldRaw){
-        var old; try{ old=JSON.parse(oldRaw); }catch(e){ old=null; }
-        var oldCount = old ? ((old.recentChats||[]).length+(old.savedChats||[]).length) : -1;
-        var localCount = local ? local.count : -1;
-        if(localCount>=oldCount && local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-        else if(old) _applyChats(old.recentChats,old.savedChats,old.chatSessions);
-      }).catch(function(){
-        if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-      });
-      return;
-    }
-    // Chunked index found — pull in each chat's messages individually.
-    var allKeys=(idx.recentChats||[]).map(function(c){return c.key;}).concat((idx.savedChats||[]).map(function(c){return c.key;}));
-    var sessions={};
-    Promise.all(allKeys.map(function(k){
-      return Neutralino.storage.getData('synapses_chat_sess_'+k).then(function(raw){
-        try{ sessions[k]=JSON.parse(raw); }catch(e){}
-      }).catch(function(){});
-    })).then(function(){
-      _applyChats(idx.recentChats,idx.savedChats,sessions);
+  // Prefer Neutralino.storage (persists across restarts), fall back to localStorage
+  if(window.Neutralino && Neutralino.storage){
+    Neutralino.storage.getData('synapses_chat_history').then(function(raw){
+      _applyChats(raw);
+    }).catch(function(){
+      _applyChats(localStorage.getItem('synapses_chat_history'));
     });
-  }).catch(function(){
-    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-  });
+  } else {
+    _applyChats(localStorage.getItem('synapses_chat_history'));
+  }
 }
 function deleteRecentChat(i){recentChats.splice(i,1);persistChats();renderRecentChats();}
 function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
@@ -15844,7 +15756,7 @@ function renderNotes(){
       +'<div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">'+n.date+'</div>'
       +'</div>'
       +(n.body?'<div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:8px;">'+esc(n.body)+'</div>':'')
-      +'<div>'+(n.tags||[]).map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
+      +'<div>'+n.tags.map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
       +'</div>';
   }).join('');
 }
@@ -16225,7 +16137,7 @@ async function confirmWorldApproach(){
 // Canvas
 
 /* SYNAPSES HOME ANIMATION — DO NOT CHANGE: indigo/purple floating particles with connecting lines on flowCanvas. Restore from this code if lost. */
-(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});init();draw();})();
+(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});init();draw();})();
 
 /* CHAT PAGE PARTICLES — same design as home page */
 (function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
@@ -17504,7 +17416,6 @@ var _nb = {
 };
 
 var NB_KEY = 'synapses_nb4';
-var QN_LOCK_KEY = 'synapses_qn_locked';
 
 function _nbDateStr() {
   var d = new Date(), mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -17532,9 +17443,7 @@ function _nbLoad() {
     return { id:'qn_' + (n._nbPageId || _nbId()), title:n.title||'Note', body:n.body||'', date:n.date||_nbDateStr() };
   });
   if (qnPages.length === 0) qnPages.push({ id:'qn_empty', title:'No notes yet', body:'', date:_nbDateStr() });
-  // Editable by default — only locked if the user explicitly toggled lock on before
-  var _qnLocked = localStorage.getItem(QN_LOCK_KEY) === '1';
-  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:_qnLocked, pages:qnPages });
+  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:true, pages:qnPages });
   _nb.activeNb = Math.min(_nb.activeNb, _nb.data.length - 1);
   var nb = _nb.data[_nb.activeNb];
   _nb.activePg = Math.min(_nb.activePg, (nb.pages||[]).length - 1);
@@ -17560,23 +17469,13 @@ function _nbRenderNotebooks() {
   _nb.data.forEach(function(notebook, i) {
     var active = (i === _nb.activeNb);
     var d = document.createElement('div');
-    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:rgba(170,172,210,0.7);';
-    var _topRow = '<div style="display:flex;align-items:center;gap:9px;">' +
-      '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
+    d.style.cssText = 'display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;' +
+      (active ? 'background:rgba(124,106,247,0.12);color:rgba(220,222,255,0.9);' : 'color:rgba(170,172,210,0.7);');
+    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
-      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
-    // Preview of the notebook's notes — each one its own clickable row, not just descriptive text
-    var _previewPages = [];
-    (notebook.pages||[]).forEach(function(p, pi){
-      if (p.title && p.title !== 'No notes yet' && _previewPages.length < 3) _previewPages.push({p:p, pi:pi});
-    });
-    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:3px;margin-top:2px;">' +
-      _previewPages.map(function(item){
-        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
-      }).join('') + '</div>' : '';
-    d.innerHTML = _topRow + _previewRow;
-    d.onmouseover = function() { this.style.background='rgba(124,106,247,0.12)'; };
-    d.onmouseout  = function() { this.style.background=''; };
+      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span>';
+    d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
+    d.onmouseout  = function() { if(!active) this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
       _nbRenderAll();
@@ -17587,15 +17486,6 @@ function _nbRenderNotebooks() {
     }
     el.appendChild(d);
   });
-}
-
-// Jump straight to a specific note from the notebook-list preview
-function nbOpenPreviewNote(nbi, pgi, e) {
-  if (e) e.stopPropagation();
-  _nbFlush();
-  _nb.activeNb = nbi; _nb.activePg = pgi;
-  _nbRenderAll();
-  if (window.innerWidth <= 620) _nbSetMobileView('editor');
 }
 
 function _nbRenderPages() {
@@ -17651,7 +17541,6 @@ function nbToggleLock() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb || nb.title !== 'Quick Notes') return;
   nb.locked = !nb.locked;
-  try { localStorage.setItem(QN_LOCK_KEY, nb.locked ? '1' : '0'); } catch(e) {}
   _nbPersist();
   _nbLoadEditor();
 }
@@ -17694,101 +17583,6 @@ function nbAddNotebook() {
   _nbPersist(); _nbRenderAll();
 }
 
-// Instantly create a fresh note and drop the user straight into typing —
-// defaults to Quick Notes, no notebook picker in the way.
-function _nbCreateNoteIn(nbIdx) {
-  _nbFlush();
-  _nb.activeNb = nbIdx;
-  var nb = _nb.data[nbIdx];
-  var page = { id:_nbId(), title:'', body:'', date:_nbDateStr() };
-  nb.pages.unshift(page); _nb.activePg = 0;
-  if (nb.title === 'Quick Notes') {
-    var freshNotes = [];
-    try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'', body:'', date:_nbDateStr(), colorIdx:4 });
-    try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
-  }
-  _nbPersist(); _nbRenderAll();
-  _nbSetMobileView('editor');
-  setTimeout(function() { var ed = document.getElementById('notesEditor'); if (ed) ed.focus(); }, 60);
-}
-
-function nbQuickAdd() {
-  var qnIdx = 0;
-  for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
-  _nbCreateNoteIn(qnIdx);
-}
-
-function nbQuickAddChooseNotebook(e) {
-  if (e) e.preventDefault();
-  var list = _nb.data.map(function(nb, i) { return (i + 1) + '. ' + nb.title; }).join('\n');
-  var choice = prompt('Add this note to which notebook?\n' + list + '\n\nType a number, or type a new name to create one:', '1');
-  if (!choice) return;
-  choice = choice.trim();
-  var idx = parseInt(choice, 10);
-  if (!isNaN(idx) && _nb.data[idx - 1]) { _nbCreateNoteIn(idx - 1); return; }
-  // Not a valid number — treat it as a new notebook name
-  var colors = ['#7c6af7','#e85d96','#f97316','#38bdf8','#a855f7','#facc15'];
-  var color = colors[(_nb.data.length - 1) % colors.length];
-  _nb.data.push({ id:_nbId(), title:choice, color:color, locked:false, pages:[] });
-  _nbCreateNoteIn(_nb.data.length - 1);
-}
-
-// ── Quick Note popup: + opens this so the user can write the note right away ──
-function openQuickNotePopup() {
-  var sel = document.getElementById('nbQuickPopupNotebook');
-  if (sel) {
-    sel.innerHTML = _nb.data.map(function(nb, i) { return '<option value="' + i + '">' + _nbEsc(nb.title) + '</option>'; }).join('');
-    var qnIdx = 0;
-    for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
-    sel.value = qnIdx;
-  }
-  var t = document.getElementById('nbQuickPopupTitle'); if (t) t.value = '';
-  var b = document.getElementById('nbQuickPopupBody'); if (b) b.value = '';
-  var ov = document.getElementById('nbQuickPopupOverlay');
-  if (ov) ov.style.display = 'flex';
-  setTimeout(function() { if (t) t.focus(); }, 50);
-}
-
-function closeQuickNotePopup() {
-  var ov = document.getElementById('nbQuickPopupOverlay');
-  if (ov) ov.style.display = 'none';
-}
-
-function saveQuickNotePopup() {
-  var sel = document.getElementById('nbQuickPopupNotebook');
-  var nbIdx = sel ? parseInt(sel.value, 10) : 0;
-  if (isNaN(nbIdx)) nbIdx = 0;
-  var titleEl = document.getElementById('nbQuickPopupTitle');
-  var bodyEl = document.getElementById('nbQuickPopupBody');
-  var title = titleEl ? titleEl.value.trim() : '';
-  var bodyRaw = bodyEl ? bodyEl.value : '';
-  // Close the popup FIRST — no matter what happens below, the window disappears now.
-  closeQuickNotePopup();
-  if (!title && !bodyRaw.trim()) { return; }
-  try {
-    _nbFlush();
-    var nb = _nb.data[nbIdx];
-    if (!nb) return;
-    var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
-    var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
-    nb.pages.unshift(page);
-    _nb.activeNb = nbIdx; _nb.activePg = 0;
-    if (nb.title === 'Quick Notes') {
-      var freshNotes = [];
-      try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
-      freshNotes.unshift({ title:page.title, body:bodyRaw, tags:[], date:page.date, colorIdx:4 });
-      try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
-    }
-    _nbPersist(); _nbRenderAll();
-    if (typeof renderNotes === 'function') renderNotes();
-    if (typeof showToast === 'function') showToast('📝 Note saved!');
-  } catch (err) {
-    console.error('saveQuickNotePopup error:', err);
-    if (typeof showToast === 'function') showToast('⚠️ Note may not have saved — check console');
-  }
-}
-
 function nbAddPage() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb) return;
@@ -17799,7 +17593,7 @@ function nbAddPage() {
   if (nb.title === 'Quick Notes') {
     var freshNotes = [];
     try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'New Page', body:'', tags:[], date:_nbDateStr(), colorIdx:4 });
+    freshNotes.unshift({ title:'New Page', body:'', date:_nbDateStr(), colorIdx:4 });
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
   }
   _nbPersist(); _nbRenderPages(); _nbLoadEditor();
@@ -17955,7 +17749,7 @@ function goNotes() {
   _currentViewId = 'sec-notes';
   var _navBtn = document.getElementById('nav-notes');
   if (_navBtn) { _navBtn.classList.add('active'); triggerNavGlow(_navBtn); }
-  document.getElementById('topTitle').textContent = 'My Notes';
+  document.getElementById('topTitle').textContent = '📓 My Notes';
   document.getElementById('topTitle').style.opacity = '1';
   document.getElementById('topTitle').style.display = '';
   var _htb = document.getElementById('hubTabBar');
@@ -26084,12 +25878,11 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  'Gno4HeB41aMg2PB87xI0oLz6n2ZGaydoX5PKhcZOUhwxG6OM', // key 1 (newest, forefront)
-  '5lBVRGIEfjYm5Ogzz9mV7oLSZGmiULkGMSCGjLpcC2MNxstp', // key 2
-  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 3 (original)
-  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 4
+  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 1 (original)
+  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 2
 ];
-var _humeKeyIdx = 0; // forced back to 0 so the new forefront key is tried first, even if an old rotation was saved
+var _humeKeyIdx = parseInt(localStorage.getItem('humeKeyIdx') || '0', 10);
+if (isNaN(_humeKeyIdx) || _humeKeyIdx < 0 || _humeKeyIdx >= _humeKeys.length) _humeKeyIdx = 0;
 function _humeGetKey() { return _humeKeys[_humeKeyIdx] || ''; }
 function _humeRotateKey() {
   if (_humeKeys.length < 2) return; // nothing to rotate to
@@ -26124,9 +25917,6 @@ function _setTtsProvider(p) {
 var _ws = null;
 var _wsReady = false;
 var _wsResolvers = []; // resolvers waiting for audio chunks from current request
-var _wsIntentionalClose = false; // set right before we call _ws.close() ourselves, so
-                                  // onerror/onclose can tell "we did this" apart from
-                                  // a real network drop and skip key rotation + auto-reconnect
 
 // ── Web Audio state ────────────────────────────────────────────────────────────
 var _actx = null;
@@ -26812,7 +26602,6 @@ function _ttsStopAll() {
 // ── WebSocket management ───────────────────────────────────────────────────────
 function _wsOpen() {
   if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
-  _wsIntentionalClose = false; // safety net: never let a stale flag suppress a future real close
   try {
     if (_ttsProvider === 'hume') {
       // Hume Octave streaming WS. Using no_binary=true so ALL audio arrives as
@@ -26925,20 +26714,9 @@ function _wsOpen() {
     // onclose for a failed connection, so rotating in both handlers was
     // cancelling itself out (rotate forward here, rotate back there).
     if (_ttsProvider === 'hume') console.error('[Hume TTS] WebSocket error', e);
-    _wsReady = false; _ws = null;
-    if (_wsIntentionalClose) return; // we closed this on purpose, don't reconnect it
-    setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    _wsReady = false; _ws = null; setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
   _ws.onclose = function (e) {
-    // If WE called _wsClose(), this close is expected — skip key rotation
-    // AND skip the auto-reconnect below entirely, then clear the flag so it
-    // doesn't leak into the next, unrelated close event.
-    if (_wsIntentionalClose) {
-      if (_ttsProvider === 'hume') console.log('[Hume TTS] WebSocket closed intentionally — code:', e.code);
-      _wsIntentionalClose = false;
-      _wsReady = false; _ws = null;
-      return;
-    }
     // Code 1000 = normal/clean close, leave the key alone. Anything else
     // (auth failure, out of credits, etc.) rotates to the next key before
     // the automatic reconnect below tries again.
@@ -26970,7 +26748,7 @@ function _downsample48to24(arrayBuf) {
   } catch (e) { return arrayBuf; }
 }
 
-function _wsClose() { if (_ws) { _wsIntentionalClose = true; try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
+function _wsClose() { if (_ws) { try { _ws.close(); } catch(e){} _ws = null; _wsReady = false; } }
 
 
 // ── Web Audio: schedule a raw PCM chunk ───────────────────────────────────────
@@ -27206,18 +26984,10 @@ function _scheduleChunk(arrayBuf) {
     // can't see. Only applied once per utterance — _playbackTime already
     // carries the offset forward for every chunk after the first, so adding
     // it again here would compound the delay.
-    // NOTE: this used to add a delay here to sync audio to the avatar's video
-    // render lag, but referenced two variables (_avaMeasuredDelaySec,
-    // _AVA_RENDER_FUDGE_SEC) that were never actually declared anywhere in
-    // this file — every time the avatar was connected, this line threw a
-    // ReferenceError on the first chunk of every utterance, silently caught
-    // by the try/catch around this whole function, which meant that chunk's
-    // src.start()/onended never ran at all. That's what was making replies
-    // feel like they took forever whenever your own TTS was combined with
-    // the avatar — audio scheduling was quietly failing every time, not the
-    // reply itself being slow. Zero delay here until a real sync mechanism
-    // is built.
     var avaDelay = 0;
+    if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected && _playbackTime <= _actx.currentTime) {
+      avaDelay = Math.max(0, _avaMeasuredDelaySec + _AVA_RENDER_FUDGE_SEC);
+    }
 
     var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay;
     src.start(startAt);
@@ -27519,14 +27289,6 @@ function speakVoiceReply(text) {
   var _on = false;
   var _busy = false;
   var _busySince = 0;
-
-  // Whether the realistic avatar video is currently up. Her face + lip-sync
-  // already communicate "she's replying"/"one sec"/etc., so cosmetic status
-  // toasts are pure clutter over the video — only genuinely actionable
-  // errors (mic permission, no mic found, etc.) should still interrupt.
-  function _avatarLive() {
-    return !!(typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected);
-  }
 
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive.
   // CSS uses this class to exempt the voice button from being hidden when
@@ -28064,12 +27826,12 @@ function speakVoiceReply(text) {
     if (!b) return;
     b.classList.remove('tnv-on','tnv-speak');
     if (s === 'off') {
-      if (mic) mic.classList.remove('tnv-icon-off');
-      if (wave) { wave.classList.add('tnv-icon-off'); wave.classList.remove('tnv-breathe'); }
+      if (mic) mic.style.display = '';
+      if (wave) { wave.style.display = 'none'; wave.classList.remove('tnv-breathe'); }
     } else {
-      if (mic) mic.classList.add('tnv-icon-off');
+      if (mic) mic.style.display = 'none';
       if (wave) {
-        wave.classList.remove('tnv-icon-off');
+        wave.style.display = 'block';
         // Kill RAF first so it can't overwrite our reset
         if (_wsAnalyserRaf) { cancelAnimationFrame(_wsAnalyserRaf); _wsAnalyserRaf = null; }
         if (_analyserRaf)   { cancelAnimationFrame(_analyserRaf);   _analyserRaf   = null; }
@@ -28168,16 +27930,12 @@ function speakVoiceReply(text) {
     _busy = true;
     btnState('speak');
     if(window.avaTvSetState) window.avaTvSetState('speak');
-    // Skip the reply-text toast while the avatar video is up — it renders
-    // right over her, and her face + lip-sync already show she's replying,
-    // so the toast is pure screen-blocking clutter in that case.
-    var _avatarUp = !!(typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected);
-    if (!_avatarUp) toast(text);
+    toast(text);
     // Show live search indicator if this reply used Tavily
     if (window._voiceUsedSearch) {
       window._voiceUsedSearch = false;
       setTimeout(function() {
-        if (_toast && !_avatarUp) {
+        if (_toast) {
           var badge = document.createElement('div');
           badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
           badge.textContent = '🌐 live search';
@@ -28201,7 +27959,6 @@ function speakVoiceReply(text) {
         waited += 20;
         if (_wsReady || waited > 1500) {
           clearInterval(_poll);
-          if (_spkGenId !== _vmGenId) return; // mic was toggled off/on while we waited — drop this turn
           if (!_wsReady || !_on) {
             // WS not available — fall back to REST fetch
             _speakREST(clean);
@@ -28566,14 +28323,6 @@ function speakVoiceReply(text) {
       : Promise.resolve();
 
     var _t0 = Date.now();
-    // Snapshot the generation id for THIS turn. _vmGenId is bumped by
-    // _ttsStopAll() any time the mic is turned off (see stopAll() -> _setTopNavVoiceActive(false)
-    // happens first, then _ttsStopAll() runs and increments it). If the user
-    // toggles off then quickly back on before this LLM turn resolves, _on will
-    // be true again by the time we get a reply — so checking _on alone isn't
-    // enough to tell "this reply belongs to a conversation that already ended".
-    // Comparing against _vmGenId catches that race and lets us drop the stale reply.
-    var _myGenId = _vmGenId;
 
     _voiceSearchPromise.then(function() {
       var searchLayer = _voiceSearchCtx
@@ -28600,12 +28349,7 @@ function speakVoiceReply(text) {
         return ctrl.signal;
       })()
     }).then(function(r) {
-      // This whole turn (started _myGenId ago) is stale if the mic was toggled
-      // off since — bail out silently instead of surfacing a toast/reply for
-      // a conversation that already ended, and don't touch _busy/record since
-      // those now belong to whatever fresh turn (if any) is currently running.
-      if (_myGenId !== _vmGenId) return;
-      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
+      if (r.status === 429) { toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -28613,7 +28357,6 @@ function speakVoiceReply(text) {
       var full = '';
       function readChunk() {
         reader.read().then(function(res) {
-          if (_myGenId !== _vmGenId) return; // stale turn — drop it
           if (res.done) {
             var reply = full.trim();
             var _elapsed = Date.now() - _t0;
@@ -28625,7 +28368,7 @@ function speakVoiceReply(text) {
               try { _mem0Save(text, reply); } catch(e) {}
               // avaBrain.afterReply deactivated
               speak(reply);
-            } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
+            } else { console.log('[Voice] Empty reply from LLM'); toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
             return;
           }
           buf += decoder.decode(res.value, { stream: true });
@@ -28638,10 +28381,10 @@ function speakVoiceReply(text) {
             try { var j = JSON.parse(data); var d = j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content; if (d) { if (!full) console.log('[Voice] First token: ' + (Date.now()-_t0) + 'ms'); full += d; window._avaLastReply = full.trim(); } } catch(e) {}
           });
           readChunk();
-        }).catch(function(e) { if (_myGenId !== _vmGenId) return; _busy = false; _busySince = 0; if (e && !_avatarLive()) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
       }
       readChunk();
-    }).catch(function(e) { if (_myGenId !== _vmGenId) return; _busy = false; _busySince = 0; if (e && !_avatarLive()) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
     }); // end _voiceSearchPromise.then
   }
 
@@ -28778,33 +28521,15 @@ function speakVoiceReply(text) {
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
-    // Fully release the mic hardware. Previously only the MediaRecorder was
-    // stopped here while _stream's underlying track stayed live — on mobile
-    // browsers/WebViews (which only allow one consumer to hold the mic at a
-    // time), that leftover live track is exactly what makes the NEXT
-    // getUserMedia() call fail with "mic is busy", even though nothing else
-    // is actually using it.
-    if (_stream) {
-      try { _stream.getTracks().forEach(function(t) { t.stop(); }); } catch(e) {}
-      _stream = null;
-    }
     _busy = false; _busySince = 0;
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
     toastHide();
-    // Clear the stored last-message text too, not just hide the toast — the
-    // hover-to-peek feature on the mic button re-shows whatever's in here
-    // any time it's hovered, with no check that this session's conversation
-    // is the one that produced it. Without this, deactivating then hovering
-    // right after reactivating can pop up a message from BEFORE you turned
-    // it off, looking like a random stale toast.
-    _toastFull = '';
     if (typeof _ttsStopAll === 'function') _ttsStopAll();
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
   }
-  window.addEventListener('pagehide', function(){ try { stopAll(); } catch(e){} });
 
   _setTopNavVoiceActive(false);
   window._openTranscript = function() {
@@ -28908,14 +28633,6 @@ function speakVoiceReply(text) {
       fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
       // Don't wipe _history here — preserve conversation across toggle off/on
       _busy = false; _busySince = 0;
-      // Release the TTS audio session BEFORE requesting the mic. On mobile
-      // WebViews (Median), TTS playback and mic capture share one audio
-      // session — if _actx is still open, getUserMedia fails with
-      // NotReadableError ("Mic is busy"). _ttsStopAll() alone won't do this
-      // here because its own guard skips cleanup once _topNavVoiceActive is true.
-      var _actxWasPresent = !!_actx;
-      var _actxClosePromise = Promise.resolve();
-      if (_actx) { try { _actxClosePromise = _actx.close() || Promise.resolve(); } catch(e){} _actx = null; }
       if (_stream) {
         // Already have mic — turn off TTS now and start recording
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
@@ -28929,67 +28646,38 @@ function speakVoiceReply(text) {
         _on = false;
         _setTopNavVoiceActive(false);
       } else {
-        // Median's wrapped WebView (no browser chrome) can silently reject a
-        // plain getUserMedia() call unless mic access is first granted via
-        // Median's own JS bridge — this is a no-op outside Median.
-        // Wait for the TTS AudioContext to actually finish closing first —
-        // close() is async, and requesting the mic before the OS audio
-        // session is truly released is what caused the constant "Mic is
-        // busy" NotReadableError, every time, even on a clean first try.
-        var _micRetries = 0;
-        var _micRetryDelays = [500, 1000, 2000];
-        function _requestMic() {
-          return _actxClosePromise.catch(function(){}).then(function(){
-            return window.median ? (
-              (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
-              (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
-              Promise.resolve()
-            ) : Promise.resolve();
-          }).then(function(){
-            return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          }).then(function(s) {
-            _stream = s;
-            // Keep mic stream alive when tab is backgrounded
-            document.addEventListener('visibilitychange', function() {
-              if (_stream) {
-                _stream.getTracks().forEach(function(t) {
-                  if (t.readyState === 'ended') return;
-                  t.enabled = true; // force re-enable in case browser muted it
-                });
-              }
-            });
-            // Permission granted — now safe to turn off TTS
-            if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
-            record();
-          }).catch(function(err) {
-            // close() resolving doesn't mean the OS has actually freed the
-            // mic hardware yet on mobile WebViews — that teardown can lag
-            // a beat behind the promise. One retry after a short delay
-            // catches that gap instead of failing on the very first try.
-            if (_micRetries < _micRetryDelays.length && err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
-              var _delay = _micRetryDelays[_micRetries];
-              _micRetries++;
-              return new Promise(function(res){ setTimeout(res, _delay); }).then(_requestMic);
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+          _stream = s;
+          // Keep mic stream alive when tab is backgrounded
+          document.addEventListener('visibilitychange', function() {
+            if (_stream) {
+              _stream.getTracks().forEach(function(t) {
+                if (t.readyState === 'ended') return;
+                t.enabled = true; // force re-enable in case browser muted it
+              });
             }
-            console.error('Mic getUserMedia error:', err && err.name, err && err.message);
-            var msg = 'Mic access denied';
-            if (err) {
-              if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                msg = 'Mic blocked — allow microphone access for this site in your browser settings';
-              } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                msg = 'No microphone found on this device';
-              } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                msg = 'Mic is busy in another app — close it and try again';
-              } else if (err.name === 'SecurityError') {
-                msg = 'Mic blocked — this page must be loaded over HTTPS';
-              }
-            }
-            toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ' retries:' + _micRetries + ']' : ''));
-            _on = false;
-            _setTopNavVoiceActive(false);
           });
-        }
-        _requestMic();
+          // Permission granted — now safe to turn off TTS
+          if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
+          record();
+        }).catch(function(err) {
+          console.error('Mic getUserMedia error:', err && err.name, err && err.message);
+          var msg = 'Mic access denied';
+          if (err) {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              msg = 'Mic blocked — allow microphone access for this site in your browser settings';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+              msg = 'No microphone found on this device';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+              msg = 'Mic is busy in another app — close it and try again';
+            } else if (err.name === 'SecurityError') {
+              msg = 'Mic blocked — this page must be loaded over HTTPS';
+            }
+          }
+          toast(msg);
+          _on = false;
+          _setTopNavVoiceActive(false);
+        });
       }
     } else {
       stopAll();
