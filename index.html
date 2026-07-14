@@ -599,7 +599,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .sidebar-move-btn:hover{background:var(--surface2);color:var(--text);}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 
-.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;}
+.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
 #etbBtns button{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -693,8 +693,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
   input,textarea,select{font-size:16px!important;}
   /* ── Chat/coach inputs: pill style ── */
-  #sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
-  #sec-chat .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 122px 12px 46px!important;min-height:48px!important;}
+  #sec-chat .input-box,#sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
   /* ── Welcome section: dock handles search on mobile, hide standalone ── */
   .input-box::placeholder{font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:rgba(200,200,220,0.5)!important;}
   textarea::placeholder{font-size:12px!important;}
@@ -863,6 +862,9 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 
 
 #chatHistoryPanel{position:absolute;top:16px;left:16px;z-index:51;pointer-events:auto;transition:opacity .3s;}
+/* User toggle (SYN-BOT header hamburger icon) — wins over every state-based
+   opacity rule below, since it's a deliberate on/off, not a state transition. */
+body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #chatEmptyState:not(.hidden) ~ * #chatHistoryPanel, #chatEmptyState:not(.hidden) + #chatHistoryPanel{opacity:0;pointer-events:none;}
 #chpSidebar.open ~ #chatHistoryPanel, #sec-chat:has(#chpSidebar.open) #chatHistoryPanel{opacity:1!important;pointer-events:auto!important;}
 /* Show trigger on empty state as hamburger */
@@ -1082,9 +1084,6 @@ html[data-theme="ios"] #ava-header-pic.ava-speaking{animation:avaGlowFlashLight 
 .input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;}
 .input-box::placeholder{color:var(--muted);}
 #sec-chat .input-box,#sec-coach .input-box{background:transparent!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;box-shadow:0 0 0 1px rgba(124,106,247,0.3),0 4px 24px rgba(0,0,0,0.3);}
-#sec-chat .input-box{padding-right:122px!important;}
-#sec-chat .send-btn{top:auto!important;bottom:10px!important;transform:none!important;}
-#sec-chat .send-btn:hover{transform:scale(1.06)!important;}
 @keyframes synapseOrbit{0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}}
 @keyframes synapseNodePulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.4);opacity:1}}
 @keyframes chatEmptyIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
@@ -1699,15 +1698,22 @@ to{opacity:0;transform:translateX(-40px);}}
 
 /* top-bar-toggle replaced by #winStrip */
 .top-bar .top-actions{-webkit-app-region:no-drag;app-region:no-drag;}
+/* Container-level fade: every icon (mic included) hides together, in one
+   synced motion — same simple behavior as the original. No per-child rule
+   here on purpose, so the default (speech-to-speech off) case is always
+   perfectly in sync and never fights with the voice-centering logic below,
+   which only ever touches the mic AFTER JS has physically moved it out of
+   .top-actions (see _tnvGlideToCenter in the script). A parent's opacity:0
+   can never be overridden by a child's own opacity, so as long as the mic
+   might still be a child of .top-actions, don't try to CSS-exempt it. */
 .top-actions{transition:opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
 .top-bar.hidden .top-actions{opacity:0!important;transform:translateY(-16px)!important;pointer-events:none;}
-/* Voice button lives OUTSIDE .top-actions now (see markup) specifically so it
-   can have its own independent show/hide instead of fighting the group's
-   parent-level opacity — that's what keeps the group's fade a single smooth
-   unit like before, instead of janky per-icon transitions. */
-#topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
-.top-bar.hidden #topNavVoiceBtn{opacity:0;transform:translateY(-16px);pointer-events:none;}
-body.voice-live .top-bar.hidden #topNavVoiceBtn{opacity:1;transform:translateY(0);pointer-events:auto;}
+/* Styling for the mic button only once JS has reparented it out of
+   .top-actions and directly under .top-bar, to float it centered while
+   speech-to-speech stays live and the rest of the top bar is collapsed.
+   Position itself (the glide) is driven by JS via inline transform/opacity —
+   this just establishes the positioning context. */
+#topNavVoiceBtn.tnv-centered{position:absolute!important;top:50%!important;left:50%!important;margin:0!important;z-index:5;pointer-events:auto!important;}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -2369,12 +2375,9 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
-#chatFlowCanvas,#jobsFlowCanvas,#roomFlowCanvas,#chatBeamsWrap{display:none!important;}
-/* flowCanvas (the original star/particle background) is handled separately
-   below — hidden by default, shown only when the day/night toggle is on the
-   sun (easyview) side. */
-#flowCanvas{display:none;}
-html[data-theme="easyview"] #flowCanvas{display:block!important;}
+#chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas{opacity:0;transition:opacity 1.4s ease;}
+#chatBeamsWrap{display:none!important;}
+html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -3589,7 +3592,7 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="cat-btn" id="nav-jobs" onclick="goJobs()"><span class="cat-dot"></span>🔗 Job Board</button>
         <button class="cat-btn" id="nav-world" onclick="goWorld()"><span class="cat-dot"></span>🌍 World Accelerator</button>
         <button class="cat-btn" id="nav-whiteboard" onclick="goWhiteboard()"><span class="cat-dot"></span>🎨 Whiteboard</button>
-        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>My Notes</button>
+        <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>📓 My Notes</button>
         <button class="cat-btn" id="nav-profile" onclick="goProfile()"><span class="cat-dot"></span>👤 My Profile</button>
       </div>
       <div class="sidebar-section" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:14px;margin-top:8px;user-select:none;" onclick="toggleSideSection('toolItems','toolArrow')">
@@ -4015,7 +4018,7 @@ window.getWebAudioNode = getWebAudioNode;
       {icon:'🔗', label:'Job Board', fn:function(){ if(typeof goJobs==='function') goJobs(); }},
       {icon:'🌍', label:'World Accelerator', fn:function(){ if(typeof goWorld==='function') goWorld(); }},
       {icon:'🎨', label:'Whiteboard', fn:function(){ if(typeof goWhiteboard==='function') goWhiteboard(); }},
-      {icon:'', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
+      {icon:'📓', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbgcc" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbgcc)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbgcc)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbgcc)" stroke-width="1.8"/></svg>', label:'Browse Tools', fn:function(){ if(typeof showTools==='function') showTools('all'); }},
       {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }}
     ];
@@ -4538,35 +4541,32 @@ window.getWebAudioNode = getWebAudioNode;
         <button class="hub-tab-btn" id="hub-tab-coach" onclick="switchHubTab('coach')" title="Advisor" style="padding:8px 12px;font-size:14px;">🎯</button>
         <div style="flex:1;"></div>
     </div>
-    <!-- Global voice activity button — lives OUTSIDE .top-actions on purpose,
-         see CSS notes near #topNavVoiceBtn, so it can hide/show independently
-         without breaking the rest of the group's single smooth fade. -->
-    <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;color:rgba(160,165,220,0.5);margin-left:6px;margin-right:2px;">
-      <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-        <line x1="12" y1="19" x2="12" y2="23"/>
-        <line x1="8" y1="23" x2="16" y2="23"/>
-      </svg>
-      <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
-        <defs>
-          <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
-          <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
-          <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
-          <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
-          <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
-          <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
-          <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
-          <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
-        </g>
-      </svg>
-    </button>
     <div class="top-actions" style="padding-right:148px;">
+      <button id="topNavVoiceBtn" onclick="if(_currentViewId==='sec-chat'){ toggleTopNavVoice(); } else { setView('sec-chat'); }" title="Voice activity (right-click for more)" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(99,102,195,0.3);background:transparent;cursor:pointer;flex-shrink:0;padding:0;color:rgba(160,165,220,0.5);margin-right:2px;">
+        <svg id="tnvMicIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
+          <defs>
+            <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="tnvBarsGroup" fill="rgba(0,217,168,1)" filter="url(#tnvGlow)">
+            <rect class="tnv-bar" x="0"    y="8"  width="3.2" height="4"  rx="1.6"/>
+            <rect class="tnv-bar" x="4.5"  y="5"  width="3.2" height="10" rx="1.6"/>
+            <rect class="tnv-bar" x="9"    y="1"  width="3.2" height="18" rx="1.6"/>
+            <rect class="tnv-bar" x="13.5" y="3"  width="3.2" height="14" rx="1.6"/>
+            <rect class="tnv-bar" x="18"   y="5"  width="3.2" height="10" rx="1.6"/>
+            <rect class="tnv-bar" x="22.5" y="7"  width="3.2" height="6"  rx="1.6"/>
+            <rect class="tnv-bar" x="27"   y="9"  width="3.2" height="3"  rx="1.6"/>
+          </g>
+        </svg>
+      </button>
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
       <!-- Robot hover toggle -->
       <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
@@ -5419,7 +5419,7 @@ window.getWebAudioNode = getWebAudioNode;
     <div id="nbCol1" style="width:210px;min-width:210px;background:rgba(7,8,16,0.98);border-right:1px solid rgba(79,86,200,0.15);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;">
       <div style="padding:13px 12px 9px;border-bottom:1px solid rgba(79,86,200,0.12);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <span style="font-family:'Syne',sans-serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(99,102,195,0.55);">Notebooks</span>
-        <button onclick="openQuickNotePopup()" title="New note" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
+        <button onclick="nbAddNotebook()" title="New notebook" style="background:rgba(124,106,247,0.13);border:1px solid rgba(124,106,247,0.28);border-radius:6px;color:#a78bfa;font-size:15px;line-height:1;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(124,106,247,0.26)'" onmouseout="this.style.background='rgba(124,106,247,0.13)'">+</button>
       </div>
       <div id="nbNotebookList" style="flex:1;overflow-y:auto;padding:5px 0;scrollbar-width:thin;scrollbar-color:rgba(124,106,247,0.15) transparent;"></div>
     </div>
@@ -5437,7 +5437,7 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Main editor -->
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:rgba(10,11,20,0.99);">
       <div id="notesTopBar" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(79,86,200,0.10);flex-shrink:0;">
-        <button class="nb-mobile-back" onclick="_nbSetMobileView('col1')" title="Back to notebooks" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
+        <button class="nb-mobile-back" onclick="_nbSetMobileView('col2')" title="Back to pages" style="background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.22);border-radius:6px;color:#a78bfa;font-size:13px;line-height:1;width:22px;height:22px;cursor:pointer;align-items:center;justify-content:center;padding:0;flex-shrink:0;">‹</button>
         <input id="notesPageTitle" type="text" placeholder="Page title…" oninput="notesTitleChanged()" style="flex:1;background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:rgba(220,222,255,0.92);caret-color:#a78bfa;" />
         <span id="notesSaveIndicator" style="font-size:11px;color:rgba(99,102,195,0.4);font-family:'DM Sans',sans-serif;transition:opacity .3s;flex-shrink:0;"></span>
         <button id="nbLockBtn" onclick="nbToggleLock()" title="Toggle lock" style="display:none;background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;font-size:13px;color:rgba(99,102,195,0.4);transition:all .15s;flex-shrink:0;" onmouseover="this.style.color='rgba(160,163,220,0.8)'" onmouseout="this.style.color='rgba(99,102,195,0.4)'">🔓</button>
@@ -5457,23 +5457,6 @@ window.getWebAudioNode = getWebAudioNode;
 
   </div>
   <!-- ────────────────────────────────────────────────────────────── -->
-
-  <!-- ── Quick Note Popup ── -->
-  <div id="nbQuickPopupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;align-items:center;justify-content:center;" onclick="if(event.target===this)closeQuickNotePopup()">
-    <div id="nbQuickPopup" style="width:320px;max-width:92vw;background:#0d0d16;border:1px solid rgba(124,106,247,0.3);border-radius:14px;padding:16px 16px 14px;box-shadow:0 12px 48px rgba(0,0,0,0.6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <span style="font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:rgba(220,222,255,0.9);">📝 New Note</span>
-        <button onclick="closeQuickNotePopup()" style="background:none;border:none;color:rgba(255,255,255,0.35);cursor:pointer;font-size:15px;padding:0;line-height:1;">✕</button>
-      </div>
-      <select id="nbQuickPopupNotebook" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:8px 10px;color:rgba(220,222,255,0.9);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;margin-bottom:8px;box-sizing:border-box;"></select>
-      <input id="nbQuickPopupTitle" type="text" placeholder="Note title…" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:9px 12px;color:rgba(230,232,255,0.95);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;outline:none;margin-bottom:8px;box-sizing:border-box;" />
-      <textarea id="nbQuickPopupBody" placeholder="Write your note…" style="width:100%;min-height:110px;background:rgba(255,255,255,0.05);border:1px solid rgba(124,106,247,0.22);border-radius:8px;padding:10px 12px;color:rgba(230,232,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button onclick="closeQuickNotePopup()" style="padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(200,200,220,0.6);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Cancel</button>
-        <button onclick="saveQuickNotePopup()" style="padding:7px 16px;background:rgba(124,106,247,0.18);border:1px solid rgba(124,106,247,0.4);border-radius:8px;color:#c4bbff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Save Note</button>
-      </div>
-    </div>
-  </div>
 
   <div class="section" id="sec-whiteboard"><div id="wbScrollbarY"><div id="wbScrollThumbY"></div></div><div id="wbScrollbarX"><div id="wbScrollThumbX"></div></div>
     <!-- Board Drawer: wrap slides as one unit, tab hangs below panel -->
@@ -5765,7 +5748,7 @@ var NAV_ALL_ITEMS = [
   {id:'jobs',   icon:'🔗', label:'Jobs',        fn:'goJobs()'},
   {id:'world',  icon:'🌍', label:'World',       fn:'goWorld()'},
   {id:'whiteboard', icon:'🎨', label:'Whiteboard',  fn:'goWhiteboard()'},
-  {id:'notes',  icon:'',   label:'My Notes',    fn:'goNotes()'},
+  {id:'notes',  icon:'📓', label:'My Notes',    fn:'goNotes()'},
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
   {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat();triggerNavGlow(this)'},
@@ -5827,16 +5810,12 @@ function loadNavConfig(){
         initBnavDrag();
         var btn=document.getElementById('bnavExpandBtn');
         if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-        // Respect whatever the user last set via the toggle (do NOT force it visible)
+        // Ensure top bar is visible
+        TOP_BAR_HIDDEN=false;
         var topBar=document.querySelector('.top-bar');
         var topBtn=document.getElementById('topBarToggle');
-        if(TOP_BAR_HIDDEN){
-          if(topBar) topBar.classList.add('hidden');
-          if(topBtn){topBtn.innerHTML='▼';topBtn.title='Show top bar';}
-        } else {
-          if(topBar) topBar.classList.remove('hidden');
-          if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
-        }
+        if(topBar) topBar.classList.remove('hidden');
+        if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
       },150);
     }
   }catch(e){}
@@ -5872,7 +5851,7 @@ function renderIconRail(){
     jobs:       {icon:'🔗', label:'Job Board',       fn:"goJobs()"},
     world:      {icon:'🌍', label:'World Accelerator',fn:"goWorld()"},
     whiteboard: {icon:'🎨', label:'Whiteboard',      fn:"goWhiteboard()"},
-    notes:      {icon:'',   label:'My Notes',        fn:"goNotes()"},
+    notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
     chat:       {icon:'💬', label:'New Chat',        fn:"newChat()"},
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"}
@@ -6571,7 +6550,7 @@ function showCyberpunkGreeting(name){
 
 
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';},2200);}
-function autoResize(el){el.style.height='auto';el.style.height=Math.max(52,Math.min(el.scrollHeight,160))+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
 
 // Render server warm-up: ping on load + first input focus so server is awake before first message
 (function(){
@@ -6664,7 +6643,7 @@ if(_isVidMode){
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
     var fn=secMap[_lastSec];
     if(fn){fn();}else if(typeof newChat==='function'){newChat();}
   }
@@ -6721,6 +6700,11 @@ var _currentViewId=null;function setView(id){
   var wasAlreadyActive = el.classList.contains('active');
   el.classList.add('active');
   if(!wasAlreadyActive){ el.style.animation='none';el.offsetHeight;el.style.animation=''; }
+  if(!wasAlreadyActive && (localStorage.getItem('_appTheme')||'purple')==='easyview'){
+    var _reinitMap={'sec-welcome':'_reinitFlowCanvas','sec-chat':'_reinitChatFlowCanvas','sec-jobs':'_reinitJobsFlowCanvas','sec-room':'_reinitRoomFlowCanvas'};
+    var _rfn=_reinitMap[id];
+    if(_rfn && window[_rfn]) setTimeout(window[_rfn], 30);
+  }
   document.querySelectorAll('.cat-btn').forEach(function(b){
     b.classList.remove('active');b.classList.remove('nav-glow');
     b.classList.remove('nav-glow-hold');b.style.boxShadow='';b.style.animation='';
@@ -13059,8 +13043,11 @@ function persistChats(){
       data.chatSessions[k]={history:chatSessions[k].history||[],hasNotes:chatSessions[k].hasNotes||false};
     });
     var _json=JSON.stringify(data);
-    // Fast, complete local copy — always full-size, never trimmed.
     localStorage.setItem('synapses_chat_history',_json);
+    // Also persist to Neutralino storage so it survives app restarts
+    if(window.Neutralino && Neutralino.storage){
+      Neutralino.storage.setData('synapses_chat_history',_json).catch(function(){});
+    }
   }catch(e){
     try{
       var minimal={recentChats:recentChats,savedChats:savedChats,chatSessions:{}};
@@ -13068,44 +13055,22 @@ function persistChats(){
         var s=chatSessions[c.key];
         if(s) minimal.chatSessions[c.key]={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
       });
-      localStorage.setItem('synapses_chat_history',JSON.stringify(minimal));
+      var _mjson=JSON.stringify(minimal);
+      localStorage.setItem('synapses_chat_history',_mjson);
+      if(window.Neutralino && Neutralino.storage){
+        Neutralino.storage.setData('synapses_chat_history',_mjson).catch(function(){});
+      }
     }catch(e2){}
-  }
-  // Persist to Neutralino.storage too, so chats survive an uninstall/reinstall.
-  // Written as many SMALL pieces (one per chat, trimmed to the last 40 messages)
-  // instead of one ever-growing blob — a single oversized write can silently fail
-  // in Neutralino, and when it does, it used to freeze the ENTIRE history at
-  // whatever the last successful write was (sometimes just 1 chat). Chunking
-  // means a failure on one chat can't take the rest down with it, and trimming
-  // keeps each individual write small enough to actually succeed.
-  if(window.Neutralino && Neutralino.storage){
-    try{
-      var _idxKeys=recentChats.map(function(c){return c.key;}).concat(savedChats.map(function(c){return c.key;}));
-      var _index={recentChats:recentChats,savedChats:savedChats};
-      Neutralino.storage.setData('synapses_chat_index',JSON.stringify(_index))
-        .catch(function(err){console.warn('Neutralino chat index save failed:',err);});
-      _idxKeys.forEach(function(k){
-        var s=chatSessions[k];
-        if(!s) return;
-        var trimmed={history:(s.history||[]).slice(-40),hasNotes:s.hasNotes||false};
-        Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(trimmed))
-          .catch(function(err){
-            // Even the trimmed chunk failed (very long single messages, etc.) —
-            // retry once with a much smaller slice as a last resort so SOMETHING
-            // for this chat survives a reinstall, rather than nothing at all.
-            var smaller={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
-            Neutralino.storage.setData('synapses_chat_sess_'+k,JSON.stringify(smaller)).catch(function(err2){console.warn('Neutralino chat chunk save failed for',k,err2);});
-          });
-      });
-    }catch(e3){}
   }
 }
 function loadPersistedChats(){
-  function _applyChats(recents,saved,sessions){
+  function _applyChats(raw){
     try{
-      if(recents) recentChats=recents;
-      if(saved) savedChats=saved;
-      if(sessions) Object.assign(chatSessions,sessions);
+      if(!raw) return;
+      var data=JSON.parse(raw);
+      if(data.recentChats) recentChats=data.recentChats;
+      if(data.savedChats) savedChats=data.savedChats;
+      if(data.chatSessions) Object.assign(chatSessions,data.chatSessions);
       renderRecentChats(); renderSavedChats();
       var _sb=document.getElementById('chpSidebar');
       if(_sb&&!_sb.classList.contains('open')&&(recentChats.length||savedChats.length)){
@@ -13114,49 +13079,16 @@ function loadPersistedChats(){
       }
     }catch(e){}
   }
-  function _fromLocalStorage(){
-    try{
-      var raw=localStorage.getItem('synapses_chat_history');
-      if(!raw) return null;
-      var d=JSON.parse(raw);
-      return {recentChats:d.recentChats||[],savedChats:d.savedChats||[],chatSessions:d.chatSessions||{},count:(d.recentChats||[]).length+(d.savedChats||[]).length};
-    }catch(e){ return null; }
-  }
-  var local=_fromLocalStorage();
-  if(!(window.Neutralino && Neutralino.storage)){
-    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-    return;
-  }
-  // New chunked format first (index + one key per chat).
-  Neutralino.storage.getData('synapses_chat_index').then(function(idxRaw){
-    var idx; try{ idx=JSON.parse(idxRaw); }catch(e){ idx=null; }
-    if(!idx || !((idx.recentChats||[]).length+(idx.savedChats||[]).length)){
-      // No usable chunked index — fall back to the old combined-blob key
-      // (covers installs saved before this chunking change existed) or localStorage.
-      Neutralino.storage.getData('synapses_chat_history').then(function(oldRaw){
-        var old; try{ old=JSON.parse(oldRaw); }catch(e){ old=null; }
-        var oldCount = old ? ((old.recentChats||[]).length+(old.savedChats||[]).length) : -1;
-        var localCount = local ? local.count : -1;
-        if(localCount>=oldCount && local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-        else if(old) _applyChats(old.recentChats,old.savedChats,old.chatSessions);
-      }).catch(function(){
-        if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-      });
-      return;
-    }
-    // Chunked index found — pull in each chat's messages individually.
-    var allKeys=(idx.recentChats||[]).map(function(c){return c.key;}).concat((idx.savedChats||[]).map(function(c){return c.key;}));
-    var sessions={};
-    Promise.all(allKeys.map(function(k){
-      return Neutralino.storage.getData('synapses_chat_sess_'+k).then(function(raw){
-        try{ sessions[k]=JSON.parse(raw); }catch(e){}
-      }).catch(function(){});
-    })).then(function(){
-      _applyChats(idx.recentChats,idx.savedChats,sessions);
+  // Prefer Neutralino.storage (persists across restarts), fall back to localStorage
+  if(window.Neutralino && Neutralino.storage){
+    Neutralino.storage.getData('synapses_chat_history').then(function(raw){
+      _applyChats(raw);
+    }).catch(function(){
+      _applyChats(localStorage.getItem('synapses_chat_history'));
     });
-  }).catch(function(){
-    if(local) _applyChats(local.recentChats,local.savedChats,local.chatSessions);
-  });
+  } else {
+    _applyChats(localStorage.getItem('synapses_chat_history'));
+  }
 }
 function deleteRecentChat(i){recentChats.splice(i,1);persistChats();renderRecentChats();}
 function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
@@ -15838,7 +15770,7 @@ function renderNotes(){
       +'<div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">'+n.date+'</div>'
       +'</div>'
       +(n.body?'<div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:8px;">'+esc(n.body)+'</div>':'')
-      +'<div>'+(n.tags||[]).map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
+      +'<div>'+n.tags.map(function(t){return'<span style="'+tagStyle(t)+'">'+esc(t)+'</span>';}).join('')+'</div>'
       +'</div>';
   }).join('');
 }
@@ -16219,16 +16151,16 @@ async function confirmWorldApproach(){
 // Canvas
 
 /* SYNAPSES HOME ANIMATION — DO NOT CHANGE: indigo/purple floating particles with connecting lines on flowCanvas. Restore from this code if lost. */
-(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=(isMobile?Math.random()*1.1+0.5:Math.random()*2+1);this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=window.innerWidth<=768;var count=isMobile?Math.round((w*h)/14000):60;count=Math.max(18,Math.min(count,60));particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);var linkDist=isMobile?70:120;particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}var _wasMobile=null;window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';var nowMobile=window.innerWidth<=768;if(_wasMobile!==null&&nowMobile!==_wasMobile){init();}_wasMobile=nowMobile;});_wasMobile=window.innerWidth<=768;init();draw();})();
+(function(){var canvas=document.getElementById('flowCanvas'),container=document.getElementById('sec-welcome');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitFlowCanvas=init;init();draw();})();
 
 /* CHAT PAGE PARTICLES — same design as home page */
-(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('chatFlowCanvas'),container=document.getElementById('sec-chat');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitChatFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* JOB BOARD PARTICLES */
-(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('jobsFlowCanvas'),container=document.getElementById('sec-jobs');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitJobsFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 /* COMMUNITY ROOM PARTICLES */
-(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},300);})();
+(function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;this.vx=(Math.random()-.5)*.4;this.vy=(Math.random()-.5)*.4;this.r=Math.random()*2+1;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;particles=[];for(var i=0;i<60;i++)particles.push(new Particle());}function draw(){ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<120){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitRoomFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 
 /* SYNAPSES LOGIN ANIMATION — DO NOT CHANGE: Layer 1 = rising diagonal blurred light beams on authBeamsCanvas. Layer 2 = same particle network as home page on authDotCanvas. Both run simultaneously. Restore from this code if lost. */
@@ -17498,7 +17430,6 @@ var _nb = {
 };
 
 var NB_KEY = 'synapses_nb4';
-var QN_LOCK_KEY = 'synapses_qn_locked';
 
 function _nbDateStr() {
   var d = new Date(), mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -17526,9 +17457,7 @@ function _nbLoad() {
     return { id:'qn_' + (n._nbPageId || _nbId()), title:n.title||'Note', body:n.body||'', date:n.date||_nbDateStr() };
   });
   if (qnPages.length === 0) qnPages.push({ id:'qn_empty', title:'No notes yet', body:'', date:_nbDateStr() });
-  // Editable by default — only locked if the user explicitly toggled lock on before
-  var _qnLocked = localStorage.getItem(QN_LOCK_KEY) === '1';
-  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:_qnLocked, pages:qnPages });
+  _nb.data.unshift({ id:'qn_notebook', title:'Quick Notes', color:'#00d9a8', locked:true, pages:qnPages });
   _nb.activeNb = Math.min(_nb.activeNb, _nb.data.length - 1);
   var nb = _nb.data[_nb.activeNb];
   _nb.activePg = Math.min(_nb.activePg, (nb.pages||[]).length - 1);
@@ -17554,23 +17483,13 @@ function _nbRenderNotebooks() {
   _nb.data.forEach(function(notebook, i) {
     var active = (i === _nb.activeNb);
     var d = document.createElement('div');
-    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:rgba(170,172,210,0.7);';
-    var _topRow = '<div style="display:flex;align-items:center;gap:9px;">' +
-      '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
+    d.style.cssText = 'display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;' +
+      (active ? 'background:rgba(124,106,247,0.12);color:rgba(220,222,255,0.9);' : 'color:rgba(170,172,210,0.7);');
+    d.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
-      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
-    // Preview of the notebook's notes — each one its own clickable row, not just descriptive text
-    var _previewPages = [];
-    (notebook.pages||[]).forEach(function(p, pi){
-      if (p.title && p.title !== 'No notes yet' && _previewPages.length < 3) _previewPages.push({p:p, pi:pi});
-    });
-    var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:3px;margin-top:2px;">' +
-      _previewPages.map(function(item){
-        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
-      }).join('') + '</div>' : '';
-    d.innerHTML = _topRow + _previewRow;
-    d.onmouseover = function() { this.style.background='rgba(124,106,247,0.12)'; };
-    d.onmouseout  = function() { this.style.background=''; };
+      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span>';
+    d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.12)'; };
+    d.onmouseout  = function() { if(!active) this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
       _nbRenderAll();
@@ -17581,15 +17500,6 @@ function _nbRenderNotebooks() {
     }
     el.appendChild(d);
   });
-}
-
-// Jump straight to a specific note from the notebook-list preview
-function nbOpenPreviewNote(nbi, pgi, e) {
-  if (e) e.stopPropagation();
-  _nbFlush();
-  _nb.activeNb = nbi; _nb.activePg = pgi;
-  _nbRenderAll();
-  if (window.innerWidth <= 620) _nbSetMobileView('editor');
 }
 
 function _nbRenderPages() {
@@ -17645,7 +17555,6 @@ function nbToggleLock() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb || nb.title !== 'Quick Notes') return;
   nb.locked = !nb.locked;
-  try { localStorage.setItem(QN_LOCK_KEY, nb.locked ? '1' : '0'); } catch(e) {}
   _nbPersist();
   _nbLoadEditor();
 }
@@ -17688,101 +17597,6 @@ function nbAddNotebook() {
   _nbPersist(); _nbRenderAll();
 }
 
-// Instantly create a fresh note and drop the user straight into typing —
-// defaults to Quick Notes, no notebook picker in the way.
-function _nbCreateNoteIn(nbIdx) {
-  _nbFlush();
-  _nb.activeNb = nbIdx;
-  var nb = _nb.data[nbIdx];
-  var page = { id:_nbId(), title:'', body:'', date:_nbDateStr() };
-  nb.pages.unshift(page); _nb.activePg = 0;
-  if (nb.title === 'Quick Notes') {
-    var freshNotes = [];
-    try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'', body:'', date:_nbDateStr(), colorIdx:4 });
-    try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
-  }
-  _nbPersist(); _nbRenderAll();
-  _nbSetMobileView('editor');
-  setTimeout(function() { var ed = document.getElementById('notesEditor'); if (ed) ed.focus(); }, 60);
-}
-
-function nbQuickAdd() {
-  var qnIdx = 0;
-  for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
-  _nbCreateNoteIn(qnIdx);
-}
-
-function nbQuickAddChooseNotebook(e) {
-  if (e) e.preventDefault();
-  var list = _nb.data.map(function(nb, i) { return (i + 1) + '. ' + nb.title; }).join('\n');
-  var choice = prompt('Add this note to which notebook?\n' + list + '\n\nType a number, or type a new name to create one:', '1');
-  if (!choice) return;
-  choice = choice.trim();
-  var idx = parseInt(choice, 10);
-  if (!isNaN(idx) && _nb.data[idx - 1]) { _nbCreateNoteIn(idx - 1); return; }
-  // Not a valid number — treat it as a new notebook name
-  var colors = ['#7c6af7','#e85d96','#f97316','#38bdf8','#a855f7','#facc15'];
-  var color = colors[(_nb.data.length - 1) % colors.length];
-  _nb.data.push({ id:_nbId(), title:choice, color:color, locked:false, pages:[] });
-  _nbCreateNoteIn(_nb.data.length - 1);
-}
-
-// ── Quick Note popup: + opens this so the user can write the note right away ──
-function openQuickNotePopup() {
-  var sel = document.getElementById('nbQuickPopupNotebook');
-  if (sel) {
-    sel.innerHTML = _nb.data.map(function(nb, i) { return '<option value="' + i + '">' + _nbEsc(nb.title) + '</option>'; }).join('');
-    var qnIdx = 0;
-    for (var i = 0; i < _nb.data.length; i++) { if (_nb.data[i].title === 'Quick Notes') { qnIdx = i; break; } }
-    sel.value = qnIdx;
-  }
-  var t = document.getElementById('nbQuickPopupTitle'); if (t) t.value = '';
-  var b = document.getElementById('nbQuickPopupBody'); if (b) b.value = '';
-  var ov = document.getElementById('nbQuickPopupOverlay');
-  if (ov) ov.style.display = 'flex';
-  setTimeout(function() { if (t) t.focus(); }, 50);
-}
-
-function closeQuickNotePopup() {
-  var ov = document.getElementById('nbQuickPopupOverlay');
-  if (ov) ov.style.display = 'none';
-}
-
-function saveQuickNotePopup() {
-  var sel = document.getElementById('nbQuickPopupNotebook');
-  var nbIdx = sel ? parseInt(sel.value, 10) : 0;
-  if (isNaN(nbIdx)) nbIdx = 0;
-  var titleEl = document.getElementById('nbQuickPopupTitle');
-  var bodyEl = document.getElementById('nbQuickPopupBody');
-  var title = titleEl ? titleEl.value.trim() : '';
-  var bodyRaw = bodyEl ? bodyEl.value : '';
-  // Close the popup FIRST — no matter what happens below, the window disappears now.
-  closeQuickNotePopup();
-  if (!title && !bodyRaw.trim()) { return; }
-  try {
-    _nbFlush();
-    var nb = _nb.data[nbIdx];
-    if (!nb) return;
-    var bodyHtml = _nbEsc(bodyRaw).replace(/\n/g, '<br>');
-    var page = { id:_nbId(), title:title || 'Untitled', body:bodyHtml, date:_nbDateStr() };
-    nb.pages.unshift(page);
-    _nb.activeNb = nbIdx; _nb.activePg = 0;
-    if (nb.title === 'Quick Notes') {
-      var freshNotes = [];
-      try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
-      freshNotes.unshift({ title:page.title, body:bodyRaw, tags:[], date:page.date, colorIdx:4 });
-      try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
-    }
-    _nbPersist(); _nbRenderAll();
-    if (typeof renderNotes === 'function') renderNotes();
-    if (typeof showToast === 'function') showToast('📝 Note saved!');
-  } catch (err) {
-    console.error('saveQuickNotePopup error:', err);
-    if (typeof showToast === 'function') showToast('⚠️ Note may not have saved — check console');
-  }
-}
-
 function nbAddPage() {
   var nb = _nb.data[_nb.activeNb];
   if (!nb) return;
@@ -17793,7 +17607,7 @@ function nbAddPage() {
   if (nb.title === 'Quick Notes') {
     var freshNotes = [];
     try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
-    freshNotes.unshift({ title:'New Page', body:'', tags:[], date:_nbDateStr(), colorIdx:4 });
+    freshNotes.unshift({ title:'New Page', body:'', date:_nbDateStr(), colorIdx:4 });
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
   }
   _nbPersist(); _nbRenderPages(); _nbLoadEditor();
@@ -17949,7 +17763,7 @@ function goNotes() {
   _currentViewId = 'sec-notes';
   var _navBtn = document.getElementById('nav-notes');
   if (_navBtn) { _navBtn.classList.add('active'); triggerNavGlow(_navBtn); }
-  document.getElementById('topTitle').textContent = 'My Notes';
+  document.getElementById('topTitle').textContent = '📓 My Notes';
   document.getElementById('topTitle').style.opacity = '1';
   document.getElementById('topTitle').style.display = '';
   var _htb = document.getElementById('hubTabBar');
@@ -21640,12 +21454,112 @@ function _updateDragZones(){
   var zL=document.getElementById('etbDragZoneL');
   if(zL) zL.style.right='136px';
 }
+// ── Voice-mic glide (speech-to-speech "float to center" behavior) ──────────
+// The mic button (#topNavVoiceBtn) normally lives inside .top-actions and
+// hides together with every other top-bar icon (see the plain .top-actions
+// container-fade CSS). The ONLY time it behaves differently is while
+// speech-to-speech is live AND the top bar icons are collapsed: after a
+// short pause, the mic physically leaves .top-actions (so it's immune to
+// the container's opacity:0) and glides to the center of the top bar using
+// the FLIP technique (measure First position, apply Last position, invert
+// with a transform, then animate the transform away) so the motion is a
+// real glide across the screen, not an instant snap.
+var _tnvGlideTimer = null;
+var _tnvCentered = false;
+var _tnvHomeParent = null;
+var _tnvHomeNextSibling = null;
+var TNV_GLIDE_DELAY = 700; // ms — pause before the mic starts gliding to center (spec: .5–1s)
+
+function _tnvClearGlideTimer(){
+  if(_tnvGlideTimer){ clearTimeout(_tnvGlideTimer); _tnvGlideTimer = null; }
+}
+
+// The status toast (#tnvToast) anchors itself to the mic button's position
+// at the moment it's shown, and never re-checks after that. That's fine
+// while the button is stationary, but the button moves — container fade
+// (±16px), glide-to-center, glide-home, fade-out-centered — and if the
+// toast is on screen during any of that, it's left pointing at wherever the
+// button used to be. This polls the button's live position every frame for
+// `ms` and keeps the toast locked to it, matching the exact anchor math
+// toast() itself uses, so it never gets orphaned mid-move.
+function _tnvTrackToastDuring(ms){
+  var toastEl = document.getElementById('tnvToast');
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!toastEl || !btn) return;
+  var start = (window.performance && performance.now) ? performance.now() : Date.now();
+  function step(now){
+    if(!toastEl.classList.contains('show')) return; // dismissed mid-move — nothing to follow
+    var r = btn.getBoundingClientRect();
+    toastEl.style.top = (r.bottom + 12) + 'px';
+    toastEl.style.left = (r.left + r.width / 2) + 'px';
+    toastEl.style.transform = 'translateX(-50%)';
+    toastEl.style.bottom = 'auto';
+    if(now - start < ms) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function _tnvGlideToCenter(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  var bar = document.querySelector('.top-bar');
+  if(!btn || !bar || _tnvCentered) return;
+  // Bail if state changed during the delay (bar reopened / voice went off).
+  if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
+  if(!window._topNavVoiceActive) return;
+  var first = btn.getBoundingClientRect();
+  _tnvHomeParent = btn.parentNode;
+  _tnvHomeNextSibling = btn.nextSibling;
+  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
+  btn.classList.add('tnv-centered');
+  _tnvCentered = true;
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.transition = 'none';
+  btn.style.opacity = '0';
+  btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
+  void btn.offsetWidth; // flush layout so the "from" state actually paints
+  btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
+  btn.style.opacity = '1';
+  btn.style.transform = 'translate(-50%,-50%) scale(1)';
+  _tnvTrackToastDuring(500);
+}
+
+function _tnvGlideHome(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || !_tnvCentered) return;
+  var first = btn.getBoundingClientRect();
+  btn.classList.remove('tnv-centered');
+  btn.style.transition = 'none';
+  btn.style.transform = 'none';
+  if(_tnvHomeParent){
+    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === _tnvHomeParent) _tnvHomeParent.insertBefore(btn, _tnvHomeNextSibling);
+    else _tnvHomeParent.appendChild(btn);
+  }
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.transform = 'translate('+dx+'px,'+dy+'px)';
+  btn.style.opacity = '1';
+  void btn.offsetWidth;
+  btn.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1)';
+  btn.style.transform = 'translate(0,0)';
+  _tnvCentered = false;
+  _tnvTrackToastDuring(450);
+  btn.addEventListener('transitionend', function _cleanup(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    btn.style.transition = '';
+    btn.style.transform = '';
+  }, {once:true});
+}
+
 function toggleTopBar(){
   TOP_BAR_HIDDEN = !TOP_BAR_HIDDEN;
   var bar = document.querySelector('.top-bar');
   var btn = document.getElementById('topBarToggle');
   var htb = document.querySelector('.hub-tab-bar');
   try{localStorage.setItem('synapses_topbar_hidden',TOP_BAR_HIDDEN?'1':'0');}catch(e){}
+  _tnvClearGlideTimer();
   if(TOP_BAR_HIDDEN){
     bar.classList.add('hidden');
     document.body.classList.add('topbar-hidden');
@@ -21653,6 +21567,16 @@ function toggleTopBar(){
     btn.title = 'Show top icons';
     if(htb) htb.style.display='none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='none';
+    // Everything (mic included) fades out together right now, in sync, via
+    // the plain .top-actions container rule — which shifts the mic by
+    // ~16px if it's still an in-flow child, so keep the toast glued to it
+    // through that motion too. Only if speech-to-speech is live do we then,
+    // after a short pause, pull the mic out and glide it to center — a
+    // deliberate second beat, not part of the initial hide.
+    _tnvTrackToastDuring(300);
+    if(window._topNavVoiceActive){
+      _tnvGlideTimer = setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+    }
   } else {
     bar.classList.remove('hidden');
     document.body.classList.remove('topbar-hidden');
@@ -21661,6 +21585,8 @@ function toggleTopBar(){
     var onHub=document.getElementById('sec-hub')&&document.getElementById('sec-hub').classList.contains('active');
     if(htb) htb.style.display=onHub?'flex':'none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='';
+    _tnvTrackToastDuring(300);
+    if(_tnvCentered) _tnvGlideHome();
   }
 }
 
@@ -23164,6 +23090,16 @@ function _openNeutralinoWebview(url){
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
+    if(t==='easyview'){
+      // Canvases sit at 0x0 while hidden (display:none), so re-measure and
+      // reinit whichever ones now have visible dimensions in sun mode.
+      setTimeout(function(){
+        if(window._reinitFlowCanvas) window._reinitFlowCanvas();
+        if(window._reinitChatFlowCanvas) window._reinitChatFlowCanvas();
+        if(window._reinitJobsFlowCanvas) window._reinitJobsFlowCanvas();
+        if(window._reinitRoomFlowCanvas) window._reinitRoomFlowCanvas();
+      }, 50);
+    }
   }
 
   window._applyTheme = applyTheme;
@@ -23495,7 +23431,10 @@ function _neuInjectDownloadInterceptor(frame){
   <div style="padding:12px 16px;border-bottom:1px solid rgba(124,106,247,0.2);display:flex;align-items:center;gap:10px;background:rgba(124,106,247,0.06);">
     <div style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px #00d9a8;flex-shrink:0;"></div>
     <div style="font-family:Syne,sans-serif;font-size:11px;font-weight:700;color:#f0f0ff;letter-spacing:.1em;">SYN-BOT // ONLINE</div>
-    <button onclick="synBotOpenAccount()" title="Account" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+    <button id="synBotHistoryToggle" onclick="toggleChatHistoryVisibility()" title="Hide past-chats button" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button onclick="synBotOpenAccount()" title="Account" style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
     <button onclick="var _t=document.getElementById('robotTooltip');if(_t){_t.style.transition='';_t.style.opacity='';_t.style.visibility='';}document.getElementById('synBotChat').style.display='none';" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;line-height:1;padding:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">×</button>
@@ -25460,6 +25399,25 @@ function _applySynBotVisualState(){
 }
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
+
+// ── Past-chats button visibility toggle (SYN-BOT header hamburger icon) ────
+function _applyChatHistoryVisibility(){
+  var hidden = false;
+  try { hidden = localStorage.getItem('synapses_hideChatHistoryBtn') === '1'; } catch(e){}
+  document.body.classList.toggle('hide-chat-history', hidden);
+  var btn = document.getElementById('synBotHistoryToggle');
+  if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+}
+function toggleChatHistoryVisibility(){
+  var hidden = !document.body.classList.contains('hide-chat-history');
+  document.body.classList.toggle('hide-chat-history', hidden);
+  try { localStorage.setItem('synapses_hideChatHistoryBtn', hidden ? '1' : '0'); } catch(e){}
+  var btn = document.getElementById('synBotHistoryToggle');
+  if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+}
+document.addEventListener('DOMContentLoaded', _applyChatHistoryVisibility);
+if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applyChatHistoryVisibility,0);
+
 function synBotOpenAccount(){
   // Deliberate bypass of the disabled goProfile() (which is intentionally no-op'd
   // elsewhere in the app). This is the one entry point that still reaches account
@@ -26078,14 +26036,13 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  'avOZrFup8wzbOKlRDbScdDhIWS8XVrTF6zLgzFrdaR0GPKg2', // key 0 (newest, forefront)
-  'Gno4HeB41aMg2PB87xI0oLz6n2ZGaydoX5PKhcZOUhwxG6OM', // key 1
-  '5lBVRGIEfjYm5Ogzz9mV7oLSZGmiULkGMSCGjLpcC2MNxstp', // key 2
-  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 3 (original)
-  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 4
+  'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 1 (original)
+  'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 2
 ];
-var _humeKeyIdx = 0; // forced back to 0 so the new forefront key is tried first, even if an old rotation was saved
+var _humeKeyIdx = parseInt(localStorage.getItem('humeKeyIdx') || '0', 10);
+if (isNaN(_humeKeyIdx) || _humeKeyIdx < 0 || _humeKeyIdx >= _humeKeys.length) _humeKeyIdx = 0;
 function _humeGetKey() { return _humeKeys[_humeKeyIdx] || ''; }
+var _humeFailStreak = 0; // consecutive non-intentional close/error events since the last successful open
 function _humeRotateKey() {
   if (_humeKeys.length < 2) return; // nothing to rotate to
   _humeKeyIdx = (_humeKeyIdx + 1) % _humeKeys.length;
@@ -26119,9 +26076,17 @@ function _setTtsProvider(p) {
 var _ws = null;
 var _wsReady = false;
 var _wsResolvers = []; // resolvers waiting for audio chunks from current request
-var _wsIntentionalClose = false; // set right before we call _ws.close() ourselves, so
-                                  // onerror/onclose can tell "we did this" apart from
-                                  // a real network drop and skip key rotation + auto-reconnect
+// Set right before any deliberate _wsClose() so the onclose handler below can
+// tell "we closed this on purpose" apart from "the connection actually died".
+// Necessary because ws.close() called with no arguments is NOT reliably
+// reported back as close code 1000 across browsers — Chromium and others
+// frequently report 1005 ("no status received") for a plain no-arg close,
+// so code-sniffing alone (e.g. `e.code !== 1000`) misclassifies completely
+// normal closes (switching voices, switching provider, stopping TTS) as
+// failures. That was silently rotating the Hume API key on ordinary use,
+// which is why Hume would eventually land on a dead/wrong key and stop
+// working even though nothing was actually broken.
+var _wsIntentionalClose = false;
 
 // ── Web Audio state ────────────────────────────────────────────────────────────
 var _actx = null;
@@ -26807,7 +26772,6 @@ function _ttsStopAll() {
 // ── WebSocket management ───────────────────────────────────────────────────────
 function _wsOpen() {
   if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) return;
-  _wsIntentionalClose = false; // safety net: never let a stale flag suppress a future real close
   try {
     if (_ttsProvider === 'hume') {
       // Hume Octave streaming WS. Using no_binary=true so ALL audio arrives as
@@ -26830,7 +26794,7 @@ function _wsOpen() {
     _wsReady = false;
   } catch(e) { _ws = null; _wsReady = false; return; }
 
-  _ws.onopen = function () { _wsReady = true; if (_ttsProvider === 'hume') console.log('[Hume TTS] WebSocket connected'); };
+  _ws.onopen = function () { _wsReady = true; if (_ttsProvider === 'hume') { _humeFailStreak = 0; console.log('[Hume TTS] WebSocket connected'); } };
 
   _ws.onmessage = function (evt) {
     if (typeof evt.data === 'string') {
@@ -26921,27 +26885,39 @@ function _wsOpen() {
     // cancelling itself out (rotate forward here, rotate back there).
     if (_ttsProvider === 'hume') console.error('[Hume TTS] WebSocket error', e);
     _wsReady = false; _ws = null;
-    if (_wsIntentionalClose) return; // we closed this on purpose, don't reconnect it
-    setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    if (!_wsIntentionalClose) setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
   _ws.onclose = function (e) {
-    // If WE called _wsClose(), this close is expected — skip key rotation
-    // AND skip the auto-reconnect below entirely, then clear the flag so it
-    // doesn't leak into the next, unrelated close event.
-    if (_wsIntentionalClose) {
-      if (_ttsProvider === 'hume') console.log('[Hume TTS] WebSocket closed intentionally — code:', e.code);
-      _wsIntentionalClose = false;
-      _wsReady = false; _ws = null;
-      return;
-    }
-    // Code 1000 = normal/clean close, leave the key alone. Anything else
-    // (auth failure, out of credits, etc.) rotates to the next key before
-    // the automatic reconnect below tries again.
+    // Was this us calling _wsClose() on purpose (switching voice/provider,
+    // stopping TTS, navigating away)? If so, don't rotate keys and don't
+    // bother auto-reconnecting — there's nothing to heal from and no reason
+    // to open a fresh socket nobody asked for. Only treat it as a real
+    // failure (rotate + reconnect) when we did NOT initiate the close.
+    var wasIntentional = _wsIntentionalClose;
+    _wsIntentionalClose = false;
     if (_ttsProvider === 'hume') {
-      console.warn('[Hume TTS] WebSocket closed — code:', e.code, 'reason:', e.reason || '(none given)');
-      if (e.code !== 1000) _humeRotateKey();
+      console.warn('[Hume TTS] WebSocket closed — code:', e.code, 'reason:', e.reason || '(none given)', wasIntentional ? '(intentional close, not rotating)' : '(unexpected close)');
+      if (!wasIntentional) {
+        _humeFailStreak++;
+        _humeRotateKey();
+        // Every key has now failed once in a row with nothing succeeding in
+        // between — this isn't a transient blip, Hume is genuinely down for
+        // us (dead keys, bad auth, account issue, etc). Previously we'd just
+        // keep silently retrying forever with no visible sign anything was
+        // wrong, which looked exactly like "the feature doesn't work" with
+        // zero clue why. Surface it and fall back to Deepgram so voice still
+        // works, instead of hanging silently on a dead provider.
+        if (_humeFailStreak >= _humeKeys.length) {
+          console.error('[Hume TTS] all ' + _humeKeys.length + ' key(s) failed to connect — falling back to Deepgram.');
+          try { showToast('Hume voice unavailable — switched to Deepgram'); } catch(e2) {}
+          _humeFailStreak = 0;
+          _setTtsProvider('deepgram');
+          return;
+        }
+      }
     }
-    _wsReady = false; _ws = null; setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
+    _wsReady = false; _ws = null;
+    if (!wasIntentional) setTimeout(function(){ try { _wsOpen(); } catch(e){} }, 1000);
   };
 }
 
@@ -27201,18 +27177,10 @@ function _scheduleChunk(arrayBuf) {
     // can't see. Only applied once per utterance — _playbackTime already
     // carries the offset forward for every chunk after the first, so adding
     // it again here would compound the delay.
-    // NOTE: this used to add a delay here to sync audio to the avatar's video
-    // render lag, but referenced two variables (_avaMeasuredDelaySec,
-    // _AVA_RENDER_FUDGE_SEC) that were never actually declared anywhere in
-    // this file — every time the avatar was connected, this line threw a
-    // ReferenceError on the first chunk of every utterance, silently caught
-    // by the try/catch around this whole function, which meant that chunk's
-    // src.start()/onended never ran at all. That's what was making replies
-    // feel like they took forever whenever your own TTS was combined with
-    // the avatar — audio scheduling was quietly failing every time, not the
-    // reply itself being slow. Zero delay here until a real sync mechanism
-    // is built.
     var avaDelay = 0;
+    if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected && _playbackTime <= _actx.currentTime) {
+      avaDelay = Math.max(0, _avaMeasuredDelaySec + _AVA_RENDER_FUDGE_SEC);
+    }
 
     var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay;
     src.start(startAt);
@@ -27515,12 +27483,32 @@ function speakVoiceReply(text) {
   var _busy = false;
   var _busySince = 0;
 
-  // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive.
-  // CSS uses this class to exempt the voice button from being hidden when
-  // the top bar icons are collapsed (see .top-bar.hidden.voice-live rule).
+  // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
+  // and — if the top bar icons are already collapsed when this changes —
+  // kicks off the same delayed glide-to-center the mic button uses in
+  // toggleTopBar(). Note: turning speech-to-speech OFF while the mic is
+  // already centered does NOT send it away — it deliberately stays put in
+  // the middle of the header, visible and clickable, so there's still a way
+  // to get back into speech-to-speech even with every other icon collapsed.
+  // It only leaves that spot when the top bar itself is shown again (see the
+  // _tnvGlideHome() call in toggleTopBar's "show" branch).
   function _setTopNavVoiceActive(v) {
     window._topNavVoiceActive = v;
     document.body.classList.toggle('voice-live', !!v);
+    if(v && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
+      _tnvClearGlideTimer();
+      _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+    }
+  }
+
+  // True while Ava's realistic avatar is connected and on screen. Used to
+  // suppress cosmetic status toasts (reply text, "one moment...", empty-reply,
+  // LLM error) that would otherwise clutter the avatar view — her face and
+  // lip-sync already communicate that she's responding. Mic-permission /
+  // browser-support errors are NOT gated by this, since those need to reach
+  // the user regardless of avatar state.
+  function _avatarLive() {
+    return typeof _avaAvatarConnected !== 'undefined' && !!_avaAvatarConnected;
   }
 
   // ── Watchdog: auto-reset if _busy gets stuck for >8s with no audio ──────
@@ -27969,7 +27957,11 @@ function speakVoiceReply(text) {
   }
   function toastHide() { if (_toast) _toast.classList.remove('show'); }
 
-  // Hovering the voice button brings back the last bubble if user dismissed it
+  // Hovering the voice button brings back the last bubble if user dismissed it.
+  // Desktop-only: touchscreens fire a synthetic mouseenter on tap with no
+  // matching mouseleave ever following, so this would show a toast that then
+  // never gets a hide event — exactly what was getting "stuck" on mobile.
+  if (window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches)
   (function() {
     var _hoverTimer = null;
     var _hideTimer = null;
@@ -28155,22 +28147,24 @@ function speakVoiceReply(text) {
     _busy = true;
     btnState('speak');
     if(window.avaTvSetState) window.avaTvSetState('speak');
-    // Skip the reply-text toast while the avatar video is up — it renders
-    // right over her, and her face + lip-sync already show she's replying,
-    // so the toast is pure screen-blocking clutter in that case.
-    var _avatarUp = !!(typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected);
-    if (!_avatarUp) toast(text);
-    // Show live search indicator if this reply used Tavily
-    if (window._voiceUsedSearch) {
+    if (!_avatarLive()) {
+      toast(text);
+      // Show live search indicator if this reply used Tavily
+      if (window._voiceUsedSearch) {
+        window._voiceUsedSearch = false;
+        setTimeout(function() {
+          if (_toast) {
+            var badge = document.createElement('div');
+            badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
+            badge.textContent = '🌐 live search';
+            _toast.querySelector('.toast-inner').appendChild(badge);
+          }
+        }, 50);
+      }
+    } else {
+      // Avatar's on screen — no toast, but still clear the flag so it
+      // doesn't carry over and wrongly badge a later non-avatar reply.
       window._voiceUsedSearch = false;
-      setTimeout(function() {
-        if (_toast && !_avatarUp) {
-          var badge = document.createElement('div');
-          badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
-          badge.textContent = '🌐 live search';
-          _toast.querySelector('.toast-inner').appendChild(badge);
-        }
-      }, 50);
     }
     var clean = text
       .replace(/\*[^*]*\*/g, '')  // remove *actions* and *narration*
@@ -28578,7 +28572,7 @@ function speakVoiceReply(text) {
         return ctrl.signal;
       })()
     }).then(function(r) {
-      if (r.status === 429) { toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
+      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -28597,7 +28591,7 @@ function speakVoiceReply(text) {
               try { _mem0Save(text, reply); } catch(e) {}
               // avaBrain.afterReply deactivated
               speak(reply);
-            } else { console.log('[Voice] Empty reply from LLM'); toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
+            } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
             return;
           }
           buf += decoder.decode(res.value, { stream: true });
@@ -28610,10 +28604,10 @@ function speakVoiceReply(text) {
             try { var j = JSON.parse(data); var d = j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content; if (d) { if (!full) console.log('[Voice] First token: ' + (Date.now()-_t0) + 'ms'); full += d; window._avaLastReply = full.trim(); } } catch(e) {}
           });
           readChunk();
-        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
       }
       readChunk();
-    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
     }); // end _voiceSearchPromise.then
   }
 
@@ -28750,33 +28744,18 @@ function speakVoiceReply(text) {
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
-    // Fully release the mic hardware. Previously only the MediaRecorder was
-    // stopped here while _stream's underlying track stayed live — on mobile
-    // browsers/WebViews (which only allow one consumer to hold the mic at a
-    // time), that leftover live track is exactly what makes the NEXT
-    // getUserMedia() call fail with "mic is busy", even though nothing else
-    // is actually using it.
-    if (_stream) {
-      try { _stream.getTracks().forEach(function(t) { t.stop(); }); } catch(e) {}
-      _stream = null;
-    }
     _busy = false; _busySince = 0;
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
     toastHide();
-    // Clear the stored last-message text too, not just hide the toast — the
-    // hover-to-peek feature on the mic button re-shows whatever's in here
-    // any time it's hovered, with no check that this session's conversation
-    // is the one that produced it. Without this, deactivating then hovering
-    // right after reactivating can pop up a message from BEFORE you turned
-    // it off, looking like a random stale toast.
-    _toastFull = '';
+    _toastFull = ''; // clear stored text too, not just hide — otherwise the
+                      // hover-peek feature below can resurrect this stale
+                      // reply after the user reactivates voice mode.
     if (typeof _ttsStopAll === 'function') _ttsStopAll();
     if (typeof _wsClose === 'function') _wsClose();
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
   }
-  window.addEventListener('pagehide', function(){ try { stopAll(); } catch(e){} });
 
   _setTopNavVoiceActive(false);
   window._openTranscript = function() {
@@ -28880,14 +28859,6 @@ function speakVoiceReply(text) {
       fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
       // Don't wipe _history here — preserve conversation across toggle off/on
       _busy = false; _busySince = 0;
-      // Release the TTS audio session BEFORE requesting the mic. On mobile
-      // WebViews (Median), TTS playback and mic capture share one audio
-      // session — if _actx is still open, getUserMedia fails with
-      // NotReadableError ("Mic is busy"). _ttsStopAll() alone won't do this
-      // here because its own guard skips cleanup once _topNavVoiceActive is true.
-      var _actxWasPresent = !!_actx;
-      var _actxClosePromise = Promise.resolve();
-      if (_actx) { try { _actxClosePromise = _actx.close() || Promise.resolve(); } catch(e){} _actx = null; }
       if (_stream) {
         // Already have mic — turn off TTS now and start recording
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
@@ -28901,67 +28872,38 @@ function speakVoiceReply(text) {
         _on = false;
         _setTopNavVoiceActive(false);
       } else {
-        // Median's wrapped WebView (no browser chrome) can silently reject a
-        // plain getUserMedia() call unless mic access is first granted via
-        // Median's own JS bridge — this is a no-op outside Median.
-        // Wait for the TTS AudioContext to actually finish closing first —
-        // close() is async, and requesting the mic before the OS audio
-        // session is truly released is what caused the constant "Mic is
-        // busy" NotReadableError, every time, even on a clean first try.
-        var _micRetries = 0;
-        var _micRetryDelays = [500, 1000, 2000];
-        function _requestMic() {
-          return _actxClosePromise.catch(function(){}).then(function(){
-            return window.median ? (
-              (window.median.backgroundAudio && window.median.backgroundAudio.requestPermission) ? window.median.backgroundAudio.requestPermission().catch(function(){}) :
-              (window.median.permissions && window.median.permissions.request) ? window.median.permissions.request(['Microphone']).catch(function(){}) :
-              Promise.resolve()
-            ) : Promise.resolve();
-          }).then(function(){
-            return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-          }).then(function(s) {
-            _stream = s;
-            // Keep mic stream alive when tab is backgrounded
-            document.addEventListener('visibilitychange', function() {
-              if (_stream) {
-                _stream.getTracks().forEach(function(t) {
-                  if (t.readyState === 'ended') return;
-                  t.enabled = true; // force re-enable in case browser muted it
-                });
-              }
-            });
-            // Permission granted — now safe to turn off TTS
-            if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
-            record();
-          }).catch(function(err) {
-            // close() resolving doesn't mean the OS has actually freed the
-            // mic hardware yet on mobile WebViews — that teardown can lag
-            // a beat behind the promise. One retry after a short delay
-            // catches that gap instead of failing on the very first try.
-            if (_micRetries < _micRetryDelays.length && err && (err.name === 'NotReadableError' || err.name === 'TrackStartError')) {
-              var _delay = _micRetryDelays[_micRetries];
-              _micRetries++;
-              return new Promise(function(res){ setTimeout(res, _delay); }).then(_requestMic);
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+          _stream = s;
+          // Keep mic stream alive when tab is backgrounded
+          document.addEventListener('visibilitychange', function() {
+            if (_stream) {
+              _stream.getTracks().forEach(function(t) {
+                if (t.readyState === 'ended') return;
+                t.enabled = true; // force re-enable in case browser muted it
+              });
             }
-            console.error('Mic getUserMedia error:', err && err.name, err && err.message);
-            var msg = 'Mic access denied';
-            if (err) {
-              if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                msg = 'Mic blocked — allow microphone access for this site in your browser settings';
-              } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                msg = 'No microphone found on this device';
-              } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-                msg = 'Mic is busy in another app — close it and try again';
-              } else if (err.name === 'SecurityError') {
-                msg = 'Mic blocked — this page must be loaded over HTTPS';
-              }
-            }
-            toast(msg + (err && err.name ? ' [' + err.name + ' actx:' + (_actxWasPresent?'y':'n') + ' retries:' + _micRetries + ']' : ''));
-            _on = false;
-            _setTopNavVoiceActive(false);
           });
-        }
-        _requestMic();
+          // Permission granted — now safe to turn off TTS
+          if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
+          record();
+        }).catch(function(err) {
+          console.error('Mic getUserMedia error:', err && err.name, err && err.message);
+          var msg = 'Mic access denied';
+          if (err) {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              msg = 'Mic blocked — allow microphone access for this site in your browser settings';
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+              msg = 'No microphone found on this device';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+              msg = 'Mic is busy in another app — close it and try again';
+            } else if (err.name === 'SecurityError') {
+              msg = 'Mic blocked — this page must be loaded over HTTPS';
+            }
+          }
+          toast(msg);
+          _on = false;
+          _setTopNavVoiceActive(false);
+        });
       }
     } else {
       stopAll();
