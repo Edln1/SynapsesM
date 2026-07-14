@@ -1705,9 +1705,15 @@ to{opacity:0;transform:translateX(-40px);}}
    can have its own independent show/hide instead of fighting the group's
    parent-level opacity — that's what keeps the group's fade a single smooth
    unit like before, instead of janky per-icon transitions. */
-#topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);}
+#topNavVoiceBtn{transition:border-color .25s,background .25s,box-shadow .25s,opacity .25s ease,transform .25s ease;opacity:1;transform:translateY(0);position:relative;}
 .top-bar.hidden #topNavVoiceBtn{opacity:0;transform:translateY(-16px);pointer-events:none;}
 body.voice-live .top-bar.hidden #topNavVoiceBtn{opacity:1;transform:translateY(0);pointer-events:auto;}
+/* Mic <-> wave icon crossfade. Both icons stay in the DOM and are stacked via
+   absolute positioning so toggling between them fades/scales smoothly instead
+   of the old instant display:none/block swap, which had no transition at all
+   (that's what read as "laggy"/non-smooth). */
+#tnvMicIcon,#tnvWaveIcon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1);opacity:1;transition:opacity .18s ease,transform .18s ease;display:block!important;}
+#tnvMicIcon.tnv-icon-off,#tnvWaveIcon.tnv-icon-off{opacity:0;transform:translate(-50%,-50%) scale(.6);pointer-events:none;}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -4548,7 +4554,7 @@ window.getWebAudioNode = getWebAudioNode;
         <line x1="12" y1="19" x2="12" y2="23"/>
         <line x1="8" y1="23" x2="16" y2="23"/>
       </svg>
-      <svg id="tnvWaveIcon" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="display:none;overflow:visible;">
+      <svg id="tnvWaveIcon" class="tnv-icon-off" width="17" height="14" viewBox="0 0 32 20" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
         <defs>
           <filter id="tnvGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur id="tnvGlowBlur" in="SourceGraphic" stdDeviation="0.8" result="blur"/>
@@ -27514,6 +27520,14 @@ function speakVoiceReply(text) {
   var _busy = false;
   var _busySince = 0;
 
+  // Whether the realistic avatar video is currently up. Her face + lip-sync
+  // already communicate "she's replying"/"one sec"/etc., so cosmetic status
+  // toasts are pure clutter over the video — only genuinely actionable
+  // errors (mic permission, no mic found, etc.) should still interrupt.
+  function _avatarLive() {
+    return !!(typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected);
+  }
+
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive.
   // CSS uses this class to exempt the voice button from being hidden when
   // the top bar icons are collapsed (see .top-bar.hidden.voice-live rule).
@@ -28050,12 +28064,12 @@ function speakVoiceReply(text) {
     if (!b) return;
     b.classList.remove('tnv-on','tnv-speak');
     if (s === 'off') {
-      if (mic) mic.style.display = '';
-      if (wave) { wave.style.display = 'none'; wave.classList.remove('tnv-breathe'); }
+      if (mic) mic.classList.remove('tnv-icon-off');
+      if (wave) { wave.classList.add('tnv-icon-off'); wave.classList.remove('tnv-breathe'); }
     } else {
-      if (mic) mic.style.display = 'none';
+      if (mic) mic.classList.add('tnv-icon-off');
       if (wave) {
-        wave.style.display = 'block';
+        wave.classList.remove('tnv-icon-off');
         // Kill RAF first so it can't overwrite our reset
         if (_wsAnalyserRaf) { cancelAnimationFrame(_wsAnalyserRaf); _wsAnalyserRaf = null; }
         if (_analyserRaf)   { cancelAnimationFrame(_analyserRaf);   _analyserRaf   = null; }
@@ -28187,6 +28201,7 @@ function speakVoiceReply(text) {
         waited += 20;
         if (_wsReady || waited > 1500) {
           clearInterval(_poll);
+          if (_spkGenId !== _vmGenId) return; // mic was toggled off/on while we waited — drop this turn
           if (!_wsReady || !_on) {
             // WS not available — fall back to REST fetch
             _speakREST(clean);
@@ -28551,6 +28566,14 @@ function speakVoiceReply(text) {
       : Promise.resolve();
 
     var _t0 = Date.now();
+    // Snapshot the generation id for THIS turn. _vmGenId is bumped by
+    // _ttsStopAll() any time the mic is turned off (see stopAll() -> _setTopNavVoiceActive(false)
+    // happens first, then _ttsStopAll() runs and increments it). If the user
+    // toggles off then quickly back on before this LLM turn resolves, _on will
+    // be true again by the time we get a reply — so checking _on alone isn't
+    // enough to tell "this reply belongs to a conversation that already ended".
+    // Comparing against _vmGenId catches that race and lets us drop the stale reply.
+    var _myGenId = _vmGenId;
 
     _voiceSearchPromise.then(function() {
       var searchLayer = _voiceSearchCtx
@@ -28577,7 +28600,12 @@ function speakVoiceReply(text) {
         return ctrl.signal;
       })()
     }).then(function(r) {
-      if (r.status === 429) { toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
+      // This whole turn (started _myGenId ago) is stale if the mic was toggled
+      // off since — bail out silently instead of surfacing a toast/reply for
+      // a conversation that already ended, and don't touch _busy/record since
+      // those now belong to whatever fresh turn (if any) is currently running.
+      if (_myGenId !== _vmGenId) return;
+      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -28585,6 +28613,7 @@ function speakVoiceReply(text) {
       var full = '';
       function readChunk() {
         reader.read().then(function(res) {
+          if (_myGenId !== _vmGenId) return; // stale turn — drop it
           if (res.done) {
             var reply = full.trim();
             var _elapsed = Date.now() - _t0;
@@ -28596,7 +28625,7 @@ function speakVoiceReply(text) {
               try { _mem0Save(text, reply); } catch(e) {}
               // avaBrain.afterReply deactivated
               speak(reply);
-            } else { console.log('[Voice] Empty reply from LLM'); toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
+            } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
             return;
           }
           buf += decoder.decode(res.value, { stream: true });
@@ -28609,10 +28638,10 @@ function speakVoiceReply(text) {
             try { var j = JSON.parse(data); var d = j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content; if (d) { if (!full) console.log('[Voice] First token: ' + (Date.now()-_t0) + 'ms'); full += d; window._avaLastReply = full.trim(); } } catch(e) {}
           });
           readChunk();
-        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(function(e) { if (_myGenId !== _vmGenId) return; _busy = false; _busySince = 0; if (e && !_avatarLive()) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
       }
       readChunk();
-    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) { if (_myGenId !== _vmGenId) return; _busy = false; _busySince = 0; if (e && !_avatarLive()) { toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
     }); // end _voiceSearchPromise.then
   }
 
