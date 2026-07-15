@@ -12651,6 +12651,7 @@ function toggleChatHistoryPanel(){
   }
 }
 function toggleChatHistoryDropdown(){
+  _haptic(10);
   // Ensure dropdown is on body so it works from any page
   var dd = document.getElementById('chatHistoryDropdown');
   if(!dd){ dd=document.createElement('div'); dd.id='chatHistoryDropdown'; document.body.appendChild(dd); }
@@ -26841,7 +26842,7 @@ function _avaUpdateVoiceToggleUI() {
   if (!btn) return;
   if (_avaNativeVoice) {
     btn.innerHTML = '<span style="filter:grayscale(1) brightness(1.7);display:inline-flex;">\uD83D\uDDE3\uFE0F</span>';
-    btn.title = "Using Anam's own voice — click to use Ava's voice instead";
+    btn.title = "Using built-in voice — click to use Ava's voice instead";
     btn.style.background = 'rgba(255,255,255,0.16)';
     btn.style.backdropFilter = 'blur(6px)';
     btn.style.webkitBackdropFilter = 'blur(6px)';
@@ -26850,7 +26851,7 @@ function _avaUpdateVoiceToggleUI() {
     btn.style.color = 'rgba(255,255,255,0.95)';
   } else {
     btn.textContent = '🔈';
-    btn.title = "Using Ava's voice — click to use Anam's own default voice instead";
+    btn.title = "Using Ava's voice — click to use built-in voice instead";
     btn.style.background = 'rgba(0,0,0,0.4)';
     btn.style.backdropFilter = 'none';
     btn.style.webkitBackdropFilter = 'none';
@@ -26868,12 +26869,16 @@ function toggleAvaNativeVoice() {
   try { localStorage.setItem('_avaNativeVoice', _avaNativeVoice ? '1' : '0'); } catch (e) {}
   _avaUpdateVoiceToggleUI();
   if (_actxGain) { try { _actxGain.gain.value = _avaNativeVoice ? 0 : 1; } catch (e) {} }
-  showToast(_avaNativeVoice ? "🗣️ Avatar will use Anam's own voice" : "🔈 Avatar will use Ava's voice");
+  showToast(_avaNativeVoice ? "🗣️ Avatar will use built-in voice" : "🔈 Avatar will use Ava's voice");
   var box = document.getElementById('avaAvatarBox');
   var wasOn = box && box.style.display !== 'none';
   if (wasOn) {
     disableAvaAvatar();
-    enableAvaAvatar();
+    // skipAutoVoice=true: this reconnect is caused by the user's own manual
+    // choice above, so enableAvaAvatar must NOT run its "auto-switch to
+    // Anam's voice" startup logic on top of it — otherwise turning native
+    // voice off just gets silently flipped back on a beat later.
+    enableAvaAvatar(true);
   }
 }
 
@@ -26891,11 +26896,13 @@ function swapAvaAvatar() {
   var wasOn = box && box.style.display !== 'none';
   if (wasOn) {
     disableAvaAvatar();
-    enableAvaAvatar();
+    // Preserve whatever voice mode was already active instead of re-running
+    // the auto-switch startup logic on this reconnect.
+    enableAvaAvatar(true);
   }
 }
 
-async function enableAvaAvatar() {
+async function enableAvaAvatar(skipAutoVoice) {
   var box = document.getElementById('avaAvatarBox');
   var statusEl = document.getElementById('avaAvatarStatus');
   var videoEl = document.getElementById('avaAvatarVideo');
@@ -26907,7 +26914,11 @@ async function enableAvaAvatar() {
   // was the bug: once persisted as '1', every later open already showed
   // "on" immediately with no visible transition). If s2s is running, leave
   // whatever the user last explicitly chose via the manual toggle.
-  if (!window._topNavVoiceActive) {
+  // skipAutoVoice=true means this call is a reconnect triggered by the
+  // user's own manual toggle/swap action, so _avaNativeVoice already holds
+  // exactly what they chose — none of this auto logic should run, or it'll
+  // just override their choice a moment later (the "won't stay off" bug).
+  if (!skipAutoVoice && !window._topNavVoiceActive) {
     _avaNativeVoice = false;
   }
 
@@ -26926,7 +26937,7 @@ async function enableAvaAvatar() {
   // than reconnecting after the fact — but we wait a beat first so the
   // icon's on-transition is actually visible. Not persisted to localStorage:
   // this is automatic per-open behavior, not a stored user preference.
-  if (!_avaNativeVoice && !window._topNavVoiceActive) {
+  if (!skipAutoVoice && !_avaNativeVoice && !window._topNavVoiceActive) {
     await new Promise(function (resolve) { setTimeout(resolve, 600); });
     _avaNativeVoice = true;
     if (_actxGain) { try { _actxGain.gain.value = 0; } catch (e) {} }
@@ -26953,7 +26964,7 @@ async function enableAvaAvatar() {
       _avaAvatarConnected = true;
       statusEl.style.display = 'none';
       videoEl.style.display = 'block';
-      showToast(_avaNativeVoice ? '🧑\u200d💼 Avatar live (Anam\u2019s own voice)' : '🧑\u200d💼 Ava\u2019s avatar is live');
+      showToast(_avaNativeVoice ? '🧑\u200d💼 Avatar live (built-in voice)' : '🧑\u200d💼 Ava\u2019s avatar is live');
     });
     _avaAnamClient.addListener(AnamSDK.AnamEvent.CONNECTION_CLOSED, function () {
       _avaAvatarConnected = false;
@@ -28099,20 +28110,17 @@ function speakVoiceReply(text) {
     '#tnvWaveIcon.tnv-breathe .tnv-bar:nth-child(7){animation:_tnvBarBreathe 0.85s ease-in-out infinite;animation-delay:0.00s;}' +
     '#tnvToast{' +
       'position:fixed;' +
-      'background:rgba(30,30,32,0.82);' +
-      'border:1px solid rgba(255,255,255,0.1);' +
+      'background:rgba(10,11,22,0.97);' +
+      'border:1px solid rgba(79,86,200,0.4);' +
       'border-radius:14px;' +
       'padding:12px 20px;' +
       'font-size:13px;' +
-      'font-weight:500;' +
       'font-family:DM Sans,sans-serif;' +
-      'color:rgba(255,255,255,0.95);' +
+      'color:rgba(200,203,240,0.95);' +
       'z-index:99999;' +
       'max-width:360px;' +
       'text-align:center;' +
-      'backdrop-filter:blur(20px) saturate(180%);' +
-      '-webkit-backdrop-filter:blur(20px) saturate(180%);' +
-      'box-shadow:0 10px 30px rgba(0,0,0,0.25);' +
+      'backdrop-filter:blur(20px);' +
       'opacity:0;' +
       'transition:opacity 0.25s;' +
       'pointer-events:none;' +
@@ -28142,7 +28150,7 @@ function speakVoiceReply(text) {
     '#tnvToast.expanded .toast-inner::-webkit-scrollbar{display:none;}' +
     '#tnvToast.expanded .toast-inner{scrollbar-width:none;-ms-overflow-style:none;}' +
     '#tnvFakeScroll{position:absolute;right:6px;top:12px;bottom:12px;width:3px;border-radius:99px;background:rgba(255,255,255,0.04);display:none;pointer-events:none;}' +
-    '#tnvFakeThumb{position:absolute;left:0;width:3px;border-radius:99px;background:rgba(255,255,255,0.4);min-height:20px;}' +
+    '#tnvFakeThumb{position:absolute;left:0;width:3px;border-radius:99px;background:linear-gradient(180deg,rgba(124,106,247,1) 0%,rgba(79,209,197,1) 33%,rgba(124,106,247,1) 66%,rgba(79,209,197,1) 100%);background-size:100% 300%;min-height:20px;box-shadow:0 0 8px rgba(124,106,247,0.8);}' +
     '#tnvToast.show{pointer-events:auto;}' +
     '#tnvToast::after{' +
       'content:" ";' +
@@ -28153,7 +28161,7 @@ function speakVoiceReply(text) {
       'width:0;height:0;' +
       'border-left:8px solid transparent;' +
       'border-right:8px solid transparent;' +
-      'border-bottom:10px solid rgba(255,255,255,0.1);' +
+      'border-bottom:10px solid rgba(79,86,200,0.4);' +
     '}' +
     '#tnvToast::before{' +
       'content:" ";' +
@@ -28164,12 +28172,12 @@ function speakVoiceReply(text) {
       'width:0;height:0;' +
       'border-left:6px solid transparent;' +
       'border-right:6px solid transparent;' +
-      'border-bottom:8px solid rgba(30,30,32,0.82);' +
+      'border-bottom:8px solid rgba(10,11,22,0.97);' +
       'z-index:1;' +
     '}' +
     '#tnvToast.show{opacity:1;}' +
     '#tnvToast.expanded{cursor:default;}' +
-    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;cursor:pointer;}';
+    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(130,140,220,0.6);margin-top:4px;cursor:pointer;}';
   document.head.appendChild(st);
 
   var _on = false;
