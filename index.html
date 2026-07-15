@@ -895,10 +895,12 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
 #chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
 #chpSidebar.open,#chpSidebar.fade-open{border-right-color:rgba(255,255,255,0.06);}
-/* Two states: light/original on the "what's on your mind" welcome screen, opaque frosted glass once an actual conversation is showing so message text can't bleed through. .chp-heavy-glass is a JS-applied fallback for mobile webviews that don't support :has(), and is only toggled on when messages are present. */
-#sec-chat:has(#chatEmptyState.hidden) #chpSidebar,#chpSidebar.chp-heavy-glass{background:rgba(0,0,0,0.97);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);}
+/* Panel keeps one consistent translucent glass look in all states — the force-field blur applied directly to the content elements (see below) is what hides message text/canvas behind it now, not a solid-black background swap. */
+/* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
 /* Force-field blur: backdrop-filter alone doesn't reliably sample animated <canvas> layers (chatFlowCanvas/chatBeamsCanvas) or <video> across mobile browsers — those get GPU-composited on their own layer and slip past the compositor's backdrop sample, which is why they stayed sharp while real DOM text blurred fine. Applying filter:blur() straight to the source elements guarantees it regardless of browser/layer quirks. Scoped to #sec-chat.chp-blur-active, toggled alongside the sidebar open/close. */
-#sec-chat #chatFlowCanvas,#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatEmptyState,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatFlowCanvas{filter:blur(0px);transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatEmptyState{filter:blur(0px);transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area{filter:blur(16px);}
 #chpSidebar.open{width:240px;}
 #chpSidebar.fade-open{width:240px;animation:chpStoryReveal 1.1s cubic-bezier(0.22,1,0.36,1) forwards;}
@@ -934,7 +936,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 .tts-speak-btn{position:absolute;bottom:6px;right:-46px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:rgba(15,15,26,0.85);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.6;transition:all .25s;z-index:10;color:rgba(255,255,255,0.8);padding:0;box-shadow:0 0 5px 1px rgba(0,217,168,0.3);}.tts-speak-btn:hover{opacity:1;border-color:rgba(0,217,168,0.9);box-shadow:0 0 6px 2px rgba(0,217,168,0.6);}.tts-speak-btn svg{pointer-events:none;}
 #chatHistoryBtn{position:absolute;left:14px;bottom:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;}
 #chatHistoryBtn:hover{opacity:1;border-color:rgba(255,255,255,0.3);}
-#chatHistoryDropdown{position:fixed;width:280px;background:rgba(12,10,22,0.97);border:1px solid rgba(124,106,247,0.3);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(16px);}
+#chatHistoryDropdown{position:fixed;width:280px;background:rgba(22,22,32,0.18);border:1px solid rgba(255,255,255,0.06);border-radius:12px;z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);}
 #chatHistoryDropdown.open{display:block;}
 .chd-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s;}
 .chd-item:hover{background:rgba(124,106,247,0.12);}
@@ -12533,10 +12535,7 @@ function toggleChatHistoryPanel(){
   if(!sidebar||!list) return;
   var _cc = document.getElementById('chatContainer');
   var _hasMsgs = !!(_cc && _cc.querySelectorAll('.message-group').length>0);
-  sidebar.classList.toggle('chp-heavy-glass', _hasMsgs);
-  sidebar.style.background = _hasMsgs ? 'rgba(0,0,0,0.97)' : '';
-  sidebar.style.backdropFilter = _hasMsgs ? 'blur(40px)' : '';
-  sidebar.style.webkitBackdropFilter = _hasMsgs ? 'blur(40px)' : '';
+  // Heavy-glass override removed — panel keeps its translucent look always now that the force-field blur handles hiding content behind it.
   var isOpen = sidebar.classList.contains('open');
   if(isOpen){ closeChatHistoryPanel(); return; }
   // Build list
@@ -16159,15 +16158,7 @@ async function confirmWorldApproach(){
     if(wasHidden && !hasMessages) restartEmptyStateAnims();
     // Sync notes toggle visibility with empty state
     if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility();
-    // Mirror hasMessages onto the sidebar directly, since some mobile webviews don't
-    // support the :has() selector the CSS rule relies on for the heavy-glass state.
-    var _chpSb = document.getElementById('chpSidebar');
-    if(_chpSb){
-      _chpSb.classList.toggle('chp-heavy-glass', hasMessages);
-      _chpSb.style.background = hasMessages ? 'rgba(0,0,0,0.97)' : '';
-      _chpSb.style.backdropFilter = hasMessages ? 'blur(40px)' : '';
-      _chpSb.style.webkitBackdropFilter = hasMessages ? 'blur(40px)' : '';
-    }
+    // Heavy-glass override removed — panel keeps its translucent look always now that the force-field blur handles hiding content behind it.
   }
 
   // Observe chatContainer for new messages
