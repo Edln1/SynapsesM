@@ -936,7 +936,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 .tts-speak-btn{position:absolute;bottom:6px;right:-46px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:rgba(15,15,26,0.85);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.6;transition:all .25s;z-index:10;color:rgba(255,255,255,0.8);padding:0;box-shadow:0 0 5px 1px rgba(0,217,168,0.3);}.tts-speak-btn:hover{opacity:1;border-color:rgba(0,217,168,0.9);box-shadow:0 0 6px 2px rgba(0,217,168,0.6);}.tts-speak-btn svg{pointer-events:none;}
 #chatHistoryBtn{position:absolute;left:14px;bottom:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;}
 #chatHistoryBtn:hover{opacity:1;border-color:rgba(255,255,255,0.3);}
-#chatHistoryDropdown{position:fixed;width:280px;background:linear-gradient(160deg,rgba(255,255,255,0.07) 0%,rgba(22,20,34,0.55) 35%,rgba(10,9,16,0.62) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(60px) saturate(160%);-webkit-backdrop-filter:blur(60px) saturate(160%);}
+#chatHistoryDropdown{position:fixed;width:280px;background:linear-gradient(160deg,rgba(255,255,255,0.06) 0%,rgba(20,18,30,0.82) 35%,rgba(8,7,14,0.88) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
 #chatHistoryDropdown.open{display:block;}
 .chd-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s;}
 .chd-item:hover{background:rgba(124,106,247,0.12);}
@@ -6748,7 +6748,7 @@ var _currentViewId=null;function setView(id){
   var wasAlreadyActive = el.classList.contains('active');
   el.classList.add('active');
   if(!wasAlreadyActive){ el.style.animation='none';el.offsetHeight;el.style.animation=''; }
-  if(!wasAlreadyActive && (localStorage.getItem('_appTheme')||'purple')==='easyview'){
+  if(!wasAlreadyActive && (localStorage.getItem('_appTheme')||'easyview')==='easyview'){
     var _reinitMap={'sec-welcome':'_reinitFlowCanvas','sec-chat':'_reinitChatFlowCanvas','sec-jobs':'_reinitJobsFlowCanvas','sec-room':'_reinitRoomFlowCanvas'};
     var _rfn=_reinitMap[id];
     if(_rfn && window[_rfn]) setTimeout(window[_rfn], 30);
@@ -21760,7 +21760,7 @@ function toggleTopBar(){
 
 // ── Day / Night toggle ──────────────────────────────────────────
 function toggleDayNight(){
-  var cur = localStorage.getItem('_appTheme') || 'purple';
+  var cur = localStorage.getItem('_appTheme') || 'easyview';
   var next = (cur === 'easyview') ? 'purple' : 'easyview';
   window._applyTheme(next);
   _syncDayNightToggle(next);
@@ -21799,7 +21799,7 @@ function _syncDayNightToggle(t){
   }
 }
 // init toggle state on load
-(function(){ _syncDayNightToggle(localStorage.getItem('_appTheme')||'purple'); })();
+(function(){ _syncDayNightToggle(localStorage.getItem('_appTheme')||'easyview'); })();
 
 // ── Chrome border-radius repaint fix ─────────────────────────────────
 // Chrome bug: border-radius on small GPU-composited elements renders
@@ -23272,10 +23272,10 @@ function _openNeutralinoWebview(url){
 
   window._applyTheme = applyTheme;
   window._getThemes  = function(){ return THEMES; };
-  window._curTheme   = function(){ return localStorage.getItem('_appTheme')||'purple'; };
+  window._curTheme   = function(){ return localStorage.getItem('_appTheme')||'easyview'; };
 
   function patchIosLanding(){
-    var t = localStorage.getItem('_appTheme')||'purple';
+    var t = localStorage.getItem('_appTheme')||'easyview';
     var isLight = t === 'light';
     var landing = document.getElementById('humanLanding');
     if(!landing) return;
@@ -23299,7 +23299,7 @@ function _openNeutralinoWebview(url){
   document.addEventListener('DOMContentLoaded', patchIosLanding);
 
   // apply on load immediately
-  applyTheme(localStorage.getItem('_appTheme')||'purple');
+  applyTheme(localStorage.getItem('_appTheme')||'easyview');
 })();
 
 function renderThemeCard(){
@@ -26317,6 +26317,20 @@ window.addEventListener('load', function () { setBtnGreen(); _buildVoicePicker()
       try { if (_actx && _actx.state === 'suspended') _actx.resume(); } catch(e) {}
     }
   });
+
+  // Best-effort background survival hint: tell the OS this page is actively
+  // playing media (not just idle), which on Android Chrome can reduce how
+  // aggressively the tab's process/timers get throttled while backgrounded.
+  // This does NOT guarantee the microphone keeps capturing once the app is
+  // minimized — that's a hard OS/browser restriction on both Android and iOS
+  // for plain web pages, not something fixable from page code — but it's the
+  // one available lever and costs nothing to set.
+  try {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: 'Synapses', artist: 'Ava' });
+      navigator.mediaSession.playbackState = 'playing';
+    }
+  } catch(e) {}
 })();
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -26879,6 +26893,13 @@ function disableAvaAvatar() {
   _avaAudioStream = null;
   _avaUtteranceStarted = false;
   _avaAvatarConnected = false;
+  // Native-voice mode mutes our own TTS gain (Anam speaks its own audio track
+  // instead) via toggleAvaNativeVoice(). That only gets un-muted there — but
+  // the video call can end other ways (✕ button, context menu, mobile hold),
+  // all of which land here. Without this, gain stays stuck at 0 and normal
+  // speech-to-speech goes silent afterward because the app still thinks
+  // Anam's voice is active even though the avatar is gone.
+  if (_actxGain) { try { _actxGain.gain.value = 1; } catch (e) {} }
   var box = document.getElementById('avaAvatarBox');
   if (box) box.style.display = 'none';
 }
@@ -26948,7 +26969,20 @@ function _ttsStopAll() {
   _wsClose();
   if (window._vmSpeakingDrainPoller) { clearInterval(window._vmSpeakingDrainPoller); window._vmSpeakingDrainPoller = null; }
   if (window._humeLastChunkTimer) { clearTimeout(window._humeLastChunkTimer); window._humeLastChunkTimer = null; }
-  if (_actx) { try { _actx.close(); } catch(e){} _actx = null; _actxGain = null; }
+  if (_actx && _actxGain) {
+    try {
+      var _stopNow = _actx.currentTime;
+      _actxGain.gain.cancelScheduledValues(_stopNow);
+      _actxGain.gain.setValueAtTime(_actxGain.gain.value, _stopNow);
+      _actxGain.gain.linearRampToValueAtTime(0, _stopNow + 0.03);
+    } catch(e) {}
+    var _actxToClose = _actx;
+    setTimeout(function(){ try { _actxToClose.close(); } catch(e){} }, 40);
+    _actx = null; _actxGain = null;
+  } else if (_actx) {
+    try { _actx.close(); } catch(e){}
+    _actx = null; _actxGain = null;
+  }
   _playbackTime = 0;
   _stopPcmWaveform ? _stopPcmWaveform() : null;
   try { window.speechSynthesis.cancel(); } catch(e) {}
