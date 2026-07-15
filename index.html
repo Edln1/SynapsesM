@@ -26749,7 +26749,7 @@ async function enableAvaAvatar() {
     var res = await fetch(_AVA_BACKEND_URL + '/anam-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatarSlot: _avaAvatarSlot }) // slot 1 = default, slot 2 = ANAM_AVATAR_ID_2
+      body: JSON.stringify({ avatarSlot: _avaAvatarSlot, nativeVoice: _avaNativeVoice }) // slot 1 = default, slot 2 = ANAM_AVATAR_ID_2; nativeVoice tells the backend whether to leave Anam's own silence-prompt/auto-end active
     });
     var data = await res.json();
     if (!data.sessionToken) {
