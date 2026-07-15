@@ -904,6 +904,34 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #sec-chat #chatEmptyState{filter:blur(0px);will-change:filter;transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);will-change:filter;transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area{filter:blur(16px);}
+/* Popped-out avatar: leaves the small docked corner box and becomes a large
+   floating window (fixed to the viewport, not the chat panel) that the user
+   can drag anywhere on screen. Position is set inline via JS drag handler;
+   this just handles the size/elevation jump and drag affordance.
+   NOTE: top/right must NOT be !important here — the JS drag handler sets
+   inline top/left on every move, and !important would silently override
+   that (this previously broke vertical dragging, leaving only left/right).
+   No grab/grabbing cursor here on purpose — the hand icon isn't wanted. */
+#avaAvatarBox.ava-popped{position:fixed!important;width:min(74vw,380px);height:min(74vw,380px);border-radius:22px;z-index:9999;box-shadow:0 12px 48px rgba(0,0,0,.55),0 0 32px rgba(124,106,247,.35);}
+#avaAvatarBox.ava-popped.ava-dragging{transition:none!important;}
+#avaAvatarBox.ava-pop-anim{transition:width .35s cubic-bezier(0.22,1,0.36,1),height .35s cubic-bezier(0.22,1,0.36,1),border-radius .35s cubic-bezier(0.22,1,0.36,1),top .35s cubic-bezier(0.22,1,0.36,1),left .35s cubic-bezier(0.22,1,0.36,1),box-shadow .35s ease;}
+/* Once popped, nudge the voice-toggle button up so it doesn't sit on top of
+   the resize grip in the bottom-right corner. */
+#avaAvatarBox.ava-popped #avaAvatarVoiceToggle{bottom:22px;}
+/* Resize grip — bottom-right corner, same look/feel as the whiteboard element
+   resize handle (a small circular grab dot), only shown once popped out. */
+#avaAvatarResize{display:none;position:absolute;bottom:-6px;right:-6px;width:18px;height:18px;cursor:se-resize;z-index:3;background:transparent;}
+/* Edge resize strips — thin invisible bands along each side so hovering near
+   an edge shows the resize cursor and lets the user drag that edge directly,
+   not just the one corner grip. */
+.ava-resize-edge{display:none;position:absolute;z-index:2;}
+#avaAvatarBox.ava-popped .ava-resize-edge{display:block;}
+#avaAvatarResizeN{top:-4px;left:8px;right:8px;height:8px;cursor:n-resize;}
+#avaAvatarResizeS{bottom:-4px;left:8px;right:8px;height:8px;cursor:s-resize;}
+#avaAvatarResizeW{left:-4px;top:8px;bottom:8px;width:8px;cursor:w-resize;}
+#avaAvatarResizeE{right:-4px;top:8px;bottom:8px;width:8px;cursor:e-resize;}
+#avaAvatarBox.ava-popped #avaAvatarResize{display:block;}
+#avaAvatarBox.ava-popped.ava-resizing{transition:none!important;}
 #chpSidebar.open{width:240px;}
 #chpSidebar.fade-open{width:240px;animation:chpStoryReveal 1.1s cubic-bezier(0.22,1,0.36,1) forwards;}
 @keyframes chpStoryReveal{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -938,7 +966,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 .tts-speak-btn{position:absolute;bottom:6px;right:-46px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:rgba(15,15,26,0.85);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.6;transition:all .25s;z-index:10;color:rgba(255,255,255,0.8);padding:0;box-shadow:0 0 5px 1px rgba(0,217,168,0.3);}.tts-speak-btn:hover{opacity:1;border-color:rgba(0,217,168,0.9);box-shadow:0 0 6px 2px rgba(0,217,168,0.6);}.tts-speak-btn svg{pointer-events:none;}
 #chatHistoryBtn{position:absolute;left:14px;bottom:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;}
 #chatHistoryBtn:hover{opacity:1;border-color:rgba(255,255,255,0.3);}
-#chatHistoryDropdown{position:fixed;width:280px;background:linear-gradient(160deg,rgba(255,255,255,0.06) 0%,rgba(20,18,30,0.82) 35%,rgba(8,7,14,0.88) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
+#chatHistoryDropdown{position:fixed;width:280px;background:rgba(70,80,105,0.62);border:none;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.15);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
 #chatHistoryDropdown.open{display:block;}
 .chd-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s;}
 .chd-item:hover{background:rgba(124,106,247,0.12);}
@@ -1493,7 +1521,8 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 *::-webkit-scrollbar-thumb{background:rgba(124,106,247,0.22);border-radius:10px;}
 *::-webkit-scrollbar-thumb:hover{background:rgba(124,106,247,0.22);}
 
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#161616;border:1px solid rgba(0,217,168,0.3);color:#00d9a8;padding:10px 20px;border-radius:100px;font-size:13px;font-family:'DM Sans',sans-serif;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;}
+#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) scale(0.92);background:rgba(30,30,32,0.72);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.95);padding:10px 18px;border-radius:14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:999;opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,0.25);}
+#toast.show{transform:translateX(-50%) scale(1);}
 
 
 /* ── Saved Tools ── */
@@ -4687,12 +4716,17 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
     <!-- Ava LiveAvatar widget — hidden until enabled via right-click on the voice button -->
     <div id="avaAvatarBox" style="position:absolute;top:14px;right:14px;width:160px;height:160px;border-radius:16px;overflow:hidden;background:#0a0a14;box-shadow:0 0 20px rgba(124,106,247,.3);border:1px solid rgba(124,106,247,0.25);z-index:15;display:none;">
-      <video id="avaAvatarVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+      <video id="avaAvatarVideo" autoplay playsinline disablePictureInPicture disableRemotePlayback x-webkit-airplay="deny" style="width:100%;height:100%;object-fit:cover;display:none;"></video>
       <div id="avaAvatarStatus" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);font-size:11px;font-family:'DM Sans',sans-serif;text-align:center;padding:8px;line-height:1.4;"></div>
       <button id="avaAvatarClose" onclick="disableAvaAvatar()" title="Turn off avatar" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">✕</button>
       <button id="avaAvatarVoiceToggle" onclick="toggleAvaNativeVoice()" title="Use Anam's own voice" style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.55);font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">🔈</button>
-      <button id="avaAvatarPip" onclick="toggleAvaPip()" title="Pop out (Picture-in-Picture)" style="position:absolute;bottom:4px;left:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">⛶</button>
+      <button id="avaAvatarPip" onclick="toggleAvaPopout()" title="Pop out (drag to move)" style="position:absolute;bottom:4px;left:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">⛶</button>
       <button id="avaAvatarSwap" onclick="swapAvaAvatar()" title="Switch avatar" style="position:absolute;top:4px;left:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">⇄</button>
+      <div id="avaAvatarResize" title="Drag to resize"></div>
+      <div id="avaAvatarResizeN" class="ava-resize-edge"></div>
+      <div id="avaAvatarResizeS" class="ava-resize-edge"></div>
+      <div id="avaAvatarResizeW" class="ava-resize-edge"></div>
+      <div id="avaAvatarResizeE" class="ava-resize-edge"></div>
     </div>
 
     <div id="chatEmptyState">
@@ -6325,13 +6359,22 @@ sf.classList.add('sb-hidden');setTimeout(function(){sf.style.display='none';ir.s
 var allJobs=[],currentUser=null,jobFilter='all';
 (function(){
   function showAuthModal(){
-    window.addEventListener('DOMContentLoaded',function(){
+    var _openIt=function(){
       if(typeof window._hideSplash==='function') setTimeout(window._hideSplash,400);
       var m=document.getElementById('authModal');
       if(m) m.style.display='flex';
       _loginAnimStarted=false;
       if(typeof initLoginAnim==='function') setTimeout(initLoginAnim,50);
-    });
+    };
+    // DOMContentLoaded has usually already fired by the time this runs from a
+    // click (e.g. guest tapping the profile button), so the old code — which
+    // only ever registered a DOMContentLoaded listener — silently did nothing
+    // after initial page load. Run immediately if the DOM is already ready.
+    if(document.readyState==='loading'){
+      window.addEventListener('DOMContentLoaded',_openIt);
+    } else {
+      _openIt();
+    }
   }
   window.showAuthModal = showAuthModal;
   try{
@@ -6599,7 +6642,14 @@ function showCyberpunkGreeting(name){
 
 
 
-function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';},2200);}
+// Fires a real vibration where the browser supports it (Android Chrome/Firefox);
+// silently does nothing on iOS Safari and desktop, since the Vibration API
+// isn't exposed there. Safe to call anywhere without feature-checking first.
+function _haptic(pattern) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern || 10); } catch (e) {}
+}
+
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';t.classList.add('show');clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';t.classList.remove('show');},2200);}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
 
 // Render server warm-up: ping on load + first input focus so server is awake before first message
@@ -10757,6 +10807,8 @@ function blankNewChat(){
   var _chatActive = document.getElementById('sec-chat') && document.getElementById('sec-chat').classList.contains('active');
   var _esAlready = document.getElementById('chatEmptyState') && !document.getElementById('chatEmptyState').classList.contains('hidden');
   if(_chatActive && _esAlready && !activeSession && (!chatHistory || !chatHistory.length)){
+    var _sbEarly=document.getElementById('chpSidebar');
+    if(_sbEarly&&_sbEarly.classList.contains('open')){ closeChatHistoryPanel(); }
     setTimeout(function(){ var _ib=document.getElementById('inputBox'); if(_ib) _ib.focus(); },50);
     return;
   }
@@ -10777,10 +10829,11 @@ function blankNewChat(){
   requestAnimationFrame(function(){ _tt2.style.opacity='1'; });
   var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   activeSession=null;
-  // Refresh sidebar list if open, but never replay the fade-open animation
+  // Always close the sidebar (and its blur overlay) after starting a new
+  // chat, so the "ask me anything" input bar is actually visible — it used
+  // to stay open/refresh in place, leaving the input hidden behind the blur.
   var _sb=document.getElementById('chpSidebar');
-  if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('fade-open');refreshChpList();}
-  else if(_sb) toggleChatHistoryPanel();
+  if(_sb&&_sb.classList.contains('open')){ closeChatHistoryPanel(); }
 
   var keys=Object.keys(chatSessions);
   if(keys.length>10){ keys.slice(0,keys.length-10).forEach(function(k){delete chatSessions[k];}); }
@@ -12612,7 +12665,7 @@ function toggleChatHistoryDropdown(){
     dd.style.transform = 'translateY(-100%)';
   }
   var all = recentChats.slice();
-  if(!all.length){ dd.innerHTML='<div class="chd-header">No chat history</div>'; dd.style.display='block'; dd.classList.add('open'); if(_secChatDD) _secChatDD.classList.add('chp-blur-active'); return; }
+  if(!all.length){ dd.innerHTML='<div class="chd-header">No chat history</div>'; dd.style.display='block'; dd.classList.add('open'); return; }
   dd.innerHTML = '';
   var hdr = document.createElement('div'); hdr.className='chd-header'; hdr.textContent='Recent Chats'; dd.appendChild(hdr);
   all.forEach(function(c,i){
@@ -12633,7 +12686,6 @@ function toggleChatHistoryDropdown(){
     });
   }
   dd.style.display='block'; dd.classList.add('open');
-  if(_secChatDD) _secChatDD.classList.add('chp-blur-active');
   setTimeout(function(){
     document.addEventListener('click', function _close(e){
       if(!dd.contains(e.target) && e.target.id!=='chatHistoryBtn'){
@@ -17898,6 +17950,7 @@ function goNotes() {
   mobileAutoCollapse();
   // Toggle off — go back to previous page
   if (_currentViewId === 'sec-notes') {
+    _haptic(8);
     var _nBtnOff = document.getElementById('bnavNotesBtn');
     if (_nBtnOff) { _nBtnOff.classList.remove('active'); _nBtnOff.style.background = 'transparent'; }
     var prev = window._preNotesView || 'sec-welcome';
@@ -17924,6 +17977,7 @@ function goNotes() {
     return;
   }
   // Toggle on — save where we are and go to notes
+  _haptic(12);
   window._preNotesView = _currentViewId || 'sec-welcome';
   var _nBtnOn = document.getElementById('bnavNotesBtn');
   if (_nBtnOn) _nBtnOn.classList.add('active');
@@ -26226,7 +26280,8 @@ window._humeVoice = _humeVoice;
 // one and remembers that choice (localStorage) so it doesn't retry the dead
 // key every page load.
 var _humeKeys = [
-  'avOZrFup8wzbOKlRDbScdDhIWS8XVrTF6zLgzFrdaR0GPKg2', // key 1 (new, prioritized)
+  'dxtfrelOOWa2w3KlS5qExRYCbZuBYbE1CK4oIc0Y6HoYMO7v', // key 0 (newest, prioritized)
+  'avOZrFup8wzbOKlRDbScdDhIWS8XVrTF6zLgzFrdaR0GPKg2', // key 1
   'CNJHrvBox7vcVmmIr8EAzYxvdHA6BAhLBy73X9yWaHwf00cA', // key 2 (original)
   'LxrOiGcrZqGAhekKJahhUvashwDuij0iHGyGvJibbcnMs4Eq'   // key 3
 ];
@@ -26243,6 +26298,38 @@ function _humeRotateKey() {
 }
 var _humeKey = _humeGetKey();
 window._humeKey = _humeKey;
+
+// ── ElevenLabs voices — shown in the same list as Hume, under a section label ──
+// Test voice only for now. voiceId is the ElevenLabs voice_id (not the display
+// name) — replace the placeholder below with the real voice_id for "Mia" from
+// your ElevenLabs account before this will return audio. The API key itself is
+// never stored here: synthesis is proxied through the existing Render backend
+// (see _elevenFetchFile), the same "no keys in client" pattern already used for
+// Deepgram/Mem0. Add more voices to this array later the same way.
+// ElevenLabs requires a Pro plan we don't have yet — every voice is locked
+// (shows the "Update" badge, not clickable) until that's sorted. Flip a
+// voice's "ready" to true once the plan is active and its voice_id is confirmed.
+var _elevenVoices = [
+  { id: 'mia', label: 'Mia — Elegant Storyteller', voiceId: 'e6qsVnCuD0MWxmhZcuKz' },
+  { id: 'carla', label: 'Carla — Sweet, Soft and Meditative', voiceId: '21m00Tcm4TlvDq8ikWAM' },
+  { id: 'lilirose', label: 'Lilirose — Cozy, Soft and Intimate', voiceId: 'l32B8XDoylOsZKiSdfhE' },
+  { id: 'mina', label: 'Mina — Gentle, Soft, and Serene Female Voice', voiceId: 'VlQRLHkc5IdFj7o0atT1' },
+  { id: 'gonzul-filiz', label: 'Gonzul Filiz', voiceId: 'xsGHrtxT5AdDzYXTQT0d' },
+  { id: 'blondie-seductive', label: 'Blondie — Seductive and Soft-Spoken', voiceId: 'ShB6BQqbEXZxWO5511Qq' },
+  { id: 'clarice', label: 'Clarice — Soft, Immersive and Smooth', voiceId: 'vQSmovmw0GQKhfDjdkLJ' },
+  { id: 'blondie-femme-fatale', label: 'Blondie — Femme Fatale', voiceId: 'YDCfZMLWcUmsGvqHq0rS' },
+  { id: 'rachel', label: 'Rachel — Inviting, Warm, and Friendly', voiceId: '6AUOG2nbfr0yFEeI0784' },
+  { id: 'marta', label: 'Marta — Dreamy, Slightly Enchanted Slavic', voiceId: '8vdIucMc14HcML5KYpFx' }
+];
+var _elevenVoice = localStorage.getItem('elevenVoice') || 'mia';
+window._elevenVoice = _elevenVoice;
+var _elevenSelected = localStorage.getItem('ttsSource') === 'elevenlabs';
+window._elevenSelected = _elevenSelected;
+function _elevenGetVoice() {
+  var found = null;
+  for (var i = 0; i < _elevenVoices.length; i++) { if (_elevenVoices[i].id === _elevenVoice) { found = _elevenVoices[i]; break; } }
+  return found || _elevenVoices[0];
+}
 
 // ── Active TTS provider — 'deepgram' or 'hume' — persisted across refresh ────
 var _ttsProvider = localStorage.getItem('ttsProvider') || 'deepgram';
@@ -26385,6 +26472,20 @@ function _buildVoicePicker() {
     '#dgVoicePanel .vp-item .vp-name{font-weight:500;margin-right:4px;flex-shrink:0;}',
     '#dgVoicePanel .vp-item .vp-desc{font-size:10.5px;color:rgba(140,145,200,0.35);overflow:hidden;text-overflow:ellipsis;}',
 
+    // Locked state — ElevenLabs voices not yet wired up with a real voice_id
+    '#dgVoicePanel .vp-item.locked{cursor:default;opacity:.55;}',
+    '#dgVoicePanel .vp-item.locked:hover{background:transparent;color:rgba(190,193,230,0.65);}',
+    '#dgVoicePanel .vp-item.locked .vp-dot{background:rgba(140,145,200,0.25);}',
+    '#dgVoicePanel .vp-badge{flex-shrink:0;font-size:8.5px;font-family:\'DM Sans\',sans-serif;',
+      'letter-spacing:.04em;text-transform:uppercase;color:rgba(247,166,106,0.85);',
+      'background:rgba(247,166,106,0.12);border:1px solid rgba(247,166,106,0.25);',
+      'border-radius:99px;padding:2px 6px;margin-left:auto;}',
+
+    // Section label — separates ElevenLabs voices from Hume voices within the same list
+    '#dgVoicePanel .vp-section-label{padding:8px 12px 4px;font-size:9.5px;font-family:\'DM Sans\',sans-serif;',
+      'letter-spacing:.1em;text-transform:uppercase;color:rgba(140,145,200,0.45);',
+      'border-top:1px solid rgba(79,86,200,0.1);margin-top:4px;}',
+
     // Toggle button above the voice btn
     '#dgVoiceToggle{position:absolute;top:8px;right:10px;z-index:9999;display:none;',
       'align-items:center;gap:4px;padding:3px 8px 3px 6px;border-radius:99px;',
@@ -26428,29 +26529,57 @@ function _buildVoicePicker() {
   var list = document.getElementById('dgVoiceList');
 
   function _activeVoiceList() {
-    return _ttsProvider === 'hume' ? _humeVoices : _dgVoices;
+    // ElevenLabs voices are appended under the Hume tab, in the same scrollable
+    // list, behind a section label — not a separate tab/provider.
+    if (_ttsProvider === 'hume') {
+      return _humeVoices.concat([{ id: '__eleven_section__', label: 'ElevenLabs Voices', isSection: true }], _elevenVoices);
+    }
+    return _dgVoices;
   }
   function _activeVoiceId() {
-    return _ttsProvider === 'hume' ? _humeVoice : _dgVoice;
+    if (_ttsProvider === 'hume') return _elevenSelected ? _elevenVoice : _humeVoice;
+    return _dgVoice;
   }
 
   function _renderVoiceList() {
     list.innerHTML = '';
     _activeVoiceList().forEach(function(v) {
+      if (v.isSection) {
+        var lbl = document.createElement('div');
+        lbl.className = 'vp-section-label';
+        lbl.textContent = v.label;
+        list.appendChild(lbl);
+        return;
+      }
       var parts = v.label.split(' — ');
       var name = parts[0];
       var desc = parts[1] || '';
+      var isEleven = _elevenVoices.indexOf(v) !== -1;
+      var locked = isEleven && !v.ready;
       var item = document.createElement('div');
-      item.className = 'vp-item' + (v.id === _activeVoiceId() ? ' active' : '');
+      item.className = 'vp-item' + (v.id === _activeVoiceId() ? ' active' : '') + (locked ? ' locked' : '');
       item.dataset.id = v.id;
       item.innerHTML =
         '<span class="vp-dot"></span>' +
         '<span class="vp-name">' + name + '</span>' +
-        '<span class="vp-desc">' + desc + '</span>';
+        '<span class="vp-desc">' + desc + '</span>' +
+        (locked ? '<span class="vp-badge">Update</span>' : '');
+      if (locked) {
+        item.title = 'Needs a verified ElevenLabs voice_id before it can be used';
+        list.appendChild(item);
+        return;
+      }
       item.addEventListener('click', function() {
-        if (_ttsProvider === 'hume') {
+        if (_elevenVoices.indexOf(v) !== -1) {
+          _elevenVoice = v.id; window._elevenVoice = _elevenVoice;
+          localStorage.setItem('elevenVoice', _elevenVoice);
+          _elevenSelected = true; window._elevenSelected = true;
+          try { localStorage.setItem('ttsSource', 'elevenlabs'); } catch(e) {}
+        } else if (_ttsProvider === 'hume') {
           _humeVoice = v.id; window._humeVoice = _humeVoice;
           localStorage.setItem('humeVoice', _humeVoice);
+          _elevenSelected = false; window._elevenSelected = false;
+          try { localStorage.setItem('ttsSource', 'hume'); } catch(e) {}
         } else {
           _dgVoice = v.id; window._dgVoice = _dgVoice;
           localStorage.setItem('dgVoice', _dgVoice);
@@ -26568,9 +26697,28 @@ function _humeFetchFile(body, attemptsLeft) {
   });
 }
 
+// ── ElevenLabs REST call — proxied through the backend so the API key is
+// never exposed to the client (same pattern as Deepgram/Mem0/Anam/LiveAvatar).
+// See /elevenlabs-tts in server.js — key lives only in the Render env var
+// ELEVENLABS_API_KEY.
+function _elevenFetchFile(text) {
+  var v = _elevenGetVoice();
+  return fetch(_AVA_BACKEND_URL + '/elevenlabs-tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text, voiceId: v.voiceId })
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t){ throw new Error('ElevenLabs HTTP ' + r.status + ': ' + t.slice(0,200)); });
+    return r.blob();
+  });
+}
+
 // ── Shared REST TTS fetch — returns a Promise<Blob>, branches by active provider ──
 // Used by the speaker button and any WS-unavailable fallback paths.
 function _ttsRestFetch(text) {
+  if (window._elevenSelected) {
+    return _elevenFetchFile(text);
+  }
   if (window._ttsProvider === 'hume') {
     var humeBody = { utterances: [{ text: text }] };
     if (window._humeVoice) humeBody.utterances[0].voice = { name: window._humeVoice, provider: 'HUME_AI' };
@@ -26691,7 +26839,7 @@ function _avaUpdateVoiceToggleUI() {
   var btn = document.getElementById('avaAvatarVoiceToggle');
   if (!btn) return;
   if (_avaNativeVoice) {
-    btn.textContent = '🗣️';
+    btn.innerHTML = '<span style="filter:grayscale(1) brightness(1.7);display:inline-flex;">\uD83D\uDDE3\uFE0F</span>';
     btn.title = "Using Anam's own voice — click to use Ava's voice instead";
     btn.style.background = 'rgba(255,255,255,0.16)';
     btn.style.backdropFilter = 'blur(6px)';
@@ -26751,11 +26899,38 @@ async function enableAvaAvatar() {
   var statusEl = document.getElementById('avaAvatarStatus');
   var videoEl = document.getElementById('avaAvatarVideo');
   if (!box) return;
+  // Speech-to-speech off means no other audio input is driving the avatar's
+  // voice, so we always auto-switch to Anam's own voice for THIS session —
+  // it's a live default, not a saved preference, so it must not be inherited
+  // from a stale localStorage value written by a previous auto-enable (that
+  // was the bug: once persisted as '1', every later open already showed
+  // "on" immediately with no visible transition). If s2s is running, leave
+  // whatever the user last explicitly chose via the manual toggle.
+  if (!window._topNavVoiceActive) {
+    _avaNativeVoice = false;
+  }
+
+  // Show the box first in its normal off state so the user actually sees
+  // the popup appear, THEN (after a short beat) auto-switch to Anam's own
+  // voice and light up the icon — so the on-transition is visible instead
+  // of happening in the same instant as the box opening.
   box.style.display = 'block';
   statusEl.style.display = 'flex';
   statusEl.textContent = 'Connecting Ava\u2019s avatar…';
   videoEl.style.display = 'none';
   _avaUpdateVoiceToggleUI();
+
+  // This has to resolve before the session request below so the backend
+  // flag and disableInputAudio setting are correct from the start, rather
+  // than reconnecting after the fact — but we wait a beat first so the
+  // icon's on-transition is actually visible. Not persisted to localStorage:
+  // this is automatic per-open behavior, not a stored user preference.
+  if (!_avaNativeVoice && !window._topNavVoiceActive) {
+    await new Promise(function (resolve) { setTimeout(resolve, 600); });
+    _avaNativeVoice = true;
+    if (_actxGain) { try { _actxGain.gain.value = 0; } catch (e) {} }
+    _avaUpdateVoiceToggleUI();
+  }
 
   try {
     var res = await fetch(_AVA_BACKEND_URL + '/anam-session', {
@@ -26900,6 +27075,12 @@ function _avaInterruptLipsync() {
 
 function disableAvaAvatar() {
   if (document.pictureInPictureElement) { try { document.exitPictureInPicture(); } catch (e) {} }
+  if (_avaPopped) {
+    var _pbox = document.getElementById('avaAvatarBox');
+    if (_pbox) { _pbox.classList.remove('ava-popped', 'ava-dragging', 'ava-resizing'); _pbox.style.left = ''; _pbox.style.top = '14px'; _pbox.style.right = '14px'; _pbox.style.width = '160px'; _pbox.style.height = '160px'; }
+    _avaPopped = false;
+    if (typeof _avaUpdatePipBtnUI === 'function') _avaUpdatePipBtnUI();
+  }
   if (_avaAnamClient) { try { _avaAnamClient.stopStreaming(); } catch (e) {} _avaAnamClient = null; }
   _avaStopSilenceKeepalive();
   _avaAudioStream = null;
@@ -26916,46 +27097,278 @@ function disableAvaAvatar() {
   if (box) box.style.display = 'none';
 }
 
-// ── Picture-in-Picture pop-out ──────────────────────────────────────────────
-// Pops the avatar video into the browser's native floating PiP window, so it
-// stays visible (and follows the user) while they switch tabs or scroll.
+// ── Pop-out (draggable full-size avatar) ────────────────────────────────────
+// Pops the avatar out of its small docked corner into a large floating panel
+// that the user can grab and drag anywhere on screen — a real in-app PiP
+// rather than the browser's native (tiny, OS-controlled) Picture-in-Picture,
+// which doesn't let you resize or freely reposition it.
+var _avaPopped = false;
+var _avaSize = null; // {w, h} remembered custom size, persists across dock/pop toggles
+var _avaPos = null;  // {left, top} remembered custom position, persists across dock/pop toggles
+var _avaPopAnimTimer = null;
+
+// Load any previously-saved pop-out size/position so it survives page
+// reloads / closing and reopening the app, not just toggling within a session.
+try {
+  var _avaSaved = JSON.parse(localStorage.getItem('synapses_ava_popstate') || 'null');
+  if (_avaSaved) {
+    if (typeof _avaSaved.w === 'number' && typeof _avaSaved.h === 'number') _avaSize = { w: _avaSaved.w, h: _avaSaved.h };
+    if (typeof _avaSaved.left === 'number' && typeof _avaSaved.top === 'number') _avaPos = { left: _avaSaved.left, top: _avaSaved.top };
+  }
+} catch (e) {}
+
+// Persists the current remembered size/position to localStorage. Called
+// after every drag/resize gesture ends so it survives reloads.
+function _avaSavePopState() {
+  try {
+    localStorage.setItem('synapses_ava_popstate', JSON.stringify({
+      w: _avaSize ? _avaSize.w : null,
+      h: _avaSize ? _avaSize.h : null,
+      left: _avaPos ? _avaPos.left : null,
+      top: _avaPos ? _avaPos.top : null
+    }));
+  } catch (e) {}
+}
+
+// Kills the pop/dock transition immediately (and cancels its pending removal
+// timeout) so a drag or resize gesture started right after popping out can't
+// get its left/top/width/height caught mid-transition — that stale transition
+// was the cause of the box visibly "snapping" once before landing where the
+// user actually dragged it to.
+function _avaKillPopAnim(box) {
+  if (_avaPopAnimTimer) { clearTimeout(_avaPopAnimTimer); _avaPopAnimTimer = null; }
+  box.classList.remove('ava-pop-anim');
+}
+
 function _avaUpdatePipBtnUI() {
   var btn = document.getElementById('avaAvatarPip');
   if (!btn) return;
-  var active = document.pictureInPictureElement === document.getElementById('avaAvatarVideo');
-  btn.textContent = active ? '🗗' : '⛶';
-  btn.title = active ? 'Exit Picture-in-Picture' : 'Pop out (Picture-in-Picture)';
-  btn.style.background = active ? 'rgba(124,106,247,0.55)' : 'rgba(0,0,0,0.4)';
+  btn.textContent = _avaPopped ? '🗗' : '⛶';
+  btn.title = _avaPopped ? 'Dock back to corner' : 'Pop out (drag to move)';
+  if (_avaPopped) {
+    btn.style.background = 'rgba(255,255,255,0.16)';
+    btn.style.backdropFilter = 'blur(6px)';
+    btn.style.webkitBackdropFilter = 'blur(6px)';
+    btn.style.border = 'none';
+    btn.style.boxShadow = 'none';
+    btn.style.color = 'rgba(255,255,255,0.95)';
+  } else {
+    btn.style.background = 'rgba(0,0,0,0.4)';
+    btn.style.backdropFilter = 'none';
+    btn.style.webkitBackdropFilter = 'none';
+    btn.style.border = 'none';
+    btn.style.color = 'rgba(255,255,255,0.7)';
+  }
 }
 
-async function toggleAvaPip() {
-  var videoEl = document.getElementById('avaAvatarVideo');
-  if (!videoEl) return;
-  if (!document.pictureInPictureEnabled || typeof videoEl.requestPictureInPicture !== 'function') {
-    showToast('Picture-in-Picture isn\u2019t supported in this browser');
-    return;
+function toggleAvaPopout() {
+  var box = document.getElementById('avaAvatarBox');
+  if (!box) return;
+  if (box.style.display === 'none') { showToast('Avatar isn\u2019t live yet'); return; }
+  _avaPopped = !_avaPopped;
+  box.classList.add('ava-pop-anim');
+  if (_avaPopped) {
+    // Land it back where the user last left it — reuses a remembered custom
+    // size/position if the user dragged/resized it before (including from a
+    // previous session, restored from localStorage), otherwise falls back to
+    // a centered default.
+    var w = _avaSize ? _avaSize.w : Math.min(window.innerWidth * 0.74, 380);
+    var h = _avaSize ? _avaSize.h : w;
+    var startLeft = _avaPos ? _avaPos.left : (window.innerWidth - w) / 2;
+    var startTop = _avaPos ? _avaPos.top : Math.max(70, (window.innerHeight - h) / 2);
+    box.style.width = w + 'px';
+    box.style.height = h + 'px';
+    box.style.left = startLeft + 'px';
+    box.style.top = startTop + 'px';
+    box.style.right = 'auto'; // the docked box positions via right:14px — free it so left drives position
+    box.classList.add('ava-popped');
+    // Re-clamp in case the viewport changed size since the position was saved
+    // (e.g. resized window, rotated device) so it can't land off-screen.
+    _avaClampToViewport(box, startLeft, startTop);
+    _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+    _avaSavePopState();
+  } else {
+    box.classList.remove('ava-popped');
+    box.style.left = '';
+    box.style.top = '14px';
+    box.style.right = '14px'; // restore the docked corner position
+    box.style.width = '160px';
+    box.style.height = '160px';
   }
-  try {
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-    } else {
-      if (videoEl.readyState === 0 || videoEl.style.display === 'none') {
-        showToast('Avatar isn\u2019t live yet');
-        return;
-      }
-      await videoEl.requestPictureInPicture();
+  _avaPopAnimTimer = setTimeout(function () { box.classList.remove('ava-pop-anim'); _avaPopAnimTimer = null; }, 380);
+  _avaUpdatePipBtnUI();
+}
+
+function _avaClampToViewport(box, knownLeft, knownTop) {
+  var w = box.offsetWidth, h = box.offsetHeight;
+  var left = (typeof knownLeft === 'number') ? knownLeft : (parseFloat(box.style.left) || 0);
+  var top = (typeof knownTop === 'number') ? knownTop : (parseFloat(box.style.top) || 0);
+  var maxLeft = window.innerWidth - w - 4;
+  var maxTop = window.innerHeight - h - 4;
+  left = Math.min(Math.max(4, left), Math.max(4, maxLeft));
+  top = Math.min(Math.max(4, top), Math.max(4, maxTop));
+  box.style.left = left + 'px';
+  box.style.top = top + 'px';
+}
+
+// Drag (whole box, grabbed anywhere except the control buttons and the
+// resize grip) and resize (bottom-right grip only) — ported directly from
+// the whiteboard element mechanic (wbMake's drag-handle + rh grip), which
+// uses a fresh document-level mousemove/mouseup pair per gesture instead of
+// always-on listeners plus shared drag-state.
+function _avaWireDragResize(box) {
+  box.addEventListener('mousedown', function (e) {
+    if (!_avaPopped) return;
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.id === 'avaAvatarResize')) return;
+    e.preventDefault();
+    _avaKillPopAnim(box);
+    var startLeft = parseFloat(box.style.left) || 0;
+    var startTop = parseFloat(box.style.top) || 0;
+    var startX = e.clientX, startY = e.clientY;
+    var lastLeft = startLeft, lastTop = startTop;
+    box.classList.add('ava-dragging');
+    function onM(ev) {
+      if (!_avaPopped) { onU(); return; }
+      lastLeft = startLeft + (ev.clientX - startX);
+      lastTop = startTop + (ev.clientY - startY);
+      box.style.left = lastLeft + 'px';
+      box.style.top = lastTop + 'px';
     }
-  } catch (e) {
-    console.error('[Ava Avatar] PiP failed:', e);
-    showToast('Couldn\u2019t open Picture-in-Picture');
+    function onU() {
+      _avaClampToViewport(box, lastLeft, lastTop);
+      box.classList.remove('ava-dragging');
+      document.removeEventListener('mousemove', onM);
+      document.removeEventListener('mouseup', onU);
+      _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+      _avaSavePopState();
+    }
+    document.addEventListener('mousemove', onM);
+    document.addEventListener('mouseup', onU);
+  });
+
+  box.addEventListener('touchstart', function (e) {
+    if (!_avaPopped) return;
+    if (e.target && (e.target.tagName === 'BUTTON' || e.target.id === 'avaAvatarResize')) return;
+    _avaKillPopAnim(box);
+    var t = e.touches[0];
+    var startLeft = parseFloat(box.style.left) || 0;
+    var startTop = parseFloat(box.style.top) || 0;
+    var startX = t.clientX, startY = t.clientY;
+    var lastLeft = startLeft, lastTop = startTop;
+    box.classList.add('ava-dragging');
+    function onM(ev) {
+      if (!_avaPopped) { onU(); return; }
+      var t2 = ev.touches[0];
+      lastLeft = startLeft + (t2.clientX - startX);
+      lastTop = startTop + (t2.clientY - startY);
+      box.style.left = lastLeft + 'px';
+      box.style.top = lastTop + 'px';
+      ev.preventDefault();
+    }
+    function onU() {
+      _avaClampToViewport(box, lastLeft, lastTop);
+      box.classList.remove('ava-dragging');
+      document.removeEventListener('touchmove', onM);
+      document.removeEventListener('touchend', onU);
+      document.removeEventListener('touchcancel', onU);
+      _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+      _avaSavePopState();
+    }
+    document.addEventListener('touchmove', onM, { passive: false });
+    document.addEventListener('touchend', onU);
+    document.addEventListener('touchcancel', onU);
+  }, { passive: true });
+
+  // Generalized resize binder — dirs selects which edges this handle drives
+  // (e.g. {s:true,e:true} for the bottom-right corner grip, {n:true} for the
+  // top edge strip). N/W edges also shift left/top so the opposite corner
+  // stays anchored while the dragged edge moves.
+  function _avaBindResize(el, dirs) {
+    if (!el) return;
+    function beginGesture(startClientX, startClientY) {
+      var startW = box.offsetWidth, startH = box.offsetHeight;
+      var startLeft = parseFloat(box.style.left) || 0;
+      var startTop = parseFloat(box.style.top) || 0;
+      var maxSize = Math.min(window.innerWidth, window.innerHeight) * 0.92;
+      var last = { left: startLeft, top: startTop };
+      box.classList.add('ava-resizing');
+      var moveTo = function (clientX, clientY) {
+        if (!_avaPopped) return false;
+        var dx = clientX - startClientX, dy = clientY - startClientY;
+        var nw = startW, nh = startH, nl = startLeft, nt = startTop;
+        if (dirs.e) nw = Math.min(Math.max(160, startW + dx), maxSize);
+        if (dirs.w) { nw = Math.min(Math.max(160, startW - dx), maxSize); nl = startLeft + (startW - nw); }
+        if (dirs.s) nh = Math.min(Math.max(160, startH + dy), maxSize);
+        if (dirs.n) { nh = Math.min(Math.max(160, startH - dy), maxSize); nt = startTop + (startH - nh); }
+        box.style.width = nw + 'px';
+        box.style.height = nh + 'px';
+        if (dirs.w) box.style.left = nl + 'px';
+        if (dirs.n) box.style.top = nt + 'px';
+        last.left = nl; last.top = nt;
+        _avaSize = { w: nw, h: nh };
+        return true;
+      };
+      moveTo.last = last;
+      return moveTo;
+    }
+    el.addEventListener('mousedown', function (e) {
+      if (!_avaPopped) return;
+      e.stopPropagation(); e.preventDefault();
+      _avaKillPopAnim(box);
+      var moveTo = beginGesture(e.clientX, e.clientY);
+      function onM(ev) { if (!moveTo(ev.clientX, ev.clientY)) onU(); }
+      function onU() {
+        _avaClampToViewport(box, moveTo.last.left, moveTo.last.top);
+        box.classList.remove('ava-resizing');
+        document.removeEventListener('mousemove', onM);
+        document.removeEventListener('mouseup', onU);
+        _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+        _avaSavePopState();
+      }
+      document.addEventListener('mousemove', onM);
+      document.addEventListener('mouseup', onU);
+    });
+    el.addEventListener('touchstart', function (e) {
+      if (!_avaPopped) return;
+      e.stopPropagation();
+      _avaKillPopAnim(box);
+      var t = e.touches[0];
+      var moveTo = beginGesture(t.clientX, t.clientY);
+      function onM(ev) {
+        var t2 = ev.touches[0];
+        if (!moveTo(t2.clientX, t2.clientY)) { onU(); return; }
+        ev.preventDefault();
+      }
+      function onU() {
+        _avaClampToViewport(box, moveTo.last.left, moveTo.last.top);
+        box.classList.remove('ava-resizing');
+        document.removeEventListener('touchmove', onM);
+        document.removeEventListener('touchend', onU);
+        document.removeEventListener('touchcancel', onU);
+        _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+        _avaSavePopState();
+      }
+      document.addEventListener('touchmove', onM, { passive: false });
+      document.addEventListener('touchend', onU);
+      document.addEventListener('touchcancel', onU);
+    }, { passive: false });
   }
+
+  _avaBindResize(document.getElementById('avaAvatarResize'), { s: true, e: true });
+  _avaBindResize(document.getElementById('avaAvatarResizeN'), { n: true });
+  _avaBindResize(document.getElementById('avaAvatarResizeS'), { s: true });
+  _avaBindResize(document.getElementById('avaAvatarResizeW'), { w: true });
+  _avaBindResize(document.getElementById('avaAvatarResizeE'), { e: true });
+
+  window.addEventListener('resize', function () {
+    if (_avaPopped) _avaClampToViewport(box);
+  });
 }
 
 (function () {
-  var videoEl = document.getElementById('avaAvatarVideo');
-  if (!videoEl) return;
-  videoEl.addEventListener('enterpictureinpicture', _avaUpdatePipBtnUI);
-  videoEl.addEventListener('leavepictureinpicture', _avaUpdatePipBtnUI);
+  var box = document.getElementById('avaAvatarBox');
+  if (!box) return;
+  _avaWireDragResize(box);
 })();
 // ── End Ava Anam Avatar ─────────────────────────────────────────────────────
 
@@ -27555,6 +27968,16 @@ async function _ttsPlayNext(genId) {
 
   var sentence = _ttsQueue.shift();
 
+  // ElevenLabs has no browser-safe streaming websocket (same key-exposure
+  // problem the REST route was built to avoid), so it never goes through
+  // _wsSend/_wsOpen at all — those two only ever know about Hume/Deepgram.
+  // Route it as a one-shot REST call instead, chaining sentences on the
+  // audio's onended the same way the WS path chains on chunk-drain.
+  if (window._elevenSelected) {
+    _elevenPlaySentence(sentence, genId);
+    return;
+  }
+
   // Ensure WS is open before sending
   _wsOpen();
   var waited = 0;
@@ -27590,6 +28013,30 @@ async function _ttsPlayNext(genId) {
     if (genId !== _vmGenId) return;
     _fallbackTTS(sentence, genId);
   }
+}
+
+function _elevenPlaySentence(sentence, genId) {
+  _elevenFetchFile(sentence).then(function(blob) {
+    if (genId !== _vmGenId) return;
+    var url = URL.createObjectURL(blob);
+    var a = new Audio(url);
+    var done = function() {
+      URL.revokeObjectURL(url);
+      if (genId !== _vmGenId) return;
+      _ttsProcessing = false;
+      _ttsPlayNext(genId);
+    };
+    a.onended = done;
+    a.onerror = done;
+    a.play().catch(function(e) {
+      console.error('[ElevenLabs TTS] play() failed', e);
+      done();
+    });
+  }).catch(function(e) {
+    console.error('[ElevenLabs TTS] fetch failed, falling back to browser voice', e);
+    if (genId !== _vmGenId) return;
+    _fallbackTTS(sentence, genId);
+  });
 }
 
 function _fallbackTTS(sentence, genId) {
@@ -27651,17 +28098,20 @@ function speakVoiceReply(text) {
     '#tnvWaveIcon.tnv-breathe .tnv-bar:nth-child(7){animation:_tnvBarBreathe 0.85s ease-in-out infinite;animation-delay:0.00s;}' +
     '#tnvToast{' +
       'position:fixed;' +
-      'background:rgba(10,11,22,0.97);' +
-      'border:1px solid rgba(79,86,200,0.4);' +
+      'background:rgba(30,30,32,0.82);' +
+      'border:1px solid rgba(255,255,255,0.1);' +
       'border-radius:14px;' +
       'padding:12px 20px;' +
       'font-size:13px;' +
+      'font-weight:500;' +
       'font-family:DM Sans,sans-serif;' +
-      'color:rgba(200,203,240,0.95);' +
+      'color:rgba(255,255,255,0.95);' +
       'z-index:99999;' +
       'max-width:360px;' +
       'text-align:center;' +
-      'backdrop-filter:blur(20px);' +
+      'backdrop-filter:blur(20px) saturate(180%);' +
+      '-webkit-backdrop-filter:blur(20px) saturate(180%);' +
+      'box-shadow:0 10px 30px rgba(0,0,0,0.25);' +
       'opacity:0;' +
       'transition:opacity 0.25s;' +
       'pointer-events:none;' +
@@ -27691,7 +28141,7 @@ function speakVoiceReply(text) {
     '#tnvToast.expanded .toast-inner::-webkit-scrollbar{display:none;}' +
     '#tnvToast.expanded .toast-inner{scrollbar-width:none;-ms-overflow-style:none;}' +
     '#tnvFakeScroll{position:absolute;right:6px;top:12px;bottom:12px;width:3px;border-radius:99px;background:rgba(255,255,255,0.04);display:none;pointer-events:none;}' +
-    '#tnvFakeThumb{position:absolute;left:0;width:3px;border-radius:99px;background:linear-gradient(180deg,rgba(124,106,247,1) 0%,rgba(79,209,197,1) 33%,rgba(124,106,247,1) 66%,rgba(79,209,197,1) 100%);background-size:100% 300%;min-height:20px;box-shadow:0 0 8px rgba(124,106,247,0.8);}' +
+    '#tnvFakeThumb{position:absolute;left:0;width:3px;border-radius:99px;background:rgba(255,255,255,0.4);min-height:20px;}' +
     '#tnvToast.show{pointer-events:auto;}' +
     '#tnvToast::after{' +
       'content:" ";' +
@@ -27702,7 +28152,7 @@ function speakVoiceReply(text) {
       'width:0;height:0;' +
       'border-left:8px solid transparent;' +
       'border-right:8px solid transparent;' +
-      'border-bottom:10px solid rgba(79,86,200,0.4);' +
+      'border-bottom:10px solid rgba(255,255,255,0.1);' +
     '}' +
     '#tnvToast::before{' +
       'content:" ";' +
@@ -27713,12 +28163,12 @@ function speakVoiceReply(text) {
       'width:0;height:0;' +
       'border-left:6px solid transparent;' +
       'border-right:6px solid transparent;' +
-      'border-bottom:8px solid rgba(10,11,22,0.97);' +
+      'border-bottom:8px solid rgba(30,30,32,0.82);' +
       'z-index:1;' +
     '}' +
     '#tnvToast.show{opacity:1;}' +
     '#tnvToast.expanded{cursor:default;}' +
-    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(130,140,220,0.6);margin-top:4px;cursor:pointer;}';
+    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;cursor:pointer;}';
   document.head.appendChild(st);
 
   var _on = false;
@@ -28414,6 +28864,10 @@ function speakVoiceReply(text) {
       .replace(/\[[^\]]*\]/g, '') // remove [stage directions]
       .replace(/[#*`~>_]/g, '')
       .replace(/\s+/g, ' ').trim().slice(0, 2500);
+    if (window._elevenSelected) {
+      _elevenSpeakOnce(clean);
+      return;
+    }
     // Use the already-open Deepgram WebSocket + Web Audio path — first chunk plays in ~100ms
     // instead of waiting for the entire MP3 to download via REST fetch.
     try {
@@ -28474,6 +28928,17 @@ function speakVoiceReply(text) {
     } catch(e) {
       _speakREST(clean);
     }
+  }
+
+  function _elevenSpeakOnce(clean) {
+    _elevenFetchFile(clean).then(function(blob) {
+      var bu = URL.createObjectURL(blob);
+      var a = new Audio(bu);
+      _playAudio(a, function() { _busy = false; _busySince = 0; toastHide(); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); });
+    }).catch(function(e) {
+      console.error('[ElevenLabs TTS] speak() fetch failed', e);
+      _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000);
+    });
   }
 
   // Fallback: original REST-based TTS for when WS is blocked/unavailable
@@ -30039,16 +30504,12 @@ async function srcAgentContact(supplier) {
   // Right-click context menu
   var ctxMenu = document.createElement('div');
   ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;min-width:200px;';
-  ctxMenu.innerHTML = '<div id="avaCx1" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">🌿</span><span>Enter Ava\u2019s World</span></div><div id="avaCx3" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">🚀</span><span>Send Ava to Space</span></div><div id="avaCx4" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">🧑\u200d💼</span><span id="avaCx4Label">Enable Video Call</span></div><div id="avaCx2" style="display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">✕</span><span>Close Window</span></div>';
+  ctxMenu.innerHTML = '<div id="avaCx4" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div><div id="avaCx2" style="display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">✕</span><span>Close Window</span></div>';
   document.body.appendChild(ctxMenu);
   function _cxHov(el,bg){ el.onmouseenter=function(){el.style.background=bg;}; el.onmouseleave=function(){el.style.background='';}; }
-  _cxHov(ctxMenu.querySelector('#avaCx1'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCx2'),'rgba(124,106,247,0.18)');
-  _cxHov(ctxMenu.querySelector('#avaCx3'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCx4'),'rgba(124,106,247,0.18)');
-  ctxMenu.querySelector('#avaCx1').onclick = function(){ ctxMenu.style.display='none'; openPopup(); };
   ctxMenu.querySelector('#avaCx2').onclick = function(){ ctxMenu.style.display='none'; closePopup(); };
-  ctxMenu.querySelector('#avaCx3').onclick = function(){ ctxMenu.style.display='none'; _shipLaunch(); };
   ctxMenu.querySelector('#avaCx4').onclick = function(){
     ctxMenu.style.display='none';
     if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) { disableAvaAvatar(); }
@@ -30065,10 +30526,17 @@ async function srcAgentContact(supplier) {
   });
   document.addEventListener('click', function(){ ctxMenu.style.display='none'; });
 
-  btn.addEventListener('touchstart', function(){
+  btn.addEventListener('touchstart', function(e){
+    var touch = e.touches && e.touches[0];
     holdTimer = setTimeout(function(){
-      if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) { disableAvaAvatar(); }
-      else if (typeof enableAvaAvatar === 'function') { enableAvaAvatar(); }
+      var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
+      if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
+      ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
+      ctxMenu.style.display = 'block';
+      var cx = touch ? touch.clientX : (btn.getBoundingClientRect().left);
+      var cy = touch ? touch.clientY : (btn.getBoundingClientRect().top);
+      ctxMenu.style.left = Math.min(cx, window.innerWidth-210)+'px';
+      ctxMenu.style.top = Math.min(cy, window.innerHeight-180)+'px';
     }, 550);
   }, {passive:true});
   ['touchend','touchmove'].forEach(function(ev){ btn.addEventListener(ev, function(){ clearTimeout(holdTimer); }, {passive:true}); });
