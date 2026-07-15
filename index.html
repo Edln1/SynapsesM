@@ -893,7 +893,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
-#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
+#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(14,13,22,0.58);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
 #chpSidebar.open,#chpSidebar.fade-open{border-right-color:rgba(255,255,255,0.06);}
 /* Panel keeps one consistent translucent glass look in all states — the force-field blur applied directly to the content elements (see below) is what hides message text/canvas behind it now, not a solid-black background swap. */
 /* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
@@ -12599,7 +12599,8 @@ function toggleChatHistoryDropdown(){
   // Ensure dropdown is on body so it works from any page
   var dd = document.getElementById('chatHistoryDropdown');
   if(!dd){ dd=document.createElement('div'); dd.id='chatHistoryDropdown'; document.body.appendChild(dd); }
-  if(dd.classList.contains('open')){ dd.classList.remove('open'); dd.style.display='none'; return; }
+  var _secChatDD = document.getElementById('sec-chat');
+  if(dd.classList.contains('open')){ dd.classList.remove('open'); dd.style.display='none'; if(_secChatDD) _secChatDD.classList.remove('chp-blur-active'); return; }
   // Position near the button
   var btn = document.getElementById('chatHistoryBtn');
   if(btn){
@@ -12609,7 +12610,7 @@ function toggleChatHistoryDropdown(){
     dd.style.transform = 'translateY(-100%)';
   }
   var all = recentChats.slice();
-  if(!all.length){ dd.innerHTML='<div class="chd-header">No chat history</div>'; dd.style.display='block'; dd.classList.add('open'); return; }
+  if(!all.length){ dd.innerHTML='<div class="chd-header">No chat history</div>'; dd.style.display='block'; dd.classList.add('open'); if(_secChatDD) _secChatDD.classList.add('chp-blur-active'); return; }
   dd.innerHTML = '';
   var hdr = document.createElement('div'); hdr.className='chd-header'; hdr.textContent='Recent Chats'; dd.appendChild(hdr);
   all.forEach(function(c,i){
@@ -12617,7 +12618,7 @@ function toggleChatHistoryDropdown(){
     var el_r = document.createElement('div');
     el_r.className = 'chd-item';
     el_r.innerHTML = '<span class="chd-item-label">'+(isSaved?'<svg width="9" height="10" viewBox="0 0 24 24" fill="rgba(124,106,247,0.5)" style="margin-right:4px;vertical-align:middle;flex-shrink:0;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>':'')+esc(c.label)+'</span>';
-    (function(_i){ el_r.onclick = function(){ openRecentChat(_i); dd.classList.remove('open'); dd.style.display='none'; }; })(i);
+    (function(_i){ el_r.onclick = function(){ openRecentChat(_i); dd.classList.remove('open'); dd.style.display='none'; if(_secChatDD) _secChatDD.classList.remove('chp-blur-active'); }; })(i);
     dd.appendChild(el_r);
   });
   if(savedChats.length){
@@ -12625,15 +12626,17 @@ function toggleChatHistoryDropdown(){
       var el_s = document.createElement('div');
       el_s.className = 'chd-item';
       el_s.innerHTML = '<span class="chd-item-label"><svg width="9" height="10" viewBox="0 0 24 24" fill="rgba(124,106,247,0.5)" style="margin-right:4px;vertical-align:middle;flex-shrink:0;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'+esc(c.label)+'</span>';
-      (function(_i){ el_s.onclick = function(){ openSavedChat(_i); dd.classList.remove('open'); dd.style.display='none'; }; })(i);
+      (function(_i){ el_s.onclick = function(){ openSavedChat(_i); dd.classList.remove('open'); dd.style.display='none'; if(_secChatDD) _secChatDD.classList.remove('chp-blur-active'); }; })(i);
       dd.appendChild(el_s);
     });
   }
   dd.style.display='block'; dd.classList.add('open');
+  if(_secChatDD) _secChatDD.classList.add('chp-blur-active');
   setTimeout(function(){
     document.addEventListener('click', function _close(e){
       if(!dd.contains(e.target) && e.target.id!=='chatHistoryBtn'){
         dd.classList.remove('open'); dd.style.display='none';
+        if(_secChatDD) _secChatDD.classList.remove('chp-blur-active');
         document.removeEventListener('click',_close);
       }
     });
