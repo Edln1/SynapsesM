@@ -893,14 +893,16 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
-#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(14,13,22,0.58);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
+#chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
+/* Only darken further when there's an actual conversation (bright message text) behind it — the empty "ask me anything" state stays at the lighter tint above. .chp-msgs-dark is a JS fallback for mobile webviews that don't support :has(). */
+#sec-chat:has(#chatEmptyState.hidden) #chpSidebar,#chpSidebar.chp-msgs-dark{background:rgba(9,8,15,0.74);}
 #chpSidebar.open,#chpSidebar.fade-open{border-right-color:rgba(255,255,255,0.06);}
 /* Panel keeps one consistent translucent glass look in all states — the force-field blur applied directly to the content elements (see below) is what hides message text/canvas behind it now, not a solid-black background swap. */
 /* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
 /* Force-field blur: backdrop-filter alone doesn't reliably sample animated <canvas> layers (chatFlowCanvas/chatBeamsCanvas) or <video> across mobile browsers — those get GPU-composited on their own layer and slip past the compositor's backdrop sample, which is why they stayed sharp while real DOM text blurred fine. Applying filter:blur() straight to the source elements guarantees it regardless of browser/layer quirks. Scoped to #sec-chat.chp-blur-active, toggled alongside the sidebar open/close. */
-#sec-chat #chatFlowCanvas{filter:blur(0px);transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatEmptyState{filter:blur(0px);transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatFlowCanvas{filter:blur(0px);will-change:filter;transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatEmptyState{filter:blur(0px);will-change:filter;transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);will-change:filter;transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area{filter:blur(16px);}
 #chpSidebar.open{width:240px;}
 #chpSidebar.fade-open{width:240px;animation:chpStoryReveal 1.1s cubic-bezier(0.22,1,0.36,1) forwards;}
@@ -12535,7 +12537,7 @@ function toggleChatHistoryPanel(){
   if(!sidebar||!list) return;
   var _cc = document.getElementById('chatContainer');
   var _hasMsgs = !!(_cc && _cc.querySelectorAll('.message-group').length>0);
-  // Heavy-glass override removed — panel keeps its translucent look always now that the force-field blur handles hiding content behind it.
+  sidebar.classList.toggle('chp-msgs-dark', _hasMsgs);
   var isOpen = sidebar.classList.contains('open');
   if(isOpen){ closeChatHistoryPanel(); return; }
   // Build list
@@ -16154,6 +16156,8 @@ async function confirmWorldApproach(){
     var container=document.getElementById('chatContainer');
     if(!container)return;
     var hasMessages=container.querySelectorAll('.message-group').length>0;
+    var _chpSb = document.getElementById('chpSidebar');
+    if(_chpSb) _chpSb.classList.toggle('chp-msgs-dark', hasMessages);
     var wasHidden = emptyState && emptyState.classList.contains('hidden');
     wrap.classList.toggle('hidden',hasMessages);
     if(emptyState) emptyState.classList.toggle('hidden',hasMessages);
@@ -23299,6 +23303,14 @@ function _openNeutralinoWebview(url){
   document.addEventListener('DOMContentLoaded', patchIosLanding);
 
   // apply on load immediately
+  try {
+    if (!localStorage.getItem('_themeDefaultMigratedV1')) {
+      if ((localStorage.getItem('_appTheme') || 'purple') === 'purple') {
+        localStorage.setItem('_appTheme', 'easyview');
+      }
+      localStorage.setItem('_themeDefaultMigratedV1', '1');
+    }
+  } catch (e) {}
   applyTheme(localStorage.getItem('_appTheme')||'easyview');
 })();
 
