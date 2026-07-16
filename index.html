@@ -26888,7 +26888,10 @@ function swapAvaAvatar() {
   _avaAvatarSlot = _avaAvatarSlot === 1 ? 2 : 1;
   var btn = document.getElementById('avaAvatarSwap');
   if (btn) {
-    btn.style.background = _avaAvatarSlot === 2 ? 'rgba(124,106,247,0.55)' : 'rgba(0,0,0,0.4)';
+    btn.style.background = _avaAvatarSlot === 2 ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.4)';
+    btn.style.backdropFilter = _avaAvatarSlot === 2 ? 'blur(6px)' : 'none';
+    btn.style.webkitBackdropFilter = _avaAvatarSlot === 2 ? 'blur(6px)' : 'none';
+    btn.style.color = _avaAvatarSlot === 2 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
     btn.title = _avaAvatarSlot === 2 ? 'Switch back to avatar 1' : 'Switch to avatar 2';
   }
   showToast(_avaAvatarSlot === 2 ? '✨ Switching to avatar 2…' : '✨ Switching to avatar 1…');
