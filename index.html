@@ -907,13 +907,21 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 /* Shell is invisible — only the cards exist visually */
 #synPulsePanel .pp-glass{position:relative;display:flex;flex-direction:column;overflow:visible;padding:0;background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 #synPulsePanel .pp-glass::before{display:none!important;}
-#synPulsePanel .pp-head{display:flex;align-items:center;gap:8px;padding:0 4px 8px;flex-shrink:0;position:relative;z-index:8;}
+#synPulsePanel .pp-head{display:flex;align-items:center;gap:8px;padding:0 4px 6px;flex-shrink:0;position:relative;z-index:8;}
 #synPulsePanel .pp-brand{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
 #synPulsePanel .pp-brand-dot{width:6px;height:6px;border-radius:50%;background:#00d9a8;box-shadow:0 0 8px rgba(0,217,168,0.6);flex-shrink:0;animation:pulseDotBlink 2s ease-in-out infinite;}
 #synPulsePanel .pp-head h3{margin:0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:rgba(242,242,245,0.78);letter-spacing:-0.02em;text-shadow:0 1px 8px rgba(0,0,0,0.55);}
 #synPulsePanel .pp-head .pp-sub{font-size:9px;color:rgba(242,242,245,0.4);font-weight:500;margin-top:1px;text-shadow:0 1px 6px rgba(0,0,0,0.5);}
 #synPulsePanel .pp-close{width:26px;height:26px;border-radius:999px;background:rgba(12,12,18,0.55);border:1px solid rgba(255,255,255,0.12);color:rgba(242,242,245,0.55);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;flex-shrink:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 #synPulsePanel .pp-close:hover{background:rgba(20,20,30,0.75);color:#fff;}
+/* Content filters: All | Meetups | News | Jobs  (Luma/Meetup = tile labels only) */
+#synPulsePanel .pp-filters{display:flex;gap:5px;padding:0 2px 8px;position:relative;z-index:8;flex-wrap:wrap;}
+#synPulsePanel .pp-filter{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(12,12,18,0.45);color:rgba(242,242,245,0.5);font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;padding:5px 10px;border-radius:999px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .15s;text-shadow:0 1px 4px rgba(0,0,0,0.4);}
+#synPulsePanel .pp-filter:hover{border-color:rgba(196,181,253,0.3);color:rgba(242,242,245,0.8);}
+#synPulsePanel .pp-filter.on{background:rgba(124,106,247,0.28);border-color:rgba(196,181,253,0.45);color:rgba(250,250,252,0.95);}
+#synPulsePanel .pp-filter.on[data-f="meetups"]{background:rgba(0,217,168,0.16);border-color:rgba(0,217,168,0.4);color:rgba(180,255,230,0.95);}
+#synPulsePanel .pp-filter.on[data-f="news"]{background:rgba(96,165,250,0.16);border-color:rgba(96,165,250,0.4);color:rgba(190,220,255,0.95);}
+#synPulsePanel .pp-filter.on[data-f="jobs"]{background:rgba(232,93,150,0.16);border-color:rgba(232,93,150,0.4);color:rgba(255,200,220,0.95);}
 /* Stack stage — room for peek cards below front */
 #synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none;background:transparent;}
 #synPulsePanel .pp-hint{text-align:center;font-size:9.5px;color:rgba(242,242,245,0.32);padding:6px 0 2px;letter-spacing:0.02em;position:relative;z-index:5;text-shadow:0 1px 6px rgba(0,0,0,0.55);}
@@ -955,13 +963,25 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #synPulsePanel .pp-card.fly-out{z-index:6;pointer-events:none;opacity:0;transform:translateY(-28px) scale(0.96);filter:blur(2px);transition:transform .4s cubic-bezier(0.22,1,0.36,1),opacity .35s ease,filter .35s ease;}
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .35s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .35s ease;}
-#synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-#synPulsePanel .pp-tag{font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(0,217,168,0.88);text-shadow:0 1px 4px rgba(0,0,0,0.35);}
-#synPulsePanel .pp-tag.meetup{color:rgba(196,181,253,0.95);}
-#synPulsePanel .pp-tag.jobs{color:rgba(255,150,190,0.92);}
-#synPulsePanel .pp-tag.ai{color:rgba(0,217,168,0.9);}
-#synPulsePanel .pp-tag.community{color:rgba(180,250,220,0.88);}
-#synPulsePanel .pp-tag.product{color:rgba(196,181,253,0.9);}
+#synPulsePanel .pp-slide-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;padding-top:4px;}
+/* Source label ON the tile — must be obvious: Luma vs Meetup.com */
+#synPulsePanel .pp-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid transparent;line-height:1.15;text-shadow:none;max-width:70%;flex-shrink:0;}
+#synPulsePanel .pp-tag .pp-tag-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+#synPulsePanel .pp-tag.luma{color:#041612;background:linear-gradient(135deg,#5dffc8,#00d9a8);border-color:rgba(0,217,168,0.55);box-shadow:0 0 14px rgba(0,217,168,0.35);}
+#synPulsePanel .pp-tag.luma .pp-tag-dot{background:#041612;}
+#synPulsePanel .pp-tag.meetup{color:#1a0610;background:linear-gradient(135deg,#ff8fbc,#e85d96);border-color:rgba(232,93,150,0.55);box-shadow:0 0 14px rgba(232,93,150,0.35);}
+#synPulsePanel .pp-tag.meetup .pp-tag-dot{background:#1a0610;}
+#synPulsePanel .pp-tag.eventbrite{color:#1a0c04;background:linear-gradient(135deg,#ffc078,#ff8c3c);border-color:rgba(255,160,80,0.5);}
+#synPulsePanel .pp-tag.eventbrite .pp-tag-dot{background:#1a0c04;}
+#synPulsePanel .pp-tag.jobs,#synPulsePanel .pp-tag.ai,#synPulsePanel .pp-tag.community,#synPulsePanel .pp-tag.product{color:rgba(250,250,252,0.95);background:rgba(124,106,247,0.28);border-color:rgba(196,181,253,0.4);}
+/* Card edge tint by source so peek cards are readable too */
+#synPulsePanel .pp-card.is-luma{box-shadow:0 14px 36px rgba(0,0,0,0.45),inset 3px 0 0 0 #00d9a8,inset 0 1px 0 rgba(255,255,255,0.16);}
+#synPulsePanel .pp-card.is-meetup{box-shadow:0 14px 36px rgba(0,0,0,0.45),inset 3px 0 0 0 #e85d96,inset 0 1px 0 rgba(255,255,255,0.16);}
+#synPulsePanel .pp-card.depth-0.is-luma{box-shadow:0 16px 40px rgba(0,0,0,0.48),inset 3px 0 0 0 #00d9a8,0 0 0 1px rgba(0,217,168,0.22),inset 0 1px 0 rgba(255,255,255,0.18);}
+#synPulsePanel .pp-card.depth-0.is-meetup{box-shadow:0 16px 40px rgba(0,0,0,0.48),inset 3px 0 0 0 #e85d96,0 0 0 1px rgba(232,93,150,0.22),inset 0 1px 0 rgba(255,255,255,0.18);}
+#synPulsePanel .pp-src{font-size:9px;font-weight:600;letter-spacing:0.04em;color:rgba(220,222,235,0.55);white-space:nowrap;}
+#synPulsePanel .pp-src.luma{color:rgba(0,217,168,0.75);}
+#synPulsePanel .pp-src.meetup{color:rgba(255,150,190,0.8);}
 #synPulsePanel .pp-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:rgba(250,250,252,0.98);line-height:1.28;margin:0 0 5px;letter-spacing:-0.02em;text-shadow:0 1px 10px rgba(0,0,0,0.45);}
 #synPulsePanel .pp-desc{font-size:11.5px;color:rgba(235,236,245,0.78);line-height:1.45;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 8px rgba(0,0,0,0.4);}
 #synPulsePanel .pp-meta{font-size:10px;color:rgba(220,222,235,0.48);margin-top:8px;text-shadow:0 1px 6px rgba(0,0,0,0.35);}
@@ -3847,13 +3867,19 @@ window.getWebAudioNode = getWebAudioNode;
         <span class="pp-brand-dot" aria-hidden="true"></span>
         <div>
           <h3>Pulse</h3>
-          <div class="pp-sub">Swipe to peek more</div>
+          <div class="pp-sub">Live Vancouver meetups</div>
         </div>
       </div>
       <button type="button" class="pp-close" onclick="window.closeSynPulse&&window.closeSynPulse()" title="Close" aria-label="Close">✕</button>
     </div>
+    <div class="pp-filters" id="synPulseFilters" role="tablist" aria-label="Pulse categories">
+      <button type="button" class="pp-filter on" data-f="all">All</button>
+      <button type="button" class="pp-filter" data-f="meetups">Meetups</button>
+      <button type="button" class="pp-filter" data-f="news">News</button>
+      <button type="button" class="pp-filter" data-f="jobs">Jobs</button>
+    </div>
     <div class="pp-stage" id="synPulseStage" aria-live="polite"></div>
-    <div class="pp-hint">Swipe up or sideways · tap stack to cycle</div>
+    <div class="pp-hint">Swipe to cycle · tap card to open</div>
   </div>
 </div>
 <nav id="bottomNavBar" style="overflow:hidden;">
@@ -18217,28 +18243,51 @@ function goNotes() {
 
 // ══════════════════════════════════════════════
 // PULSE — iOS-style stacked glass notifications
-// Front card full · 2–3 peek behind · swipe to reveal
+// Real meetup data first (Luma + Meetup/Eventbrite via server)
 // ══════════════════════════════════════════════
 (function(){
   var READ_KEY = 'synapses_pulse_read_v1';
+  var CACHE_KEY = 'synapses_pulse_meetup_cache_v4'; /* v4: topic filters + platform tile labels */
+  var FILTER_KEY = 'synapses_pulse_filter_v2'; /* all | meetups | news | jobs */
   var AUTO_MS = 4800;
-  var PEEK = 3; /* cards partially visible behind front */
+  var PEEK = 3;
   var _open = false;
   var _i = 0;
   var _timer = null;
   var _busy = false;
   var _drag = null;
+  var _loading = false;
+  var _source = 'seed';
+  var _filter = 'all'; /* all | meetups | news | jobs  — NOT luma/meetup */
+  var _allEvents = []; /* unfiltered live list */
 
-  var FEED = [
-    { id:'m1', cat:'meetup', ico:'☕', tag:'Meetup', title:'Vancouver AI Builders — casual cowork', desc:'Weekly laptop session. Ship, ask, meet people building with AI in the city.', meta:'This week · Vancouver' },
-    { id:'m2', cat:'meetup', ico:'🎤', tag:'Meetup', title:'Speech-to-speech demo night', desc:'Show-and-tell for live voice agents, lip-sync avatars, and companion UX.', meta:'Sat evening · Hybrid' },
-    { id:'c1', cat:'community', ico:'📡', tag:'Community', title:'Builder Feed: shipping in public', desc:'Launch checklists, soft launches, and first-10-user stories heating up.', meta:'Builder Feed' },
-    { id:'c2', cat:'community', ico:'💬', tag:'Community', title:'Chatroom: what are you building?', desc:'Drop your stack, get unstuck, or find a collab partner this month.', meta:'Community room' },
-    { id:'j1', cat:'jobs', ico:'💼', tag:'Jobs', title:'Remote AI product roles trending', desc:'Prompt eng, AI CS, and no-code builder postings on the board.', meta:'Job Board' },
-    { id:'a1', cat:'ai', ico:'⚡', tag:'AI signal', title:'Tools worth a look this week', desc:'Fast video gen, better TTS, and local agents — skim Hub filters.', meta:'Tools Hub' },
-    { id:'p1', cat:'product', ico:'✨', tag:'Synapses', title:'Tour & companion polish', desc:'First-run film, product tour, and SynBot recovery — try Tour anytime.', meta:'Product' },
-    { id:'p2', cat:'product', ico:'📓', tag:'Synapses', title:'Notes stay your co-pilot', desc:'Park ideas mid-conversation; pinned notes stick when you switch pages.', meta:'Notes' }
+  /* Seed until live fetch returns */
+  var SEED = [
+    { id:'seed1', topic:'meetups', platform:'luma', tag:'Luma', title:'Loading Vancouver AI events…', desc:'Pulling live events from Luma and Meetup.com. This can take a few seconds on first load.', meta:'Connecting…', url: 'https://lu.ma/vancouver-ai' }
   ];
+  /* Extra non-meetup pulse cards so News / Jobs filters have content */
+  var EXTRAS = [
+    { id:'news_vai', topic:'news', platform:'web', tag:'News', title:'Vancouver AI scene is heating up', desc:'Community calendars, builder nights, and local AI meetups keep filling up — watch Pulse for the next ones.', meta:'Community · Vancouver', url: 'https://lu.ma/vancouver-ai' },
+    { id:'news_tools', topic:'news', platform:'web', tag:'News', title:'Builders shipping with open models', desc:'Local creators are mixing open-weight models with product launches. Tap for the Vancouver AI calendar hub.', meta:'AI · Product', url: 'https://lu.ma/vancouver-ai' },
+    { id:'jobs_remote', topic:'jobs', platform:'web', tag:'Jobs', title:'Remote AI roles still open', desc:'Product, eng, and GTM roles for AI-native teams. Open Job Board in Synapses for the full list.', meta:'Careers · Remote', url: 'https://www.linkedin.com/jobs/search/?keywords=AI%20Vancouver' },
+    { id:'jobs_yc', topic:'jobs', platform:'web', tag:'Jobs', title:'Startup hiring in BC tech', desc:'Early-stage AI and developer-tool companies in Vancouver / remote-Canada are posting builder roles.', meta:'Careers · BC', url: 'https://www.ycombinator.com/jobs' }
+  ];
+  var EMPTY = [
+    { id:'empty1', topic:'meetups', platform:'luma', tag:'Luma', title:'Nothing in this category', desc:'Try All, Meetups, News, or Jobs — or open the Vancouver AI Luma calendar.', meta:'Tap to open Luma', url: 'https://lu.ma/vancouver-ai' }
+  ];
+  var FEED = SEED.slice();
+  var _fetchGen = 0;
+
+  function _proxyBase(){
+    try {
+      if (typeof GROQ_PROXY === 'string' && GROQ_PROXY) return GROQ_PROXY.replace(/\/$/, '');
+    } catch(e){}
+    return 'https://synbot-whatsapp-2.onrender.com';
+  }
+  function _setSub(text){
+    var sub = document.querySelector('#synPulsePanel .pp-sub');
+    if(sub) sub.textContent = text || 'Live Vancouver meetups';
+  }
 
   function _readMap(){
     try { return JSON.parse(localStorage.getItem(READ_KEY) || '{}') || {}; } catch(e){ return {}; }
@@ -18265,24 +18314,232 @@ function goNotes() {
     _saveRead(m);
     _updateBadge();
   }
-  function _tagClass(cat){
-    if(cat==='meetup'||cat==='jobs'||cat==='ai'||cat==='community'||cat==='product') return cat;
-    return '';
+  function _platformOf(it){
+    if(!it) return 'meetup';
+    var url = String(it.url || '');
+    var id = String(it.id || '');
+    /* URL / id are ground truth — never trust a wrong server tag */
+    if(/lu\.ma|luma\.com/i.test(url) || /^luma[_-]/i.test(id) || it.platform === 'luma' || it.cat === 'luma' || /^luma$/i.test(it.tag||'')) return 'luma';
+    if(/meetup\.com/i.test(url) || /^mu[_-]/i.test(id) || it.platform === 'meetup' || /^meetup$/i.test(it.tag||'')) return 'meetup';
+    if(it.platform === 'eventbrite' || /eventbrite/i.test(url)) return 'eventbrite';
+    return it.platform || 'meetup';
+  }
+  function _labelOf(plat){
+    /* Platform badge on the TILE — Luma vs Meetup.com vs News/Jobs */
+    if(plat === 'luma') return 'Luma';
+    if(plat === 'meetup') return 'Meetup';
+    if(plat === 'eventbrite') return 'Eventbrite';
+    if(plat === 'news' || plat === 'web') return 'News';
+    if(plat === 'jobs') return 'Jobs';
+    return 'Pulse';
+  }
+  function _viaOf(plat, topic){
+    if(plat === 'luma') return 'via Luma';
+    if(plat === 'meetup') return 'via Meetup.com';
+    if(plat === 'eventbrite') return 'via Eventbrite';
+    if(topic === 'jobs' || plat === 'jobs') return 'Jobs';
+    if(topic === 'news' || plat === 'news') return 'News';
+    return 'Pulse';
+  }
+  function _topicOf(it){
+    if(!it) return 'meetups';
+    if(it.topic === 'meetups' || it.topic === 'news' || it.topic === 'jobs') return it.topic;
+    if(it.cat === 'news' || it.cat === 'jobs' || it.cat === 'meetups') return it.cat;
+    var blob = String(it.title||'') + ' ' + String(it.desc||'') + ' ' + String(it.meta||'');
+    if(/\b(hiring|job|jobs|role|career|apply|recruit)\b/i.test(blob)) return 'jobs';
+    if(/\b(news|announce|funding|raises|launch|report|brief)\b/i.test(blob)) return 'news';
+    /* Live Luma / Meetup.com events are always Meetups */
+    var plat = _platformOf(it);
+    if(plat === 'luma' || plat === 'meetup' || plat === 'eventbrite') return 'meetups';
+    return 'meetups';
+  }
+  function _tagClass(it){
+    var p = typeof it === 'string' ? it : _platformOf(it);
+    if(p==='luma') return 'luma';
+    if(p==='meetup') return 'meetup';
+    if(p==='eventbrite') return 'eventbrite';
+    var topic = (typeof it === 'object' && it) ? _topicOf(it) : '';
+    if(topic === 'news' || p === 'news' || p === 'web') return 'ai';
+    if(topic === 'jobs' || p === 'jobs') return 'jobs';
+    return 'meetup';
   }
   function _cardHtml(it){
+    var plat = _platformOf(it);
+    var topic = _topicOf(it);
+    /* Badge = where it came from (Luma / Meetup) or content type for extras */
+    var tag = (plat === 'luma' || plat === 'meetup' || plat === 'eventbrite')
+      ? _labelOf(plat)
+      : (topic === 'jobs' ? 'Jobs' : (topic === 'news' ? 'News' : _labelOf(plat)));
+    var via = _viaOf(plat, topic);
+    var meta = String(it.meta || '').replace(/\s*·\s*Tap to open/i, '');
+    meta = meta.replace(/\b(Meetup\.com|Meetup|Luma)\b/gi, '').replace(/\s*·\s*·/g, ' · ').replace(/^\s*·\s*|\s*·\s*$/g, '').trim();
+    var badgeClass = (plat === 'luma' || plat === 'meetup' || plat === 'eventbrite') ? _tagClass(plat) : _tagClass(it);
     return '<div class="pp-grip" aria-hidden="true"></div>' +
       '<div class="pp-slide-top">' +
-        '<div class="pp-tag '+_tagClass(it.cat)+'">'+it.tag+'</div>' +
+        '<span class="pp-tag '+badgeClass+'" data-platform="'+_esc(plat)+'" data-topic="'+_esc(topic)+'">' +
+          '<span class="pp-tag-dot" aria-hidden="true"></span>'+_esc(tag)+
+        '</span>' +
+        '<span class="pp-src '+_esc(plat === 'web' ? topic : plat)+'">'+_esc(via)+'</span>' +
       '</div>' +
-      '<h4 class="pp-title">'+it.title+'</h4>' +
-      '<p class="pp-desc">'+it.desc+'</p>' +
-      '<div class="pp-meta">'+it.meta+'</div>';
+      '<h4 class="pp-title">'+_esc(it.title)+'</h4>' +
+      '<p class="pp-desc">'+_esc(it.desc||'')+'</p>' +
+      '<div class="pp-meta">'+_esc(meta || via)+(it.url?' · Tap to open':'')+'</div>';
+  }
+  function _esc(s){
+    return String(s==null?'':s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function _normalizeList(items){
+    return (items || []).map(function(it, idx){
+      var plat = _platformOf(it);
+      var topic = _topicOf(it);
+      var label = (plat === 'luma' || plat === 'meetup' || plat === 'eventbrite')
+        ? _labelOf(plat)
+        : (topic === 'jobs' ? 'Jobs' : (topic === 'news' ? 'News' : _labelOf(plat)));
+      var meta = String(it.meta || '')
+        .replace(/\b(Meetup\.com|Meetup|Luma|Eventbrite)\b/gi, '')
+        .replace(/\s*·\s*·+/g, ' · ')
+        .replace(/^\s*·\s*|\s*·\s*$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      var srcBit = (plat === 'luma') ? 'Luma' : (plat === 'meetup' ? 'Meetup.com' : (plat === 'eventbrite' ? 'Eventbrite' : (topic === 'jobs' ? 'Jobs' : (topic === 'news' ? 'News' : 'Web'))));
+      meta = meta ? (meta + ' · ' + srcBit) : (srcBit + ' · Vancouver');
+      return {
+        id: String(it.id || ('ev_'+idx)),
+        topic: topic,
+        cat: topic, /* content category for filters */
+        platform: plat, /* Luma / Meetup / web — tile label */
+        tag: label,
+        title: it.title || 'Event',
+        desc: it.desc || '',
+        meta: meta,
+        url: it.url || '',
+        when: it.when || Date.now()
+      };
+    });
+  }
+  function _filterList(list){
+    list = list || [];
+    if(_filter === 'meetups' || _filter === 'news' || _filter === 'jobs'){
+      return list.filter(function(it){ return _topicOf(it) === _filter; });
+    }
+    /* migrate old luma/meetup filter prefs → all */
+    if(_filter === 'luma' || _filter === 'meetup') return list.slice();
+    return list.slice();
+  }
+  function _syncFilterButtons(){
+    var wrap = document.getElementById('synPulseFilters');
+    if(!wrap) return;
+    var f = (_filter === 'luma' || _filter === 'meetup') ? 'all' : _filter;
+    wrap.querySelectorAll('.pp-filter').forEach(function(b){
+      b.classList.toggle('on', (b.getAttribute('data-f') || '') === f);
+    });
+  }
+  function _setFilter(f){
+    /* content filters only — Luma/Meetup stay on the tile */
+    if(f === 'luma' || f === 'meetup') f = 'all';
+    _filter = f || 'all';
+    try { localStorage.setItem(FILTER_KEY, _filter); } catch(e){}
+    _syncFilterButtons();
+    var filtered = _filterList(_allEvents.length ? _allEvents : FEED);
+    if(!filtered.length){
+      FEED = EMPTY.slice();
+      _i = 0;
+      if(_open) _buildStack();
+      var emptyMsg = { meetups:'No meetups right now', news:'No news cards', jobs:'No job cards', all:'No events' };
+      _setSub(emptyMsg[_filter] || 'No events');
+      return;
+    }
+    FEED = filtered;
+    _i = 0;
+    _updateBadge();
+    if(_open) _buildStack();
+    var nMu = _allEvents.filter(function(x){ return _topicOf(x)==='meetups'; }).length;
+    var nN = _allEvents.filter(function(x){ return _topicOf(x)==='news'; }).length;
+    var nJ = _allEvents.filter(function(x){ return _topicOf(x)==='jobs'; }).length;
+    if(_filter === 'meetups') _setSub('Meetups · ' + FEED.length);
+    else if(_filter === 'news') _setSub('News · ' + FEED.length);
+    else if(_filter === 'jobs') _setSub('Jobs · ' + FEED.length);
+    else _setSub('All · ' + FEED.length + '  (Meetups ' + nMu + ' · News ' + nN + ' · Jobs ' + nJ + ')');
+  }
+  function _applyFeed(items, source){
+    if(!items || !items.length) return false;
+    var normalized = _normalizeList(items);
+    /* Merge curated News/Jobs so those filters always have something */
+    var extras = _normalizeList(EXTRAS);
+    var seen = {};
+    normalized.forEach(function(x){ seen[x.id] = 1; });
+    extras.forEach(function(x){ if(!seen[x.id]) normalized.push(x); });
+    _allEvents = normalized;
+    _source = source || 'live';
+    try {
+      if(normalized[0] && normalized[0].id !== 'seed1' && normalized[0].id !== 'empty1'){
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), source: _source, events: normalized }));
+      }
+    } catch(e){}
+    _setFilter(_filter);
+    return true;
+  }
+  function _loadCachedMeetups(){
+    try {
+      var raw = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if(!raw || !raw.events || !raw.events.length) return false;
+      if(Date.now() - (raw.at||0) > 2*3600e3) return false;
+      if(raw.events[0] && (raw.events[0].id === 'seed1' || raw.events[0].id === 'empty1')) return false;
+      return _applyFeed(raw.events, raw.source || 'cache');
+    } catch(e){ return false; }
+  }
+  function _fetchMeetups(force){
+    var gen = ++_fetchGen;
+    _loading = true;
+    _setSub(force ? 'Refreshing…' : 'Fetching live…');
+    /* filter=all always — client filters Luma vs Meetup */
+    var url = _proxyBase() + '/pulse-meetups?city=vancouver&filter=all' + (force ? '&refresh=1' : '');
+    var ctrl = null;
+    var timer = null;
+    try { ctrl = new AbortController(); timer = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 90000); } catch(eA){}
+    fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data){
+        if(timer) clearTimeout(timer);
+        if(gen !== _fetchGen) return;
+        _loading = false;
+        /* Prefer full unfiltered list when server sends it */
+        var list = (data && data.all && data.all.length) ? data.all
+          : ((data && data.events) ? data.events : []);
+        if(list.length){
+          _applyFeed(list, (data && data.source) || 'live');
+          return;
+        }
+        if(!_allEvents.length || FEED[0].id === 'seed1'){
+          _applyFeed(EMPTY, 'empty');
+          _setSub('No events found');
+        }
+      })
+      .catch(function(err){
+        if(timer) clearTimeout(timer);
+        if(gen !== _fetchGen) return;
+        _loading = false;
+        console.warn('[Pulse] meetup fetch failed', err && err.message ? err.message : err);
+        if(!_allEvents.length || FEED[0].id === 'seed1'){
+          _applyFeed(EMPTY, 'empty');
+          _setSub('Offline · retry later');
+        } else {
+          _setSub('Using cache');
+        }
+      });
   }
   function _buildStack(){
     var stage = document.getElementById('synPulseStage');
     if(!stage) return;
+    if(!FEED.length) FEED = SEED.slice();
     stage.innerHTML = FEED.map(function(it, idx){
-      return '<article class="pp-card" data-i="'+idx+'" data-id="'+it.id+'">'+_cardHtml(it)+'</article>';
+      var plat = _platformOf(it);
+      var edge = (plat === 'luma') ? ' is-luma' : (plat === 'meetup' ? ' is-meetup' : '');
+      return '<article class="pp-card'+edge+'" data-i="'+idx+'" data-id="'+_esc(it.id)+'" data-platform="'+_esc(plat)+'" data-url="'+_esc(it.url||'')+'">'+_cardHtml(it)+'</article>';
     }).join('');
     _layoutStack(false);
     _wireFrontDrag();
@@ -18367,7 +18624,7 @@ function goNotes() {
       var moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
       front.classList.remove('swiping');
       _drag = null;
-      /* Swipe up / left / right → reveal next peek card. Light tap also cycles. */
+      /* Swipe up / left / right → reveal next peek card. Tap → open real event link. */
       if(dy < -36 || Math.abs(dx) > 48){
         front.style.transform = '';
         front.style.opacity = '';
@@ -18375,7 +18632,14 @@ function goNotes() {
       } else if(!moved){
         front.style.transform = '';
         front.style.opacity = '';
-        advance('auto');
+        var link = front.getAttribute('data-url') || '';
+        if(link && /^https?:\/\//i.test(link)){
+          try { window.open(link, '_blank', 'noopener'); } catch(eO){}
+          _markRead(front.getAttribute('data-id'));
+          _armAuto();
+        } else {
+          advance('auto');
+        }
       } else {
         front.style.transform = '';
         front.style.opacity = '';
@@ -18410,12 +18674,19 @@ function goNotes() {
     _i = 0;
     _busy = false;
     _drag = null;
+    /* Prefer cached live meetups, then seed; always re-fetch so stack updates when ready */
+    if(!_loadCachedMeetups()) {
+      FEED = SEED.slice();
+      _setSub('Fetching live…');
+    }
     _buildStack();
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
     _open = true;
     _armAuto();
+    /* Always hit server (force if still on seed so we don't sit on "Loading…") */
+    _fetchMeetups(FEED[0] && FEED[0].id === 'seed1');
     if(typeof _haptic === 'function') try { _haptic(8); } catch(e){}
   }
   function closePulse(){
@@ -18438,7 +18709,26 @@ function goNotes() {
   window.openSynPulse = openPulse;
 
   function boot(){
+    try { _filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch(e){ _filter = 'all'; }
+    if(_filter === 'luma' || _filter === 'meetup') _filter = 'all';
+    _syncFilterButtons();
+    var filt = document.getElementById('synPulseFilters');
+    if(filt){
+      filt.querySelectorAll('.pp-filter').forEach(function(b){
+        b.onclick = function(e){
+          e.preventDefault();
+          e.stopPropagation();
+          _setFilter(b.getAttribute('data-f') || 'all');
+        };
+      });
+    }
+    _loadCachedMeetups();
     _updateBadge();
+    /* Prefetch so first open is already live (Render may cold-start ~30–60s once) */
+    setTimeout(function(){ _fetchMeetups(false); }, 1200);
+    setTimeout(function(){
+      if(!FEED.length || FEED[0].id === 'seed1') _fetchMeetups(true);
+    }, 8000);
     document.addEventListener('keydown', function(e){
       if(!_open) return;
       if(e.key === 'Escape') closePulse();
