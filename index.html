@@ -5835,6 +5835,7 @@ var NAV_ALL_ITEMS = [
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
   {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat();triggerNavGlow(this)'},
+  {id:'tour',   icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:'window.startTourFromNav&&window.startTourFromNav()'},
 ];
 var navMainIds  = ['chat','home','hub','human','room','jobs','world','whiteboard','tools'];
 var navMoreIds  = ['notes'];
@@ -5858,6 +5859,13 @@ function loadNavConfig(){
       if(navMainIds.indexOf('notes')===-1 && navMoreIds.indexOf('notes')===-1){
         navMoreIds.push('notes');
       }
+      /* After first bottom-left float press, Tour stays in chat/bottom nav forever (right side of bar) */
+      try {
+        if (localStorage.getItem('synapses_tour_btn_docked') === '1') {
+          navMainIds = navMainIds.filter(function (x) { return x !== 'tour'; });
+          navMainIds.push('tour');
+        }
+      } catch (eDock) {}
       if(cfg.topBar) navTopBarIds=cfg.topBar;
       // Restore nav mode after render
       if(cfg.atBottom){
@@ -5937,8 +5945,16 @@ function renderIconRail(){
     notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
     chat:       {icon:'💬', label:'New Chat',        fn:"newChat()"},
-    profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"}
+    profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"},
+    tour:       {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:"window.startTourFromNav&&window.startTourFromNav()"}
   };
+  /* If user already used the bottom-left float once, keep Tour in rail/bottom nav forever */
+  try {
+    if (localStorage.getItem('synapses_tour_btn_docked') === '1') {
+      navMainIds = navMainIds.filter(function (x) { return x !== 'tour'; });
+      navMainIds.push('tour');
+    }
+  } catch (eTourRail) {}
   rail.innerHTML = '';
   navMainIds.forEach(function(id){
     if(id === 'chat') return; // pen icon already hardcoded above the rail
@@ -6750,7 +6766,7 @@ function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;se
   }catch(e){}
 })();
 
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}setTimeout(function(){if(typeof startSynapsesTour==='function')startSynapsesTour(false);},800);return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}setTimeout(function(){if(typeof startSynapsesTour==='function')startSynapsesTour(false);},800);}
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}}
 function switchAuthTab(t){document.getElementById('tabLogin').classList.toggle('active',t==='login');document.getElementById('tabRegister').classList.toggle('active',t==='register');document.getElementById('loginForm').style.display=t==='login'?'block':'none';document.getElementById('registerForm').style.display=t==='register'?'block':'none';}
 function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
 function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
@@ -17570,11 +17586,9 @@ function finishOb(){
   if(currentUser.id) _supabase.from('profiles').update({onboarded:true}).eq('id',currentUser.id);
   var m=document.getElementById('onboardingModal'); if(m) m.classList.remove('show');
   // Product hero is voice + avatar + neural chat — land there, not tools hub
-  showToast('👋 Welcome — let\'s show you around');
+  showToast('👋 Welcome');
   try{ if(typeof setView==='function') setView('sec-chat'); }catch(e){}
-  setTimeout(function(){
-    if(typeof startSynapsesTour==='function') startSynapsesTour(false);
-  }, 500);
+  /* Tour is manual only (Tour button) — no auto-start after onboarding */
 }
 
 
@@ -28536,7 +28550,59 @@ function speakVoiceReply(text) {
   // this turn actually contained something worth remembering long-term.
   var _metaInstruction = '\n\nCRITICAL, NON-NEGOTIABLE FORMATTING RULE — this applies to EVERY single reply you give, no exceptions, even in casual conversation, even mid-roleplay, even when you are focused on giving a good in-character answer: after your reply, on its own new line, you MUST silently append a tag — it will never be spoken or shown to the user, so do not mention it or reference it in your reply: <meta>{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other","clean_summary":"one short third-person sentence distilling the fact, starting with the word User","asked_clarifying_question":true or false}</meta>. Do NOT skip this tag under any circumstances, regardless of how engaged you are in the conversation. Only set is_life_context to true if the USER (the person talking to you) shared something genuinely worth remembering later about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, health status, routine or habit, personal fact, past milestone, or a stable preference or value. NEVER set is_life_context to true for your own in-character small talk, opinions, hobbies, or made-up activities (e.g. your music taste, your day, your plans, your coffee run) — that is not the user\'s life context and must always be false. Set asked_clarifying_question to true only if your reply itself is a clarifying question asking for missing details (like timeframe, current routine, or specifics) before you can build a schedule, routine, or plan — not for ordinary questions in normal conversation. If the user already gave enough detail to act on (e.g. specific times, a clear timeframe), just help them directly instead of asking, and set this to false.\n\nWhen someone asks you to build something concrete like a schedule, routine, or plan and their message does not already include enough detail to do that well, ask one quick clarifying question first instead of guessing with vague placeholders — but the question must be about whatever is ACTUALLY missing for THIS specific request, not a fixed default question. Do not always ask about wake-up/bed time — that only matters for daily schedules. For a workout plan, ask about fitness level or days available; for a work-focused plan, ask about deadlines or priorities; for a routine change, ask what part of the day it affects. Vary the question based on the actual topic. If they already gave enough specifics, just help directly.';
 
-  var _sysCached = 'You are a real person — warm, present, and genuine. Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
+  var _sysCached = 'You are Ava — a real, warm, present companion in Synapses (a personal AI OS built around live speech-to-speech). Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. Stay coherent with the conversation so far — never jump to random unrelated topics. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
+
+  var _S2S_INTRO_KEY = 'synapses_s2s_first_intro_v1';
+  window._s2sOpenedThisSession = false;
+  window._s2sFirstSessionActive = false;
+
+  /**
+   * ONE-TIME only (browser localStorage). Does NOT touch WhatsApp bot/server
+   * or any other HTML file. Only runs when top-nav S2S is turned on and the
+   * user has never gotten this intro before.
+   */
+  function _maybeS2SFirstIntro() {
+    if (!_on || _busy) return false;
+
+    /* Already delivered lifetime intro — never auto-speak again */
+    try {
+      if (localStorage.getItem(_S2S_INTRO_KEY) === '1') return false;
+    } catch (e) { /* continue */ }
+
+    var userTurns = 0;
+    for (var i = 0; i < _history.length; i++) {
+      if (_history[i] && _history[i].role === 'user') userTurns++;
+    }
+    /* Mid-conversation — don't interrupt */
+    if (userTurns > 0) return false;
+
+    try { localStorage.setItem(_S2S_INTRO_KEY, '1'); } catch (e4) {}
+    window._s2sFirstSessionActive = true;
+
+    var name = '';
+    try {
+      var mem = _loadMemory();
+      if (mem && mem.name) name = String(mem.name).replace(/[^\w\s\-']/g, '').trim().split(/\s+/)[0];
+    } catch (e2) {}
+    try {
+      if (!name && typeof currentUser !== 'undefined' && currentUser && currentUser.name && !currentUser.isGuest) {
+        name = String(currentUser.name).trim().split(/\s+/)[0];
+      }
+    } catch (e3) {}
+    if (name && name.length > 18) name = '';
+
+    var intro = name
+      ? ('Hey ' + name + ". I'm Ava — your live companion in Synapses. This is a real conversation with me, out loud, not a menu of tools. I'm glad you're here. What's on your mind?")
+      : ("Hey. I'm Ava — your live companion in Synapses. This is a real conversation with me, out loud, not a menu of tools. I'm glad you're here. What's on your mind?");
+
+    var last = _history.length ? _history[_history.length - 1] : null;
+    if (!(last && last.role === 'assistant' && last.content === intro)) {
+      _history.push({ role: 'assistant', content: intro });
+    }
+    window._avaLastReply = intro;
+    speak(intro);
+    return true;
+  }
 
   // ── Persistent Memory System ────────────────────────────────────────────
   var _memKey = 'synapses_companion_memory';
@@ -29719,7 +29785,19 @@ function speakVoiceReply(text) {
           : '';
       var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
       var worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
-      var sys = _sysCached + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _metaInstruction;
+      var firstSess = '';
+      if (window._s2sFirstSessionActive) {
+        var _asTurns = 0;
+        for (var _fi = 0; _fi < _history.length; _fi++) {
+          if (_history[_fi] && _history[_fi].role === 'user') _asTurns++;
+        }
+        if (_asTurns <= 4) {
+          firstSess = '\n\nFIRST LIVE SPEECH-TO-SPEECH SESSION: You already introduced yourself as Ava, the live companion in Synapses. Stay continuous with that welcome — warm, present, coherent. Do NOT answer randomly or invent unrelated topics. If they sound unsure, gently re-orient: they can talk about anything (feelings, work, ideas) or ask what Synapses is (personal AI OS centered on live voice companionship with you). Keep it human and short unless they ask for depth.';
+        } else {
+          window._s2sFirstSessionActive = false;
+        }
+      }
+      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _metaInstruction;
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 650 : (synCtx ? 650 : 600);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
@@ -30062,10 +30140,14 @@ function speakVoiceReply(text) {
       fetch('https://synbot-whatsapp-2.onrender.com/heartbeat').catch(function(){});
       // Don't wipe _history here — preserve conversation across toggle off/on
       _busy = false; _busySince = 0;
-      if (_stream) {
-        // Already have mic — turn off TTS now and start recording
+      function _afterMicReady() {
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
+        /* First open: Ava leads with a real intro — don't jump into random listen/reply */
+        if (_maybeS2SFirstIntro()) return;
         record();
+      }
+      if (_stream) {
+        _afterMicReady();
       } else if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         // No getUserMedia at all — almost always means the page isn't on
         // a secure origin (https:// or localhost). Browsers silently strip
@@ -30086,9 +30168,7 @@ function speakVoiceReply(text) {
               });
             }
           });
-          // Permission granted — now safe to turn off TTS
-          if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
-          record();
+          _afterMicReady();
         }).catch(function(err) {
           console.error('Mic getUserMedia error:', err && err.name, err && err.message);
           var msg = 'Mic access denied';
@@ -33001,6 +33081,7 @@ async function srcAgentContact(supplier) {
 </div>
 <!-- SYN_TOUR_FLOAT_START -->
 <style>
+/* First launch only: bottom-left tour entry (user must press — never auto-start) */
 #synTourFloatBtn{
   position:fixed;left:14px;bottom:14px;z-index:88750;
   width:34px;height:34px;border-radius:12px;padding:0;cursor:pointer;
@@ -33010,8 +33091,13 @@ async function srcAgentContact(supplier) {
   backdrop-filter:blur(20px) saturate(1.15);
   -webkit-backdrop-filter:blur(20px) saturate(1.15);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 2px 12px rgba(0,0,0,0.2);
-  opacity:0.28;transition:opacity .25s ease,background .2s,border-color .2s,box-shadow .2s,transform .15s;
+  opacity:0.45;transition:opacity .25s ease,background .2s,border-color .2s,box-shadow .2s,transform .15s,left .2s,bottom .2s;
   pointer-events:auto;
+}
+/* Sit in bottom-left row next to Notes (not on top of it, not auto tour) */
+body.bottom-nav #synTourFloatBtn{
+  left:52px;
+  bottom:calc(9px + env(safe-area-inset-bottom,0px));
 }
 #synTourFloatBtn:hover{
   opacity:0.92;
@@ -33022,17 +33108,118 @@ async function srcAgentContact(supplier) {
 #synTourFloatBtn:active{transform:scale(0.96);}
 #synTourFloatBtn svg{opacity:0.55;transition:opacity .2s;}
 #synTourFloatBtn:hover svg{opacity:1;}
+/* After first press: float is gone forever — lives in icon rail / bottom nav */
+#synTourFloatBtn.docked{display:none!important;opacity:0!important;pointer-events:none!important;}
 /* hide while tour is open so it doesn't sit on the guide */
 #synTourRoot.on ~ #synTourFloatBtn,
 body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:none!important;}
+/* Rail / bnav tour chip — match other icons */
+.icon-rail-btn#rail-tour svg,.bnav-btn#bnav-tour svg{display:block;}
 </style>
 <button id="synTourFloatBtn" type="button" title="Start product tour" aria-label="Start product tour"
-  onclick="(function(){try{if(typeof resetSynapsesTour==='function')resetSynapsesTour();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(124,106,247,0.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  onclick="(function(){try{if(typeof window.dockSynapsesTourBtn==='function')window.dockSynapsesTourBtn();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="9"/>
-    <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(0,217,168,0.85)" stroke="none"/>
+    <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/>
   </svg>
 </button>
+<script>
+(function () {
+  var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
+  var TOUR_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="12" r="9"/>' +
+      '<polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/>' +
+    '</svg>';
+  function isTourBtnDocked() {
+    try { return localStorage.getItem(TOUR_BTN_KEY) === '1'; } catch (e) { return false; }
+  }
+  function hideFloat() {
+    var f = document.getElementById('synTourFloatBtn');
+    if (f) {
+      f.classList.add('docked');
+      f.style.display = 'none';
+    }
+  }
+  function startTourFromNav() {
+    try {
+      /* Do not wipe "tour done" — that made the tour reappear every app launch */
+      if (typeof startSynapsesTour === 'function') startSynapsesTour(true);
+    } catch (e) { console.error(e); }
+  }
+  function ensureTourInNavCatalog() {
+    if (typeof NAV_ALL_ITEMS === 'undefined' || !NAV_ALL_ITEMS) return;
+    var exists = NAV_ALL_ITEMS.some(function (x) { return x.id === 'tour'; });
+    if (!exists) {
+      NAV_ALL_ITEMS.push({
+        id: 'tour',
+        icon: TOUR_ICON,
+        label: 'Tour',
+        fn: 'window.startTourFromNav && window.startTourFromNav()'
+      });
+    } else {
+      var it = NAV_ALL_ITEMS.find(function (x) { return x.id === 'tour'; });
+      if (it) {
+        it.icon = TOUR_ICON;
+        it.label = 'Tour';
+        it.fn = 'window.startTourFromNav && window.startTourFromNav()';
+      }
+    }
+  }
+  function placeTourInMainNav() {
+    if (typeof navMainIds === 'undefined' || !navMainIds) return;
+    /* Always keep chat first; pin Tour near the right of the chat/bottom bar */
+    navMainIds = navMainIds.filter(function (x) { return x !== 'tour'; });
+    if (navMainIds.indexOf('chat') === -1) navMainIds.unshift('chat');
+    navMainIds.push('tour');
+    if (typeof navMoreIds !== 'undefined' && navMoreIds) {
+      navMoreIds = navMoreIds.filter(function (x) { return x !== 'tour'; });
+    }
+  }
+  window.startTourFromNav = startTourFromNav;
+  window.isSynapsesTourBtnDocked = isTourBtnDocked;
+  /** First bottom-left press only → float gone forever; Tour lives in bottom nav / rail (chat row) */
+  window.dockSynapsesTourBtn = function () {
+    try { localStorage.setItem(TOUR_BTN_KEY, '1'); } catch (e) {}
+    hideFloat();
+    ensureTourInNavCatalog();
+    placeTourInMainNav();
+    try { if (typeof saveNavConfig === 'function') saveNavConfig(); } catch (e2) {}
+    try {
+      if (typeof renderBottomNav === 'function') renderBottomNav();
+      else if (typeof renderIconRail === 'function') renderIconRail();
+    } catch (e3) {}
+  };
+  function applyDockedState() {
+    if (!isTourBtnDocked()) {
+      /* First open: show bottom-left float, never auto-start tour */
+      var f = document.getElementById('synTourFloatBtn');
+      if (f) {
+        f.classList.remove('docked');
+        f.style.display = 'flex';
+      }
+      return;
+    }
+    hideFloat();
+    ensureTourInNavCatalog();
+    placeTourInMainNav();
+    try {
+      if (typeof renderBottomNav === 'function') renderBottomNav();
+      else if (typeof renderIconRail === 'function') renderIconRail();
+    } catch (e) {}
+  }
+  window._applyDockedTourBtn = applyDockedState;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(applyDockedState, 200);
+      setTimeout(applyDockedState, 800);
+    });
+  } else {
+    setTimeout(applyDockedState, 200);
+    setTimeout(applyDockedState, 800);
+  }
+})();
+</script>
 <!-- SYN_TOUR_FLOAT_END -->
 <!-- SYNAPSES_FIRST_TOUR_START -->
 <script>
@@ -33168,6 +33355,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourRoot h2,#synTourRoot h3,#synTourCard h3,#synTourCenter h2,#synTourChoice h3{font-family:"Syne",sans-serif!important;}',
       '#synTourFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}',
       '#synTourDim{display:none!important;}',
+      /* Mobile-only story narration plate (desktop keeps canvas caption) */
+      '#synTourNarration{display:none;pointer-events:none;}',
 
       /* soft target ring — soft glass tones, no neon teal blast */
       '#synTourHole{position:absolute;border-radius:18px;pointer-events:none;opacity:0;z-index:2;',
@@ -33355,7 +33544,30 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
       '@media (prefers-reduced-motion:reduce){',
       '#synTourHole.pulse,#synTourCenter .st-orb,#synTourCenter .panel::before,#synTourCenter .panel.myth-climax{animation:none!important;}',
-      '#synTourHole,#synTourCard,#synTourCenter .panel{transition-duration:.01ms!important;}}'
+      '#synTourHole,#synTourCard,#synTourCenter .panel{transition-duration:.01ms!important;}}',
+
+      /* ── Mobile narration: TOP glass plate — never under Ask me anything / Tour dock ── */
+      '@media (max-width:768px){',
+      '#synTourNarration{display:block;position:absolute;left:50%;right:auto;bottom:auto;',
+      'top:max(52px,calc(10px + env(safe-area-inset-top,0px)));z-index:12;',
+      'width:min(400px,calc(100vw - 28px));padding:14px 16px 15px;border-radius:16px;box-sizing:border-box;',
+      'background:linear-gradient(180deg,rgba(18,16,28,0.78) 0%,rgba(10,10,16,0.68) 100%);',
+      'backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);',
+      'border:1px solid rgba(255,255,255,0.14);',
+      'box-shadow:0 12px 32px rgba(0,0,0,0.42),0 0 0 1px rgba(124,106,247,0.1),inset 0 1px 0 rgba(255,255,255,0.12);',
+      'font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
+      'font-size:15.5px;font-weight:500;line-height:1.55;letter-spacing:0.012em;',
+      'color:rgba(250,250,252,0.96);text-align:center;',
+      '-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;',
+      'text-shadow:0 1px 2px rgba(0,0,0,0.45);',
+      'opacity:0;transform:translate3d(-50%,-8px,0);',
+      'transition:opacity .42s ease,transform .5s cubic-bezier(0.16,1,0.3,1);',
+      'max-height:26vh;overflow:hidden;}',
+      '#synTourNarration::before{content:"";display:block;width:28px;height:2px;margin:0 auto 10px;border-radius:2px;',
+      'background:linear-gradient(90deg,transparent,rgba(196,181,253,0.6),transparent);',
+      'box-shadow:0 0 10px rgba(124,106,247,0.3);}',
+      '#synTourNarration .st-nar-text{display:block;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;}',
+      '}'
     ].join('');
   }
 
@@ -33430,16 +33642,61 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     wireChoiceButtons();
   }
 
+  function isTourMobile() {
+    try { return window.matchMedia('(max-width: 768px)').matches; } catch (e) {
+      return window.innerWidth <= 768;
+    }
+  }
+
+  function ensureNarrationDom() {
+    if ($('synTourNarration')) return;
+    var root = $('synTourRoot');
+    if (!root) return;
+    var d = document.createElement('div');
+    d.id = 'synTourNarration';
+    d.setAttribute('aria-live', 'polite');
+    d.innerHTML = '<span class="st-nar-text"></span>';
+    root.appendChild(d);
+  }
+
+  /** Mobile: crisp glass caption plate. Desktop: unused (canvas caption stays). */
+  function updateNarrationDom(m) {
+    var el = $('synTourNarration');
+    if (!el) return;
+    if (!isTourMobile()) {
+      el.classList.remove('show');
+      el.style.opacity = '0';
+      return;
+    }
+    var textEl = el.querySelector('.st-nar-text') || el;
+    if (m && m.caption && m.captionA > 0.02) {
+      if (textEl.textContent !== m.caption) textEl.textContent = m.caption;
+      el.classList.add('show');
+      el.style.opacity = String(Math.max(0, Math.min(1, m.captionA)));
+      /* Top plate — slide down into place (not bottom under input/tour) */
+      el.style.transform = 'translate3d(-50%,0,0)';
+    } else {
+      el.style.opacity = '0';
+      el.style.transform = 'translate3d(-50%,-8px,0)';
+      if (!m || !m.caption || m.captionA <= 0.01) {
+        el.classList.remove('show');
+        if (textEl) textEl.textContent = '';
+      }
+    }
+  }
+
   function injectDom() {
     if ($('synTourRoot')) {
       ensureChoiceDom();
       ensureVideoControlsDom();
+      ensureNarrationDom();
       return;
     }
     var root = document.createElement('div');
     root.id = 'synTourRoot';
     root.innerHTML =
       '<canvas id="synTourFx"></canvas>' +
+      '<div id="synTourNarration" aria-live="polite"><span class="st-nar-text"></span></div>' +
       '<div id="synTourHole"></div>' +
       '<div id="synTourCard">' +
         '<div id="synTourVideoWrap">' +
@@ -33548,6 +33805,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     hideMythChoice();
     hideStoryTourBtn();
     state.myth = null;
+    try { updateNarrationDom(null); } catch (e) {}
   }
 
   /**
@@ -34639,6 +34897,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (m.captionA <= 0.01) m.caption = '';
       }
     }
+    /* Mobile glass plate tracks the same caption fade */
+    try { updateNarrationDom(m); } catch (eNar) {}
 
     /* Dock follows planet; bot is soft-parked once — never re-snap (that caused stutter) */
     if (m.waitingChoice || (m.endless && $('synTourChoice') && $('synTourChoice').classList.contains('show'))) {
@@ -35754,8 +36014,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       ctx.fillRect(-sx, -sy, W, H);
     }
 
-    /* Story captions — exact style from first build (before delete) */
-    if (m.caption && m.captionA > 0.02) {
+    /* Desktop/browser: canvas caption (unchanged). Mobile: DOM plate handles it. */
+    if (!isTourMobile() && m.caption && m.captionA > 0.02) {
       ctx.save();
       ctx.globalAlpha = m.captionA;
       ctx.font = '600 14px "DM Sans",system-ui,sans-serif';
@@ -35877,10 +36137,19 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   function doneAlready() {
-    try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+    if (window.__synTourDone === true) return true;
+    try { if (localStorage.getItem(KEY) === '1') return true; } catch (e) {}
+    try {
+      if (typeof document !== 'undefined' && document.cookie && document.cookie.indexOf(KEY + '=1') !== -1) return true;
+    } catch (e2) {}
+    return false;
   }
   function markDone() {
+    window.__synTourDone = true;
     try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    try {
+      document.cookie = KEY + '=1;path=/;max-age=31536000;SameSite=Lax';
+    } catch (e2) {}
   }
   function ensureChat() {
     try { if (typeof setView === 'function') setView('sec-chat'); } catch (e) {}
@@ -36203,21 +36472,32 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } catch (e) {}
   }
 
+  function styleTourVideoCtrl(ctrl) {
+    if (!ctrl) return;
+    ctrl.style.cssText =
+      'position:absolute;left:auto;right:8px;bottom:8px;z-index:50;transform:none;' +
+      'display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:0;margin:0;width:auto;' +
+      'background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;' +
+      'pointer-events:auto;opacity:0.45;';
+  }
+
   function ensureVideoControlsDom() {
     var wrap = $('synTourVideoWrap');
     if (!wrap) return;
 
-    /* Always full-rebuild shell so old native-controls injects cannot survive */
+    /* Prefer patch-in-place — full rebuild kills iOS play() after user gesture */
+    var existing = $('synTourVideo');
+    if (existing && $('synTourVCtrl')) {
+      killNativeVideoChrome(existing);
+      styleTourVideoCtrl($('synTourVCtrl'));
+      wireTourVideoControls();
+      return;
+    }
+
     var oldSrc = '';
-    var wasPlaying = false;
-    var oldTime = 0;
-    var oldMuted = false;
     var oldVid = $('synTourVideo');
     if (oldVid) {
       oldSrc = oldVid.currentSrc || oldVid.src || oldVid.getAttribute('src') || '';
-      wasPlaying = !oldVid.paused;
-      oldTime = oldVid.currentTime || 0;
-      oldMuted = !!oldVid.muted;
       killNativeVideoChrome(oldVid);
       try {
         if (oldVid._stCtrlMo) oldVid._stCtrlMo.disconnect();
@@ -36226,83 +36506,176 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
     wrap.innerHTML =
       '<div class="st-vmedia">' +
-        '<video id="synTourVideo" playsinline webkit-playsinline preload="metadata" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
+        '<video id="synTourVideo" playsinline webkit-playsinline preload="auto" muted disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
       '</div>' +
       '<div class="st-vshim" aria-hidden="true"></div>' +
       '<span class="st-vglow"></span>' +
       '<span class="st-vbadge">LIVE INTRO</span>' +
       '<div class="st-vctrl" id="synTourVCtrl">' + glassVideoBarHtml() + '</div>';
 
-    var ctrl = $('synTourVCtrl');
-    if (ctrl) {
-      /* Tiny corner controls — quiet until hover, never in face center */
-      ctrl.style.cssText =
-        'position:absolute;left:auto;right:8px;bottom:8px;z-index:50;transform:none;' +
-        'display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:0;margin:0;width:auto;' +
-        'background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;' +
-        'pointer-events:auto;opacity:0.38;';
-    }
+    styleTourVideoCtrl($('synTourVCtrl'));
 
     var vid = $('synTourVideo');
     if (vid) {
       killNativeVideoChrome(vid);
       if (oldSrc) {
-        try {
-          vid.src = oldSrc;
-          if (oldTime > 0) vid.currentTime = oldTime;
-          vid.muted = oldMuted;
-          if (wasPlaying) {
-            var rp = vid.play();
-            if (rp && rp.catch) rp.catch(function () {});
-          }
-        } catch (e5) {}
+        try { vid.src = oldSrc; } catch (e5) {}
       }
     }
     wireTourVideoControls();
   }
 
-  function showVideo(on) {
+  /** Reliable play path — mobile must start muted + visible + playsinline */
+  function kickTourVideoPlay(vid) {
+    if (!vid) return;
+    killNativeVideoChrome(vid);
+    try {
+      vid.setAttribute('playsinline', '');
+      vid.setAttribute('webkit-playsinline', '');
+      vid.playsInline = true;
+      vid.setAttribute('preload', 'auto');
+      vid.preload = 'auto';
+    } catch (eAttr) {}
+
+    var mobile = isTourMobile();
+
+    function applyMute(on) {
+      try {
+        vid.muted = !!on;
+        if (on) vid.setAttribute('muted', '');
+        else vid.removeAttribute('muted');
+        setMuteIcon(!!on);
+      } catch (eM) {}
+    }
+
+    function doPlay(forceMuted) {
+      applyMute(forceMuted || mobile);
+      if (!forceMuted && !mobile) {
+        try { vid.volume = 1; } catch (eV) {}
+      }
+      killNativeVideoChrome(vid);
+      var p = vid.play();
+      if (p && p.then) {
+        p.then(function () {
+          setPlayIcon(false);
+          setMuteIcon(vid.muted);
+        }).catch(function () {
+          /* iOS / Chrome: retry muted, then after canplay */
+          applyMute(true);
+          var p2 = vid.play();
+          if (p2 && p2.catch) {
+            p2.catch(function () {
+              var n = 0;
+              function retry() {
+                if (!vid || n > 6) return;
+                n++;
+                applyMute(true);
+                var pr = vid.play();
+                if (pr && pr.then) {
+                  pr.then(function () { setPlayIcon(false); setMuteIcon(true); })
+                    .catch(function () { setTimeout(retry, 180); });
+                }
+              }
+              vid.addEventListener('canplay', function onC() {
+                vid.removeEventListener('canplay', onC);
+                retry();
+              });
+              try { vid.load(); } catch (eL) {}
+              setTimeout(retry, 120);
+              setTimeout(retry, 400);
+              setTimeout(retry, 900);
+            });
+          }
+          setPlayIcon(false);
+          setMuteIcon(true);
+        });
+      } else {
+        setPlayIcon(false);
+        setMuteIcon(vid.muted);
+      }
+    }
+
+    try {
+      if (vid.readyState >= 2) doPlay(mobile);
+      else {
+        applyMute(true);
+        var started = false;
+        function go() {
+          if (started) return;
+          started = true;
+          doPlay(true);
+        }
+        vid.addEventListener('loadeddata', go, { once: true });
+        vid.addEventListener('canplay', go, { once: true });
+        setTimeout(go, 280);
+        try { if (vid.src) vid.load(); } catch (eLd) {}
+      }
+    } catch (e) {
+      doPlay(true);
+    }
+  }
+
+  function showVideo(on, opts) {
     var wrap = $('synTourVideoWrap');
     if (!wrap) return;
     if (!on) {
       wrap.classList.remove('show');
       var vOff = $('synTourVideo');
-      if (vOff) { try { vOff.pause(); } catch (e) {} }
+      if (vOff) {
+        try { vOff.pause(); } catch (e) {}
+        vOff._stWantPlay = false;
+      }
       return;
     }
-    injectStyles(); /* freshest glass CSS */
-    ensureVideoControlsDom(); /* nuclear rebuild: glass only, no native bar */
+    injectStyles();
+    ensureVideoControlsDom();
     var vid = $('synTourVideo');
     if (!vid) return;
     wrap.classList.add('show');
     killNativeVideoChrome(vid);
+    try {
+      vid.setAttribute('playsinline', '');
+      vid.setAttribute('webkit-playsinline', '');
+      vid.playsInline = true;
+    } catch (ePI) {}
+
     if (!vid.getAttribute('src') && !vid.src) {
       vid.src = DEMO_SRC;
       vid.onerror = function () { wrap.classList.remove('show'); };
     } else if (!vid.src && DEMO_SRC) {
       vid.src = DEMO_SRC;
     }
-    try {
-      vid.currentTime = 0;
-      /* Unmute Ava intro — user already clicked into tour so gesture is valid */
-      vid.muted = false;
-      vid.volume = 1;
-      killNativeVideoChrome(vid);
-      var p = vid.play();
-      if (p && p.catch) {
-        p.catch(function () {
-          /* Autoplay with sound blocked — start muted; glass unmute still works */
-          vid.muted = true;
-          killNativeVideoChrome(vid);
-          vid.play().catch(function () {});
-          setMuteIcon(true);
-        });
+
+    try { vid.currentTime = 0; } catch (eT) {}
+
+    var defer = opts && opts.deferPlay;
+    if (defer || isTourMobile()) {
+      /* Mobile: play only after the card is visible (iOS blocks hidden video) */
+      vid._stWantPlay = true;
+      /* still attempt once — desktop gesture path; mobile will retry after reveal */
+      if (!isTourMobile()) kickTourVideoPlay(vid);
+      else {
+        applyMobilePrep(vid);
+        setTimeout(function () {
+          if (vid && vid._stWantPlay) kickTourVideoPlay(vid);
+        }, 80);
       }
-      setTimeout(function () { killNativeVideoChrome(vid); wireTourVideoControls(); }, 40);
-      setTimeout(function () { killNativeVideoChrome(vid); }, 200);
-      setTimeout(function () { killNativeVideoChrome(vid); }, 600);
-      setPlayIcon(false);
-      setMuteIcon(vid.muted);
+    } else {
+      kickTourVideoPlay(vid);
+    }
+    setTimeout(function () { killNativeVideoChrome(vid); wireTourVideoControls(); }, 40);
+  }
+
+  function applyMobilePrep(vid) {
+    if (!vid) return;
+    try {
+      vid.muted = true;
+      vid.setAttribute('muted', '');
+      vid.setAttribute('playsinline', '');
+      vid.setAttribute('webkit-playsinline', '');
+      vid.playsInline = true;
+      setMuteIcon(true);
+      setPlayIcon(true);
     } catch (e) {}
   }
 
@@ -36358,6 +36731,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       card.style.setProperty('visibility', 'visible', 'important');
       card.classList.add('show');
       card.style.setProperty('opacity', '1', 'important');
+      /* After visible: start Ava intro (critical on iOS/mobile) */
+      var vPlay = $('synTourVideo');
+      if (vPlay && vPlay._stWantPlay) {
+        vPlay._stWantPlay = false;
+        setTimeout(function () { kickTourVideoPlay(vPlay); }, 30);
+        setTimeout(function () {
+          if (vPlay.paused) kickTourVideoPlay(vPlay);
+        }, 320);
+      }
     }
 
     requestAnimationFrame(function () {
@@ -36498,9 +36880,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         $('synTourBody').textContent = step.body;
         $('synTourNext').textContent = step.cta || 'Next';
         $('synTourSec').style.display = 'none';
-        showVideo(true);
+        showVideo(true, { deferPlay: true });
         reflowTextAnims(card);
-        /* Measure + pixel-center after video is shown (bulletproof) */
+        /* Measure + pixel-center; play kicks after card is visible (iOS needs this) */
         centerVideoCard(card);
         spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 18);
       } else {
@@ -36565,12 +36947,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (!state.open) return;
     state.open = false;
     window.__synTourActive = false;
-    markDone();
+    markDone(); /* persist finished so Median/WebView does not re-auto-open */
     /* Tour finished → BR corner bot allowed (entrance considered done) */
     window.__synBotStoryReleased = true;
     hideMythChoice();
     showVideo(false);
     stopFx(); /* cancels raf + myth timers + clears canvas */
+    try { updateNarrationDom(null); } catch (eN) {}
     var c = tinyBot();
     if (state.guideReleased && c) {
       if (c._tourHome) {
@@ -36629,7 +37012,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       state.open = false;
     }
     if (state.open) return;
-    if (force) { try { localStorage.removeItem(KEY); } catch (e) {} }
+    /* Do NOT clear "done" on force — that made Median re-show tour every launch after a mid-tour kill */
     injectStyles(); /* re-writes #synTourStyles so hard-refresh picks up myth CSS */
     injectDom();
     ensureVideoControlsDom(); /* always patch glass video bar (even if root already existed) */
@@ -36663,39 +37046,48 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   window.startSynapsesTour = function (force) { startTour(!!force); };
   window.resetSynapsesTour = function () {
+    window.__synTourDone = false;
     try { localStorage.removeItem(KEY); } catch (e) {}
+    try { document.cookie = KEY + '=;path=/;max-age=0'; } catch (e2) {}
+  };
+  /** Kill tour UI immediately + mark finished (for stuck Median launches) */
+  window.dismissSynapsesTour = function () {
+    try {
+      markDone();
+      state.open = false;
+      window.__synTourActive = false;
+      showVideo(false);
+      stopFx();
+      hideMythChoice();
+      var root = $('synTourRoot');
+      if (root) root.classList.remove('on');
+      var card = $('synTourCard');
+      if (card) {
+        card.classList.remove('show', 'st-video');
+        card.style.display = 'none';
+      }
+      var center = $('synTourCenterPanel');
+      if (center) center.classList.remove('show', 'myth-climax');
+      window.__synBotStoryReleased = true;
+    } catch (e) {}
   };
 
-  function maybeAuto() {
-    if (doneAlready()) return;
-    setTimeout(function () {
-      if (doneAlready() || state.open) return;
-      if (typeof currentUser === 'undefined' || !currentUser) return;
-      startTour(false);
-    }, 900);
-  }
+  /* AUTO tour OFF forever — user must press bottom-left Tour (or docked Tour icon). */
+  function maybeAuto() { return; }
+  window.__synTourAutoDisabled = true;
 
   function patchOnLogin() {
     if (typeof onLogin !== 'function') return;
     if (onLogin._synTourPatched) return;
-    var prev = onLogin;
-    window.onLogin = function () {
-      var r = prev.apply(this, arguments);
-      setTimeout(maybeAuto, 650);
-      return r;
-    };
-    try { onLogin = window.onLogin; } catch (e) {}
-    window.onLogin._synTourPatched = true;
+    onLogin._synTourPatched = true;
   }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       setTimeout(patchOnLogin, 100);
-      setTimeout(maybeAuto, 2500);
     });
   } else {
     setTimeout(patchOnLogin, 100);
-    setTimeout(maybeAuto, 2500);
   }
 
   window.addEventListener('resize', function () {
