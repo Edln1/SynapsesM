@@ -28556,12 +28556,16 @@ function speakVoiceReply(text) {
   // a planning/schedule/routine request. When true, the NEXT user message skips the
   // regex check and triggers life-context recall unconditionally, then clears itself.
   var _planningModeActive = false;
-  // Smart mem0 is POST-REPLY only (see _metaRetryClassify after speak).
-  // Do NOT inject a <meta> classifier into the live system prompt — that added ~600
-  // tokens of prefill + forced extra generation after every answer and made voice
-  // feel slower than Final Index Before contextindex changes.html.
-  // Keep a tiny planning nudge (not a meta format rule) for schedule/routine asks.
-  var _planningNudge = '\n\nIf they ask you to build a schedule, routine, or plan and they have not given enough specifics yet, ask one short clarifying question about what is actually missing for THIS request — do not use a fixed default question.';
+  // Smart mem0 = ONE groq-chat call per turn (same as before).
+  // Short meta tag instruction only — NOT a second classify request, NOT a 600-token essay.
+  // Stripped client-side before speak/history. If tag missing, skip save (no retry LLM).
+  var _metaInstruction =
+    '\n\nAfter your reply, on its own last line only (never spoken/mentioned), append: ' +
+    '<meta>{"is_life_context":true or false,"category":"work|goal|relationship|health|routine|other","clean_summary":"one short third-person sentence starting with User","asked_clarifying_question":true or false}</meta>. ' +
+    'is_life_context=true ONLY if the USER shared a lasting fact about THEIR life (goal/plan/relationship/work/health/routine). ' +
+    'Never true for your own persona chatter. asked_clarifying_question=true only if your reply asks for missing details before a schedule/routine/plan.';
+  var _planningNudge =
+    '\n\nIf they ask for a schedule/routine/plan without enough specifics, ask one short clarifying question about what is actually missing for THIS request.';
 
   var _sysCached = 'You are Ava — a real, warm, present companion in Synapses (a personal AI OS built around live speech-to-speech). Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. Stay coherent with the conversation so far — never jump to random unrelated topics. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
 
@@ -28730,46 +28734,7 @@ function speakVoiceReply(text) {
     } catch(e) {}
   }
 
-  // Retry backstop: fires only when the main turn's <meta> tag was missing or
-  // failed to parse (i.e. _meta came back null). One extra lightweight,
-  // non-streaming call asking the 8B model to classify the turn after the
-  // fact — same JSON shape as _metaInstruction, just asked as a standalone
-  // question instead of appended to a live reply. Keeps memory coverage from
-  // silently regressing on turns where the model skipped the inline tag.
-  async function _metaRetryClassify(userText, replyText) {
-    try {
-      var sys = 'You are classifying a single turn from a conversation, after the fact. ' +
-        'Reply with STRICT JSON only, no markdown, no code fences, in this exact shape: ' +
-        '{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other",' +
-        '"clean_summary":"one short third-person sentence distilling the fact, starting with the word User",' +
-        '"asked_clarifying_question":true or false}. ' +
-        'Only set is_life_context to true if the USER shared something genuinely worth remembering later ' +
-        'about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, ' +
-        'health status, routine or habit, personal fact, past milestone, or a stable preference or value. ' +
-        'NEVER set is_life_context to true for the assistant\'s own in-character small talk, opinions, ' +
-        'hobbies, or made-up activities. ' +
-        'Set asked_clarifying_question to true only if the ASSISTANT reply is a clarifying question about ' +
-        'missing details before building a schedule/routine/plan — not ordinary chat questions.';
-      var userPrompt = 'User said: "' + userText + '"\n\nAssistant replied: "' + replyText + '"';
-      var r = await fetch(GROQ_PROXY + '/groq-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }, { role: 'user', content: userPrompt }], max_tokens: 120, stream: false })
-      });
-      var json = await r.json();
-      var raw = json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
-      if (!raw) { console.warn('[Mem0] retry classify — empty response, giving up'); return null; }
-      var clean = raw.replace(/```json|```/g, '').trim();
-      var parsed = null;
-      try { parsed = JSON.parse(clean); } catch(e) { console.warn('[Mem0] retry classify — JSON.parse failed: ' + clean.slice(0, 200)); return null; }
-      if (!parsed || typeof parsed.is_life_context !== 'boolean') { console.warn('[Mem0] retry classify — malformed shape: ' + clean.slice(0, 200)); return null; }
-      console.log('[Mem0] retry classify succeeded | is_life_context: ' + parsed.is_life_context);
-      return parsed;
-    } catch(e) {
-      console.warn('[Mem0] retry classify — request failed: ' + e);
-      return null;
-    }
-  }
+  // No second-call classify. Smart save uses the <meta> from the SAME stream only.
   // ── End Mem0 Layer ────────────────────────────────────────────────────────
 
   // ── Life Context Layer: gated save/recall on top of mem0, tagged category:'life_context' ──
@@ -29813,10 +29778,9 @@ function speakVoiceReply(text) {
           window._s2sFirstSessionActive = false;
         }
       }
-      /* Same shape as pre-context-index file for TTFT — no inline <meta> bloat.
-         Optional tiny planning nudge only when the user is asking for a plan/schedule. */
+      /* ONE LLM request: short meta tag in-stream (not a second classify call). */
       var _planNudge = _lifeContextRecallRegex.test(text) ? _planningNudge : '';
-      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _planNudge;
+      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _planNudge + _metaInstruction;
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 650 : (synCtx ? 650 : 600);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
@@ -29836,30 +29800,70 @@ function speakVoiceReply(text) {
       var decoder = new TextDecoder();
       var buf = '';
       var full = '';
+      /* Option 1: single call, speak the moment <meta appears — don't wait for tag tail */
+      var _spokeEarly = false;
+      var _earlyReply = '';
+
+      function _findMetaOpen(s) {
+        /* Search full buffer so <me + ta> split across SSE chunks still matches */
+        return s.search(/<meta\b/i);
+      }
+      function _parseMetaFrom(raw) {
+        var open = _findMetaOpen(raw);
+        if (open === -1) return null;
+        var tail = raw.slice(open);
+        var m = tail.match(/<meta>([\s\S]*?)<\/meta>/i) || tail.match(/\{[\s\S]*?"is_life_context"[\s\S]*?\}/i);
+        if (!m) return null;
+        try { return JSON.parse(m[1] || m[0]); } catch (e) { return null; }
+      }
+      function _tryEarlySpeakOnMeta() {
+        if (_spokeEarly) return;
+        var idx = _findMetaOpen(full);
+        if (idx === -1) return;
+        var reply = full.slice(0, idx).trim();
+        if (!reply) return;
+        _spokeEarly = true;
+        _earlyReply = reply;
+        window._avaLastReply = reply;
+        console.log('[Voice] Early speak @ <meta: ' + (Date.now() - _t0) + 'ms | ' + reply.length + ' chars (tag still streaming)');
+        speak(reply);
+      }
+
       function readChunk() {
         reader.read().then(function(res) {
           if (res.done) {
             var _rawFull = full.trim();
-            /* Safety strip if a legacy <meta> ever appears — classifier is post-hoc now */
-            var _metaOpenIdx = _rawFull.search(/<meta\b/i);
-            var reply = _metaOpenIdx !== -1 ? _rawFull.slice(0, _metaOpenIdx).trim() : _rawFull;
+            var _metaOpenIdx = _findMetaOpen(_rawFull);
+            var reply = _spokeEarly && _earlyReply
+              ? _earlyReply
+              : (_metaOpenIdx !== -1 ? _rawFull.slice(0, _metaOpenIdx).trim() : _rawFull);
+            var _meta = _parseMetaFrom(_rawFull);
             var _elapsed = Date.now() - _t0;
-            console.log('[Voice] Full response: ' + _elapsed + 'ms (' + (_elapsed < 2000 ? 'fast' : 'slow') + ')' + (reply ? ' | ' + reply.length + ' chars' : ' | EMPTY'));
+            console.log('[Voice] Full response: ' + _elapsed + 'ms (' + (_elapsed < 2000 ? 'fast' : 'slow') + ')' +
+              (reply ? ' | ' + reply.length + ' chars' : ' | EMPTY') +
+              (_spokeEarly ? ' | early-speak' : ' | speak-on-done'));
             if (reply) {
-              _history.push({ role: 'assistant', content: reply });
+              /* Avoid double-push if something already wrote this turn */
+              var _lastH = _history.length ? _history[_history.length - 1] : null;
+              if (!(_lastH && _lastH.role === 'assistant' && _lastH.content === reply)) {
+                _history.push({ role: 'assistant', content: reply });
+              }
               window._avaLastReply = reply;
               try { if (_history.length >= 6) _extractAndSaveMemory(_history[_history.length-2] ? _history[_history.length-2].content : '', reply); } catch(e) {}
-              /* Speak FIRST — match old-file latency. Smart mem0 runs after, async. */
-              speak(reply);
+              try { _metaSave(text, reply, _meta); } catch (eSave) {}
               try { _lifeContextSave(text, reply); } catch(e) {}
-              _metaRetryClassify(text, reply).then(function(retryMeta) {
-                try { _metaSave(text, reply, retryMeta); } catch(e) {}
-                if (retryMeta && retryMeta.asked_clarifying_question === true) {
-                  _planningModeActive = true;
-                  console.log('[Planning] clarifying question detected — recall armed for next turn');
-                }
-              });
-            } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
+              if (_meta && _meta.asked_clarifying_question === true) {
+                _planningModeActive = true;
+                console.log('[Planning] clarifying question detected — recall armed for next turn');
+              }
+              /* Only speak here if <meta never showed (model skipped tag) */
+              if (!_spokeEarly) speak(reply);
+            } else {
+              console.log('[Voice] Empty reply from LLM');
+              if (!_avatarLive()) toast('Hmm, try that again?');
+              _busy = false; _busySince = 0;
+              if (_on) record();
+            }
             return;
           }
           buf += decoder.decode(res.value, { stream: true });
@@ -29869,7 +29873,19 @@ function speakVoiceReply(text) {
             if (!line.startsWith('data: ')) return;
             var data = line.slice(6).trim();
             if (data === '[DONE]') return;
-            try { var j = JSON.parse(data); var d = j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content; if (d) { if (!full) console.log('[Voice] First token: ' + (Date.now()-_t0) + 'ms'); full += d; window._avaLastReply = full.trim(); } } catch(e) {}
+            try {
+              var j = JSON.parse(data);
+              var d = j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
+              if (d) {
+                if (!full) console.log('[Voice] First token: ' + (Date.now() - _t0) + 'ms');
+                full += d;
+                if (!_spokeEarly) {
+                  window._avaLastReply = full.trim();
+                  _tryEarlySpeakOnMeta();
+                }
+                /* After early speak, keep accumulating full so </meta> + JSON land for save */
+              }
+            } catch (e) {}
           });
           readChunk();
         }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
