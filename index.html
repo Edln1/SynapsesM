@@ -24248,19 +24248,23 @@ function _neuInjectDownloadInterceptor(frame){
   // Every 10-16s it fades in for ~4s then fades out.
   // While zone is hovered, stays visible (managed by showRobot/hideRobot).
 
-  // Start hidden — BR corner SynBot only after entrance myth has released him (or tour already done)
+  // Start hidden until splash/greeting clears — then float BR SynBot (tour is manual-only now)
   canvas.style.opacity = '0';
   if (typeof window.__synBotStoryReleased === 'undefined') window.__synBotStoryReleased = false;
 
   (function(){
     var shown = false;
-    /** BR corner bot only after entrance animation has played (hatch exit) or prior tour complete */
+    /**
+     * BR floating SynBot is always allowed once splash/greeting is gone.
+     * Old gate required entrance tour hatch / synapses_tour_v1 — that hid the bot
+     * forever after auto-tour was disabled. Tour flight still owns visibility via _tourMode.
+     */
     function _synBotEntranceReady(){
+      /* Mid pre-hatch tour flight: BR corner stays off until guide is released */
       try {
-        if (localStorage.getItem('synapses_tour_v1') === '1') return true;
-      } catch (e) {}
-      if (window.__synBotStoryReleased) return true;
-      return false;
+        if (window.__synTourActive && !window.__synBotStoryReleased && !_tourMode) return false;
+      } catch (e0) {}
+      return true;
     }
     function _synBotAllowed(){
       if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return false;
@@ -24284,24 +24288,34 @@ function _neuInjectDownloadInterceptor(frame){
       if(shown && !g){ mo.disconnect(); setTimeout(function(){ if(_synBotAllowed() && !_tourMode) canvas.style.opacity='0.55'; }, 200); }
     });
     mo.observe(document.body, {childList:true, subtree:true});
-    // Guest / no greeting: still wait for entrance — do NOT auto-show BR bot pre-animation
+    // Guest / no greeting: show BR floating bot after splash (manual tour — no entrance wait)
     var splashMo = new MutationObserver(function(){
       if(!document.getElementById('appSplash') && !shown){
         setTimeout(function(){
           if(!document.getElementById('cyberGreeting') && !shown){
             splashMo.disconnect(); mo.disconnect();
             shown = true;
-            /* stay opacity 0 until entrance ready */
             if(_synBotAllowed() && !_tourMode) canvas.style.opacity='0.55';
           }
-        }, 1500);
+        }, 600);
       }
     });
     splashMo.observe(document.body, {childList:true, subtree:false});
-    // Safety: only reveal BR if entrance already done (returning user)
+    // Safety net: always try to float BR bot if still hidden after load
     setTimeout(function(){
-      if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()) canvas.style.opacity='0.55';
-    }, 12000);
+      if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()
+        && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
+        shown = true;
+        canvas.style.opacity='0.55';
+      }
+    }, 2500);
+    setTimeout(function(){
+      if(!_tourMode && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
+        && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
+        shown = true;
+        canvas.style.opacity='0.55';
+      }
+    }, 6000);
   })();
 
   // Hide when big robot tooltip shows, restore when it hides
@@ -24359,11 +24373,10 @@ function _neuInjectDownloadInterceptor(frame){
     try {
       if (window.__synTourActive || (window.state && document.getElementById('synTourRoot') && document.getElementById('synTourRoot').classList.contains('on'))) return;
     } catch (eTour) {}
-    /* No BR hover chat until entrance myth has released SynBot (or tour already done) */
+    /* BR hover chat allowed whenever bot is free (manual tour — no entrance gate) */
     try {
       if (typeof window._synBotEntranceReady === 'function' && !window._synBotEntranceReady()) return;
-      if (localStorage.getItem('synapses_tour_v1') !== '1' && !window.__synBotStoryReleased) return;
-    } catch (eEnt) { return; }
+    } catch (eEnt) { /* allow */ }
     if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
     if(document.getElementById('appSplash')) return;
     if(document.getElementById('cyberGreeting')) return;
@@ -28543,12 +28556,12 @@ function speakVoiceReply(text) {
   // a planning/schedule/routine request. When true, the NEXT user message skips the
   // regex check and triggers life-context recall unconditionally, then clears itself.
   var _planningModeActive = false;
-  // Silent self-classifier tag appended to every voice-turn system prompt. Groq is asked to
-  // tack a <meta>...</meta> JSON block onto the end of its reply — never spoken or shown,
-  // stripped out client-side right after streaming completes (see readChunk's res.done branch).
-  // Replaces the old "blindly save every raw turn" mem0 save with a save gated on whether
-  // this turn actually contained something worth remembering long-term.
-  var _metaInstruction = '\n\nCRITICAL, NON-NEGOTIABLE FORMATTING RULE — this applies to EVERY single reply you give, no exceptions, even in casual conversation, even mid-roleplay, even when you are focused on giving a good in-character answer: after your reply, on its own new line, you MUST silently append a tag — it will never be spoken or shown to the user, so do not mention it or reference it in your reply: <meta>{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other","clean_summary":"one short third-person sentence distilling the fact, starting with the word User","asked_clarifying_question":true or false}</meta>. Do NOT skip this tag under any circumstances, regardless of how engaged you are in the conversation. Only set is_life_context to true if the USER (the person talking to you) shared something genuinely worth remembering later about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, health status, routine or habit, personal fact, past milestone, or a stable preference or value. NEVER set is_life_context to true for your own in-character small talk, opinions, hobbies, or made-up activities (e.g. your music taste, your day, your plans, your coffee run) — that is not the user\'s life context and must always be false. Set asked_clarifying_question to true only if your reply itself is a clarifying question asking for missing details (like timeframe, current routine, or specifics) before you can build a schedule, routine, or plan — not for ordinary questions in normal conversation. If the user already gave enough detail to act on (e.g. specific times, a clear timeframe), just help them directly instead of asking, and set this to false.\n\nWhen someone asks you to build something concrete like a schedule, routine, or plan and their message does not already include enough detail to do that well, ask one quick clarifying question first instead of guessing with vague placeholders — but the question must be about whatever is ACTUALLY missing for THIS specific request, not a fixed default question. Do not always ask about wake-up/bed time — that only matters for daily schedules. For a workout plan, ask about fitness level or days available; for a work-focused plan, ask about deadlines or priorities; for a routine change, ask what part of the day it affects. Vary the question based on the actual topic. If they already gave enough specifics, just help directly.';
+  // Smart mem0 is POST-REPLY only (see _metaRetryClassify after speak).
+  // Do NOT inject a <meta> classifier into the live system prompt — that added ~600
+  // tokens of prefill + forced extra generation after every answer and made voice
+  // feel slower than Final Index Before contextindex changes.html.
+  // Keep a tiny planning nudge (not a meta format rule) for schedule/routine asks.
+  var _planningNudge = '\n\nIf they ask you to build a schedule, routine, or plan and they have not given enough specifics yet, ask one short clarifying question about what is actually missing for THIS request — do not use a fixed default question.';
 
   var _sysCached = 'You are Ava — a real, warm, present companion in Synapses (a personal AI OS built around live speech-to-speech). Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. Stay coherent with the conversation so far — never jump to random unrelated topics. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
 
@@ -28728,12 +28741,15 @@ function speakVoiceReply(text) {
       var sys = 'You are classifying a single turn from a conversation, after the fact. ' +
         'Reply with STRICT JSON only, no markdown, no code fences, in this exact shape: ' +
         '{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other",' +
-        '"clean_summary":"one short third-person sentence distilling the fact, starting with the word User"}. ' +
+        '"clean_summary":"one short third-person sentence distilling the fact, starting with the word User",' +
+        '"asked_clarifying_question":true or false}. ' +
         'Only set is_life_context to true if the USER shared something genuinely worth remembering later ' +
         'about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, ' +
         'health status, routine or habit, personal fact, past milestone, or a stable preference or value. ' +
         'NEVER set is_life_context to true for the assistant\'s own in-character small talk, opinions, ' +
-        'hobbies, or made-up activities.';
+        'hobbies, or made-up activities. ' +
+        'Set asked_clarifying_question to true only if the ASSISTANT reply is a clarifying question about ' +
+        'missing details before building a schedule/routine/plan — not ordinary chat questions.';
       var userPrompt = 'User said: "' + userText + '"\n\nAssistant replied: "' + replyText + '"';
       var r = await fetch(GROQ_PROXY + '/groq-chat', {
         method: 'POST',
@@ -29797,7 +29813,10 @@ function speakVoiceReply(text) {
           window._s2sFirstSessionActive = false;
         }
       }
-      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _metaInstruction;
+      /* Same shape as pre-context-index file for TTFT — no inline <meta> bloat.
+         Optional tiny planning nudge only when the user is asking for a plan/schedule. */
+      var _planNudge = _lifeContextRecallRegex.test(text) ? _planningNudge : '';
+      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _planNudge;
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 650 : (synCtx ? 650 : 600);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
@@ -29821,57 +29840,25 @@ function speakVoiceReply(text) {
         reader.read().then(function(res) {
           if (res.done) {
             var _rawFull = full.trim();
-            // Strip the silent <meta>...</meta> classifier tag before the reply ever
-            // reaches history, notes, or speak() — it must never be seen or heard.
-            // IMPORTANT: find the OPENING tag first and always cut there, even if the
-            // closing </meta> never arrived. If a reply runs close to max_tokens, the
-            // model can hit the cap mid-JSON — the tag never closes, the old
-            // closed-tag-only regex fails to match, and the whole raw blob (dangling
-            // "<meta>{...}" fragment included) used to leak straight into the reply.
-            var _meta = null;
-            // Use /<meta/i (not the full /<meta>/i) so malformed opens like
-            // "<metalog={...}></meta>" still get caught and cut from the reply —
-            // otherwise the whole raw tag leaks into what's shown/spoken.
+            /* Safety strip if a legacy <meta> ever appears — classifier is post-hoc now */
             var _metaOpenIdx = _rawFull.search(/<meta\b/i);
             var reply = _metaOpenIdx !== -1 ? _rawFull.slice(0, _metaOpenIdx).trim() : _rawFull;
-            if (_metaOpenIdx !== -1) {
-              var _metaTail = _rawFull.slice(_metaOpenIdx);
-              // Try the clean form first, then fall back to grabbing the first
-              // {...} JSON object in the tail even if the tag itself is malformed.
-              var _metaMatch = _metaTail.match(/<meta>([\s\S]*?)<\/meta>/i) || _metaTail.match(/\{[\s\S]*?"asked_clarifying_question"[\s\S]*?\}/i);
-              if (_metaMatch) { try { _meta = JSON.parse(_metaMatch[1] || _metaMatch[0]); } catch(e) { _meta = null; console.warn('[Mem0] meta JSON.parse failed, raw tail was: ' + _metaTail.slice(0, 300)); } }
-              else { console.warn('[Mem0] <meta found but no JSON object matched inside it, raw tail was: ' + _metaTail.slice(0, 300)); }
-              // else: tag got truncated before it closed — no classification this
-              // turn (meta stays null, nothing saved), but reply is still clean.
-            } else {
-              console.warn('[Mem0] no <meta tag found anywhere in raw response at all — model skipped it entirely this turn. Raw tail: ' + _rawFull.slice(-200));
-            }
             var _elapsed = Date.now() - _t0;
             console.log('[Voice] Full response: ' + _elapsed + 'ms (' + (_elapsed < 2000 ? 'fast' : 'slow') + ')' + (reply ? ' | ' + reply.length + ' chars' : ' | EMPTY'));
             if (reply) {
               _history.push({ role: 'assistant', content: reply });
               window._avaLastReply = reply;
               try { if (_history.length >= 6) _extractAndSaveMemory(_history[_history.length-2] ? _history[_history.length-2].content : '', reply); } catch(e) {}
-              if (_meta) {
-                try { _metaSave(text, reply, _meta); } catch(e) {}
-              } else {
-                // Main tag was missing/unparseable this turn — fire the retry
-                // backstop once instead of just skipping the save outright.
-                _metaRetryClassify(text, reply).then(function(retryMeta) {
-                  if (retryMeta) console.log('[Mem0] using retry classification result in place of missing/malformed inline tag');
-                  try { _metaSave(text, reply, retryMeta); } catch(e) {}
-                });
-              }
-              try { _lifeContextSave(text, reply); } catch(e) {}
-              // If she just asked a clarifying question about a schedule/routine/plan,
-              // arm the flag so the NEXT message (your answer) triggers life-context
-              // recall unconditionally, even if it doesn't match the regex wording.
-              if (_meta && _meta.asked_clarifying_question === true) {
-                _planningModeActive = true;
-                console.log('[Planning] clarifying question detected — recall armed for next turn');
-              }
-              // avaBrain.afterReply deactivated
+              /* Speak FIRST — match old-file latency. Smart mem0 runs after, async. */
               speak(reply);
+              try { _lifeContextSave(text, reply); } catch(e) {}
+              _metaRetryClassify(text, reply).then(function(retryMeta) {
+                try { _metaSave(text, reply, retryMeta); } catch(e) {}
+                if (retryMeta && retryMeta.asked_clarifying_question === true) {
+                  _planningModeActive = true;
+                  console.log('[Planning] clarifying question detected — recall armed for next turn');
+                }
+              });
             } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
             return;
           }
@@ -33081,65 +33068,144 @@ async function srcAgentContact(supplier) {
 </div>
 <!-- SYN_TOUR_FLOAT_START -->
 <style>
-/* First launch only: bottom-left tour entry (user must press — never auto-start) */
+/* First launch: bottom-left tour entry (user must press — never auto-start) */
 #synTourFloatBtn{
-  position:fixed;left:14px;bottom:14px;z-index:88750;
-  width:34px;height:34px;border-radius:12px;padding:0;cursor:pointer;
+  position:fixed;left:14px;bottom:18px;z-index:100200;
+  width:38px;height:38px;border-radius:12px;padding:0;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  border:1px solid rgba(255,255,255,0.08);
-  background:rgba(255,255,255,0.03);
-  backdrop-filter:blur(20px) saturate(1.15);
-  -webkit-backdrop-filter:blur(20px) saturate(1.15);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 2px 12px rgba(0,0,0,0.2);
-  opacity:0.45;transition:opacity .25s ease,background .2s,border-color .2s,box-shadow .2s,transform .15s,left .2s,bottom .2s;
-  pointer-events:auto;
+  border:1px solid rgba(124,106,247,0.35);
+  background:rgba(18,14,36,0.72);
+  backdrop-filter:blur(20px) saturate(1.2);
+  -webkit-backdrop-filter:blur(20px) saturate(1.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),0 2px 14px rgba(0,0,0,0.35),0 0 14px rgba(124,106,247,0.18);
+  opacity:0.92;transition:opacity .25s ease,background .2s,border-color .2s,box-shadow .2s,transform .15s,left .2s,bottom .2s;
+  pointer-events:auto;visibility:visible;
 }
-/* Sit in bottom-left row next to Notes (not on top of it, not auto tour) */
+/* Sit in bottom-left row next to Notes (not on top of it) */
 body.bottom-nav #synTourFloatBtn{
   left:52px;
-  bottom:calc(9px + env(safe-area-inset-bottom,0px));
+  bottom:calc(14px + env(safe-area-inset-bottom,0px));
 }
 #synTourFloatBtn:hover{
-  opacity:0.92;
-  background:rgba(255,255,255,0.07);
-  border-color:rgba(124,106,247,0.35);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 4px 18px rgba(0,0,0,0.35),0 0 16px rgba(124,106,247,0.12);
+  opacity:1;
+  background:rgba(28,22,52,0.88);
+  border-color:rgba(124,106,247,0.55);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 4px 18px rgba(0,0,0,0.4),0 0 18px rgba(124,106,247,0.28);
 }
 #synTourFloatBtn:active{transform:scale(0.96);}
-#synTourFloatBtn svg{opacity:0.55;transition:opacity .2s;}
+#synTourFloatBtn svg{opacity:0.95;transition:opacity .2s;}
 #synTourFloatBtn:hover svg{opacity:1;}
+/* Soft pulse so first-open Tour is findable on mobile */
+@keyframes synTourFloatPulse{
+  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),0 2px 14px rgba(0,0,0,0.35),0 0 12px rgba(124,106,247,0.16);}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 2px 16px rgba(0,0,0,0.4),0 0 22px rgba(0,217,168,0.28);}
+}
+#synTourFloatBtn:not(.docked){animation:synTourFloatPulse 2.4s ease-in-out infinite;}
 /* After first press: float is gone forever — lives in icon rail / bottom nav */
-#synTourFloatBtn.docked{display:none!important;opacity:0!important;pointer-events:none!important;}
+#synTourFloatBtn.docked{display:none!important;opacity:0!important;pointer-events:none!important;animation:none!important;}
 /* hide while tour is open so it doesn't sit on the guide */
 #synTourRoot.on ~ #synTourFloatBtn,
-body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:none!important;}
+body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:none!important;animation:none!important;}
 /* Rail / bnav tour chip — match other icons */
 .icon-rail-btn#rail-tour svg,.bnav-btn#bnav-tour svg{display:block;}
 </style>
 <button id="synTourFloatBtn" type="button" title="Start product tour" aria-label="Start product tour"
   onclick="(function(){try{window.__synTourIntentionalStart=true;if(typeof window.dockSynapsesTourBtn==='function')window.dockSynapsesTourBtn();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="9"/>
-    <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/>
+    <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(0,217,168,0.95)" stroke="none"/>
   </svg>
 </button>
 <script>
 (function () {
+  /**
+   * Bump this string every time you ship a new APK / embedded HTML.
+   * If it doesn't match localStorage, tour UX is wiped so a "reinstall"
+   * (or new package) always gets the bottom-left Tour float back.
+   * Android Backup / WebView cache often keeps localStorage across reinstall —
+   * this is the HTML-side fix for that.
+   */
+  var SYNAPSES_APP_BUILD = '2026-07-17-tour-reset-3';
+  var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
+  var TOUR_DONE_KEY = 'synapses_tour_v1';
+  var TOUR_KEYS_TO_WIPE = [
+    TOUR_BTN_KEY,
+    TOUR_DONE_KEY,
+    'synapses_s2s_first_intro_v1'
+  ];
   var TOUR_ICON =
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
       '<circle cx="12" cy="12" r="9"/>' +
-      '<polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/>' +
+      '<polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(0,217,168,0.95)" stroke="none"/>' +
     '</svg>';
+
+  /** Wipe tour docked/done flags (used on new build + hard reset) */
+  function wipeTourUxStorage() {
+    window.__synTourDone = false;
+    window.__synTourIntentionalStart = false;
+    try {
+      for (var i = 0; i < TOUR_KEYS_TO_WIPE.length; i++) {
+        localStorage.removeItem(TOUR_KEYS_TO_WIPE[i]);
+      }
+    } catch (e) {}
+    try {
+      document.cookie = TOUR_DONE_KEY + '=;path=/;max-age=0';
+      document.cookie = TOUR_DONE_KEY + '=;path=/;max-age=0;SameSite=Lax';
+    } catch (e2) {}
+  }
+
+  /**
+   * New package / reinstall with new build id → treat as first open for Tour.
+   * Returns true if storage was wiped.
+   */
+  function migrateTourOnNewBuild() {
+    try {
+      var prev = localStorage.getItem(BUILD_KEY);
+      if (prev === SYNAPSES_APP_BUILD) return false;
+      wipeTourUxStorage();
+      localStorage.setItem(BUILD_KEY, SYNAPSES_APP_BUILD);
+      return true;
+    } catch (e) {
+      /* storage blocked — still try wipe in-memory flags */
+      wipeTourUxStorage();
+      return true;
+    }
+  }
+
+  /* MUST run before any docked check */
+  migrateTourOnNewBuild();
+
   function isTourBtnDocked() {
     try { return localStorage.getItem(TOUR_BTN_KEY) === '1'; } catch (e) { return false; }
+  }
+  function isTourDone() {
+    if (window.__synTourDone === true) return true;
+    try { if (localStorage.getItem(TOUR_DONE_KEY) === '1') return true; } catch (e) {}
+    try {
+      if (document.cookie && document.cookie.indexOf(TOUR_DONE_KEY + '=1') !== -1) return true;
+    } catch (e2) {}
+    return false;
   }
   function hideFloat() {
     var f = document.getElementById('synTourFloatBtn');
     if (f) {
       f.classList.add('docked');
       f.style.display = 'none';
+      f.style.visibility = 'hidden';
+      f.style.opacity = '0';
+      f.style.pointerEvents = 'none';
     }
+  }
+  function showFloat() {
+    var f = document.getElementById('synTourFloatBtn');
+    if (!f) return;
+    f.classList.remove('docked');
+    f.style.display = 'flex';
+    f.style.visibility = 'visible';
+    f.style.opacity = '0.92';
+    f.style.pointerEvents = 'auto';
+    f.style.zIndex = '100200';
   }
   function startTourFromNav() {
     try {
@@ -33178,7 +33244,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
   window.startTourFromNav = startTourFromNav;
   window.isSynapsesTourBtnDocked = isTourBtnDocked;
-  /** First bottom-left press only → float gone forever; Tour lives in bottom nav / rail (chat row) */
+  window.SYNAPSES_APP_BUILD = SYNAPSES_APP_BUILD;
+
+  /** Full tour UX reset: float back, done flag gone (for reinstall / stuck WebView) */
+  window.resetSynapsesTourUx = function () {
+    wipeTourUxStorage();
+    try { localStorage.setItem(BUILD_KEY, SYNAPSES_APP_BUILD); } catch (e) {}
+    showFloat();
+    try {
+      if (typeof window.resetSynapsesTour === 'function') window.resetSynapsesTour();
+    } catch (e2) {}
+    applyDockedState();
+  };
+
+  /** First bottom-left press only → float gone for this install; Tour also in bottom nav */
   window.dockSynapsesTourBtn = function () {
     try { localStorage.setItem(TOUR_BTN_KEY, '1'); } catch (e) {}
     hideFloat();
@@ -33191,13 +33270,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } catch (e3) {}
   };
   function applyDockedState() {
+    /* Recovery: if somehow marked done with no dock, still fine to hide only when docked */
     if (!isTourBtnDocked()) {
-      /* First open: show bottom-left float, never auto-start tour */
-      var f = document.getElementById('synTourFloatBtn');
-      if (f) {
-        f.classList.remove('docked');
-        f.style.display = 'flex';
-      }
+      showFloat();
       return;
     }
     hideFloat();
@@ -33209,15 +33284,38 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } catch (e) {}
   }
   window._applyDockedTourBtn = applyDockedState;
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      setTimeout(applyDockedState, 200);
-      setTimeout(applyDockedState, 800);
-    });
-  } else {
+  function bootTourFloat() {
+    /* Re-run build migration in case something wrote flags during early scripts */
+    migrateTourOnNewBuild();
+    applyDockedState();
+    /* Re-assert after splash / nav init (Median WebView can remount UI late) */
     setTimeout(applyDockedState, 200);
     setTimeout(applyDockedState, 800);
+    setTimeout(applyDockedState, 1800);
+    setTimeout(applyDockedState, 3500);
   }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootTourFloat);
+  } else {
+    bootTourFloat();
+  }
+  /* When splash leaves, re-show float if still undocked */
+  try {
+    var splashWatch = new MutationObserver(function () {
+      if (!document.getElementById('appSplash') && !isTourBtnDocked()) {
+        applyDockedState();
+      }
+    });
+    splashWatch.observe(document.body, { childList: true, subtree: false });
+  } catch (eW) {}
+
+  /* ?resetTour=1 in URL → force wipe once (handy for stuck Median without full clear-data) */
+  try {
+    var q = (window.location && window.location.search) || '';
+    if (/[?&]resetTour=1(?:&|$)/.test(q)) {
+      window.resetSynapsesTourUx();
+    }
+  } catch (eQ) {}
 })();
 </script>
 <!-- SYN_TOUR_FLOAT_END -->
@@ -37116,7 +37214,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   window.resetSynapsesTour = function () {
     window.__synTourDone = false;
     try { localStorage.removeItem(KEY); } catch (e) {}
-    try { document.cookie = KEY + '=;path=/;max-age=0'; } catch (e2) {}
+    try { localStorage.removeItem('synapses_tour_btn_docked'); } catch (e1) {}
+    try {
+      document.cookie = KEY + '=;path=/;max-age=0';
+      document.cookie = KEY + '=;path=/;max-age=0;SameSite=Lax';
+    } catch (e2) {}
+    try {
+      if (typeof window._applyDockedTourBtn === 'function') window._applyDockedTourBtn();
+    } catch (e3) {}
   };
   /** Kill tour UI immediately + mark finished (for stuck Median launches) */
   window.dismissSynapsesTour = function () {
