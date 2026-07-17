@@ -1521,8 +1521,22 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 *::-webkit-scrollbar-thumb{background:rgba(124,106,247,0.22);border-radius:10px;}
 *::-webkit-scrollbar-thumb:hover{background:rgba(124,106,247,0.22);}
 
-#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) scale(0.92);background:rgba(30,30,32,0.72);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.95);padding:10px 18px;border-radius:14px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:999;opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,0.25);}
-#toast.show{transform:translateX(-50%) scale(1);}
+#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px) scale(0.96);background:rgba(18,16,28,0.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .22s ease,transform .28s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);max-width:min(320px,calc(100vw - 40px));text-align:center;line-height:1.35;letter-spacing:0.01em;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
+@media(max-width:768px){
+  /* Compact lower-zone pill — never competes with top tour chrome / status bar */
+  #toast{
+    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    top:auto!important;
+    max-width:min(260px,calc(100vw - 56px))!important;
+    padding:6px 12px!important;
+    font-size:11px!important;
+    font-weight:500!important;
+    border-radius:999px!important;
+    line-height:1.3!important;
+    box-shadow:0 6px 18px rgba(0,0,0,0.32)!important;
+  }
+}
 
 
 /* ── Saved Tools ── */
@@ -6660,7 +6674,17 @@ function _haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern || 10); } catch (e) {}
 }
 
-function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';t.classList.add('show');clearTimeout(t._to);t._to=setTimeout(function(){t.style.opacity='0';t.classList.remove('show');},2200);}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  if(!t) return;
+  /* During immersive tour/film, suppress app toasts — they fight narration & headers */
+  if(window.__synTourActive) return;
+  t.textContent=msg;
+  t.style.opacity='';
+  t.classList.add('show');
+  clearTimeout(t._to);
+  t._to=setTimeout(function(){t.classList.remove('show');},2000);
+}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,160)+'px';el.style.overflow=el.scrollHeight>160?'auto':'hidden';}
 
 // Render server warm-up: ping on load + first input focus so server is awake before first message
@@ -6668,15 +6692,11 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
   var _pinged = false;
   function _warmRender(){
     if(_pinged) return; _pinged = true;
-    // Ping both endpoints so classify + tavily are warm, not just the server root
+    // Wake the hot path first: ping + groq (classify only when search keywords hit)
     fetch('https://synbot-whatsapp-2.onrender.com/ping',{method:'GET'}).catch(function(){});
     setTimeout(function(){
-      fetch('https://synbot-whatsapp-2.onrender.com/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'hi',context:''})}).catch(function(){});
-    }, 1000);
-    // Wake Groq LLM connection with a throwaway 1-token call (cheap, just opens the pipe)
-    setTimeout(function(){
       fetch('https://synbot-whatsapp-2.onrender.com/groq-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'hi'}],max_tokens:1})}).catch(function(){});
-    }, 1500);
+    }, 400);
     // Pre-open Deepgram TTS WebSocket so auth handshake is done before first real reply needs it
     setTimeout(function(){
       if(typeof _wsOpen==='function'){ try{ _wsOpen(); }catch(e){} }
@@ -11477,8 +11497,12 @@ function detectIntent(text, mode) {
 }
 
 // ── Quick Notes Context Builder ──
-function buildNotesContext() {
+function buildNotesContext(userText) {
   try {
+    /* Skip notes entirely unless user is asking about them — saves tokens + TTFT */
+    if (userText && !/\b(note|notes|jot|remind|saved|wrote down|what did i)\b/i.test(String(userText))) {
+      return '';
+    }
     // Prefer the live in-memory userNotes array (always up to date in Neutralino & browser)
     var notes = (typeof userNotes !== 'undefined' && Array.isArray(userNotes) && userNotes.length)
       ? userNotes
@@ -11488,17 +11512,14 @@ function buildNotesContext() {
       try { notes = JSON.parse(localStorage.getItem('synapses_notes') || '[]'); } catch(e) {}
     }
     if (!notes || !notes.length) return '';
-    var recent = notes.slice(0, 8);
+    /* Cap notes injection — was 8×120 chars + long instructions (slow + noisy) */
+    var recent = notes.slice(0, 5);
     var lines = recent.map(function(n, i) {
-      var title = (n.title || 'Untitled').trim();
-      var body  = (n.body  || '').trim().slice(0, 120);
-      var date  = n.date  ? ' [' + n.date + ']' : '';
-      var tags  = (n.tags && n.tags.length) ? ' #' + n.tags.join(' #') : '';
-      return (i + 1) + '. ' + title + date + tags + (body ? ' — ' + body : '');
+      var title = (n.title || 'Untitled').trim().slice(0, 48);
+      var body  = (n.body  || '').trim().slice(0, 80);
+      return (i + 1) + '. ' + title + (body ? ' — ' + body : '');
     });
-    return '\n\nUSER QUICK NOTES (' + recent.length + ' saved — most recent first):\n' +
-      'These are personal notes the user has written inside the app. ONLY reference these if the user directly asks about their notes, saved thoughts, or explicitly asks you to check their notes. Do NOT bring them up proactively or connect them to unrelated topics.\n' +
-      lines.join('\n');
+    return '\n\nUSER NOTES (only if they ask about notes):\n' + lines.join('\n');
   } catch(e) { return ''; }
 }
 
@@ -11585,7 +11606,7 @@ function buildSmartSysPrompt(mode, userText) {
       'CRITICAL RULES: (1) Generate COMPLETE mission briefs — always include: Problem Statement, Why Now, Approach, Key Actions (3-5 specific steps), Skills Needed, How to Start This Week, Resources/Connections. (2) Be specific to the user\'s input, never generic. (3) Use **bold** headers and structured markdown. (4) Mention relevant app sections where community support exists. (5) Be inspiring but realistic — great missions start small.',
   };
 
-  return (modePrompts[mode] || modePrompts.chat) + buildNotesContext() + _matrixGetInjection();
+  return (modePrompts[mode] || modePrompts.chat) + buildNotesContext(userText) + _matrixGetInjection();
 }
 
 // ── Offline Smart Response (no API needed) ──
@@ -11650,7 +11671,7 @@ async function smartSend(config) {
   var history = config.history || [{role:'user',content:text}];
 
   try {
-    var data = await callClaude(sys, history, mode === 'world' ? 2000 : mode === 'coach' ? 1800 : mode === 'chat' ? 2400 : 1200);
+    var data = await callClaude(sys, history, mode === 'world' ? 1600 : mode === 'coach' ? 1400 : mode === 'chat' ? 1800 : 1000);
     if (data.error) {
       // Fallback to offline on API error
       offlineSmartResponse(text, mode, config.displayFn);
@@ -12239,6 +12260,8 @@ function getGroqKey(){ return ''; }
 function nextGroqKey(){ /* rotation now happens server-side in /groq-chat */ }
 
 var _skipDelay = false;
+/* Artificial stream pacing (ms per chunk). 0 = fastest; old value was 17 */
+window._streamPaceMs = 0;
 
 // ══════════════════════ MONETIZATION / USAGE GATING ══════════════════════
 var FREE_DAILY_LIMIT = 10; // free AI replies per rolling day (text + voice combined)
@@ -12398,59 +12421,72 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
   recordAIUsage();
   try {
     var messages = [];
-    // nocontext = extraction call, don't inject notes. brain = full sys prompt. llm = notes only.
+    // nocontext = extraction call, don't inject notes. brain = full sys prompt. llm = notes only (if asked).
     if(_aiMode === 'brain' && sys) {
-      messages.push({role:'system', content:sys});
+      /* Cap brain system prompt — huge context dumps crush first-token latency */
+      var _sysBrain = sys.length > 4500 ? sys.slice(0, 4500) + '\n[trimmed for speed]' : sys;
+      messages.push({role:'system', content: _sysBrain});
     } else if(_aiMode === 'llm') {
-      var notesOnly = buildNotesContext();
+      var _lastUser = '';
+      for (var _ui = msgs.length - 1; _ui >= 0; _ui--) {
+        if (msgs[_ui].role === 'user') { _lastUser = msgs[_ui].content || ''; break; }
+      }
+      var notesOnly = buildNotesContext(_lastUser);
       if(notesOnly) messages.push({role:'system', content:'USER QUICK NOTES (reference if relevant):' + notesOnly});
     }
     // llm_nocontext: no system prompt at all (used for note extraction to avoid token bloat)
     msgs.forEach(function(m){ messages.push({role:m.role==='assistant'?'assistant':'user', content:m.content}); });
-    if(messages.length > 32) messages = messages.slice(-32);
+    /* Keep payload lean — history bloat still hurts TTFT */
+    if(messages.length > 20) messages = messages.slice(-20);
+    for (var _mi = 0; _mi < messages.length; _mi++) {
+      if (messages[_mi].content && messages[_mi].content.length > 3500) {
+        messages[_mi] = { role: messages[_mi].role, content: messages[_mi].content.slice(0, 3500) + '…' };
+      }
+    }
 
-    // Step 1: classifier first, then Tavily only if needed
-
+    /*
+     * SPEED: do NOT await classify on every message (that was +1–5s TTFT even for "hi").
+     * Classify+Tavily only when keywords suggest live data — same purpose as old classify,
+     * without the always-on network tax. Mem0 is not on this text path.
+     */
     if (_aiMode !== 'llm_nocontext' && maxTok >= 1000) {
       var _lu = ''; for(var _i=msgs.length-1;_i>=0;_i--){ if(msgs[_i].role==='user'){ _lu=msgs[_i].content; break; } }
-      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently)\b/i.test(_lu);
+      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking)\b/i.test(_lu);
 
-      // Build recent context snippet for classifier + query rewriting (last 3 turns, no system)
-      var _recentCtx = msgs.slice(-6).filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return (m.role==='user'?'User: ':'AI: ')+m.content.slice(0,120); }).join('\n');
-
-      // Step 1a + 1b: classify + rewrite on server (uses server Groq keys, not HTML keys)
-      var _clAnswer = 'NO'; // safe default — never assume search before server confirms
-      var _searchQuery = _lu;
-      var _clDone = false;
-      try {
-        var _clTimeout = null;
-        var _clPromise = new Promise(function(resolve) {
-          _clTimeout = setTimeout(function(){ resolve(null); }, 5000);
-          fetch('https://synbot-whatsapp-2.onrender.com/classify', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ message: _lu, context: _recentCtx })
-          }).then(function(r){ clearTimeout(_clTimeout); return r.ok ? r.json() : null; })
-            .then(function(j){ resolve(j); })
-            .catch(function(){ clearTimeout(_clTimeout); resolve(null); });
-        });
-        var _clJson = await _clPromise;
-        if (_clJson && _clJson.decision) {
-          _clAnswer = _clJson.decision.trim().toUpperCase().replace(/[^A-Z]/g,'');
-          if (_clJson.query) _searchQuery = _clJson.query;
-        }
-      } catch(e) {}
-      if (!_clAnswer) _clAnswer = _keywordHit ? 'BASIC' : 'NO';
-      // _keywordHit no longer overrides NO — server decision is final
-
-      // Step 1c: fire Tavily with the rewritten query
-      if (_clAnswer === 'BASIC' || _clAnswer === 'ADVANCED') {
+      if (_keywordHit) {
+        var _recentCtx = msgs.slice(-4).filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return (m.role==='user'?'User: ':'AI: ')+String(m.content||'').slice(0,80); }).join('\n');
+        var _clAnswer = 'BASIC'; /* keyword already says search is likely */
+        var _searchQuery = _lu;
+        var _clJson = null;
         try {
-          var _tvCtrl = new AbortController();
-          var _tvTimeout = setTimeout(function(){ _tvCtrl.abort(); }, 7000);
-          var _tv = await fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:_searchQuery, search_depth: _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'}),signal:_tvCtrl.signal});
-          clearTimeout(_tvTimeout);
-          if (_tv.ok) { var _tvj = await _tv.json(); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } }
+          var _clTimeout = null;
+          var _clPromise = new Promise(function(resolve) {
+            _clTimeout = setTimeout(function(){ resolve(null); }, 1500);
+            fetch('https://synbot-whatsapp-2.onrender.com/classify', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ message: _lu, context: _recentCtx })
+            }).then(function(r){ clearTimeout(_clTimeout); return r.ok ? r.json() : null; })
+              .then(function(j){ resolve(j); })
+              .catch(function(){ clearTimeout(_clTimeout); resolve(null); });
+          });
+          _clJson = await _clPromise;
+          if (_clJson && _clJson.decision) {
+            _clAnswer = _clJson.decision.trim().toUpperCase().replace(/[^A-Z]/g,'') || 'BASIC';
+            if (_clJson.query) _searchQuery = _clJson.query;
+          }
         } catch(e) {}
+        /* Classify said NO despite keywords — trust it and skip Tavily */
+        if (_clAnswer === 'NO') {
+          /* skip search */
+        } else if (_clAnswer === 'BASIC' || _clAnswer === 'ADVANCED') {
+          try {
+            var _tvCtrl = new AbortController();
+            var _tvTimeout = setTimeout(function(){ _tvCtrl.abort(); }, 3500);
+            var _tv = await fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:_searchQuery, search_depth: _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'}),signal:_tvCtrl.signal});
+            clearTimeout(_tvTimeout);
+            if (_tv.ok) { var _tvj = await _tv.json(); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } }
+          } catch(e) {}
+        }
       }
     }
     // Step 2: call Groq or HF depending on mode
@@ -12500,7 +12536,8 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
           try{
             var json = JSON.parse(line.slice(6));
             var delta = json.choices&&json.choices[0]&&json.choices[0].delta&&json.choices[0].delta.content;
-            if(delta){ fullText += delta; if(onChunk) onChunk(fullText); if(!_skipDelay) await new Promise(function(r){setTimeout(r,17)}); }
+            /* 17ms/token felt typewriter-slow after larger context; 0 = true stream speed */
+            if(delta){ fullText += delta; if(onChunk) onChunk(fullText); if(!_skipDelay && window._streamPaceMs > 0) await new Promise(function(r){setTimeout(r, window._streamPaceMs); }); }
           }catch(e){}
         }
       }
@@ -12947,7 +12984,8 @@ async function sendMessage(){
     _storyChunksScheduled = 0;
     _storyChunksRendered = 0;
     _storyStreamStart = 0;
-    var data=await callClaude(sys,chatHistory.slice(-30),4000,function(partial){
+    /* Lean history + tokens for fast TTFT (was 30/4000) */
+    var data=await callClaude(sys,chatHistory.slice(-12),1400,function(partial){
       // Stream TTS: speak each new complete sentence as soon as it arrives
       if(_vmActive){
         // Fire TTS on sentence OR clause boundaries (comma/colon/semicolon) for minimum latency
@@ -13203,12 +13241,14 @@ function _checkAndShowNotesPanel(history){
 
 function openSavedChat(i){var c=savedChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});}else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
 function saveRecentChat(label,key){if(recentChats.find(function(c){return c.key===key;}))return;recentChats.unshift({label:label.slice(0,36)+(label.length>36?'…':''),key:key});if(recentChats.length>20)recentChats.pop();renderRecentChats();persistChats();
-  // Auto-open panel with fade (not slide) after message completes
+  // Refresh list if open — do NOT auto-open past-chats drawer on first messages
+  // (keeps empty-state clean; user opens via hamburger when they want history)
   var sb=document.getElementById('chpSidebar');
-  if(sb&&!sb.classList.contains('open')){
-    toggleChatHistoryPanel();
-    sb.classList.add('fade-open');
-  }else{refreshChpList();}
+  if(sb&&sb.classList.contains('open')){
+    refreshChpList();
+  }else if(typeof refreshChpList==='function'){
+    try{ refreshChpList(); }catch(e){}
+  }
 }
 function persistChats(){
   try{
@@ -13439,7 +13479,7 @@ async function sendCoachHubMessage(){
   c.appendChild(g);c.scrollTop=c.scrollHeight;
   var sys=buildSmartSysPrompt('coach',text);
   try{
-    var data=await callClaude(sys,coachHubHistory,1800);
+    var data=await callClaude(sys,coachHubHistory.slice(-12),1400);
     g.remove();
     var reply;
     if(data.error){
@@ -23858,9 +23898,28 @@ function _neuInjectDownloadInterceptor(frame){
     ctx.translate(cx, cy);
     ctx.rotate(angle);
 
+    /* Demo/tour = purple eyes; normal BR bot = classic mint green (pre-tour look) */
+    var _demoLook = !!(typeof _tourMode !== 'undefined' && _tourMode) || !!window.__synTourActive;
+    /* Soft blend after tour: 1 = full purple, 0 = full mint */
+    if (typeof window.__synBotEyeBlend !== 'number') window.__synBotEyeBlend = _demoLook ? 1 : 0;
+    if (_demoLook) window.__synBotEyeBlend = 1;
+    else window.__synBotEyeBlend = Math.max(0, window.__synBotEyeBlend - 0.035);
+
+    var b = window.__synBotEyeBlend; /* 1 purple → 0 mint */
+    function _mix(c0, c1, t) {
+      /* c0/c1 are [r,g,b] 0-255 */
+      return 'rgb(' + Math.round(c0[0] + (c1[0] - c0[0]) * t) + ',' +
+        Math.round(c0[1] + (c1[1] - c0[1]) * t) + ',' +
+        Math.round(c0[2] + (c1[2] - c0[2]) * t) + ')';
+    }
+    var eyeMint = [0, 217, 168];
+    var eyePurp = [167, 139, 250]; /* #a78bfa */
+    var eyeCol = _mix(eyeMint, eyePurp, b);
+    var eyeGlow = b > 0.5 ? 'rgba(124,106,247,' + (0.45 + b * 0.25) + ')' : 'rgba(0,217,168,' + (0.55 + (1 - b) * 0.2) + ')';
+
     // Jet boot flames (below body)
     var flameSz = s*0.55*jetFlicker;
-    // Left flame
+    // Left flame — always warm amber/purple base
     ctx.save();
     ctx.translate(-s*0.35, s*0.9);
     var fg1 = ctx.createRadialGradient(0,0,0,0,flameSz*0.5,flameSz);
@@ -23870,13 +23929,18 @@ function _neuInjectDownloadInterceptor(frame){
     ctx.fillStyle=fg1;
     ctx.beginPath();ctx.ellipse(0,flameSz*0.4,flameSz*0.4,flameSz,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
-    // Right flame — purple (never mint/green blast)
+    // Right flame — mint when idle (classic), purple during tour
     ctx.save();
     ctx.translate(s*0.35, s*0.9);
     var fg2 = ctx.createRadialGradient(0,0,0,0,flameSz*0.5,flameSz);
-    fg2.addColorStop(0,'rgba(255,210,120,0.85)');
-    fg2.addColorStop(0.4,'rgba(124,106,247,0.55)');
-    fg2.addColorStop(1,'rgba(124,106,247,0)');
+    fg2.addColorStop(0,'rgba(255,200,60,0.9)');
+    if (b > 0.45) {
+      fg2.addColorStop(0.4,'rgba(124,106,247,0.55)');
+      fg2.addColorStop(1,'rgba(124,106,247,0)');
+    } else {
+      fg2.addColorStop(0.4,'rgba(0,217,168,0.5)');
+      fg2.addColorStop(1,'rgba(0,217,168,0)');
+    }
     ctx.fillStyle=fg2;
     ctx.beginPath();ctx.ellipse(0,flameSz*0.4,flameSz*0.4,flameSz,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
@@ -23889,14 +23953,10 @@ function _neuInjectDownloadInterceptor(frame){
     // Head
     ctx.fillStyle='#1e1040';
     ctx.beginPath();ctx.roundRect(-s*0.45,-s*0.5,s*0.9,s*0.65,s*0.22);ctx.fill();ctx.stroke();
-    // Eyes — soft lilac on tour (no ugly mint green glow)
-    if (typeof _tourMode !== 'undefined' && _tourMode) {
-      ctx.fillStyle='#c4b5fd';
-      ctx.shadowColor='rgba(124,106,247,0.7)';ctx.shadowBlur=s*0.28;
-    } else {
-      ctx.fillStyle='#a78bfa';
-      ctx.shadowColor='rgba(124,106,247,0.55)';ctx.shadowBlur=s*0.32;
-    }
+    // Eyes — mint green classic BR bot; purple only during tour/demo
+    ctx.fillStyle = eyeCol;
+    ctx.shadowColor = eyeGlow;
+    ctx.shadowBlur = s * (0.32 + (1 - b) * 0.12);
     ctx.fillRect(-s*0.32,-s*0.32,s*0.22,s*0.22);
     ctx.fillRect(s*0.1,-s*0.32,s*0.22,s*0.22);
     ctx.shadowBlur=0;
@@ -25957,12 +26017,26 @@ document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
 
 // ── Past-chats button visibility toggle (SYN-BOT header hamburger icon) ────
+// First load default: HIDDEN (hamburger → purple morph stays off until user enables it)
 function _applyChatHistoryVisibility(){
-  var hidden = false;
-  try { hidden = localStorage.getItem('synapses_hideChatHistoryBtn') === '1'; } catch(e){}
+  var hidden = true;
+  try {
+    var v = localStorage.getItem('synapses_hideChatHistoryBtn');
+    if (v === '0') hidden = false;
+    else if (v === '1') hidden = true;
+    else {
+      /* Never set → first open: hide and persist so empty-state hamburger is gone */
+      hidden = true;
+      localStorage.setItem('synapses_hideChatHistoryBtn', '1');
+    }
+  } catch(e){}
   document.body.classList.toggle('hide-chat-history', hidden);
   var btn = document.getElementById('synBotHistoryToggle');
   if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+  /* Also ensure drawer is closed on first paint */
+  try {
+    if (hidden && typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
+  } catch (e2) {}
 }
 function toggleChatHistoryVisibility(){
   var hidden = !document.body.classList.contains('hide-chat-history');
@@ -25970,6 +26044,9 @@ function toggleChatHistoryVisibility(){
   try { localStorage.setItem('synapses_hideChatHistoryBtn', hidden ? '1' : '0'); } catch(e){}
   var btn = document.getElementById('synBotHistoryToggle');
   if (btn) btn.title = hidden ? 'Show past-chats button' : 'Hide past-chats button';
+  if (hidden && typeof closeChatHistoryPanel === 'function') {
+    try { closeChatHistoryPanel(); } catch (e3) {}
+  }
 }
 document.addEventListener('DOMContentLoaded', _applyChatHistoryVisibility);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applyChatHistoryVisibility,0);
@@ -28658,36 +28735,63 @@ function speakVoiceReply(text) {
     return _mem0UserId;
   }
 
+  /** Hard-cap mem0 so a cold Render box never stalls voice */
+  var _MEM0_TIMEOUT_MS = 450;
+
+  function _withTimeout(promise, ms, fallback) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var t = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve(fallback);
+      }, ms);
+      Promise.resolve(promise).then(function (v) {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        resolve(v);
+      }).catch(function () {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        resolve(fallback);
+      });
+    });
+  }
+
   async function _mem0Recall(query) {
     try {
-      if (_mem0Cache && (Date.now() - _mem0Cache.ts < 30000) && _mem0Cache.query === query) {
+      if (_mem0Cache && (Date.now() - _mem0Cache.ts < 45000)) {
         return _mem0Cache.result;
       }
-      var res = await fetch(_MEM0_BACKEND + '/mem0-search', {
+      var fetchP = fetch(_MEM0_BACKEND + '/mem0-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query, user_id: _getMem0UserId(), limit: 5 })
+        body: JSON.stringify({ query: query, user_id: _getMem0UserId(), limit: 3 })
+      }).then(function (res) { return res.json(); }).then(function (data) {
+        var memories = (data.results || data || []).map(function (m) { return m.memory || m.text || ''; }).filter(Boolean);
+        var result = memories.length ? memories.slice(0, 3).join('. ') : '';
+        _mem0Cache = { query: query, result: result, ts: Date.now() };
+        return result;
       });
-      var data = await res.json();
-      var memories = (data.results || data || []).map(function(m){ return m.memory || m.text || ''; }).filter(Boolean);
-      var result = memories.length ? memories.join('. ') : '';
-      _mem0Cache = { query: query, result: result, ts: Date.now() };
-      return result;
-    } catch(e) { return ''; }
+      return await _withTimeout(fetchP, _MEM0_TIMEOUT_MS, (_mem0Cache && _mem0Cache.result) || '');
+    } catch (e) { return (_mem0Cache && _mem0Cache.result) || ''; }
   }
 
   async function _mem0Save(userText, replyText) {
     try {
-      await fetch(_MEM0_BACKEND + '/mem0-save', {
+      /* Fire-and-forget style: never block UI; timeout client wait */
+      var p = fetch(_MEM0_BACKEND + '/mem0-save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [{ role: 'user', content: userText }, { role: 'assistant', content: replyText }],
           user_id: _getMem0UserId()
         })
-      });
-      _mem0Cache = null; // invalidate cache after save
-    } catch(e) {}
+      }).then(function () { _mem0Cache = null; });
+      await _withTimeout(p, 800, null);
+    } catch (e) {}
   }
   // Gated save driven by the <meta> classifier tag Groq appends to each reply (see
   // _metaInstruction). If the model flagged this turn as genuinely worth remembering,
@@ -28766,14 +28870,15 @@ function speakVoiceReply(text) {
   async function _lifeContextRecall(query, force) {
     if (!force && !_lifeContextRecallRegex.test(query)) return '';
     try {
-      var res = await fetch(_MEM0_BACKEND + '/mem0-search', {
+      var fetchP = fetch(_MEM0_BACKEND + '/mem0-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query, user_id: _getMem0UserId(), category: 'life_context' })
+        body: JSON.stringify({ query: query, user_id: _getMem0UserId(), category: 'life_context', limit: 3 })
+      }).then(function (res) { return res.json(); }).then(function (data) {
+        return data.result || '';
       });
-      var data = await res.json();
-      return data.result || '';
-    } catch(e) { return ''; }
+      return await _withTimeout(fetchP, _MEM0_TIMEOUT_MS, window._lifeContextLastContext || '');
+    } catch (e) { return window._lifeContextLastContext || ''; }
   }
   // ── End Life Context Layer ────────────────────────────────────────────────
 
@@ -29331,94 +29436,105 @@ function speakVoiceReply(text) {
     if (!_on) return;
     _busy = true;
     btnState('speak');
-    if(window.avaTvSetState) window.avaTvSetState('speak');
-    if (!_avatarLive()) {
+    if (window.avaTvSetState) window.avaTvSetState('speak');
+
+    /* Toast must appear in the same moment TTS is sent — never early while WS connects */
+    var _wantToast = !_avatarLive();
+    var _usedSearch = !!window._voiceUsedSearch;
+    window._voiceUsedSearch = false;
+    var _toastShown = false;
+    function _showToastWithSpeech() {
+      if (!_wantToast || _toastShown) return;
+      _toastShown = true;
       toast(text);
-      // Show live search indicator if this reply used Tavily
-      if (window._voiceUsedSearch) {
-        window._voiceUsedSearch = false;
-        setTimeout(function() {
-          if (_toast) {
-            var badge = document.createElement('div');
-            badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
-            badge.textContent = '🌐 live search';
-            _toast.querySelector('.toast-inner').appendChild(badge);
-          }
-        }, 50);
+      if (_usedSearch && _toast) {
+        try {
+          var badge = document.createElement('div');
+          badge.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:7px;padding:2px 9px;border-radius:20px;font-size:10px;font-family:DM Sans,sans-serif;background:rgba(0,217,168,0.10);border:1px solid rgba(0,217,168,0.30);color:#00d9a8;letter-spacing:0.02em;';
+          badge.textContent = '🌐 live search';
+          var inn = _toast.querySelector('.toast-inner');
+          if (inn) inn.appendChild(badge);
+        } catch (eB) {}
       }
-    } else {
-      // Avatar's on screen — no toast, but still clear the flag so it
-      // doesn't carry over and wrongly badge a later non-avatar reply.
-      window._voiceUsedSearch = false;
     }
+
     var clean = text
-      .replace(/\*[^*]*\*/g, '')  // remove *actions* and *narration*
-      .replace(/\([^)]*\)/g, '')  // remove (inner thoughts)
-      .replace(/\[[^\]]*\]/g, '') // remove [stage directions]
+      .replace(/\*[^*]*\*/g, '')
+      .replace(/\([^)]*\)/g, '')
+      .replace(/\[[^\]]*\]/g, '')
       .replace(/[#*`~>_]/g, '')
       .replace(/\s+/g, ' ').trim().slice(0, 2500);
+
     if (window._elevenSelected) {
+      _showToastWithSpeech();
       _elevenSpeakOnce(clean);
       return;
     }
-    // Use the already-open Deepgram WebSocket + Web Audio path — first chunk plays in ~100ms
-    // instead of waiting for the entire MP3 to download via REST fetch.
+
     try {
-      _wsOpen(); // no-op if already open
-      var _spkGenId = _vmGenId; // snapshot so we can detect if user stops
+      _wsOpen();
+      var _fired = false;
+
+      function _wireFlushResolver() {
+        var _safetyTimer = setTimeout(function () {
+          _busy = false; _busySince = 0;
+          if (_on) setTimeout(record, 180);
+        }, 12000);
+        while (_wsResolvers.length > 0) {
+          var _stale = _wsResolvers.shift();
+          if (_stale) { try { _stale(null); } catch (e) {} }
+        }
+        _wsResolvers.push(function () {
+          clearTimeout(_safetyTimer);
+          var _drainCheck = setInterval(function () {
+            if (!_actx || _playbackTime <= _actx.currentTime + 0.1) {
+              clearInterval(_drainCheck);
+              _busy = false; _busySince = 0;
+              toastHide();
+              if (_on) setTimeout(record, 180);
+            }
+          }, 100);
+        });
+      }
+
+      function _fireWsSpeak() {
+        if (_fired) return;
+        _fired = true;
+        if (!_wsReady || !_on) {
+          _showToastWithSpeech();
+          _speakREST(clean);
+          return;
+        }
+        _ensureAudioCtx();
+        /* Same frame: bubble + TTS request */
+        _showToastWithSpeech();
+        if (_ttsProvider === 'hume') {
+          var _humeMsg2 = { text: clean, flush: true };
+          if (_humeVoice) _humeMsg2.voice = { name: _humeVoice, provider: 'HUME_AI' };
+          _ws.send(JSON.stringify(_humeMsg2));
+        } else {
+          _ws.send(JSON.stringify({ type: 'Speak', text: clean }));
+          _ws.send(JSON.stringify({ type: 'Flush' }));
+        }
+        _wireFlushResolver();
+      }
+
+      if (_wsReady) {
+        _fireWsSpeak();
+        return;
+      }
+
+      /* Wait briefly for warm WS — toast still held until fire */
       var waited = 0;
-      var _poll = setInterval(function() {
+      var _poll = setInterval(function () {
         waited += 20;
-        if (_wsReady || waited > 1500) {
+        if (_wsReady || waited > 1200) {
           clearInterval(_poll);
-          if (!_wsReady || !_on) {
-            // WS not available — fall back to REST fetch
-            _speakREST(clean);
-            return;
-          }
-          // Ensure AudioCtx is running
-          _ensureAudioCtx();
-          // Send text over the already-warm WS — PCM chunks stream back immediately
-          if (_ttsProvider === 'hume') {
-            var _humeMsg2 = { text: clean, flush: true };
-            if (_humeVoice) _humeMsg2.voice = { name: _humeVoice, provider: 'HUME_AI' };
-            _ws.send(JSON.stringify(_humeMsg2));
-          } else {
-            _ws.send(JSON.stringify({ type: 'Speak', text: clean }));
-            _ws.send(JSON.stringify({ type: 'Flush' }));
-          }
-          // Listen for Flushed/is_last_chunk to know audio is done, then re-enable mic
-          var _safetyTimer = setTimeout(function() {
-            // If Flushed never arrived after 12s, force unlock
-            _busy = false; _busySince = 0; if (_on) setTimeout(record, 180);
-          }, 12000);
-          // This loop only ever expects ONE resolver in flight. But just discarding
-          // the array (old version of this fix) could silently orphan a resolver
-          // still pending from elsewhere (e.g. the main orb voice flow, more likely
-          // to still be pending now that Hume's debounce below waits up to 2s) —
-          // whoever was awaiting that promise would then hang forever, which is
-          // very likely why Hume went completely silent after this fix landed.
-          // Actually RESOLVE any stale entry instead of dropping it, so nothing is
-          // left hanging, then start clean for this turn.
-          while (_wsResolvers.length > 0) {
-            var _staleResolver = _wsResolvers.shift();
-            if (_staleResolver) { try { _staleResolver(null); } catch(e) {} }
-          }
-          _wsResolvers.push(function() {
-            clearTimeout(_safetyTimer);
-            // Wait for playback buffer to drain
-            var _drainCheck = setInterval(function() {
-              if (!_actx || _playbackTime <= _actx.currentTime + 0.1) {
-                clearInterval(_drainCheck);
-                _busy = false; _busySince = 0;
-                toastHide();
-                if (_on) setTimeout(record, 180);
-              }
-            }, 100);
-          });
+          _fireWsSpeak();
         }
       }, 20);
-    } catch(e) {
+    } catch (e) {
+      _showToastWithSpeech();
       _speakREST(clean);
     }
   }
@@ -29687,25 +29803,39 @@ function speakVoiceReply(text) {
     if(window.avaTvSetState) window.avaTvSetState('speak');
     _history.push({ role: 'user', content: text });
     var msgs = _history.slice(-6);
-    // Gate mem0 retrieval — only go fetch memories when this message actually
-    // sounds like life context (same trigger phrases as save/recall below), OR
-    // when _planningModeActive is armed (meaning Ava just asked a clarifying
-    // question last turn, so THIS message is the answer to that — treat it as
-    // life-context even if it doesn't happen to contain trigger words).
-    var _recallTriggered = _lifeContextRecallRegex.test(text) || _planningModeActive;
-    if (_recallTriggered) {
-      _mem0Recall(text).then(function(m){ window._mem0LastContext = m; });
-    } else {
-      window._mem0LastContext = '';
-    }
-    _lifeContextRecall(text, _planningModeActive).then(function(m){ window._lifeContextLastContext = m; });
-    _planningModeActive = false; // one-shot — consume it whether or not it was armed
+    /*
+     * Mem0 SPEED path (was double network + race before LLM):
+     * 1) Use LAST turn's cached memory for THIS reply (instant — no wait).
+     * 2) Prefetch for NEXT turn only when life-context/planning triggers.
+     * 3) Never fire both general + life_context search in parallel on casual chat.
+     * 4) Hard 450ms timeout so cold mem0 never stalls voice.
+     */
+    var _planningArmed = _planningModeActive;
+    var _recallTriggered = _lifeContextRecallRegex.test(text) || _planningArmed;
+    var _saveTriggered = _lifeContextSaveRegex.test(text);
+    _planningModeActive = false; // one-shot — consume whether or not it was armed
+
+    /* Instant context from cache (previous turn) — do NOT await network here */
     var memCtx = _buildMemoryContext();
+
+    /* Background prefetch for next turn only — does not block Groq */
+    if (_recallTriggered) {
+      /* One search only: life_context category (not general + life) */
+      _lifeContextRecall(text, true).then(function (m) {
+        if (m) window._lifeContextLastContext = m;
+      });
+      /* Optional general mem0 only if we have no life cache yet */
+      if (!window._lifeContextLastContext && !window._mem0LastContext) {
+        _mem0Recall(text).then(function (m) {
+          if (m) window._mem0LastContext = m;
+        });
+      }
+    }
+
     var _synKwRegex = /\b(synapses|our app|this app|the app|whiteboard|job board|builder feed|match.{0,3}connect|user development|health ai|chatroom|world accelerator|tools hub|quick notes?|sticky notes?|war room|syn.?bot|the chat widget)\b/i;
     var synCtx = _synKwRegex.test(text) ? '\n\n' + _synapsesCtx : '';
     var relCtx = _getRelPrompt();
     _trackPersonalTurn(text);
-    var _mem0Mems = window._mem0LastContext ? window._mem0LastContext : [];
     var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
@@ -29735,7 +29865,7 @@ function speakVoiceReply(text) {
             _tavilyTimedOut = true;
             console.log('[VoiceSearch] Tavily TIMEOUT — proceeding without search context');
             if (_tavilyCtrl) try { _tavilyCtrl.abort(); } catch(e){}
-          }, 3500); // cap search wait so a cold/slow backend can't stall the reply
+          }, 2000); // hard 2s — voice must not wait on cold Tavily
           return fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -29743,10 +29873,9 @@ function speakVoiceReply(text) {
             signal: _tavilyCtrl ? _tavilyCtrl.signal : undefined
           }).then(function(r){ return r.json(); }).then(function(d){
             clearTimeout(_tavilyTimer);
-            if (_tavilyTimedOut) return; // already proceeded without context
+            if (_tavilyTimedOut) return;
             _voiceSearchCtx = d.context || '';
             window._voiceUsedSearch = !!_voiceSearchCtx;
-            // Save topics from this turn so follow-up questions can inherit them
             console.log('[VoiceSearch] Tavily returned:', _voiceSearchCtx ? _voiceSearchCtx.slice(0, 100) + '...' : 'EMPTY');
           }).catch(function(e){
             clearTimeout(_tavilyTimer);
@@ -29782,19 +29911,28 @@ function speakVoiceReply(text) {
           window._s2sFirstSessionActive = false;
         }
       }
-      /* ONE LLM request: short meta tag in-stream (not a second classify call). */
-      var _planNudge = _lifeContextRecallRegex.test(text) ? _planningNudge : '';
-      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _planNudge + _metaInstruction;
-      var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 650 : (synCtx ? 650 : 600);
+      /*
+       * Meta tag ONLY when this turn might need life-context save/planning —
+       * putting it on every turn forced longer generations + more tokens (slow).
+       * Casual voice chat skips meta entirely.
+       */
+      var _needMeta = _recallTriggered || _saveTriggered || _planningArmed;
+      var _planNudge = _recallTriggered ? _planningNudge : '';
+      /* Keep system prompt short — large matrix/synapses dumps slow first token */
+      var _matrixBit = (typeof _matrixGetInjection === 'function' && typeof _MATRIX_MODE !== 'undefined' && _MATRIX_MODE !== 'default')
+        ? _matrixGetInjection() : '';
+      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
+      if (sys.length > 6000) sys = sys.slice(0, 6000) + '\n[context trimmed for speed]';
+      var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : 320);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true, userId:(currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null }),
+      /* No userId on hot path — unused by /groq-chat for mem0, just extra body */
+      body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
       signal: (function(){
         if (typeof AbortController === 'undefined') return undefined;
         var ctrl = new AbortController();
-        // If no response headers within 8s (cold backend / dropped request), abort and retry
-        setTimeout(function(){ try { ctrl.abort(); } catch(e){} }, 8000);
+        setTimeout(function(){ try { ctrl.abort(); } catch(e){} }, 6000);
         return ctrl.signal;
       })()
     }).then(function(r) {
@@ -29834,7 +29972,7 @@ function speakVoiceReply(text) {
       function _tryEarlySpeakOnMeta() {
         if (_spokeEarly) return;
         var idx = _findMetaOpen(full);
-        if (idx === -1) return;
+        if (idx === -1) return; /* no meta this turn — speak full reply on stream end (avoids cutting mid-answer) */
         var reply = full.slice(0, idx).trim();
         if (!reply) return;
         _spokeEarly = true;
@@ -29858,20 +29996,23 @@ function speakVoiceReply(text) {
               (reply ? ' | ' + reply.length + ' chars' : ' | EMPTY') +
               (_spokeEarly ? ' | early-speak' : ' | speak-on-done'));
             if (reply) {
-              /* Avoid double-push if something already wrote this turn */
               var _lastH = _history.length ? _history[_history.length - 1] : null;
               if (!(_lastH && _lastH.role === 'assistant' && _lastH.content === reply)) {
                 _history.push({ role: 'assistant', content: reply });
               }
               window._avaLastReply = reply;
-              try { if (_history.length >= 6) _extractAndSaveMemory(_history[_history.length-2] ? _history[_history.length-2].content : '', reply); } catch(e) {}
-              try { _metaSave(text, reply, _meta); } catch (eSave) {}
-              try { _lifeContextSave(text, reply); } catch(e) {}
+              /* Saves AFTER speak — never compete with TTS / next record */
+              setTimeout(function () {
+                try { if (_history.length >= 6) _extractAndSaveMemory(_history[_history.length-2] ? _history[_history.length-2].content : '', reply); } catch(e) {}
+                if (_needMeta) {
+                  try { _metaSave(text, reply, _meta); } catch (eSave) {}
+                }
+                try { _lifeContextSave(text, reply); } catch(e) {}
+              }, 0);
               if (_meta && _meta.asked_clarifying_question === true) {
                 _planningModeActive = true;
                 console.log('[Planning] clarifying question detected — recall armed for next turn');
               }
-              /* Only speak here if <meta never showed (model skipped tag) */
               if (!_spokeEarly) speak(reply);
             } else {
               console.log('[Voice] Empty reply from LLM');
@@ -33156,7 +33297,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    * Android Backup / WebView cache often keeps localStorage across reinstall —
    * this is the HTML-side fix for that.
    */
-  var SYNAPSES_APP_BUILD = '2026-07-17-tour-hub-video-1';
+  var SYNAPSES_APP_BUILD = '2026-07-17-tour-story-no-meetava';
   var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
   var TOUR_DONE_KEY = 'synapses_tour_v1';
@@ -33484,7 +33625,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     /* Real SynBot only after he exits the UFO on the moon */
     guideReleased: false,
     /* Last hatch/home spawn so we never fall back to bottom-right */
-    guideSpawn: null
+    guideSpawn: null,
+    /* full | story | tour | demo — how this run was opened */
+    entryMode: 'full'
   };
 
   function prefersReducedMotion() {
@@ -33504,8 +33647,26 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourRoot h2,#synTourRoot h3,#synTourCard h3,#synTourCenter h2,#synTourChoice h3{font-family:"Syne",sans-serif!important;}',
       '#synTourFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}',
       '#synTourDim{display:none!important;}',
-      /* Mobile-only story narration plate (desktop keeps canvas caption) */
+      /* Mobile-only story narration (desktop keeps canvas caption) */
       '#synTourNarration{display:none;pointer-events:none;}',
+      /* Skip — bottom-right above nav; leaves top bar + center film free */
+      '#synTourSkipMyth{position:fixed;display:none;align-items:center;justify-content:center;gap:5px;',
+      'top:auto;left:auto;right:max(14px,calc(12px + env(safe-area-inset-right,0px)));',
+      'bottom:max(70px,calc(56px + env(safe-area-inset-bottom,0px)));',
+      'transform:none;',
+      'z-index:100110;min-width:0;height:30px;padding:0 14px;border-radius:999px;cursor:pointer;pointer-events:auto!important;',
+      'background:rgba(8,8,14,0.42);border:1px solid rgba(255,255,255,0.12);color:rgba(242,242,245,0.72);',
+      'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);',
+      'box-shadow:0 4px 14px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.08);opacity:0.82;',
+      'font-family:"DM Sans",sans-serif;transition:opacity .2s,background .2s,color .2s,border-color .2s,transform .12s;}',
+      '#synTourSkipMyth.show{display:flex!important;}',
+      '#synTourSkipMyth:hover{opacity:1;background:rgba(124,106,247,0.2);color:#fff;border-color:rgba(196,181,253,0.4);}',
+      '#synTourSkipMyth:active{transform:scale(0.96);}',
+      '#synTourSkipMyth svg{width:11px;height:11px;display:block;opacity:0.85;flex-shrink:0;}',
+      '#synTourSkipMyth .st-skip-label{display:inline;font-size:11px;font-weight:600;letter-spacing:0.03em;line-height:1;}',
+      '@media (max-width:768px){',
+      '#synTourSkipMyth{bottom:max(86px,calc(72px + env(safe-area-inset-bottom,0px)));right:max(12px,env(safe-area-inset-right,0px));opacity:0.9;}',
+      '}',
 
       /* soft target ring — soft glass tones, no neon teal blast */
       '#synTourHole{position:absolute;border-radius:18px;pointer-events:none;opacity:0;z-index:2;',
@@ -33731,27 +33892,35 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourHole.pulse,#synTourCenter .st-orb,#synTourCenter .panel::before,#synTourCenter .panel.myth-climax{animation:none!important;}',
       '#synTourHole,#synTourCard,#synTourCenter .panel,#synTourVideoWrap video{transition-duration:.01ms!important;}}',
 
-      /* ── Mobile narration: TOP glass plate — never under Ask me anything / Tour dock ── */
+      /* ── Mobile narration: cinematic LOWER-THIRD chip (pro film UX)
+         Why not top plate: competes with status bar / tour skip / app chrome.
+         Lower-third keeps the story frame primary; caption is secondary. ── */
       '@media (max-width:768px){',
-      '#synTourNarration{display:block;position:absolute;left:50%;right:auto;bottom:auto;',
-      'top:max(52px,calc(10px + env(safe-area-inset-top,0px)));z-index:12;',
-      'width:min(400px,calc(100vw - 28px));padding:14px 16px 15px;border-radius:16px;box-sizing:border-box;',
-      'background:linear-gradient(180deg,rgba(18,16,28,0.78) 0%,rgba(10,10,16,0.68) 100%);',
-      'backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);',
-      'border:1px solid rgba(255,255,255,0.14);',
-      'box-shadow:0 12px 32px rgba(0,0,0,0.42),0 0 0 1px rgba(124,106,247,0.1),inset 0 1px 0 rgba(255,255,255,0.12);',
+      '#synTourNarration{display:block;position:absolute;left:50%;right:auto;top:auto;',
+      'bottom:max(96px,calc(78px + env(safe-area-inset-bottom,0px)));z-index:14;',
+      'width:auto;max-width:min(300px,calc(100vw - 48px));',
+      'padding:7px 12px 8px;border-radius:999px;box-sizing:border-box;',
+      'background:rgba(8,8,14,0.52);',
+      'backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);',
+      'border:1px solid rgba(255,255,255,0.1);',
+      'box-shadow:0 6px 20px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);',
       'font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;',
-      'font-size:15.5px;font-weight:500;line-height:1.55;letter-spacing:0.012em;',
-      'color:rgba(250,250,252,0.96);text-align:center;',
-      '-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;',
-      'text-shadow:0 1px 2px rgba(0,0,0,0.45);',
-      'opacity:0;transform:translate3d(-50%,-8px,0);',
-      'transition:opacity .42s ease,transform .5s cubic-bezier(0.16,1,0.3,1);',
-      'max-height:26vh;overflow:hidden;}',
-      '#synTourNarration::before{content:"";display:block;width:28px;height:2px;margin:0 auto 10px;border-radius:2px;',
-      'background:linear-gradient(90deg,transparent,rgba(196,181,253,0.6),transparent);',
-      'box-shadow:0 0 10px rgba(124,106,247,0.3);}',
-      '#synTourNarration .st-nar-text{display:block;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;}',
+      'font-size:12px;font-weight:500;line-height:1.32;letter-spacing:0.01em;',
+      'color:rgba(248,248,252,0.9);text-align:center;',
+      '-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;',
+      'text-shadow:0 1px 3px rgba(0,0,0,0.5);',
+      'opacity:0;transform:translate3d(-50%,10px,0);',
+      'transition:opacity .38s ease,transform .48s cubic-bezier(0.16,1,0.3,1);',
+      'max-height:none;overflow:visible;}',
+      '#synTourNarration::before{display:none!important;content:none!important;}',
+      '#synTourNarration .st-nar-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;',
+      'overflow:hidden;white-space:normal;word-wrap:break-word;overflow-wrap:anywhere;',
+      'max-width:min(276px,calc(100vw - 64px));}',
+      /* Very small phones: even tighter */
+      '}',
+      '@media (max-width:380px){',
+      '#synTourNarration{max-width:min(260px,calc(100vw - 40px));font-size:11.5px;padding:6px 10px 7px;}',
+      '#synTourNarration .st-nar-text{max-width:min(240px,calc(100vw - 52px));}',
       '}'
     ].join('');
   }
@@ -33844,7 +34013,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     root.appendChild(d);
   }
 
-  /** Mobile: crisp glass caption plate. Desktop: unused (canvas caption stays). */
+  /** Mobile: cinematic lower-third chip. Desktop: canvas caption only. */
   function updateNarrationDom(m) {
     var el = $('synTourNarration');
     if (!el) return;
@@ -33858,16 +34027,158 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (textEl.textContent !== m.caption) textEl.textContent = m.caption;
       el.classList.add('show');
       el.style.opacity = String(Math.max(0, Math.min(1, m.captionA)));
-      /* Top plate — slide down into place (not bottom under input/tour) */
+      /* Lower-third — slide up gently (never under top header) */
       el.style.transform = 'translate3d(-50%,0,0)';
     } else {
       el.style.opacity = '0';
-      el.style.transform = 'translate3d(-50%,-8px,0)';
+      el.style.transform = 'translate3d(-50%,10px,0)';
       if (!m || !m.caption || m.captionA <= 0.01) {
         el.classList.remove('show');
         if (textEl) textEl.textContent = '';
       }
     }
+  }
+
+  function showTourSkipMyth(on) {
+    var b = $('synTourSkipMyth');
+    if (!b) return;
+    if (on) b.classList.add('show');
+    else b.classList.remove('show');
+  }
+
+  /**
+   * First-run Skip: jump past the long film straight to planet dock
+   * with BOTH choices — Continue story | Do the tour.
+   */
+  function skipMythToChoice() {
+    try {
+      hideMeetAvaPanel();
+      hideStoryTourBtn();
+      /* Ensure myth exists so the choice dock has a moon to sit on */
+      if (!state.myth || !state.myth.active) {
+        if (typeof initMyth === 'function') initMyth();
+      }
+      var m = state.myth;
+      if (!m) {
+        /* Fallback: open hub-style product path */
+        if (typeof skipMythToTour === 'function') skipMythToTour();
+        return;
+      }
+
+      clearMythTimers();
+      if (state.mythTimer) {
+        clearTimeout(state.mythTimer);
+        state.mythTimer = 0;
+      }
+
+      /* Settle scene to home crater (end of intro film) */
+      m.phase = 'choice';
+      m.waitingChoice = true;
+      m.panelShown = false;
+      m.endless = false;
+      m.soft = 1;
+      m.orbAlpha = 0;
+      m.flash = 0;
+      m.shake = 0;
+      m.actors = [];
+      m.foes = [];
+      m.lasers = [];
+      m.caption = '';
+      m.captionA = 0;
+      m.captionHold = 0;
+
+      if (m.ufo) {
+        m.ufo.alive = true;
+        m.ufo.landed = true;
+        m.ufo.hatch = 1;
+        m.ufo.scale = Math.max(m.ufo.scale || 0, 0.95);
+        m.ufo.a = 1;
+        m.ufo.x = m.moon.x - 8;
+        m.ufo.y = m.moon.y - m.moon.r * 0.35;
+        m.ufo.face = 0;
+      }
+      if (m.moon) m.moon.a = 1;
+      if (m.home) m.home.a = 1;
+
+      try {
+        if (!m.friends || !m.friends.length) spawnFriends(m, window.innerWidth, window.innerHeight);
+        if (m.friends) {
+          for (var fi = 0; fi < m.friends.length; fi++) {
+            m.friends[fi].a = 1;
+            m.friends[fi].x = m.friends[fi].tx;
+            m.friends[fi].y = m.friends[fi].ty;
+          }
+        }
+      } catch (eF) {}
+      try {
+        if (!m.girl) spawnGirl(m);
+        if (m.girl) { m.girl.a = 1; m.girl.heart = 1; }
+      } catch (eG) {}
+      try {
+        if (!m.structure) spawnMoonStructure(m);
+        if (m.structure) {
+          m.structure.h = m.structure.hMax || 100;
+          m.structure.floors = 5;
+          m.structure.a = 1;
+          m.structure.lit = 1;
+          m.structure.glow = 0.75;
+          m.structure.visitors = 0.5;
+        }
+      } catch (eS) {}
+      try { applyHomeScene(m); } catch (eH) {}
+
+      mythCaption(m, 'Your move — keep the story, or take the product tour.', 4.5);
+
+      if (!state.guideReleased) {
+        try {
+          releaseGuideBot(m.moon.x - 20, m.moon.y - m.moon.r * 0.55, true);
+        } catch (eB) {}
+      }
+      pinGuideAtPlanet(true);
+      showMythChoice(); /* both: Continue story + Do the tour */
+      showTourSkipMyth(false);
+      try {
+        if (typeof updateNarrationDom === 'function') updateNarrationDom(m);
+      } catch (eN) {}
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_skip_to_choice', { mode: state.entryMode || 'full' });
+      } catch (eT) {}
+    } catch (err) {
+      console.error('[Tour] skipMythToChoice', err);
+      try { skipMythToTour(); } catch (e2) {}
+    }
+  }
+
+  function wireTourSkipMyth() {
+    var b = $('synTourSkipMyth');
+    if (!b) return;
+    /* Always rebind so label + handler stay correct after DOM rebuilds */
+    b.onclick = function (e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      try {
+        var step = STEPS[state.i];
+        var onFilm = !!(state.myth && state.myth.active) || !!(step && step.myth);
+        if (onFilm) {
+          /* First-time demo / full / story replay → planet choice (story vs tour) */
+          if (state.entryMode === 'story' || state.entryMode === 'full' || !state.entryMode || state.entryMode === '') {
+            skipMythToChoice();
+            return;
+          }
+          skipMythToChoice();
+          return;
+        }
+        if (step && step.mode === 'video') {
+          if (state.entryMode === 'demo') finish(false);
+          else next();
+        } else {
+          next();
+        }
+      } catch (err) {
+        try { skipMythToChoice(); } catch (e2) {
+          try { finish(true); } catch (e3) {}
+        }
+      }
+    };
   }
 
   function ensureReplayHubDom() {
@@ -33879,14 +34190,45 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     hub.innerHTML =
       '<div class="panel">' +
         '<h2>Welcome back</h2>' +
-        '<p>Watch the film story, or jump into the product tour. Close anytime — nothing blocks the room.</p>' +
+        '<p>Film story, Ava live intro, or product tour. Close anytime.</p>' +
         '<div class="row">' +
           '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
           '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
+          '<button type="button" class="btn btn-ghost" id="synTourReplayDemo">Ava live intro</button>' +
           '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
         '</div>' +
       '</div>';
     root.appendChild(hub);
+  }
+
+  function ensureSkipMythDom() {
+    var root = $('synTourRoot');
+    if (!root) return;
+    var skipHtml =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<polygon points="5 4 15 12 5 20 5 4"/>' +
+        '<line x1="19" y1="5" x2="19" y2="19"/>' +
+      '</svg>' +
+      '<span class="st-skip-label">Skip</span>';
+    var b = $('synTourSkipMyth');
+    if (b) {
+      /* Upgrade old icon-only skip to labeled control */
+      if (!b.querySelector('.st-skip-label')) {
+        b.innerHTML = skipHtml;
+        b.title = 'Skip to choose story or tour';
+        b.setAttribute('aria-label', 'Skip to choose story or tour');
+      }
+      wireTourSkipMyth();
+      return;
+    }
+    b = document.createElement('button');
+    b.id = 'synTourSkipMyth';
+    b.type = 'button';
+    b.title = 'Skip to choose story or tour';
+    b.setAttribute('aria-label', 'Skip to choose story or tour');
+    b.innerHTML = skipHtml;
+    root.appendChild(b);
+    wireTourSkipMyth();
   }
 
   function injectDom() {
@@ -33895,6 +34237,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       ensureVideoControlsDom();
       ensureNarrationDom();
       ensureReplayHubDom();
+      ensureSkipMythDom();
       return;
     }
     var root = document.createElement('div');
@@ -33902,6 +34245,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     root.innerHTML =
       '<canvas id="synTourFx"></canvas>' +
       '<div id="synTourNarration" aria-live="polite"><span class="st-nar-text"></span></div>' +
+      '<button type="button" id="synTourSkipMyth" title="Skip to choose story or tour" aria-label="Skip to choose story or tour">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<polygon points="5 4 15 12 5 20 5 4"/>' +
+          '<line x1="19" y1="5" x2="19" y2="19"/>' +
+        '</svg>' +
+        '<span class="st-skip-label">Skip</span>' +
+      '</button>' +
       '<div id="synTourHole"></div>' +
       '<div id="synTourCard">' +
         '<div id="synTourVideoWrap">' +
@@ -33957,10 +34307,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '<div id="synTourReplayHub" aria-label="Tour options">' +
         '<div class="panel">' +
           '<h2>Welcome back</h2>' +
-          '<p>Watch the film story, or jump into the product tour. Close anytime — nothing blocks the room.</p>' +
+          '<p>Film story, Ava live intro, or product tour. Close anytime.</p>' +
           '<div class="row">' +
             '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
             '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
+            '<button type="button" class="btn btn-ghost" id="synTourReplayDemo">Ava live intro</button>' +
             '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
           '</div>' +
         '</div>' +
@@ -33971,6 +34322,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     $('synTourSkip').onclick = function () { finish(true); };
     $('synTourCenterNext').onclick = function () { next(); };
     wireChoiceButtons();
+    wireTourSkipMyth();
     var storyTourBtn = $('synTourStoryTourBtn');
     if (storyTourBtn) storyTourBtn.onclick = function () { skipMythToTour(); };
     $('synTourCenterSkip').onclick = function () { finish(true); };
@@ -34405,7 +34757,16 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     state.mythTimer = setTimeout(function () {
       if (!state.open || !state.myth || state.myth !== m) return;
       if (state.myth.panelShown) return;
-      if (state.myth.waitingChoice) skipMythToTour();
+      if (!state.myth.waitingChoice) return;
+      /* Story hub: don't slam Meet Ava — leave them on film dock or exit clean */
+      if (state.entryMode === 'story') {
+        try {
+          /* Keep planet choice dock visible; do not open Meet Ava */
+          showMythChoice();
+        } catch (e) {}
+        return;
+      }
+      skipMythToTour();
     }, 90000);
   }
 
@@ -34926,21 +35287,53 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     scheduleStoryChapter(m, 400);
   }
 
-  /** Leave the story → Meet Ava (then Talk with Ava runs the real tour) */
+  /** Fully hide Meet Ava / center glass — never leave it blocking the film */
+  function hideMeetAvaPanel() {
+    try {
+      var centerWrap = $('synTourCenter');
+      var center = $('synTourCenterPanel');
+      var card = $('synTourCard');
+      if (center) {
+        center.classList.remove('show', 'myth-climax');
+        center.style.opacity = '0';
+        center.style.pointerEvents = 'none';
+        center.style.transform = '';
+      }
+      if (centerWrap) {
+        centerWrap.style.display = 'none';
+        centerWrap.style.pointerEvents = 'none';
+      }
+      if (card) {
+        card.classList.remove('show', 'st-video');
+        card.style.display = 'none';
+        card.style.visibility = 'hidden';
+      }
+      var skipC = $('synTourCenterSkip');
+      if (skipC) skipC.style.pointerEvents = 'none';
+    } catch (e) {}
+  }
+
+  /**
+   * Leave the story film.
+   * - First-run (full): Meet Ava panel (legacy path).
+   * - Watch story / story hub: NEVER Meet Ava — jump to Ava live video or clean exit.
+   */
   function skipMythToTour() {
     try {
       hideMythChoice();
       hideStoryTourBtn();
       wireChoiceButtons();
+      hideMeetAvaPanel();
 
       var m = state.myth;
       if (m) {
         m.waitingChoice = false;
         m.endless = false;
         m.phase = 'soft';
-        m.interactive = true;
-        /* Allow panel to open even if a half-failed reveal set panelShown */
-        m.panelShown = false;
+        m.interactive = false;
+        m.panelShown = true; /* block delayed timers from re-opening UI */
+        m.caption = '';
+        m.captionA = 0;
         if (m.structure) {
           m.structure.h = m.structure.hMax || 100;
           m.structure.lit = 1;
@@ -34948,6 +35341,27 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           m.structure.visitors = 1;
           m.structure.floors = 5;
         }
+      }
+
+      /* Hub "Watch story" or pure story mode: no Meet Ava wall — go to Ava video or finish */
+      if (state.entryMode === 'story') {
+        try { stopMyth(); } catch (eS) {}
+        try { updateNarrationDom(null); } catch (eN) {}
+        hideMeetAvaPanel();
+        state.guideReleased = true;
+        window.__synBotStoryReleased = true;
+        state.entryMode = 'tour';
+        state.i = 1; /* Ava live intro video */
+        showTourSkipMyth(true);
+        try {
+          if (typeof synTrack === 'function') synTrack('tour_step', { step: 'ava_video_from_story' });
+        } catch (eT) {}
+        renderStep();
+        return;
+      }
+
+      /* Full first-run only: Meet Ava shell */
+      if (m) {
         try {
           if (!state.guideReleased) {
             releaseGuideBot(m.moon.x, m.moon.y - m.moon.r * 0.42, true);
@@ -34957,7 +35371,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         } catch (eBot) {}
       }
 
-      /* Force Meet Ava shell visible */
       var centerWrap = $('synTourCenter');
       var center = $('synTourCenterPanel');
       var card = $('synTourCard');
@@ -34986,6 +35399,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           };
         }
         if (secEl) secEl.style.display = 'none';
+        var skipC = $('synTourCenterSkip');
+        if (skipC) skipC.style.pointerEvents = 'auto';
         reflowTextAnims(center);
         center.classList.remove('myth-climax', 'show');
         void center.offsetWidth;
@@ -34995,23 +35410,22 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         center.style.transform = 'scale(1) translateY(0)';
       }
       if (m) {
-        m.panelShown = true;
         m.phase = 'done';
         m.interactive = true;
-        m.caption = '';
-        m.captionA = 0;
       }
       state.i = 0; /* welcome / Meet Ava — Next advances into tour */
       try {
         if (typeof synTrack === 'function') synTrack('tour_step', { step: 'meet_ava_from_story' });
-      } catch (eT) {}
+      } catch (eT2) {}
     } catch (err) {
-      /* last resort: jump straight into demo step */
+      /* last resort: jump straight into demo step — never leave Meet Ava stuck on */
       try {
         hideMythChoice();
         hideStoryTourBtn();
-        state.i = 0;
-        next();
+        hideMeetAvaPanel();
+        state.i = 1;
+        state.entryMode = state.entryMode === 'story' ? 'tour' : (state.entryMode || 'full');
+        renderStep();
       } catch (e2) {}
     }
   }
@@ -37130,6 +37544,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
     /* Always park choice dock off-screen on every Next — kills top-left glass glitch */
     hideMythChoice();
+    ensureSkipMythDom();
+    /* Subtle skip only on film/myth + Ava demo video — not on product spotlights */
+    showTourSkipMyth(!!(step && (step.myth || step.mode === 'video')));
 
     /* Leaving welcome myth when advancing */
     if (!(step.myth && step.mode === 'center')) {
@@ -37172,23 +37589,45 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           guideFlyTo(state.guideSpawn.x, state.guideSpawn.y);
         }
         card.style.display = 'none';
-        $('synTourCenter').style.display = 'flex';
-        $('synTourCenterTitle').textContent = step.title;
-        $('synTourCenterBody').textContent = step.body;
-        $('synTourCenterNext').textContent = step.cta || 'Continue';
-        if (step.secondary) {
-          $('synTourCenterSec').style.display = 'inline-flex';
-          $('synTourCenterSec').textContent = step.secondary;
-        } else {
-          $('synTourCenterSec').style.display = 'none';
-        }
 
-        /* Welcome myth — real SynBot stays hidden until exit+home */
+        /* Welcome myth / Watch story film — NO Meet Ava wall over the animation */
         if (step.myth && !prefersReducedMotion()) {
-          center.classList.remove('show', 'myth-climax');
+          hideMeetAvaPanel();
+          /* Also force center wrap gone so Skip tour / Talk with Ava cannot block film */
+          var cw = $('synTourCenter');
+          if (cw) {
+            cw.style.display = 'none';
+            cw.style.pointerEvents = 'none';
+          }
+          if (center) {
+            center.classList.remove('show', 'myth-climax');
+            center.style.opacity = '0';
+            center.style.pointerEvents = 'none';
+          }
           hideGuideBot();
+          showTourSkipMyth(true);
           initMyth();
-          /* ~38s saga: escape→friends→battle→meet→settle→moon spire→signal→travelers→Ava→tour */
+          /* Film-only: subtle skip icon top-right; planet dock later for continue/tour */
+        } else if (step.myth && prefersReducedMotion()) {
+          /* Reduced motion still skips the giant Meet Ava on pure story replays */
+          if (state.entryMode === 'story') {
+            hideMeetAvaPanel();
+            state.i = 1;
+            state.entryMode = 'tour';
+            renderStep();
+            return;
+          }
+          stopMyth();
+          $('synTourCenter').style.display = 'flex';
+          $('synTourCenterTitle').textContent = step.title;
+          $('synTourCenterBody').textContent = step.body;
+          $('synTourCenterNext').textContent = step.cta || 'Continue';
+          $('synTourCenterSec').style.display = 'none';
+          reflowTextAnims(center);
+          requestAnimationFrame(function () {
+            if (!state.open) return;
+            center.classList.add('show');
+          });
         } else {
           stopMyth();
           if (!state.guideReleased) {
@@ -37198,6 +37637,16 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
               gs ? gs.y : window.innerHeight * 0.68,
               true
             );
+          }
+          $('synTourCenter').style.display = 'flex';
+          $('synTourCenterTitle').textContent = step.title;
+          $('synTourCenterBody').textContent = step.body;
+          $('synTourCenterNext').textContent = step.cta || 'Continue';
+          if (step.secondary) {
+            $('synTourCenterSec').style.display = 'inline-flex';
+            $('synTourCenterSec').textContent = step.secondary;
+          } else {
+            $('synTourCenterSec').style.display = 'none';
           }
           reflowTextAnims(center);
           requestAnimationFrame(function () {
@@ -37273,6 +37722,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   function next() {
+    /* Demo-only run: after Ava video, exit (they can re-open anytime from hub) */
+    var cur = STEPS[state.i];
+    if (state.entryMode === 'demo' && cur && cur.mode === 'video') {
+      finish(false);
+      return;
+    }
     if (state.i >= STEPS.length - 1) {
       finish(false);
       return;
@@ -37290,6 +37745,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     window.__synBotStoryReleased = true;
     hideMythChoice();
     hideReplayHub();
+    showTourSkipMyth(false);
+    try { hideMeetAvaPanel(); } catch (eH) {}
     showVideo(false);
     closeSynBotHard();
     stopFx(); /* cancels raf + myth timers + clears canvas */
@@ -37411,6 +37868,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
     var storyBtn = $('synTourReplayStory');
     var tourBtn = $('synTourReplayTour');
+    var demoBtn = $('synTourReplayDemo');
     var closeBtn = $('synTourReplayClose');
     if (storyBtn) {
       storyBtn.onclick = function (e) {
@@ -37423,13 +37881,22 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       tourBtn.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         hideReplayHub();
+        /* Includes Ava live intro video, then product spotlights */
         startTour(true, { mode: 'tour' });
+      };
+    }
+    if (demoBtn) {
+      demoBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        hideReplayHub();
+        startTour(true, { mode: 'demo' });
       };
     }
     if (closeBtn) {
       closeBtn.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         hideReplayHub();
+        showTourSkipMyth(false);
         state.open = false;
         window.__synTourActive = false;
         if (root) {
@@ -37469,34 +37936,41 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     injectStyles();
     injectDom();
     ensureVideoControlsDom();
-    /* mode: story = film myth (step 0); tour = product spotlights (skip film); default = full first run */
-    if (opts.mode === 'tour') {
-      state.i = 2; /* Neural chat spotlight — skip long film + demo for clean product tour */
+    /* mode: story = film myth (0); tour = Ava live intro video (1) then product; demo = video only (1);
+       default = full first run from film */
+    state.entryMode = opts.mode || 'full';
+    if (opts.mode === 'tour' || opts.mode === 'demo') {
+      state.i = 1; /* Ava introduces Synapses — live video, always re-watchable */
       state.guideReleased = true;
       window.__synBotStoryReleased = true;
     } else {
       state.i = 0;
       state.guideReleased = false;
       window.__synBotStoryReleased = false;
+      if (opts.mode === 'story') state.entryMode = 'story';
     }
     state.open = true;
     window.__synTourActive = true;
     state.myth = null;
     ensureChat();
+    /* Kill any leftover Meet Ava / hub glass before film or tour starts */
+    try { hideMeetAvaPanel(); } catch (eH) {}
+    try { hideReplayHub(); } catch (eR) {}
     try {
       closeSynBotHard();
       var tb = document.getElementById('tinyBotCanvas');
       if (tb && !tb.style.cssText.includes('100vw')) {
-        tb.style.opacity = opts.mode === 'tour' ? '1' : '0';
+        tb.style.opacity = (opts.mode === 'tour' || opts.mode === 'demo') ? '1' : '0';
       }
     } catch (e) {}
-    if (opts.mode === 'tour') {
+    if (opts.mode === 'tour' || opts.mode === 'demo') {
       try {
         releaseGuideBot(window.innerWidth * 0.78, window.innerHeight * 0.68, true);
       } catch (eG) {}
     } else {
       hideGuideBot();
     }
+    showTourSkipMyth(opts.mode === 'story' || opts.mode === 'full' || !opts.mode);
     startFx();
     var rootOn = $('synTourRoot');
     if (rootOn) {
@@ -37538,6 +38012,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       try { stopFx(); } catch (eF) {}
       try { hideMythChoice(); } catch (eH) {}
       try { hideReplayHub(); } catch (eHub) {}
+      try { showTourSkipMyth(false); } catch (eSk) {}
       try { updateNarrationDom(null); } catch (eN) {}
       var root = document.getElementById('synTourRoot');
       if (root) {
