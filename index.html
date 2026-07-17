@@ -6677,10 +6677,6 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
     setTimeout(function(){
       fetch('https://synbot-whatsapp-2.onrender.com/groq-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'hi'}],max_tokens:1})}).catch(function(){});
     }, 1500);
-    // Wake Mem0 connection with a throwaway query (dummy user id so it doesn't pollute real history)
-    setTimeout(function(){
-      fetch('https://synbot-whatsapp-2.onrender.com/mem0-search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'warmup',user_id:'_warmup_ping',limit:1})}).catch(function(){});
-    }, 2000);
     // Pre-open Deepgram TTS WebSocket so auth handshake is done before first real reply needs it
     setTimeout(function(){
       if(typeof _wsOpen==='function'){ try{ _wsOpen(); }catch(e){} }
@@ -33160,7 +33156,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    * Android Backup / WebView cache often keeps localStorage across reinstall —
    * this is the HTML-side fix for that.
    */
-  var SYNAPSES_APP_BUILD = '2026-07-17-tour-reset-3';
+  var SYNAPSES_APP_BUILD = '2026-07-17-tour-hub-video-1';
   var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
   var TOUR_DONE_KEY = 'synapses_tour_v1';
@@ -33245,6 +33241,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function startTourFromNav() {
     try {
       window.__synTourIntentionalStart = true;
+      /* Always close SYN-BOT so the film / hub is never blocked by the chat panel */
+      try {
+        var chat = document.getElementById('synBotChat');
+        if (chat) chat.style.display = 'none';
+        var tip = document.getElementById('robotTooltip');
+        if (tip) { tip.classList.remove('rt-visible'); tip.classList.add('rt-hidden'); tip.style.opacity = '0'; tip.style.visibility = 'hidden'; }
+      } catch (eClose) {}
+      /* Second access (tour already finished once) → choice: Watch story | Take tour | Close */
+      var already = false;
+      try { already = window.__synTourDone === true || localStorage.getItem(TOUR_DONE_KEY) === '1'; } catch (eD) {}
+      if (already && typeof window.openSynapsesTourHub === 'function') {
+        window.openSynapsesTourHub();
+        return;
+      }
       if (typeof startSynapsesTour === 'function') startSynapsesTour(true);
     } catch (e) { console.error(e); }
   }
@@ -33567,15 +33577,27 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourCard.st-video .row{justify-content:center;}',
       '#synTourCard.st-video .skip{margin-left:0;}',
       /* Big face frame + custom glass controls ONLY (native browser chrome fully replaced) */
-      '#synTourVideoWrap{display:none;margin:14px auto 0;border-radius:16px;overflow:hidden;background:rgba(8,8,14,0.45);',
+      '#synTourVideoWrap{display:none;margin:14px auto 0;border-radius:16px;overflow:hidden;background:rgba(8,8,14,0.55);',
       'aspect-ratio:1;width:calc(100% - 28px);max-width:100%;max-height:min(52vh,360px);height:min(52vh,calc(100vw - 68px),360px);',
       'position:relative;box-sizing:border-box;}',
       '#synTourVideoWrap.show{display:block;}',
-      /* Video sits under a media shell — native UI cannot stack above glass siblings */
-      '#synTourVideoWrap .st-vmedia{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:16px;background:#0a0a12;}',
+      /* Soft glass well while video decodes — never flash a broken first frame */
+      '#synTourVideoWrap .st-vmedia{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:16px;',
+      'background:radial-gradient(ellipse at 50% 38%,rgba(124,106,247,0.22) 0%,rgba(10,10,18,0.92) 55%,#06060c 100%);}',
+      '#synTourVideoWrap .st-vloader{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;',
+      'pointer-events:none;opacity:1;transition:opacity .55s cubic-bezier(0.16,1,0.3,1);',
+      'background:radial-gradient(circle at 50% 42%,rgba(124,106,247,0.16),transparent 62%);} ',
+      '#synTourVideoWrap.ready .st-vloader{opacity:0;visibility:hidden;}',
+      '#synTourVideoWrap .st-vloader::before{content:"";width:36px;height:36px;border-radius:50%;',
+      'border:1.5px solid rgba(196,181,253,0.18);border-top-color:rgba(196,181,253,0.85);border-right-color:rgba(0,217,168,0.45);',
+      'animation:stVidSpin .9s linear infinite;box-shadow:0 0 24px rgba(124,106,247,0.25);}',
+      '@keyframes stVidSpin{to{transform:rotate(360deg);}}',
+      /* Fade video in only when ready — no ugly preload frame */
       '#synTourVideoWrap video,#synTourVideoWrap .st-vmedia video{width:100%!important;height:100%!important;object-fit:cover;object-position:center 22%;',
       'display:block!important;border-radius:16px;pointer-events:none!important;border:0!important;outline:none!important;',
-      '-webkit-appearance:none!important;appearance:none!important;}',
+      '-webkit-appearance:none!important;appearance:none!important;',
+      'opacity:0;transition:opacity .75s cubic-bezier(0.16,1,0.3,1);filter:brightness(0.92);}',
+      '#synTourVideoWrap.ready video,#synTourVideoWrap.ready .st-vmedia video{opacity:1;filter:brightness(1);}',
       /* Kill ALL native chrome (WebKit + legacy + big center play) */
       '#synTourVideoWrap video::-webkit-media-controls,',
       '#synTourVideoWrap video::-webkit-media-controls-enclosure,',
@@ -33681,9 +33703,33 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       /* hidden — tour lives on planet dock only */
       '#synTourStoryTourBtn{display:none!important;}',
 
+      /* Second-access hub: Watch story vs Take tour (does not block film forever) */
+      '#synTourReplayHub{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:100090;pointer-events:none;}',
+      '#synTourReplayHub.show{display:flex;pointer-events:auto;}',
+      '#synTourReplayHub .panel{pointer-events:auto;width:min(380px,calc(100vw - 32px));text-align:center;padding:28px 22px 20px;border-radius:22px;',
+      'background:linear-gradient(160deg,rgba(255,255,255,0.08) 0%,rgba(124,106,247,0.1) 45%,rgba(8,8,14,0.32) 100%);',
+      'backdrop-filter:blur(28px) saturate(1.45);-webkit-backdrop-filter:blur(28px) saturate(1.45);',
+      'border:1px solid rgba(255,255,255,0.14);',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.32),0 0 0 1px rgba(124,106,247,0.18),inset 0 1px 0 rgba(255,255,255,0.12);',
+      'opacity:0;transform:scale(0.94) translateY(12px);transition:opacity .45s cubic-bezier(0.16,1,0.3,1),transform .55s cubic-bezier(0.16,1,0.3,1);}',
+      '#synTourReplayHub.show .panel{opacity:1;transform:scale(1) translateY(0);}',
+      '#synTourReplayHub h2{margin:0 0 8px;font-family:"Syne",sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.03em;',
+      'background:linear-gradient(125deg,#f2f2f5 10%,#c4b5fd 45%,#00d9a8 95%);-webkit-background-clip:text;background-clip:text;color:transparent;}',
+      '#synTourReplayHub p{margin:0 0 18px;font-family:"DM Sans",sans-serif;font-size:13.5px;line-height:1.5;color:rgba(242,242,245,0.78);}',
+      '#synTourReplayHub .row{display:flex;flex-direction:column;gap:8px;align-items:stretch;}',
+      '#synTourReplayHub .btn{appearance:none;cursor:pointer;font-family:"DM Sans",sans-serif;font-weight:600;font-size:13.5px;padding:12px 18px;border-radius:999px;transition:transform .15s,background .2s,border-color .2s,box-shadow .2s;}',
+      '#synTourReplayHub .btn:active{transform:scale(0.97);}',
+      '#synTourReplayHub .btn-primary{background:rgba(124,106,247,0.24);color:#f2f2f5;border:1px solid rgba(0,217,168,0.42);',
+      'box-shadow:0 4px 22px rgba(124,106,247,0.18),inset 0 1px 0 rgba(255,255,255,0.14);}',
+      '#synTourReplayHub .btn-primary:hover{background:rgba(124,106,247,0.36);}',
+      '#synTourReplayHub .btn-ghost{background:rgba(255,255,255,0.06);color:rgba(242,242,245,0.9);border:1px solid rgba(255,255,255,0.14);}',
+      '#synTourReplayHub .btn-ghost:hover{background:rgba(255,255,255,0.1);border-color:rgba(196,181,253,0.45);}',
+      '#synTourReplayHub .btn-close{background:none;border:none;color:rgba(242,242,245,0.4);font-size:12px;margin-top:6px;cursor:pointer;}',
+      '#synTourReplayHub .btn-close:hover{color:rgba(196,181,253,0.95);}',
+
       '@media (prefers-reduced-motion:reduce){',
       '#synTourHole.pulse,#synTourCenter .st-orb,#synTourCenter .panel::before,#synTourCenter .panel.myth-climax{animation:none!important;}',
-      '#synTourHole,#synTourCard,#synTourCenter .panel{transition-duration:.01ms!important;}}',
+      '#synTourHole,#synTourCard,#synTourCenter .panel,#synTourVideoWrap video{transition-duration:.01ms!important;}}',
 
       /* ── Mobile narration: TOP glass plate — never under Ask me anything / Tour dock ── */
       '@media (max-width:768px){',
@@ -33824,11 +33870,31 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
   }
 
+  function ensureReplayHubDom() {
+    var root = $('synTourRoot');
+    if (!root || $('synTourReplayHub')) return;
+    var hub = document.createElement('div');
+    hub.id = 'synTourReplayHub';
+    hub.setAttribute('aria-label', 'Tour options');
+    hub.innerHTML =
+      '<div class="panel">' +
+        '<h2>Welcome back</h2>' +
+        '<p>Watch the film story, or jump into the product tour. Close anytime — nothing blocks the room.</p>' +
+        '<div class="row">' +
+          '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
+          '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
+          '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
+        '</div>' +
+      '</div>';
+    root.appendChild(hub);
+  }
+
   function injectDom() {
     if ($('synTourRoot')) {
       ensureChoiceDom();
       ensureVideoControlsDom();
       ensureNarrationDom();
+      ensureReplayHubDom();
       return;
     }
     var root = document.createElement('div');
@@ -33840,8 +33906,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '<div id="synTourCard">' +
         '<div id="synTourVideoWrap">' +
           '<div class="st-vmedia">' +
-            '<video id="synTourVideo" playsinline webkit-playsinline preload="metadata" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
+            '<video id="synTourVideo" playsinline webkit-playsinline preload="auto" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
           '</div>' +
+          '<div class="st-vloader" aria-hidden="true"></div>' +
           '<div class="st-vshim" aria-hidden="true"></div>' +
           '<span class="st-vglow"></span>' +
           '<span class="st-vbadge">LIVE INTRO</span>' +
@@ -33884,6 +33951,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           '<div class="row">' +
             '<button type="button" class="btn btn-primary" id="synTourChoiceStory">Continue story</button>' +
             '<button type="button" class="btn btn-ghost" id="synTourChoiceTour">Do the tour</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="synTourReplayHub" aria-label="Tour options">' +
+        '<div class="panel">' +
+          '<h2>Welcome back</h2>' +
+          '<p>Watch the film story, or jump into the product tour. Close anytime — nothing blocks the room.</p>' +
+          '<div class="row">' +
+            '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
+            '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
+            '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -36544,6 +36622,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       muteBtn.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         vid.muted = !vid.muted;
+        /* Remember explicit user mute so we do not auto-unmute against their choice */
+        window.__synTourVidUserMuted = !!vid.muted;
         if (!vid.muted) {
           try { vid.volume = 1; } catch (err) {}
           if (vid.paused) {
@@ -36645,12 +36725,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
     wrap.innerHTML =
       '<div class="st-vmedia">' +
-        '<video id="synTourVideo" playsinline webkit-playsinline preload="auto" muted disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
+        '<video id="synTourVideo" playsinline webkit-playsinline preload="auto" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
       '</div>' +
+      '<div class="st-vloader" aria-hidden="true"></div>' +
       '<div class="st-vshim" aria-hidden="true"></div>' +
       '<span class="st-vglow"></span>' +
       '<span class="st-vbadge">LIVE INTRO</span>' +
       '<div class="st-vctrl" id="synTourVCtrl">' + glassVideoBarHtml() + '</div>';
+    try { wrap.classList.remove('ready'); } catch (eR) {}
 
     styleTourVideoCtrl($('synTourVCtrl'));
 
@@ -36665,16 +36747,32 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   /**
-   * Reliable play — mobile: muted + playsinline, only while card visible.
-   * Never hide the wrap on error (that caused flash-then-disappear).
-   * Never call video.load() in retries (that also flashes and dies on WebView).
+   * Reliable play after user gesture (Tour button).
+   * Prefer UNMUTED unless user muted; only fall back to muted if autoplay policy blocks.
+   * Fade-in when frames are ready — never flash a broken preload image.
+   * Never call video.load() in retries (flash + WebView stall).
    */
+  function markTourVideoReady(wrap, vid) {
+    if (!wrap) return;
+    var go = function () {
+      wrap.classList.add('ready');
+    };
+    /* Wait for real frames — readyState 2+ (current data) is enough to avoid broken poster */
+    if (vid && vid.readyState >= 2) {
+      requestAnimationFrame(function () { requestAnimationFrame(go); });
+    } else {
+      /* Soft fallback so spinner never sticks forever */
+      setTimeout(go, 1200);
+    }
+  }
+
   function kickTourVideoPlay(vid) {
     if (!vid || !state.open) return;
     var myId = ++_tourVidKickId;
     var wrap = $('synTourVideoWrap');
     if (wrap) {
       wrap.classList.add('show');
+      wrap.classList.remove('ready');
       wrap.style.display = 'block';
     }
 
@@ -36687,31 +36785,31 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       vid.playsInline = true;
       vid.preload = 'auto';
       vid.setAttribute('preload', 'auto');
+      /* Keep first decoded frame hidden via CSS until .ready */
+      vid.style.opacity = '';
     } catch (eAttr) {}
 
-    var mobile = isTourMobile();
     var src = resolveDemoSrc();
     try {
       var cur = vid.currentSrc || vid.src || '';
       if (!cur || (cur.indexOf('demo-s2s') < 0 && !vid.getAttribute('src'))) {
         vid.src = src;
       } else if (vid.getAttribute('src') === 'assets/demo-s2s.mp4' || (cur && cur.indexOf('assets/demo-s2s') >= 0 && src !== cur)) {
-        /* Upgrade relative path to absolute for Median/WebView */
         if (src && src !== vid.getAttribute('src')) vid.src = src;
       }
     } catch (eSrc) {
       try { vid.src = src; } catch (e2) {}
     }
 
-    /* Keep frame visible — do NOT remove .show on error */
     vid.onerror = function () {
       if (myId !== _tourVidKickId) return;
       console.warn('[TourVideo] error', vid.error && vid.error.code, vid.src);
       setPlayIcon(true);
-      setMuteIcon(true);
       if (wrap) {
         wrap.classList.add('show');
         wrap.style.display = 'block';
+        /* Still reveal shell so UI isn't stuck on spinner forever */
+        wrap.classList.add('ready');
       }
     };
 
@@ -36724,71 +36822,99 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       } catch (eM) {}
     }
 
+    function onPlayingOk() {
+      if (myId !== _tourVidKickId) return;
+      setPlayIcon(false);
+      setMuteIcon(vid.muted);
+      if (wrap) {
+        wrap.classList.add('show');
+        markTourVideoReady(wrap, vid);
+      }
+    }
+
     function doPlay(forceMuted) {
       if (myId !== _tourVidKickId || !state.open) return;
-      applyMute(forceMuted || mobile);
-      if (!mobile && !forceMuted) {
+      var wantMuted = !!forceMuted || !!window.__synTourVidUserMuted;
+      applyMute(wantMuted);
+      if (!wantMuted) {
         try { vid.volume = 1; } catch (eV) {}
       }
       killNativeVideoChrome(vid);
       var p = vid.play();
       if (p && p.then) {
         p.then(function () {
-          if (myId !== _tourVidKickId) return;
-          setPlayIcon(false);
-          setMuteIcon(vid.muted);
-          if (wrap) wrap.classList.add('show');
+          onPlayingOk();
         }).catch(function () {
           if (myId !== _tourVidKickId) return;
-          /* Always fall back to muted — never load() (flash bug) */
-          applyMute(true);
-          var p2 = vid.play();
-          if (p2 && p2.then) {
-            p2.then(function () {
-              setPlayIcon(false);
-              setMuteIcon(true);
-            }).catch(function () {
-              var n = 0;
-              function retry() {
-                if (myId !== _tourVidKickId || !state.open || n > 5) {
-                  setPlayIcon(true);
-                  return;
+          /* Policy blocked unmuted → soft fallback to muted (only if user did not force mute state) */
+          if (!window.__synTourVidUserMuted) {
+            applyMute(true);
+            var p2 = vid.play();
+            if (p2 && p2.then) {
+              p2.then(function () {
+                onPlayingOk();
+              }).catch(function () {
+                var n = 0;
+                function retry() {
+                  if (myId !== _tourVidKickId || !state.open || n > 5) {
+                    setPlayIcon(true);
+                    if (wrap) wrap.classList.add('ready');
+                    return;
+                  }
+                  n++;
+                  applyMute(true);
+                  var pr = vid.play();
+                  if (pr && pr.then) {
+                    pr.then(function () { onPlayingOk(); })
+                      .catch(function () { setTimeout(retry, 250); });
+                  }
                 }
-                n++;
-                applyMute(true);
-                var pr = vid.play();
-                if (pr && pr.then) {
-                  pr.then(function () { setPlayIcon(false); setMuteIcon(true); })
-                    .catch(function () { setTimeout(retry, 250); });
-                }
-              }
-              setTimeout(retry, 200);
-              setTimeout(retry, 600);
-            });
+                setTimeout(retry, 200);
+                setTimeout(retry, 600);
+              });
+            }
+          } else {
+            setPlayIcon(true);
+            if (wrap) wrap.classList.add('ready');
           }
-          setPlayIcon(vid.paused);
-          setMuteIcon(true);
         });
       } else {
-        setPlayIcon(false);
-        setMuteIcon(vid.muted);
+        onPlayingOk();
       }
     }
 
-    applyMute(true);
+    /* Prefer unmuted on kick (user just tapped Tour / Next — counts as gesture) */
+    var preferMuted = !!window.__synTourVidUserMuted;
+    function go() {
+      if (myId !== _tourVidKickId || !state.open) return;
+      doPlay(preferMuted);
+    }
+
+    function tryRevealWhenBuffered() {
+      if (myId !== _tourVidKickId) return;
+      if (vid.readyState >= 2 && wrap) markTourVideoReady(wrap, vid);
+    }
+
+    vid.addEventListener('loadeddata', tryRevealWhenBuffered, { once: true });
+    vid.addEventListener('canplay', tryRevealWhenBuffered, { once: true });
+    vid.addEventListener('playing', function () {
+      if (myId !== _tourVidKickId) return;
+      if (wrap) markTourVideoReady(wrap, vid);
+    }, { once: true });
+
     if (vid.readyState >= 2) {
-      doPlay(true);
+      go();
     } else {
       var started = false;
-      function go() {
+      function onceGo() {
         if (started || myId !== _tourVidKickId) return;
         started = true;
-        doPlay(true);
+        go();
       }
-      vid.addEventListener('loadeddata', go, { once: true });
-      vid.addEventListener('canplay', go, { once: true });
-      setTimeout(go, 350);
-      setTimeout(go, 900);
+      vid.addEventListener('loadeddata', onceGo, { once: true });
+      vid.addEventListener('canplay', onceGo, { once: true });
+      setTimeout(onceGo, 400);
+      setTimeout(onceGo, 1000);
     }
   }
 
@@ -36796,7 +36922,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var wrap = $('synTourVideoWrap');
     if (!wrap) return;
     if (!on) {
-      wrap.classList.remove('show');
+      wrap.classList.remove('show', 'ready');
       wrap.style.display = '';
       var vOff = $('synTourVideo');
       if (vOff) {
@@ -36811,14 +36937,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var vid = $('synTourVideo');
     if (!vid) return;
     wrap.classList.add('show');
+    wrap.classList.remove('ready'); /* start under soft loader — no broken frame */
     wrap.style.display = 'block';
     killNativeVideoChrome(vid);
     try {
       vid.setAttribute('playsinline', '');
       vid.setAttribute('webkit-playsinline', '');
       vid.playsInline = true;
-      vid.muted = true;
-      vid.setAttribute('muted', '');
+      /* Do not force mute here — kickTourVideoPlay prefers unmuted unless user muted */
+      if (window.__synTourVidUserMuted) {
+        vid.muted = true;
+        vid.setAttribute('muted', '');
+      } else {
+        vid.muted = false;
+        vid.removeAttribute('muted');
+      }
     } catch (ePI) {}
 
     var abs = resolveDemoSrc();
@@ -36834,17 +36967,16 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       try { vid.src = abs; } catch (eS2) {}
     }
 
-    /* Never hide wrap on media error — flash-then-gone was this */
     vid.onerror = function () {
       console.warn('[TourVideo] showVideo error', vid.src);
       setPlayIcon(true);
-      wrap.classList.add('show');
+      wrap.classList.add('show', 'ready');
       wrap.style.display = 'block';
     };
 
     /* Don't seek to 0 before metadata — can stall mobile WebViews */
     var defer = opts && opts.deferPlay;
-    if (isTourMobile() || defer) {
+    if (defer) {
       vid._stWantPlay = true;
       applyMobilePrep(vid);
       /* Only play after card is on-screen — kick from centerVideoCard.place */
@@ -36858,12 +36990,19 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function applyMobilePrep(vid) {
     if (!vid) return;
     try {
-      vid.muted = true;
-      vid.setAttribute('muted', '');
+      /* Keep unmuted preference — only mute if user already chose mute */
+      if (window.__synTourVidUserMuted) {
+        vid.muted = true;
+        vid.setAttribute('muted', '');
+        setMuteIcon(true);
+      } else {
+        vid.muted = false;
+        vid.removeAttribute('muted');
+        setMuteIcon(false);
+      }
       vid.setAttribute('playsinline', '');
       vid.setAttribute('webkit-playsinline', '');
       vid.playsInline = true;
-      setMuteIcon(true);
       setPlayIcon(true);
     } catch (e) {}
   }
@@ -37150,7 +37289,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     /* Tour finished → BR corner bot allowed (entrance considered done) */
     window.__synBotStoryReleased = true;
     hideMythChoice();
+    hideReplayHub();
     showVideo(false);
+    closeSynBotHard();
     stopFx(); /* cancels raf + myth timers + clears canvas */
     try { updateNarrationDom(null); } catch (eN) {}
     var c = tinyBot();
@@ -37207,50 +37348,172 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
   function tinyBot() { return document.getElementById('tinyBotCanvas'); }
 
-  function startTour(force) {
+  function closeSynBotHard() {
+    try {
+      var chat = document.getElementById('synBotChat');
+      if (chat) chat.style.display = 'none';
+      var tip = document.getElementById('robotTooltip');
+      if (tip) {
+        tip.classList.remove('rt-visible');
+        tip.classList.add('rt-hidden');
+        tip.style.opacity = '0';
+        tip.style.visibility = 'hidden';
+      }
+    } catch (e) {}
+  }
+
+  function hideReplayHub() {
+    var hub = $('synTourReplayHub');
+    if (hub) hub.classList.remove('show');
+  }
+
+  /**
+   * Second access (from SYN-BOT tour icon after first finish):
+   * Watch story | Take tour | Close — never leave the chat panel over the film.
+   */
+  function showReplayHub() {
+    closeSynBotHard();
+    injectStyles();
+    injectDom();
+    hideMythChoice();
+    hideReplayHub();
+    try { showVideo(false); } catch (eV) {}
+    try { stopFx(); } catch (eF) {}
+    try { if (state.myth) stopMyth(); } catch (eM) {}
+    state.open = true;
+    window.__synTourActive = true;
+    state.i = 0;
+    state.myth = null;
+    state.guideReleased = false;
+    var root = $('synTourRoot');
+    if (root) {
+      root.classList.add('on');
+      root.style.display = '';
+      root.style.pointerEvents = 'none';
+    }
+    var card = $('synTourCard');
+    if (card) {
+      card.classList.remove('show', 'st-video');
+      card.style.display = 'none';
+      card.style.visibility = 'hidden';
+    }
+    var center = $('synTourCenterPanel');
+    if (center) center.classList.remove('show', 'myth-climax');
+    var centerWrap = $('synTourCenter');
+    if (centerWrap) centerWrap.style.display = 'none';
+    var hole = $('synTourHole');
+    if (hole) hole.classList.remove('show');
+
+    var hub = $('synTourReplayHub');
+    if (!hub) return;
+    if (root) root.style.pointerEvents = 'auto';
+    hub.classList.add('show');
+
+    var storyBtn = $('synTourReplayStory');
+    var tourBtn = $('synTourReplayTour');
+    var closeBtn = $('synTourReplayClose');
+    if (storyBtn) {
+      storyBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        hideReplayHub();
+        startTour(true, { mode: 'story' });
+      };
+    }
+    if (tourBtn) {
+      tourBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        hideReplayHub();
+        startTour(true, { mode: 'tour' });
+      };
+    }
+    if (closeBtn) {
+      closeBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        hideReplayHub();
+        state.open = false;
+        window.__synTourActive = false;
+        if (root) {
+          root.classList.remove('on');
+          root.style.pointerEvents = '';
+        }
+        closeSynBotHard();
+        window.__synBotStoryReleased = true;
+        if (typeof window._tinyBotSync === 'function') {
+          try { window._tinyBotSync(); } catch (eS) {}
+        }
+      };
+    }
+    try {
+      if (typeof synTrack === 'function') synTrack('tour_hub_open', {});
+    } catch (eT) {}
+  }
+
+  window.openSynapsesTourHub = showReplayHub;
+
+  function startTour(force, opts) {
     /* HARD RULE: never auto-proc. Only explicit Tour button (force === true). */
     if (!force) return;
+    opts = opts || {};
+    closeSynBotHard();
+    hideReplayHub();
     // Force restart even if tour is mid-flight
     if (state.open) {
-      try { showVideo(false); stopFx(); guideEnd(); hideGuideBot(); } catch (e) {}
+      try { showVideo(false); stopFx(); guideEnd(); hideGuideBot(); hideMythChoice(); } catch (e) {}
       var rootStuck = document.getElementById('synTourRoot');
-      if (rootStuck) rootStuck.classList.remove('on');
+      if (rootStuck) {
+        rootStuck.classList.remove('on');
+        rootStuck.style.pointerEvents = '';
+      }
       state.open = false;
     }
-    if (state.open) return;
     injectStyles();
     injectDom();
     ensureVideoControlsDom();
-    state.i = 0;
+    /* mode: story = film myth (step 0); tour = product spotlights (skip film); default = full first run */
+    if (opts.mode === 'tour') {
+      state.i = 2; /* Neural chat spotlight — skip long film + demo for clean product tour */
+      state.guideReleased = true;
+      window.__synBotStoryReleased = true;
+    } else {
+      state.i = 0;
+      state.guideReleased = false;
+      window.__synBotStoryReleased = false;
+    }
     state.open = true;
     window.__synTourActive = true;
     state.myth = null;
-    state.guideReleased = false;
-    window.__synBotStoryReleased = false;
     ensureChat();
     try {
-      var tip = document.getElementById('robotTooltip');
-      if (tip) { tip.classList.remove('rt-visible'); tip.classList.add('rt-hidden'); }
-      var chat = document.getElementById('synBotChat');
-      if (chat) chat.style.display = 'none';
+      closeSynBotHard();
       var tb = document.getElementById('tinyBotCanvas');
       if (tb && !tb.style.cssText.includes('100vw')) {
-        tb.style.opacity = '0';
+        tb.style.opacity = opts.mode === 'tour' ? '1' : '0';
       }
     } catch (e) {}
-    hideGuideBot();
+    if (opts.mode === 'tour') {
+      try {
+        releaseGuideBot(window.innerWidth * 0.78, window.innerHeight * 0.68, true);
+      } catch (eG) {}
+    } else {
+      hideGuideBot();
+    }
     startFx();
-    $('synTourRoot').classList.add('on');
+    var rootOn = $('synTourRoot');
+    if (rootOn) {
+      rootOn.classList.add('on');
+      rootOn.style.display = '';
+      rootOn.style.pointerEvents = '';
+    }
     try {
-      if (typeof synTrack === 'function') synTrack('tour_start', {});
+      if (typeof synTrack === 'function') synTrack('tour_start', { mode: opts.mode || 'full' });
     } catch (e) {}
     renderStep();
   }
 
-  window.startSynapsesTour = function (force) {
+  window.startSynapsesTour = function (force, opts) {
     /* Ignore false/undefined — blocks every legacy auto-start call site */
     if (!force) return;
-    startTour(true);
+    startTour(true, opts);
   };
   window.resetSynapsesTour = function () {
     window.__synTourDone = false;
@@ -37274,6 +37537,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       try { showVideo(false); } catch (eV) {}
       try { stopFx(); } catch (eF) {}
       try { hideMythChoice(); } catch (eH) {}
+      try { hideReplayHub(); } catch (eHub) {}
       try { updateNarrationDom(null); } catch (eN) {}
       var root = document.getElementById('synTourRoot');
       if (root) {
