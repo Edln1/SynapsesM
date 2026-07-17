@@ -920,29 +920,30 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-filters.show{display:flex;opacity:1;transform:translateY(0);}
 #synPulsePanel .pp-filter{
-  appearance:none;cursor:pointer;position:relative;margin:0;padding:4px 10px;
+  appearance:none;cursor:pointer;position:relative;margin:0;padding:3px 7px;
   border:none!important;border-radius:0!important;background:transparent!important;
   box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  font-family:'DM Sans',sans-serif;font-size:9px;font-weight:500;
-  letter-spacing:0.14em;text-transform:uppercase;line-height:1;
-  color:rgba(255,255,255,0.3);text-shadow:none;
+  font-family:'DM Sans',sans-serif;font-size:7.5px;font-weight:500;
+  letter-spacing:0.1em;text-transform:uppercase;line-height:1;
+  /* same quiet white as before “smaller” pass — not greyed-out */
+  color:rgba(255,255,255,0.38);text-shadow:none;
   transition:color .18s ease;
 }
 /* thin border separators between words */
 #synPulsePanel .pp-filter + .pp-filter::before{
   content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
-  width:1px;height:9px;
-  background:linear-gradient(180deg,transparent,rgba(255,255,255,0.22),transparent);
+  width:1px;height:7px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,0.18),transparent);
   pointer-events:none;
 }
 #synPulsePanel .pp-filter:hover{color:rgba(255,255,255,0.7);background:transparent!important;}
-/* Selected: same word color as idle hierarchy — only white underline marks selection */
+/* Selected: words stay white (not pink/mint) — only underline shows active */
 #synPulsePanel .pp-filter.on,
 #synPulsePanel .pp-filter.on[data-f="all"],
 #synPulsePanel .pp-filter.on[data-f="meetups"],
 #synPulsePanel .pp-filter.on[data-f="news"],
 #synPulsePanel .pp-filter.on[data-f="jobs"]{
-  color:rgba(255,255,255,0.72)!important;
+  color:rgba(255,255,255,0.78)!important;
   background:transparent!important;
   border:none!important;
   box-shadow:none!important;
@@ -950,9 +951,9 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-filter.on::after{
   content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
-  width:12px;height:1px;border-radius:1px;
-  background:rgba(255,255,255,0.88);
-  box-shadow:0 0 5px rgba(255,255,255,0.25);
+  width:10px;height:1px;border-radius:1px;
+  background:rgba(255,255,255,0.75);
+  box-shadow:none;
 }
 #synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
 /* Stack stage */
@@ -963,52 +964,51 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   50%{transform:translateY(-10px) scale(0.96) rotateX(12deg);filter:blur(1px);opacity:0.75;}
   100%{transform:translateY(0) scale(1) rotateX(0);filter:blur(0);}
 }
-/* Bottom row: original Pulse style (Syne) + optical nudge so it isn't low vs hint */
+/* Bottom row: ONE line — [dot] Pulse  hint  ☰  all same vertical center */
 #synPulsePanel .pp-foot{
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:6px 4px 2px;position:relative;z-index:8;min-width:0;flex-wrap:nowrap;
-  width:100%;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;gap:0;
+  padding:6px 4px 2px;position:relative;z-index:8;width:100%;box-sizing:border-box;
 }
-#synPulsePanel .pp-brand{
-  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
-  transform:translateY(-2.5px);
+#synPulsePanel .pp-line{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:16px;line-height:16px;flex-wrap:nowrap;min-width:0;
 }
 #synPulsePanel .pp-brand-dot{
   width:5px;height:5px;border-radius:50%;background:#00d9a8;
   box-shadow:0 0 6px rgba(0,217,168,0.55);flex-shrink:0;
   animation:pulseDotBlink 2s ease-in-out infinite;
-  margin:0;
+  display:block;margin:0;
+  transform:translateY(-1px);
 }
-#synPulsePanel .pp-brand-text{display:inline-flex;align-items:center;min-width:0;}
-#synPulsePanel .pp-brand h3{
-  margin:0;padding:0;
+/* Footer brand name — NOT .pp-title (that class is card event titles @ 14px) */
+#synPulsePanel .pp-name{
+  margin:0;padding:0;border:0;
   font-family:'Syne',sans-serif;font-size:10px;font-weight:700;
   color:rgba(242,242,245,0.78);letter-spacing:-0.02em;
   text-shadow:0 1px 8px rgba(0,0,0,0.55);
-  line-height:1;
+  line-height:1;height:auto;display:block;
+  flex-shrink:0;
+  transform:translateY(-1px);
 }
-#synPulsePanel .pp-brand .pp-sub{display:none!important;}
 #synPulsePanel .pp-hint{
-  flex:0 1 auto;text-align:center;
+  margin:0;padding:0;border:0;
   font-family:'DM Sans',sans-serif;font-size:8.5px;font-weight:500;
   color:rgba(242,242,245,0.32);letter-spacing:0.01em;
   text-shadow:0 1px 6px rgba(0,0,0,0.55);
-  line-height:1;white-space:nowrap;min-width:0;
-  margin:0;padding:0;
+  line-height:1;height:auto;display:block;
+  white-space:nowrap;min-width:0;
 }
-#synPulsePanel .pp-foot-actions{
-  display:inline-flex;align-items:center;justify-content:center;
-  gap:0;flex-shrink:0;
-}
-#synPulsePanel .pp-close{display:none!important;}
-/* Hamburger: quiet text-only, no pill/round bg */
+/* legacy wrappers unused after restructure */
+#synPulsePanel .pp-brand,#synPulsePanel .pp-brand-text,#synPulsePanel .pp-foot-actions{display:contents;}
+#synPulsePanel .pp-brand .pp-sub,#synPulsePanel .pp-close{display:none!important;}
 #synPulsePanel .pp-cats-toggle{
-  width:auto;height:auto;min-width:0;min-height:0;border-radius:0;
+  width:auto;height:16px;min-width:0;min-height:0;border-radius:0;margin:0;
   background:transparent!important;border:none!important;box-shadow:none!important;
   color:rgba(242,242,245,0.28);cursor:pointer;font-size:11px;font-weight:500;
   display:inline-flex;align-items:center;justify-content:center;
-  transition:color .15s,opacity .15s;padding:0;line-height:1;
+  transition:color .15s,opacity .15s;padding:0;line-height:16px;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:0.75;
+  flex-shrink:0;
 }
 #synPulsePanel .pp-cats-toggle:hover{color:rgba(242,242,245,0.55);background:transparent!important;opacity:1;}
 #synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
@@ -1049,16 +1049,23 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-fast{transition-duration:.18s!important;}
-/* Simple text labels — one word only. All meetup-style tags use screenshot pink (not mint). */
-#synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
-#synPulsePanel .pp-tag{font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,150,190,0.95);text-shadow:0 1px 4px rgba(0,0,0,0.35);padding:0;border:none;background:none;box-shadow:none;border-radius:0;display:inline;}
+/* Card corner labels (MEETUPS / NEWS / JOBS) — quiet white, app has no pink */
+#synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+#synPulsePanel .pp-tag{
+  font-size:8px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  color:rgba(255,255,255,0.45);text-shadow:0 1px 4px rgba(0,0,0,0.35);
+  padding:0;border:none;background:none;box-shadow:none;border-radius:0;display:inline;
+}
 #synPulsePanel .pp-tag.luma,
 #synPulsePanel .pp-tag.meetup,
 #synPulsePanel .pp-tag.meetups,
-#synPulsePanel .pp-tag.jobs{color:rgba(255,150,190,0.95);}
-#synPulsePanel .pp-tag.news,#synPulsePanel .pp-tag.ai{color:rgba(0,217,168,0.9);}
-#synPulsePanel .pp-tag.community{color:rgba(180,250,220,0.88);}
-#synPulsePanel .pp-tag.product{color:rgba(196,181,253,0.9);}
+#synPulsePanel .pp-tag.jobs,
+#synPulsePanel .pp-tag.news,
+#synPulsePanel .pp-tag.ai,
+#synPulsePanel .pp-tag.community,
+#synPulsePanel .pp-tag.product{
+  color:rgba(255,255,255,0.45);
+}
 #synPulsePanel .pp-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:rgba(250,250,252,0.98);line-height:1.28;margin:0 0 5px;letter-spacing:-0.02em;text-shadow:0 1px 10px rgba(0,0,0,0.45);}
 #synPulsePanel .pp-desc{font-size:11.5px;color:rgba(235,236,245,0.78);line-height:1.45;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 8px rgba(0,0,0,0.4);}
 #synPulsePanel .pp-meta{font-size:10px;color:rgba(220,222,235,0.48);margin-top:8px;text-shadow:0 1px 6px rgba(0,0,0,0.35);}
@@ -3993,15 +4000,10 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
     <div class="pp-stage" id="synPulseStage" aria-live="polite"></div>
     <div class="pp-foot">
-      <div class="pp-brand">
+      <div class="pp-line">
         <span class="pp-brand-dot" aria-hidden="true"></span>
-        <div class="pp-brand-text">
-          <h3>Pulse</h3>
-          <div class="pp-sub" hidden>Swipe to peek more</div>
-        </div>
-      </div>
-      <div class="pp-hint">Swipe to peek · flick to spin · tap open</div>
-      <div class="pp-foot-actions">
+        <span class="pp-name">Pulse</span>
+        <span class="pp-hint" id="synPulseHint">Swipe to peek · flick to spin · tap open</span>
         <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Categories" aria-label="Toggle categories" aria-expanded="false">☰</button>
       </div>
     </div>
@@ -18406,11 +18408,10 @@ function goNotes() {
   }
   function _setSub(text){
     /* One-row footer hint — default keeps 3 short phrases with · separators */
-    var hint = document.querySelector('#synPulsePanel .pp-hint');
+    var hint = document.getElementById('synPulseHint') || document.querySelector('#synPulsePanel .pp-hint');
     var def = 'Swipe to peek · flick to spin · tap open';
     if(!hint) return;
     if(!text || /swipe|peek|spin|tap/i.test(text)){ hint.textContent = def; return; }
-    /* status (fetching / filter counts) — keep short one line */
     hint.textContent = String(text).slice(0, 36);
   }
 
