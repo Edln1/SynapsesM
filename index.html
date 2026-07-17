@@ -6766,7 +6766,7 @@ function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;se
   }catch(e){}
 })();
 
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}}
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(typeof dismissSynapsesTour==='function')dismissSynapsesTour();}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(typeof dismissSynapsesTour==='function')dismissSynapsesTour();}catch(_t){}}
 function switchAuthTab(t){document.getElementById('tabLogin').classList.toggle('active',t==='login');document.getElementById('tabRegister').classList.toggle('active',t==='register');document.getElementById('loginForm').style.display=t==='login'?'block':'none';document.getElementById('registerForm').style.display=t==='register'?'block':'none';}
 function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
 function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
@@ -33117,7 +33117,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 .icon-rail-btn#rail-tour svg,.bnav-btn#bnav-tour svg{display:block;}
 </style>
 <button id="synTourFloatBtn" type="button" title="Start product tour" aria-label="Start product tour"
-  onclick="(function(){try{if(typeof window.dockSynapsesTourBtn==='function')window.dockSynapsesTourBtn();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
+  onclick="(function(){try{window.__synTourIntentionalStart=true;if(typeof window.dockSynapsesTourBtn==='function')window.dockSynapsesTourBtn();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="9"/>
     <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/>
@@ -33143,7 +33143,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
   function startTourFromNav() {
     try {
-      /* Do not wipe "tour done" — that made the tour reappear every app launch */
+      window.__synTourIntentionalStart = true;
       if (typeof startSynapsesTour === 'function') startSynapsesTour(true);
     } catch (e) { console.error(e); }
   }
@@ -33235,6 +33235,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   window.__synTourLoaded = true;
 
   var DEMO_SRC = window.SYNAPSES_DEMO_VIDEO || 'assets/demo-s2s.mp4';
+  function resolveDemoSrc() {
+    var s = DEMO_SRC || 'assets/demo-s2s.mp4';
+    if (/^https?:\/\//i.test(s) || s.indexOf('//') === 0 || s.indexOf('data:') === 0 || s.indexOf('blob:') === 0) return s;
+    try { return new URL(s, window.location.href).href; } catch (e) { return s; }
+  }
+  var _tourVidKickId = 0;
   var C = {
     purp: '#7c6af7',
     purpSoft: 'rgba(124,106,247,0.45)',
@@ -36525,19 +36531,56 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     wireTourVideoControls();
   }
 
-  /** Reliable play path — mobile must start muted + visible + playsinline */
+  /**
+   * Reliable play — mobile: muted + playsinline, only while card visible.
+   * Never hide the wrap on error (that caused flash-then-disappear).
+   * Never call video.load() in retries (that also flashes and dies on WebView).
+   */
   function kickTourVideoPlay(vid) {
-    if (!vid) return;
+    if (!vid || !state.open) return;
+    var myId = ++_tourVidKickId;
+    var wrap = $('synTourVideoWrap');
+    if (wrap) {
+      wrap.classList.add('show');
+      wrap.style.display = 'block';
+    }
+
     killNativeVideoChrome(vid);
     try {
       vid.setAttribute('playsinline', '');
       vid.setAttribute('webkit-playsinline', '');
+      vid.setAttribute('x5-playsinline', 'true');
+      vid.setAttribute('x5-video-player-type', 'h5');
       vid.playsInline = true;
-      vid.setAttribute('preload', 'auto');
       vid.preload = 'auto';
+      vid.setAttribute('preload', 'auto');
     } catch (eAttr) {}
 
     var mobile = isTourMobile();
+    var src = resolveDemoSrc();
+    try {
+      var cur = vid.currentSrc || vid.src || '';
+      if (!cur || (cur.indexOf('demo-s2s') < 0 && !vid.getAttribute('src'))) {
+        vid.src = src;
+      } else if (vid.getAttribute('src') === 'assets/demo-s2s.mp4' || (cur && cur.indexOf('assets/demo-s2s') >= 0 && src !== cur)) {
+        /* Upgrade relative path to absolute for Median/WebView */
+        if (src && src !== vid.getAttribute('src')) vid.src = src;
+      }
+    } catch (eSrc) {
+      try { vid.src = src; } catch (e2) {}
+    }
+
+    /* Keep frame visible — do NOT remove .show on error */
+    vid.onerror = function () {
+      if (myId !== _tourVidKickId) return;
+      console.warn('[TourVideo] error', vid.error && vid.error.code, vid.src);
+      setPlayIcon(true);
+      setMuteIcon(true);
+      if (wrap) {
+        wrap.classList.add('show');
+        wrap.style.display = 'block';
+      }
+    };
 
     function applyMute(on) {
       try {
@@ -36549,44 +36592,48 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
 
     function doPlay(forceMuted) {
+      if (myId !== _tourVidKickId || !state.open) return;
       applyMute(forceMuted || mobile);
-      if (!forceMuted && !mobile) {
+      if (!mobile && !forceMuted) {
         try { vid.volume = 1; } catch (eV) {}
       }
       killNativeVideoChrome(vid);
       var p = vid.play();
       if (p && p.then) {
         p.then(function () {
+          if (myId !== _tourVidKickId) return;
           setPlayIcon(false);
           setMuteIcon(vid.muted);
+          if (wrap) wrap.classList.add('show');
         }).catch(function () {
-          /* iOS / Chrome: retry muted, then after canplay */
+          if (myId !== _tourVidKickId) return;
+          /* Always fall back to muted — never load() (flash bug) */
           applyMute(true);
           var p2 = vid.play();
-          if (p2 && p2.catch) {
-            p2.catch(function () {
+          if (p2 && p2.then) {
+            p2.then(function () {
+              setPlayIcon(false);
+              setMuteIcon(true);
+            }).catch(function () {
               var n = 0;
               function retry() {
-                if (!vid || n > 6) return;
+                if (myId !== _tourVidKickId || !state.open || n > 5) {
+                  setPlayIcon(true);
+                  return;
+                }
                 n++;
                 applyMute(true);
                 var pr = vid.play();
                 if (pr && pr.then) {
                   pr.then(function () { setPlayIcon(false); setMuteIcon(true); })
-                    .catch(function () { setTimeout(retry, 180); });
+                    .catch(function () { setTimeout(retry, 250); });
                 }
               }
-              vid.addEventListener('canplay', function onC() {
-                vid.removeEventListener('canplay', onC);
-                retry();
-              });
-              try { vid.load(); } catch (eL) {}
-              setTimeout(retry, 120);
-              setTimeout(retry, 400);
-              setTimeout(retry, 900);
+              setTimeout(retry, 200);
+              setTimeout(retry, 600);
             });
           }
-          setPlayIcon(false);
+          setPlayIcon(vid.paused);
           setMuteIcon(true);
         });
       } else {
@@ -36595,23 +36642,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
     }
 
-    try {
-      if (vid.readyState >= 2) doPlay(mobile);
-      else {
-        applyMute(true);
-        var started = false;
-        function go() {
-          if (started) return;
-          started = true;
-          doPlay(true);
-        }
-        vid.addEventListener('loadeddata', go, { once: true });
-        vid.addEventListener('canplay', go, { once: true });
-        setTimeout(go, 280);
-        try { if (vid.src) vid.load(); } catch (eLd) {}
-      }
-    } catch (e) {
+    applyMute(true);
+    if (vid.readyState >= 2) {
       doPlay(true);
+    } else {
+      var started = false;
+      function go() {
+        if (started || myId !== _tourVidKickId) return;
+        started = true;
+        doPlay(true);
+      }
+      vid.addEventListener('loadeddata', go, { once: true });
+      vid.addEventListener('canplay', go, { once: true });
+      setTimeout(go, 350);
+      setTimeout(go, 900);
     }
   }
 
@@ -36620,11 +36664,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (!wrap) return;
     if (!on) {
       wrap.classList.remove('show');
+      wrap.style.display = '';
       var vOff = $('synTourVideo');
       if (vOff) {
         try { vOff.pause(); } catch (e) {}
         vOff._stWantPlay = false;
       }
+      _tourVidKickId++; /* cancel in-flight kicks */
       return;
     }
     injectStyles();
@@ -36632,35 +36678,45 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var vid = $('synTourVideo');
     if (!vid) return;
     wrap.classList.add('show');
+    wrap.style.display = 'block';
     killNativeVideoChrome(vid);
     try {
       vid.setAttribute('playsinline', '');
       vid.setAttribute('webkit-playsinline', '');
       vid.playsInline = true;
+      vid.muted = true;
+      vid.setAttribute('muted', '');
     } catch (ePI) {}
 
-    if (!vid.getAttribute('src') && !vid.src) {
-      vid.src = DEMO_SRC;
-      vid.onerror = function () { wrap.classList.remove('show'); };
-    } else if (!vid.src && DEMO_SRC) {
-      vid.src = DEMO_SRC;
+    var abs = resolveDemoSrc();
+    try {
+      if (!vid.getAttribute('src') && !vid.src) {
+        vid.src = abs;
+      } else if (!vid.src) {
+        vid.src = abs;
+      } else if ((vid.getAttribute('src') || '').indexOf('assets/demo-s2s') === 0) {
+        vid.src = abs;
+      }
+    } catch (eS) {
+      try { vid.src = abs; } catch (eS2) {}
     }
 
-    try { vid.currentTime = 0; } catch (eT) {}
+    /* Never hide wrap on media error — flash-then-gone was this */
+    vid.onerror = function () {
+      console.warn('[TourVideo] showVideo error', vid.src);
+      setPlayIcon(true);
+      wrap.classList.add('show');
+      wrap.style.display = 'block';
+    };
 
+    /* Don't seek to 0 before metadata — can stall mobile WebViews */
     var defer = opts && opts.deferPlay;
-    if (defer || isTourMobile()) {
-      /* Mobile: play only after the card is visible (iOS blocks hidden video) */
+    if (isTourMobile() || defer) {
       vid._stWantPlay = true;
-      /* still attempt once — desktop gesture path; mobile will retry after reveal */
-      if (!isTourMobile()) kickTourVideoPlay(vid);
-      else {
-        applyMobilePrep(vid);
-        setTimeout(function () {
-          if (vid && vid._stWantPlay) kickTourVideoPlay(vid);
-        }, 80);
-      }
+      applyMobilePrep(vid);
+      /* Only play after card is on-screen — kick from centerVideoCard.place */
     } else {
+      try { if (vid.readyState >= 1) vid.currentTime = 0; } catch (eT) {}
       kickTourVideoPlay(vid);
     }
     setTimeout(function () { killNativeVideoChrome(vid); wireTourVideoControls(); }, 40);
@@ -36731,22 +36787,32 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       card.style.setProperty('visibility', 'visible', 'important');
       card.classList.add('show');
       card.style.setProperty('opacity', '1', 'important');
-      /* After visible: start Ava intro (critical on iOS/mobile) */
+      if (wrap) {
+        wrap.classList.add('show');
+        wrap.style.display = 'block';
+      }
+      /* One play kick after fully visible — multi-kick caused flash/disappear */
       var vPlay = $('synTourVideo');
-      if (vPlay && vPlay._stWantPlay) {
+      if (vPlay && vPlay._stWantPlay && !card._stVidKicked) {
+        card._stVidKicked = true;
         vPlay._stWantPlay = false;
-        setTimeout(function () { kickTourVideoPlay(vPlay); }, 30);
         setTimeout(function () {
+          if (!state.open) return;
+          kickTourVideoPlay(vPlay);
+        }, 60);
+        /* Soft recovery only if still paused — no video.load() */
+        setTimeout(function () {
+          if (!state.open || !vPlay) return;
           if (vPlay.paused) kickTourVideoPlay(vPlay);
-        }, 320);
+        }, 500);
       }
     }
 
+    card._stVidKicked = false;
     requestAnimationFrame(function () {
       requestAnimationFrame(place);
     });
-    setTimeout(place, 80);
-    setTimeout(place, 320);
+    setTimeout(place, 100);
   }
 
   function clearVideoCardStyles(card) {
@@ -37003,25 +37069,24 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function tinyBot() { return document.getElementById('tinyBotCanvas'); }
 
   function startTour(force) {
-    if (!force && doneAlready()) return;
-    // Force restart even if tour is mid-flight / already marked done
-    if (force && state.open) {
+    /* HARD RULE: never auto-proc. Only explicit Tour button (force === true). */
+    if (!force) return;
+    // Force restart even if tour is mid-flight
+    if (state.open) {
       try { showVideo(false); stopFx(); guideEnd(); hideGuideBot(); } catch (e) {}
       var rootStuck = document.getElementById('synTourRoot');
       if (rootStuck) rootStuck.classList.remove('on');
       state.open = false;
     }
     if (state.open) return;
-    /* Do NOT clear "done" on force — that made Median re-show tour every launch after a mid-tour kill */
-    injectStyles(); /* re-writes #synTourStyles so hard-refresh picks up myth CSS */
+    injectStyles();
     injectDom();
-    ensureVideoControlsDom(); /* always patch glass video bar (even if root already existed) */
+    ensureVideoControlsDom();
     state.i = 0;
     state.open = true;
     window.__synTourActive = true;
     state.myth = null;
     state.guideReleased = false;
-    /* Hide BR corner bot until hatch exit during this run */
     window.__synBotStoryReleased = false;
     ensureChat();
     try {
@@ -37034,7 +37099,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         tb.style.opacity = '0';
       }
     } catch (e) {}
-    /* CRITICAL: do NOT guideStart here — SynBot is inside the UFO until land+exit+home */
     hideGuideBot();
     startFx();
     $('synTourRoot').classList.add('on');
@@ -37044,7 +37108,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     renderStep();
   }
 
-  window.startSynapsesTour = function (force) { startTour(!!force); };
+  window.startSynapsesTour = function (force) {
+    /* Ignore false/undefined — blocks every legacy auto-start call site */
+    if (!force) return;
+    startTour(true);
+  };
   window.resetSynapsesTour = function () {
     window.__synTourDone = false;
     try { localStorage.removeItem(KEY); } catch (e) {}
@@ -37056,23 +37124,31 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       markDone();
       state.open = false;
       window.__synTourActive = false;
-      showVideo(false);
-      stopFx();
-      hideMythChoice();
-      var root = $('synTourRoot');
-      if (root) root.classList.remove('on');
-      var card = $('synTourCard');
+      try { if (state.myth) stopMyth(); } catch (eM) {}
+      try { showVideo(false); } catch (eV) {}
+      try { stopFx(); } catch (eF) {}
+      try { hideMythChoice(); } catch (eH) {}
+      try { updateNarrationDom(null); } catch (eN) {}
+      var root = document.getElementById('synTourRoot');
+      if (root) {
+        root.classList.remove('on');
+        root.style.display = 'none';
+      }
+      var card = document.getElementById('synTourCard');
       if (card) {
         card.classList.remove('show', 'st-video');
         card.style.display = 'none';
+        card.style.visibility = 'hidden';
       }
-      var center = $('synTourCenterPanel');
+      var center = document.getElementById('synTourCenterPanel');
       if (center) center.classList.remove('show', 'myth-climax');
+      var centerWrap = document.getElementById('synTourCenter');
+      if (centerWrap) centerWrap.style.display = 'none';
       window.__synBotStoryReleased = true;
     } catch (e) {}
   };
 
-  /* AUTO tour OFF forever — user must press bottom-left Tour (or docked Tour icon). */
+  /* AUTO tour OFF forever */
   function maybeAuto() { return; }
   window.__synTourAutoDisabled = true;
 
@@ -37082,12 +37158,32 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     onLogin._synTourPatched = true;
   }
 
+  /* On every load: kill stuck tour overlay so demo cannot block the app */
+  function killStuckTourOnBoot() {
+    try {
+      var root = document.getElementById('synTourRoot');
+      if (root && root.classList.contains('on') && !window.__synTourIntentionalStart) {
+        window.dismissSynapsesTour();
+      }
+      /* If user already finished once, never leave overlay around */
+      if (doneAlready() && root) {
+        root.classList.remove('on');
+        root.style.display = 'none';
+        window.__synTourActive = false;
+      }
+    } catch (e) {}
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       setTimeout(patchOnLogin, 100);
+      setTimeout(killStuckTourOnBoot, 50);
+      setTimeout(killStuckTourOnBoot, 500);
     });
   } else {
     setTimeout(patchOnLogin, 100);
+    setTimeout(killStuckTourOnBoot, 50);
+    setTimeout(killStuckTourOnBoot, 500);
   }
 
   window.addEventListener('resize', function () {
