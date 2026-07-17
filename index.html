@@ -907,27 +907,111 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 /* Shell is invisible — only the cards exist visually */
 #synPulsePanel .pp-glass{position:relative;display:flex;flex-direction:column;overflow:visible;padding:0;background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 #synPulsePanel .pp-glass::before{display:none!important;}
-#synPulsePanel .pp-head{display:flex;align-items:center;gap:6px;padding:0 4px 6px;flex-shrink:0;position:relative;z-index:8;}
-#synPulsePanel .pp-brand{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
-#synPulsePanel .pp-brand-dot{width:6px;height:6px;border-radius:50%;background:#00d9a8;box-shadow:0 0 8px rgba(0,217,168,0.6);flex-shrink:0;animation:pulseDotBlink 2s ease-in-out infinite;}
-#synPulsePanel .pp-head h3{margin:0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:rgba(242,242,245,0.78);letter-spacing:-0.02em;text-shadow:0 1px 8px rgba(0,0,0,0.55);}
-#synPulsePanel .pp-head .pp-sub{font-size:9px;color:rgba(242,242,245,0.4);font-weight:500;margin-top:1px;text-shadow:0 1px 6px rgba(0,0,0,0.5);}
-#synPulsePanel .pp-cats-toggle{width:26px;height:26px;border-radius:999px;background:rgba(12,12,18,0.55);border:1px solid rgba(255,255,255,0.12);color:rgba(242,242,245,0.55);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s,border-color .15s;flex-shrink:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:0;line-height:1;}
-#synPulsePanel .pp-cats-toggle:hover,#synPulsePanel .pp-cats-toggle.on{background:rgba(124,106,247,0.22);border-color:rgba(196,181,253,0.4);color:rgba(220,210,255,0.95);}
-#synPulsePanel .pp-close{width:26px;height:26px;border-radius:999px;background:rgba(12,12,18,0.55);border:1px solid rgba(255,255,255,0.12);color:rgba(242,242,245,0.55);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;flex-shrink:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
-#synPulsePanel .pp-close:hover{background:rgba(20,20,30,0.75);color:#fff;}
-/* Categories collapsed by default — toggle from header (saves mobile space) */
-#synPulsePanel .pp-filters{display:none;gap:5px;padding:0 2px 8px;position:relative;z-index:8;flex-wrap:wrap;}
-#synPulsePanel .pp-filters.show{display:flex;}
-#synPulsePanel .pp-filter{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(12,12,18,0.45);color:rgba(242,242,245,0.5);font-size:10px;font-weight:600;font-family:'DM Sans',sans-serif;padding:5px 10px;border-radius:999px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .15s;text-shadow:0 1px 4px rgba(0,0,0,0.4);}
-#synPulsePanel .pp-filter:hover{border-color:rgba(196,181,253,0.3);color:rgba(242,242,245,0.8);}
-#synPulsePanel .pp-filter.on{background:rgba(124,106,247,0.28);border-color:rgba(196,181,253,0.45);color:rgba(250,250,252,0.95);}
-#synPulsePanel .pp-filter.on[data-f="meetups"]{background:rgba(232,93,150,0.16);border-color:rgba(232,93,150,0.4);color:rgba(255,200,220,0.95);}
-#synPulsePanel .pp-filter.on[data-f="news"]{background:rgba(0,217,168,0.16);border-color:rgba(0,217,168,0.4);color:rgba(180,255,230,0.95);}
-#synPulsePanel .pp-filter.on[data-f="jobs"]{background:rgba(232,93,150,0.16);border-color:rgba(232,93,150,0.4);color:rgba(255,200,220,0.95);}
-/* Stack stage — room for peek cards below front */
+/* No top header — brand sits LEFT of bottom hint row */
+#synPulsePanel .pp-head{display:none!important;}
+/* Categories: words only + thin vertical separators — NO pill/circle backgrounds */
+#synPulsePanel .pp-filters{
+  display:none;align-items:center;justify-content:center;gap:0;
+  padding:2px 4px 8px;position:relative;z-index:8;width:100%;
+  background:transparent!important;border:none!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  opacity:0;transform:translateY(4px);
+  transition:opacity .22s ease,transform .28s cubic-bezier(0.22,1,0.36,1);
+}
+#synPulsePanel .pp-filters.show{display:flex;opacity:1;transform:translateY(0);}
+#synPulsePanel .pp-filter{
+  appearance:none;cursor:pointer;position:relative;margin:0;padding:4px 10px;
+  border:none!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  font-family:'DM Sans',sans-serif;font-size:9px;font-weight:500;
+  letter-spacing:0.14em;text-transform:uppercase;line-height:1;
+  color:rgba(255,255,255,0.3);text-shadow:none;
+  transition:color .18s ease;
+}
+/* thin border separators between words */
+#synPulsePanel .pp-filter + .pp-filter::before{
+  content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:1px;height:9px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,0.22),transparent);
+  pointer-events:none;
+}
+#synPulsePanel .pp-filter:hover{color:rgba(255,255,255,0.7);background:transparent!important;}
+/* Selected: same word color as idle hierarchy — only white underline marks selection */
+#synPulsePanel .pp-filter.on,
+#synPulsePanel .pp-filter.on[data-f="all"],
+#synPulsePanel .pp-filter.on[data-f="meetups"],
+#synPulsePanel .pp-filter.on[data-f="news"],
+#synPulsePanel .pp-filter.on[data-f="jobs"]{
+  color:rgba(255,255,255,0.72)!important;
+  background:transparent!important;
+  border:none!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+#synPulsePanel .pp-filter.on::after{
+  content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:12px;height:1px;border-radius:1px;
+  background:rgba(255,255,255,0.88);
+  box-shadow:0 0 5px rgba(255,255,255,0.25);
+}
+#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
+/* Stack stage */
 #synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:900px;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent;}
-#synPulsePanel .pp-hint{text-align:center;font-size:9.5px;color:rgba(242,242,245,0.32);padding:6px 0 2px;letter-spacing:0.02em;position:relative;z-index:5;text-shadow:0 1px 6px rgba(0,0,0,0.55);}
+#synPulsePanel .pp-stage.wheel-spin .pp-card.depth-0{animation:ppWheelFlip .11s ease-in-out infinite;}
+@keyframes ppWheelFlip{
+  0%{transform:translateY(0) scale(1) rotateX(0);filter:blur(0);}
+  50%{transform:translateY(-10px) scale(0.96) rotateX(12deg);filter:blur(1px);opacity:0.75;}
+  100%{transform:translateY(0) scale(1) rotateX(0);filter:blur(0);}
+}
+/* Bottom row: original Pulse style (Syne) + optical nudge so it isn't low vs hint */
+#synPulsePanel .pp-foot{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:6px 4px 2px;position:relative;z-index:8;min-width:0;flex-wrap:nowrap;
+  width:100%;box-sizing:border-box;
+}
+#synPulsePanel .pp-brand{
+  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
+  transform:translateY(-2.5px);
+}
+#synPulsePanel .pp-brand-dot{
+  width:5px;height:5px;border-radius:50%;background:#00d9a8;
+  box-shadow:0 0 6px rgba(0,217,168,0.55);flex-shrink:0;
+  animation:pulseDotBlink 2s ease-in-out infinite;
+  margin:0;
+}
+#synPulsePanel .pp-brand-text{display:inline-flex;align-items:center;min-width:0;}
+#synPulsePanel .pp-brand h3{
+  margin:0;padding:0;
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:700;
+  color:rgba(242,242,245,0.78);letter-spacing:-0.02em;
+  text-shadow:0 1px 8px rgba(0,0,0,0.55);
+  line-height:1;
+}
+#synPulsePanel .pp-brand .pp-sub{display:none!important;}
+#synPulsePanel .pp-hint{
+  flex:0 1 auto;text-align:center;
+  font-family:'DM Sans',sans-serif;font-size:8.5px;font-weight:500;
+  color:rgba(242,242,245,0.32);letter-spacing:0.01em;
+  text-shadow:0 1px 6px rgba(0,0,0,0.55);
+  line-height:1;white-space:nowrap;min-width:0;
+  margin:0;padding:0;
+}
+#synPulsePanel .pp-foot-actions{
+  display:inline-flex;align-items:center;justify-content:center;
+  gap:0;flex-shrink:0;
+}
+#synPulsePanel .pp-close{display:none!important;}
+/* Hamburger: quiet text-only, no pill/round bg */
+#synPulsePanel .pp-cats-toggle{
+  width:auto;height:auto;min-width:0;min-height:0;border-radius:0;
+  background:transparent!important;border:none!important;box-shadow:none!important;
+  color:rgba(242,242,245,0.28);cursor:pointer;font-size:11px;font-weight:500;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:color .15s,opacity .15s;padding:0;line-height:1;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:0.75;
+}
+#synPulsePanel .pp-cats-toggle:hover{color:rgba(242,242,245,0.55);background:transparent!important;opacity:1;}
+#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
 /* Cards: fogged glass — soft frost, NOT clear. Blur + dark fog so UI under doesn't bleed text. */
 #synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:16px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
@@ -992,8 +1076,9 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 /* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
 /* Force-field blur: backdrop-filter alone doesn't reliably sample animated <canvas> layers (chatFlowCanvas/chatBeamsCanvas) or <video> across mobile browsers — those get GPU-composited on their own layer and slip past the compositor's backdrop sample, which is why they stayed sharp while real DOM text blurred fine. Applying filter:blur() straight to the source elements guarantees it regardless of browser/layer quirks. Scoped to #sec-chat.chp-blur-active, toggled alongside the sidebar open/close. */
 #sec-chat #chatFlowCanvas{filter:blur(0px);will-change:filter;transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatEmptyState{filter:blur(0px);will-change:filter;transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer,#sec-chat .input-area{filter:blur(0px);will-change:filter;transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatEmptyState{filter:blur(0px);transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area{filter:blur(16px);}
 /* Popped-out avatar: leaves the small docked corner box and becomes a large
    floating window (fixed to the viewport, not the chat panel) that the user
@@ -1205,14 +1290,47 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 .typing span:nth-child(2){animation-delay:.2s;}
 .typing span:nth-child(3){animation-delay:.4s;}
 .input-area{padding:16px 24px 20px;border-top:1px solid var(--border);background:var(--sidebar);flex-shrink:0;}
-#sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;transition:transform .45s cubic-bezier(0.22,1,0.36,1);will-change:transform;}
+#sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
-/* Pulse open lift + center: MOBILE ONLY (desktop stays bottom-left, no home shift) */
+/* Pulse open lift: MOBILE ONLY — only lift light text/input, NOT whole empty state (orb kills FPS) */
 @media (max-width:768px){
-  body.pulse-open #chatEmptyState:not(.hidden){transform:translateY(-78px);}
-  body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{transform:translateY(-92px);}
-  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area{transform:translateY(-80px);}
+  #sec-chat .syn-greeting,
+  #sec-chat .syn-sub{
+    transition:transform .28s cubic-bezier(0.25,0.8,0.25,1);
+    will-change:auto;
+    transform:translate3d(0,0,0);
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+  }
+  #sec-chat .input-area{
+    transition:transform .28s cubic-bezier(0.25,0.8,0.25,1)!important;
+    will-change:auto;
+    transform:translate3d(0,0,0);
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+  }
+  /* While lifting, drop expensive blur so the slide stays smooth on phone GPUs */
+  body.pulse-open #sec-chat .input-box{
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    background:rgba(12,12,22,0.72)!important;
+  }
+  body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
+  body.pulse-open #chatEmptyState:not(.hidden) .syn-sub{
+    transform:translate3d(0,-64px,0);
+  }
+  body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
+    transform:translate3d(0,-76px,0)!important;
+  }
+  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area{
+    transform:translate3d(0,-72px,0)!important;
+  }
+  /* Pause heavy ambient motion while Pulse is open */
+  body.pulse-open .syn-ring,
+  body.pulse-open .syn-node,
+  body.pulse-open .syn-glyph{animation-play-state:paused!important;}
+  body.pulse-open .syn-orb-wrap{opacity:0.55;transition:opacity .2s ease;}
   #synPulsePanel{left:50%!important;right:auto!important;width:min(268px,calc(100vw - 40px))!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;transform:translate(-50%,12px) scale(0.94)!important;}
   #synPulsePanel.open{transform:translate(-50%,0) scale(1)!important;}
   #synPulsePanel .pp-stage{height:168px!important;}
@@ -1394,7 +1512,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #sec-chat,#sec-coach{overflow:hidden;}
 /* ── Beams Background ── */
 #chatBeamsWrap{display:none;}
-#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease,transform .45s cubic-bezier(0.22,1,0.36,1);overflow:visible;will-change:transform;}
+#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
 .syn-glyph{pointer-events:none;}
 .syn-orb-wrap{pointer-events:none;}
@@ -3867,25 +3985,26 @@ window.getWebAudioNode = getWebAudioNode;
 </button>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
-    <div class="pp-head">
-      <div class="pp-brand">
-        <span class="pp-brand-dot" aria-hidden="true"></span>
-        <div>
-          <h3>Pulse</h3>
-          <div class="pp-sub">Swipe to peek more</div>
-        </div>
-      </div>
-      <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Categories" aria-label="Toggle categories" aria-expanded="false">☰</button>
-      <button type="button" class="pp-close" onclick="window.closeSynPulse&&window.closeSynPulse()" title="Close" aria-label="Close">✕</button>
-    </div>
-    <div class="pp-filters" id="synPulseFilters" role="tablist" aria-label="Pulse categories" hidden>
+    <div class="pp-filters show" id="synPulseFilters" role="tablist" aria-label="Pulse categories">
       <button type="button" class="pp-filter on" data-f="all">All</button>
       <button type="button" class="pp-filter" data-f="meetups">Meetups</button>
       <button type="button" class="pp-filter" data-f="news">News</button>
       <button type="button" class="pp-filter" data-f="jobs">Jobs</button>
     </div>
     <div class="pp-stage" id="synPulseStage" aria-live="polite"></div>
-    <div class="pp-hint">Swipe up or sideways · flick hard to spin · tap to open</div>
+    <div class="pp-foot">
+      <div class="pp-brand">
+        <span class="pp-brand-dot" aria-hidden="true"></span>
+        <div class="pp-brand-text">
+          <h3>Pulse</h3>
+          <div class="pp-sub" hidden>Swipe to peek more</div>
+        </div>
+      </div>
+      <div class="pp-hint">Swipe to peek · flick to spin · tap open</div>
+      <div class="pp-foot-actions">
+        <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Categories" aria-label="Toggle categories" aria-expanded="false">☰</button>
+      </div>
+    </div>
   </div>
 </div>
 <nav id="bottomNavBar" style="overflow:hidden;">
@@ -18253,7 +18372,7 @@ function goNotes() {
 // ══════════════════════════════════════════════
 (function(){
   var READ_KEY = 'synapses_pulse_read_v1';
-  var CACHE_KEY = 'synapses_pulse_meetup_cache_v5'; /* v5: Meetups label + source in meta only */
+  var CACHE_KEY = 'synapses_pulse_meetup_cache_v6'; /* v6: real Tavily news + jobs */
   var FILTER_KEY = 'synapses_pulse_filter_v2'; /* all | meetups | news | jobs */
   var AUTO_MS = 4800;
   var PEEK = 3;
@@ -18286,8 +18405,13 @@ function goNotes() {
     return 'https://synbot-whatsapp-2.onrender.com';
   }
   function _setSub(text){
-    var sub = document.querySelector('#synPulsePanel .pp-sub');
-    if(sub) sub.textContent = text || 'Live Vancouver meetups';
+    /* One-row footer hint — default keeps 3 short phrases with · separators */
+    var hint = document.querySelector('#synPulsePanel .pp-hint');
+    var def = 'Swipe to peek · flick to spin · tap open';
+    if(!hint) return;
+    if(!text || /swipe|peek|spin|tap/i.test(text)){ hint.textContent = def; return; }
+    /* status (fetching / filter counts) — keep short one line */
+    hint.textContent = String(text).slice(0, 36);
   }
 
   function _readMap(){
@@ -18344,34 +18468,41 @@ function goNotes() {
   }
   function _topicOf(it){
     if(!it) return 'meetups';
-    /* Luma / Meetup.com / Eventbrite events are ALWAYS meetups — never News via keywords */
+    /* Luma / Meetup.com / Eventbrite URLs are always Meetups */
     var plat = _platformOf(it);
     if(plat === 'luma' || plat === 'meetup' || plat === 'eventbrite') return 'meetups';
-    if(it.topic === 'news' || it.topic === 'jobs' || it.topic === 'meetups') return it.topic;
-    if(it.cat === 'news' || it.cat === 'jobs') return it.cat;
-    /* No keyword guessing into News — live pulse is meetups until we have real news/jobs feeds */
+    /* Server-tagged real news / jobs (Tavily) */
+    if(it.topic === 'news' || it.cat === 'news' || /^news[_-]/i.test(String(it.id||''))) return 'news';
+    if(it.topic === 'jobs' || it.cat === 'jobs' || /^jobs[_-]/i.test(String(it.id||''))) return 'jobs';
+    if(it.topic === 'meetups') return 'meetups';
     return 'meetups';
   }
-  function _sourceMeta(plat){
+  function _sourceMeta(plat, it){
     if(plat === 'luma') return 'Luma';
     if(plat === 'meetup') return 'Meetup.com';
     if(plat === 'eventbrite') return 'Eventbrite';
+    /* For news/jobs, keep host from meta if present */
+    if(it && it.meta && /·/.test(it.meta)) return '';
+    if(it && (it.topic === 'news' || it.cat === 'news')) return 'News';
+    if(it && (it.topic === 'jobs' || it.cat === 'jobs')) return 'Jobs';
     return '';
   }
   function _cardHtml(it){
     var plat = _platformOf(it);
     var topic = _topicOf(it);
-    /* Pink "Meetups" tag for events; News/Jobs only if those topics exist later */
+    /* Pink Meetups / mint News / pink Jobs */
     var label = (topic === 'jobs') ? 'Jobs' : (topic === 'news') ? 'News' : 'Meetups';
     var tagClass = (topic === 'jobs') ? 'jobs' : (topic === 'news') ? 'news' : 'meetup';
-    var src = _sourceMeta(plat);
     var meta = String(it.meta || '').replace(/\s*·\s*Tap to open/i, '').trim();
-    /* Strip any old Luma/Meetup stamps then put source once in grey meta */
-    meta = meta.replace(/\b(via\s+)?(Luma|Meetup\.com|Meetup|Eventbrite)\b/gi, '')
-      .replace(/\s*·\s*·+/g, ' · ').replace(/^\s*·\s*|\s*·\s*$/g, '').replace(/\s+/g, ' ').trim();
+    if(topic === 'meetups'){
+      var src = _sourceMeta(plat, it);
+      /* Keep date/location; ensure Luma or Meetup.com once in grey meta */
+      if(src && !new RegExp(src.replace('.', '\\.'), 'i').test(meta)){
+        meta = meta ? (meta + ' · ' + src) : src;
+      }
+    }
     var metaBits = [];
     if(meta) metaBits.push(meta);
-    if(src) metaBits.push(src);
     if(it.url) metaBits.push('Tap to open');
     return '<div class="pp-grip" aria-hidden="true"></div>' +
       '<div class="pp-slide-top">' +
@@ -18390,20 +18521,21 @@ function goNotes() {
       var plat = _platformOf(it);
       var topic = _topicOf(it);
       var label = (topic === 'jobs') ? 'Jobs' : (topic === 'news') ? 'News' : 'Meetups';
-      var src = _sourceMeta(plat);
       var meta = String(it.meta || '')
         .replace(/\s*·\s*Tap to open/i, '')
-        .replace(/\b(via\s+)?(Luma|Meetup\.com|Meetup|Eventbrite)\b/gi, '')
-        .replace(/\s*·\s*·+/g, ' · ')
-        .replace(/^\s*·\s*|\s*·\s*$/g, '')
         .replace(/\s+/g, ' ')
         .trim();
-      if(src) meta = meta ? (meta + ' · ' + src) : src;
+      if(topic === 'meetups'){
+        var src = _sourceMeta(plat, it);
+        if(src && !new RegExp(src.replace('.', '\\.'), 'i').test(meta)){
+          meta = meta ? (meta + ' · ' + src) : src;
+        }
+      }
       return {
         id: String(it.id || ('ev_'+idx)),
         topic: topic,
         cat: topic,
-        platform: plat,
+        platform: plat === 'web' && topic === 'news' ? 'web' : (plat === 'web' && topic === 'jobs' ? 'web' : plat),
         tag: label,
         title: it.title || 'Event',
         desc: it.desc || '',
@@ -18455,7 +18587,7 @@ function goNotes() {
     if(_filter === 'meetups') _setSub('Meetups · ' + FEED.length);
     else if(_filter === 'news') _setSub('News · ' + FEED.length);
     else if(_filter === 'jobs') _setSub('Jobs · ' + FEED.length);
-    else _setSub('Swipe to peek more');
+    else _setSub('');
   }
   function _applyFeed(items, source){
     if(!items || !items.length) return false;
@@ -18549,7 +18681,7 @@ function goNotes() {
       var card = cards[s];
       var idx = parseInt(card.getAttribute('data-i'), 10);
       var depth = (idx - _i + FEED.length) % FEED.length;
-      card.classList.remove('depth-0','depth-1','depth-2','depth-3','depth-hide','swiping','fly-out','fly-out-left','fly-out-right');
+      card.classList.remove('depth-0','depth-1','depth-2','depth-3','depth-hide','swiping','fly-out','fly-out-left','fly-out-right','fly-out-fast');
       card.style.transform = '';
       card.style.opacity = '';
       card.style.transition = animate ? '' : 'none';
@@ -18574,6 +18706,7 @@ function goNotes() {
     if(!_open || _busy || _drag) return;
     _timer = setTimeout(function(){ advance('auto'); }, AUTO_MS);
   }
+  var _spinTimer = null;
   function advance(how, steps){
     if(_busy || !_open) return;
     steps = Math.max(1, Math.min(FEED.length || 1, steps || 1));
@@ -18583,28 +18716,46 @@ function goNotes() {
     if(!stage){ _busy = false; return; }
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front){ _busy = false; return; }
-    var fly = how === 'left' ? 'fly-out-left' : how === 'right' ? 'fly-out-right' : 'fly-out';
-    if(steps > 1) front.classList.add('fly-out-fast');
+    /* Horizontal only for single-card fly (left/right). Vertical uses spinCarousel. */
+    var fly = how === 'left' ? 'fly-out-left' : how === 'right' ? 'fly-out-right' : 'fly-out-left';
     front.classList.add(fly);
-    var delay = steps > 1 ? 160 : 320;
     setTimeout(function(){
       _i = (_i + steps) % FEED.length;
       _layoutStack(true);
       _wireFrontDrag();
       _busy = false;
       _armAuto();
-    }, delay);
+    }, 300);
   }
-  /** Hard flick → wheel spin through several cards */
-  function _wheelFromVelocity(dx, dy, dt){
-    dt = Math.max(16, dt || 16);
-    var vx = Math.abs(dx) / dt; /* px/ms */
-    var vy = Math.abs(dy) / dt;
-    var speed = Math.max(vx, vy);
-    if(speed < 0.55 && Math.abs(dy) < 70 && Math.abs(dx) < 90) return 1;
-    if(speed > 1.8 || Math.abs(dy) > 160 || Math.abs(dx) > 200) return Math.min(FEED.length, 5);
-    if(speed > 1.1 || Math.abs(dy) > 110 || Math.abs(dx) > 140) return Math.min(FEED.length, 3);
-    return 1;
+  /** Vertical swipe: rapid carousel flip through the deck */
+  function spinCarousel(dir, strength){
+    if(_busy || !_open || !FEED.length) return;
+    _busy = true;
+    _clearAuto();
+    if(_spinTimer){ clearInterval(_spinTimer); _spinTimer = null; }
+    var stage = document.getElementById('synPulseStage');
+    if(stage) stage.classList.add('wheel-spin');
+    var n = FEED.length;
+    /* Stronger flick = more flips; at least almost a full deck for a real spin feel */
+    var flips = Math.max(n, Math.min(n * 2, Math.round(n * (0.9 + (strength || 1) * 0.8))));
+    var stepDir = dir < 0 ? 1 : -1; /* swipe up → forward */
+    var left = flips;
+    var tickMs = Math.max(55, Math.min(95, 720 / Math.max(6, flips)));
+    _spinTimer = setInterval(function(){
+      if(left <= 0){
+        clearInterval(_spinTimer);
+        _spinTimer = null;
+        if(stage) stage.classList.remove('wheel-spin');
+        _layoutStack(true);
+        _wireFrontDrag();
+        _busy = false;
+        _armAuto();
+        return;
+      }
+      _i = (_i + stepDir + FEED.length) % FEED.length;
+      _layoutStack(false);
+      left--;
+    }, tickMs);
   }
   function _wireFrontDrag(){
     var stage = document.getElementById('synPulseStage');
@@ -18623,41 +18774,54 @@ function goNotes() {
       if(!_drag || _drag.card !== front) return;
       _drag.dx = x - _drag.x;
       _drag.dy = y - _drag.y;
-      var dx = _drag.dx, dy = Math.min(20, Math.max(-100, _drag.dy));
-      var rot = Math.max(-10, Math.min(10, dx * 0.06));
-      front.style.transform = 'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale(1.02)';
-      front.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx)/280 - Math.max(0, -_drag.dy)/180));
+      var dx = _drag.dx, dy = _drag.dy;
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      /* Lock axis: vertical drag = tilt only Y; horizontal = slide X */
+      if(ay > ax){
+        var ty = Math.max(-70, Math.min(70, dy));
+        front.style.transform = 'translateY('+ty+'px) scale('+(1 - Math.min(0.06, ay/900))+')';
+        front.style.opacity = String(Math.max(0.55, 1 - ay/220));
+      } else {
+        var rot = Math.max(-10, Math.min(10, dx * 0.06));
+        front.style.transform = 'translate('+dx+'px,0) rotate('+rot+'deg) scale(1.02)';
+        front.style.opacity = String(Math.max(0.35, 1 - ax/280));
+      }
     }
     function end(){
       if(!_drag || _drag.card !== front) return;
       var dx = _drag.dx, dy = _drag.dy;
-      var dt = Date.now() - (_drag.t0 || Date.now());
-      var moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+      var dt = Math.max(16, Date.now() - (_drag.t0 || Date.now()));
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      var moved = ax > 10 || ay > 10;
       front.classList.remove('swiping');
       _drag = null;
-      /* Swipe up / left / right → peek next; hard flick → wheel through stack */
-      if(dy < -36 || Math.abs(dx) > 48){
-        front.style.transform = '';
-        front.style.opacity = '';
-        var steps = _wheelFromVelocity(dx, dy, dt);
-        var dir = dx < -36 ? 'left' : dx > 36 ? 'right' : 'auto';
-        advance(dir, steps);
-      } else if(!moved){
-        front.style.transform = '';
-        front.style.opacity = '';
+      front.style.transform = '';
+      front.style.opacity = '';
+
+      /* Vertical: carousel spin (NOT same as left/right) */
+      if(ay > 40 && ay >= ax){
+        var vy = ay / dt;
+        var strength = Math.min(2.2, 0.7 + vy * 1.4 + ay / 180);
+        spinCarousel(dy, strength);
+        return;
+      }
+      /* Horizontal: one card left/right */
+      if(ax > 48 && ax > ay){
+        advance(dx < 0 ? 'left' : 'right', 1);
+        return;
+      }
+      if(!moved){
         var link = front.getAttribute('data-url') || '';
         if(link && /^https?:\/\//i.test(link)){
           try { window.open(link, '_blank', 'noopener'); } catch(eO){}
           _markRead(front.getAttribute('data-id'));
           _armAuto();
         } else {
-          advance('auto', 1);
+          advance('left', 1);
         }
-      } else {
-        front.style.transform = '';
-        front.style.opacity = '';
-        _armAuto();
+        return;
       }
+      _armAuto();
     }
 
     front.addEventListener('pointerdown', function(e){
@@ -18690,13 +18854,18 @@ function goNotes() {
     var filt = document.getElementById('synPulseFilters');
     var tog = document.getElementById('synPulseCatsToggle');
     if(filt){
-      if(on){ filt.classList.add('show'); filt.hidden = false; }
-      else { filt.classList.remove('show'); filt.hidden = true; }
+      if(on){ filt.classList.add('show'); filt.removeAttribute('hidden'); }
+      else { filt.classList.remove('show'); filt.setAttribute('hidden', ''); }
     }
     if(tog){
       tog.classList.toggle('on', !!on);
       tog.setAttribute('aria-expanded', on ? 'true' : 'false');
     }
+  }
+  function closePulseCleanupSpin(){
+    if(_spinTimer){ clearInterval(_spinTimer); _spinTimer = null; }
+    var stage = document.getElementById('synPulseStage');
+    if(stage) stage.classList.remove('wheel-spin');
   }
   function openPulse(){
     var panel = document.getElementById('synPulsePanel');
@@ -18708,10 +18877,10 @@ function goNotes() {
     /* Prefer cached live meetups, then seed; always re-fetch so stack updates when ready */
     if(!_loadCachedMeetups()) {
       FEED = SEED.slice();
-      _setSub('Swipe to peek more');
+      _setSub('');
     }
     _buildStack();
-    _setCatsOpen(false);
+    _setCatsOpen(true); /* categories stay visible */
     _setPulseLift(true);
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
@@ -18726,9 +18895,9 @@ function goNotes() {
     var panel = document.getElementById('synPulsePanel');
     var btn = document.getElementById('bnavPulseBtn');
     _clearAuto();
+    closePulseCleanupSpin();
     _drag = null;
     _busy = false;
-    _setCatsOpen(false);
     _setPulseLift(false);
     if(panel){ panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); }
     if(btn) btn.classList.remove('active');
@@ -18747,7 +18916,7 @@ function goNotes() {
     try { _filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch(e){ _filter = 'all'; }
     if(_filter === 'luma' || _filter === 'meetup') _filter = 'all';
     _syncFilterButtons();
-    _setCatsOpen(false);
+    _setCatsOpen(true); /* default: categories on */
     var catsTog = document.getElementById('synPulseCatsToggle');
     if(catsTog){
       catsTog.onclick = function(e){
@@ -18778,7 +18947,10 @@ function goNotes() {
     document.addEventListener('keydown', function(e){
       if(!_open) return;
       if(e.key === 'Escape') closePulse();
-      if(e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); advance(e.key==='ArrowRight'?'right':'auto', 1); }
+      if(e.key === 'ArrowRight'){ e.preventDefault(); advance('right', 1); }
+      if(e.key === 'ArrowLeft' || e.key === ' '){ e.preventDefault(); advance('left', 1); }
+      if(e.key === 'ArrowUp'){ e.preventDefault(); spinCarousel(-1, 1.4); }
+      if(e.key === 'ArrowDown'){ e.preventDefault(); spinCarousel(1, 1.4); }
     });
     document.addEventListener('mousedown', function(e){
       if(!_open) return;
