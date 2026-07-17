@@ -6777,7 +6777,7 @@ function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;se
   }catch(e){}
 })();
 
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(typeof dismissSynapsesTour==='function')dismissSynapsesTour();}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(typeof dismissSynapsesTour==='function')dismissSynapsesTour();}catch(_t){}}
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}/* Never mark tour done on guest enter — only clear stuck overlay if tour not intentionally running */try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){/* soft dismiss without markDone */var _r=document.getElementById('synTourRoot');if(_r&&_r.classList.contains('on')&&!window.__synTourIntentionalStart){window.dismissSynapsesTour();}}}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){var _r2=document.getElementById('synTourRoot');if(_r2&&_r2.classList.contains('on'))window.dismissSynapsesTour();}}catch(_t){}}
 function switchAuthTab(t){document.getElementById('tabLogin').classList.toggle('active',t==='login');document.getElementById('tabRegister').classList.toggle('active',t==='register');document.getElementById('loginForm').style.display=t==='login'?'block':'none';document.getElementById('registerForm').style.display=t==='register'?'block':'none';}
 function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
 function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
@@ -23898,12 +23898,17 @@ function _neuInjectDownloadInterceptor(frame){
     ctx.translate(cx, cy);
     ctx.rotate(angle);
 
-    /* Demo/tour = purple eyes; normal BR bot = classic mint green (pre-tour look) */
-    var _demoLook = !!(typeof _tourMode !== 'undefined' && _tourMode) || !!window.__synTourActive;
+    /* Purple only while tour UI is actually live (film/product guide). Stuck flags alone = mint. */
+    var _tourUiLive = false;
+    try {
+      var _tr = document.getElementById('synTourRoot');
+      _tourUiLive = !!(window.__synTourActive && _tr && _tr.classList.contains('on') && _tr.style.display !== 'none');
+    } catch (eDL) {}
+    var _demoLook = !!(typeof _tourMode !== 'undefined' && _tourMode && _tourUiLive);
     /* Soft blend after tour: 1 = full purple, 0 = full mint */
     if (typeof window.__synBotEyeBlend !== 'number') window.__synBotEyeBlend = _demoLook ? 1 : 0;
     if (_demoLook) window.__synBotEyeBlend = 1;
-    else window.__synBotEyeBlend = Math.max(0, window.__synBotEyeBlend - 0.035);
+    else window.__synBotEyeBlend = Math.max(0, window.__synBotEyeBlend - 0.08);
 
     var b = window.__synBotEyeBlend; /* 1 purple → 0 mint */
     function _mix(c0, c1, t) {
@@ -24099,9 +24104,37 @@ function _neuInjectDownloadInterceptor(frame){
   };
   // Bring mini bot back on screen immediately (cancel any exit/offscreen)
   canvas._bringIn = function(){
-    /* If stuck in full-screen tour layer, hard-reset to BR first */
+    /* Live tour UI owns the guide — never hard-reset mid-demo */
+    try {
+      var rootLive = document.getElementById('synTourRoot');
+      var tourUiOn = !!(rootLive && rootLive.classList.contains('on') && rootLive.style.display !== 'none');
+      if (tourUiOn && window.__synTourActive) return;
+      if (_tourMode && tourUiOn && window.__synTourActive) return;
+      /* Stuck purple: flag or tour-mode with UI gone — free mint BR immediately */
+      if ((window.__synTourActive && !tourUiOn) || (_tourMode && !tourUiOn)) {
+        window.__synTourActive = false;
+        canvas._hardResetBR();
+        try { window.__synBotEyeBlend = 0; } catch (eClr0) {}
+        return;
+      }
+    } catch (eBring) {
+      if (_tourMode && window.__synTourActive) {
+        /* ambiguous — only hard-reset if root not on */
+        try {
+          var r2 = document.getElementById('synTourRoot');
+          if (!(r2 && r2.classList.contains('on'))) {
+            window.__synTourActive = false;
+            canvas._hardResetBR();
+            return;
+          }
+        } catch (e3) {}
+        return;
+      }
+    }
+    /* Leftover fullscreen after tour closed — recover to BR mint */
     if (_tourMode || W > 400 || canvas.style.width === '100vw' || (canvas.style.cssText || '').indexOf('100vw') !== -1) {
       canvas._hardResetBR();
+      try { window.__synTourActive = false; window.__synBotEyeBlend = 0; } catch (eClr) {}
       return;
     }
     _exiting = false;
@@ -24366,29 +24399,59 @@ function _neuInjectDownloadInterceptor(frame){
     }
     function _synBotAllowed(){
       if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return false;
-      /* While tour/story is flying him, visibility is owned by tour mode — not BR corner */
-      if (window.__synTourActive && !_tourMode) return false;
+      /* Only hide BR while tour UI is actually live and bot is not in guide mode yet */
+      try {
+        var rA = document.getElementById('synTourRoot');
+        var liveA = !!(window.__synTourActive && rA && rA.classList.contains('on') && rA.style.display !== 'none');
+        if (liveA && !_tourMode) return false;
+      } catch (eA) {
+        if (window.__synTourActive && !_tourMode) return false;
+      }
       return _synBotEntranceReady();
     }
     window._synBotEntranceReady = _synBotEntranceReady;
     window._tinyBotSync = function(){
-      /* Stuck tour flag with no active tour UI → force release */
+      /* Never fight a LIVE tour/story — fullscreen purple bot is intentional only then */
       try {
-        var rootStuck = document.getElementById('synTourRoot');
-        var tourUiOn = rootStuck && rootStuck.classList.contains('on');
-        if (window.__synTourActive && !tourUiOn && !_tourMode) {
-          window.__synTourActive = false;
-          window.__synBotStoryReleased = true;
-        }
-      } catch (eS) {}
-      if(!_synBotAllowed()){
-        /* Only hide if tour is truly flying; otherwise recover */
-        if (window.__synTourActive && !_tourMode) {
-          canvas.style.opacity='0';
+        var rootLive = document.getElementById('synTourRoot');
+        var tourUiOn = !!(rootLive && rootLive.classList.contains('on') && rootLive.style.display !== 'none');
+        if (window.__synTourActive && tourUiOn) {
+          if (_tourMode) canvas.style.opacity = '1';
           return;
         }
+        /* Stuck purple/fullscreen with tour UI gone — always recover mint BR */
+        if (!tourUiOn && (_tourMode || W > 400 || (canvas.style.cssText || '').indexOf('100vw') !== -1 || window.__synTourActive)) {
+          window.__synTourActive = false;
+          try { canvas._hardResetBR(); } catch (eHR) {}
+          try { window.__synBotEyeBlend = 0; } catch (eB0) {}
+          shown = true;
+          canvas.style.opacity = '0.55';
+          canvas.style.visibility = 'visible';
+          return;
+        }
+      } catch (eLive) {}
+      if(!_synBotAllowed()){
+        if (window.__synTourActive && !_tourMode) {
+          /* If flag stuck without tour UI, free bot instead of hiding forever */
+          try {
+            var r3 = document.getElementById('synTourRoot');
+            if (!(r3 && r3.classList.contains('on') && r3.style.display !== 'none')) {
+              window.__synTourActive = false;
+            } else {
+              canvas.style.opacity='0';
+              return;
+            }
+          } catch (eA) {
+            canvas.style.opacity='0';
+            return;
+          }
+        }
       }
-      if(_tourMode){ canvas.style.opacity='1'; return; }
+      if(_tourMode){
+        /* Should only happen mid live tour; if we got here, reset */
+        try { canvas._hardResetBR(); } catch (eTM) {}
+        try { window.__synBotEyeBlend = 0; } catch (eB1) {}
+      }
       if(!document.getElementById('cyberGreeting') && !document.getElementById('appSplash')){
         shown = true;
         if (W > 400 || (canvas.style.cssText || '').indexOf('100vw') !== -1) {
@@ -24396,33 +24459,59 @@ function _neuInjectDownloadInterceptor(frame){
         }
         canvas.style.opacity='0.55';
         canvas.style.visibility='visible';
+        try { window.__synBotEyeBlend = 0; } catch (eB) {}
       }
     };
 
-    /** Global recovery — call after tour finish, app resume, or when widget "dies" */
-    window._forceReleaseSynBot = function(){
+    /**
+     * Free BR SynBot after tour END or stuck purple state.
+     * Never kills a truly live tour (root.on + active) unless opt.force.
+     * Stuck flag / fullscreen with UI off recovers WITHOUT force.
+     */
+    window._forceReleaseSynBot = function(opt){
+      opt = opt || {};
       try {
+        var root = document.getElementById('synTourRoot');
+        var tourUiOn = !!(root && root.classList.contains('on') && root.style.display !== 'none');
+        var choiceLive = false;
+        try {
+          var ch = document.getElementById('synTourChoice');
+          choiceLive = !!(ch && ch.classList.contains('show') && tourUiOn);
+        } catch (eCh) {}
+        var hubLive = false;
+        try {
+          var hub = document.getElementById('synTourReplayHub');
+          hubLive = !!(hub && hub.classList.contains('show') && tourUiOn);
+        } catch (eHub) {}
+        var trulyLive = !!(tourUiOn && window.__synTourActive);
+        /* Live demo — leave alone unless finish/dismiss forces it */
+        if (!opt.force && trulyLive) {
+          return;
+        }
+        if (!opt.force && (choiceLive || hubLive)) {
+          return;
+        }
+        /* Clear stuck flags + mint BR */
         window.__synTourActive = false;
         window.__synBotStoryReleased = true;
-        var root = document.getElementById('synTourRoot');
-        if (root) {
+        if (root && (opt.force || !tourUiOn)) {
           root.classList.remove('on');
           root.style.display = 'none';
           root.style.pointerEvents = 'none';
         }
-        ['synTourCenter','synTourChoice','synTourSkipMyth','synTourReplayHub','synTourCard'].forEach(function(id){
-          var el = document.getElementById(id);
-          if (!el) return;
-          el.classList.remove('show', 'myth-climax', 'st-video', 'tour-only');
-          if (id === 'synTourCenter' || id === 'synTourReplayHub') el.style.display = 'none';
-          if (id === 'synTourChoice' || id === 'synTourSkipMyth') {
-            el.classList.remove('show');
+        if (opt.force || !tourUiOn) {
+          ['synTourCenter','synTourChoice','synTourSkipMyth','synTourReplayHub'].forEach(function(id){
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('show', 'myth-climax', 'tour-only');
+            if (id === 'synTourCenter' || id === 'synTourReplayHub') el.style.display = 'none';
             if (id === 'synTourChoice') {
               el.style.display = 'none';
               el.style.left = '-9999px';
             }
-          }
-        });
+            if (id === 'synTourSkipMyth') el.classList.remove('show');
+          });
+        }
         var tip = document.getElementById('robotTooltip');
         if (tip) {
           tip.classList.remove('rt-visible');
@@ -24431,22 +24520,27 @@ function _neuInjectDownloadInterceptor(frame){
           tip.style.visibility = '';
           tip.style.transition = '';
         }
-        var fly = document.querySelector('canvas[style*="z-index:88889"]');
-        /* best-effort: leave fly canvases alone if not ours */
-        try {
-          if (typeof _flyCanvas !== 'undefined' && _flyCanvas && _flyCanvas.parentNode) {
-            _flyCanvas.parentNode.removeChild(_flyCanvas);
-          }
-        } catch (eF) {}
         if (canvas._hardResetBR) canvas._hardResetBR();
         else if (canvas._tourEnd) canvas._tourEnd();
         if (canvas._resume) canvas._resume();
+        try { window.__synBotEyeBlend = 0; } catch (eB2) {}
         shown = true;
         canvas.style.opacity = '0.55';
         canvas.style.visibility = 'visible';
       } catch (e) {
         console.warn('[SynBot] forceRelease failed', e);
       }
+    };
+
+    /** Public soft recover — hover/click can call when bot feels stuck */
+    window._synBotUnstick = function(){
+      try {
+        var root = document.getElementById('synTourRoot');
+        var tourUiOn = !!(root && root.classList.contains('on') && root.style.display !== 'none');
+        if (tourUiOn && window.__synTourActive) return false;
+        window._forceReleaseSynBot({ force: !tourUiOn });
+        return true;
+      } catch (e) { return false; }
     };
     var mo = new MutationObserver(function(){
       var g = document.getElementById('cyberGreeting');
@@ -24535,22 +24629,27 @@ function _neuInjectDownloadInterceptor(frame){
 
   function showRobot(){
     if(!tooltip) return;
-    /* Disabled during real tour — but recover if tour flags are stuck with UI off */
+    /* Disabled during real tour — unstick purple leftover when UI is off */
     try {
       var rootTour = document.getElementById('synTourRoot');
-      var tourUiOn = rootTour && rootTour.classList.contains('on') && rootTour.style.display !== 'none';
-      if (window.__synTourActive || tourUiOn) {
-        if (!tourUiOn && typeof window._forceReleaseSynBot === 'function') {
-          window._forceReleaseSynBot();
-        } else if (tourUiOn) {
-          return; /* real tour in progress */
+      var tourUiOn = !!(rootTour && rootTour.classList.contains('on') && rootTour.style.display !== 'none');
+      if (tourUiOn && window.__synTourActive) {
+        return; /* real tour/film in progress — purple guide is intentional */
+      }
+      var tc0 = document.getElementById('tinyBotCanvas');
+      var stuckFs = tc0 && ((tc0.style.cssText || '').indexOf('100vw') !== -1 || tc0.width > 500);
+      if ((window.__synTourActive && !tourUiOn) || stuckFs) {
+        if (typeof window._forceReleaseSynBot === 'function') {
+          window._forceReleaseSynBot({ force: true });
+        } else if (typeof window._synBotUnstick === 'function') {
+          window._synBotUnstick();
         }
       }
     } catch (eTour) {}
     /* BR hover chat allowed whenever bot is free (manual tour — no entrance gate) */
     try {
       if (typeof window._synBotEntranceReady === 'function' && !window._synBotEntranceReady()) {
-        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot({ force: true });
         else return;
       }
     } catch (eEnt) { /* allow */ }
@@ -24983,6 +25082,18 @@ function _neuInjectDownloadInterceptor(frame){
 
     var tc = document.getElementById('tinyBotCanvas');
     if(!tc || !tc._getRobotScreenPos) return;
+
+    /* If bot is purple/fullscreen leftover, unstick on any corner hover — no hard close needed */
+    try {
+      var rootT = document.getElementById('synTourRoot');
+      var liveT = !!(window.__synTourActive && rootT && rootT.classList.contains('on') && rootT.style.display !== 'none');
+      var stuckFs2 = (tc.style.cssText || '').indexOf('100vw') !== -1 || tc.width > 500;
+      if (!liveT && (stuckFs2 || window.__synTourActive)) {
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot({ force: true });
+        else if (tc._hardResetBR) tc._hardResetBR();
+        try { window.__synBotEyeBlend = 0; } catch (eEye) {}
+      }
+    } catch (eSt) {}
 
     var pos = tc._getRobotScreenPos();
     var dx = _mouseX - pos.x;
@@ -26139,39 +26250,68 @@ function _applySynBotVisualState(){
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
 
-/* Recover SynBot after app sleep / tab back / random stuck states */
+/* Recover SynBot after app sleep — NEVER mid-tour (fullscreen guide is normal during demo) */
 (function(){
-  function _synBotRecover(reason){
+  function _tourUiActuallyOn(){
     try {
       var root = document.getElementById('synTourRoot');
-      var tourUiOn = root && root.classList.contains('on') && root.style.display !== 'none';
+      if (!root) return false;
+      if (!root.classList.contains('on')) return false;
+      if (root.style.display === 'none') return false;
+      return true;
+    } catch (e) { return false; }
+  }
+  function _tourIsLive(){
+    /* Only block recovery when the demo UI is actually visible */
+    return _tourUiActuallyOn() && !!window.__synTourActive;
+  }
+  function _synBotRecover(reason){
+    try {
+      /* Live tour UI: leave purple guide alone */
+      if (_tourIsLive()) return;
+      try {
+        var choice = document.getElementById('synTourChoice');
+        if (choice && choice.classList.contains('show') && _tourUiActuallyOn()) return;
+        var hub = document.getElementById('synTourReplayHub');
+        if (hub && hub.classList.contains('show') && _tourUiActuallyOn()) return;
+      } catch (eC) {}
+      var stuckFlag = !!window.__synTourActive && !_tourUiActuallyOn();
       var tc = document.getElementById('tinyBotCanvas');
-      var stuckTourFlag = window.__synTourActive && !tourUiOn;
-      var stuckFullscreen = tc && ((tc.style.cssText || '').indexOf('100vw') !== -1 || tc.width > 500);
-      var stuckHidden = tc && (tc.style.opacity === '0' || parseFloat(tc.style.opacity) < 0.15) && !tourUiOn;
-      if (stuckTourFlag || stuckFullscreen || (stuckHidden && window.__synBotStoryReleased)) {
-        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
-        else if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
-        if (typeof console !== 'undefined' && console.log) console.log('[SynBot] recovered:', reason);
-      } else if (typeof window._tinyBotSync === 'function') {
-        window._tinyBotSync();
+      if (!tc) {
+        if (stuckFlag) window.__synTourActive = false;
+        return;
       }
+      var stuckFullscreen = (tc.style.cssText || '').indexOf('100vw') !== -1 || tc.width > 500;
+      var stuckPurpleEyes = (typeof window.__synBotEyeBlend === 'number' && window.__synBotEyeBlend > 0.5) && !_tourIsLive();
+      if (!stuckFullscreen && !stuckFlag && !stuckPurpleEyes) return;
+      /* Free mint BR — no hard app close needed */
+      if (typeof window._forceReleaseSynBot === 'function') {
+        window._forceReleaseSynBot({ force: true });
+      } else {
+        window.__synTourActive = false;
+        if (tc._hardResetBR) tc._hardResetBR();
+        else if (tc._tourEnd) tc._tourEnd();
+        tc.style.opacity = '0.55';
+        tc.style.visibility = 'visible';
+        try { window.__synBotEyeBlend = 0; } catch (eB) {}
+      }
+      if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+      if (typeof console !== 'undefined' && console.log) console.log('[SynBot] recovered:', reason);
     } catch (e) {}
   }
   document.addEventListener('visibilitychange', function(){
     if (document.visibilityState === 'visible') {
       setTimeout(function(){ _synBotRecover('visibility'); }, 200);
-      setTimeout(function(){ _synBotRecover('visibility-late'); }, 900);
     }
   });
   window.addEventListener('focus', function(){
-    setTimeout(function(){ _synBotRecover('focus'); }, 300);
+    setTimeout(function(){ _synBotRecover('focus'); }, 250);
   });
-  /* Light watchdog — random “not interactable” from leftover tour/offscreen */
+  /* Fast watchdog — purple stuck should self-heal within ~2s without hard close */
   setInterval(function(){
     if (document.visibilityState !== 'visible') return;
     _synBotRecover('watchdog');
-  }, 8000);
+  }, 2000);
 })();
 
 // ── Past-chats button visibility toggle (SYN-BOT header hamburger icon) ────
@@ -33455,7 +33595,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    * Android Backup / WebView cache often keeps localStorage across reinstall —
    * this is the HTML-side fix for that.
    */
-  var SYNAPSES_APP_BUILD = '2026-07-17-tour-story-no-meetava';
+  /* Bump this on each tour UX change so Chrome localStorage re-unlocks the first tour */
+  var SYNAPSES_APP_BUILD = '2026-07-17-synbot-unstick-v3';
   var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
   var TOUR_DONE_KEY = 'synapses_tour_v1';
@@ -33547,14 +33688,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         var tip = document.getElementById('robotTooltip');
         if (tip) { tip.classList.remove('rt-visible'); tip.classList.add('rt-hidden'); tip.style.opacity = '0'; tip.style.visibility = 'hidden'; }
       } catch (eClose) {}
-      /* Second access (tour already finished once) → choice: Watch story | Take tour | Close */
-      var already = false;
-      try { already = window.__synTourDone === true || localStorage.getItem(TOUR_DONE_KEY) === '1'; } catch (eD) {}
+      /* Always show Tour entry — hub if finished once, else first-run film */
+      var already = isTourDone();
       if (already && typeof window.openSynapsesTourHub === 'function') {
         window.openSynapsesTourHub();
         return;
       }
       if (typeof startSynapsesTour === 'function') startSynapsesTour(true);
+      else if (typeof window.startSynapsesTour === 'function') window.startSynapsesTour(true);
     } catch (e) { console.error(e); }
   }
   /** After first use: Tour lives inside the SYN-BOT chat header icon row, not the main nav */
@@ -33618,10 +33759,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     showChatTourIcon();
   };
   function applyDockedState() {
-    /* Recovery: if somehow marked done with no dock, still fine to hide only when docked */
+    /* Recovery: undocked → show bottom-left Tour float so first tour is always reachable */
     if (!isTourBtnDocked()) {
       showFloat();
-      hideChatTourIcon();
+      if (isTourDone()) showChatTourIcon();
+      else hideChatTourIcon();
       return;
     }
     hideFloat();
@@ -33871,8 +34013,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourCard .btn-primary:hover{background:rgba(124,106,247,0.34);border-color:rgba(196,181,253,0.55);',
       'box-shadow:0 8px 28px rgba(124,106,247,0.22),0 0 20px rgba(124,106,247,0.15);}',
       '#synTourCard .btn-ghost{background:rgba(255,255,255,0.05);color:rgba(242,242,245,0.8);border:1px solid rgba(255,255,255,0.12);}',
-      '#synTourCard .skip{margin-left:auto;background:none;border:none;color:rgba(242,242,245,0.4);font-size:12px;cursor:pointer;font-family:inherit;transition:color .2s;}',
-      '#synTourCard .skip:hover{color:rgba(196,181,253,0.9);}',
+      /* Card Skip removed — only first-film Skip (#synTourSkipMyth) exists */
+      '#synTourCard .skip,#synTourSkip{display:none!important;}',
+      '#synTourCenterSkip{display:none!important;}',
       /* Frosted glass progress — dark track, active = soft white neon glow */
       '#synTourCard .pips{display:flex;gap:5px;margin-bottom:14px;align-items:center;}',
       '#synTourCard .pip{height:3px;flex:1;border-radius:999px;overflow:hidden;position:relative;',
@@ -34003,7 +34146,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
       /* Planet-dock glass controls (right of home world) — NOT a full-screen popup */
       /* Default off-screen so we never flash a glass “window” at 0,0 */
-      '#synTourChoice{position:fixed;left:-9999px;top:-9999px;display:none;flex-direction:column;gap:8px;z-index:100080;pointer-events:none;',
+      '#synTourChoice{position:fixed;left:-9999px;top:-9999px;display:none;flex-direction:column;gap:8px;z-index:100120;pointer-events:none;',
       'transform:none;inset:auto;visibility:hidden;}',
       '#synTourChoice.show{display:flex!important;pointer-events:auto!important;visibility:visible!important;}',
       '#synTourChoice .st-choice-panel{display:flex;flex-direction:column;gap:8px;padding:0;margin:0;background:transparent;border:none;box-shadow:none;backdrop-filter:none;}',
@@ -34022,7 +34165,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       /* hidden — tour lives on planet dock only */
       '#synTourStoryTourBtn{display:none!important;}',
 
-      /* Second-access hub: Watch story vs Take tour (does not block film forever) */
+      /* Second-access hub: Watch story | Take tour | Close only */
       '#synTourReplayHub{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:100090;pointer-events:none;}',
       '#synTourReplayHub.show{display:flex;pointer-events:auto;}',
       '#synTourReplayHub .panel{pointer-events:auto;width:min(380px,calc(100vw - 32px));text-align:center;padding:28px 22px 20px;border-radius:22px;',
@@ -34121,13 +34264,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (centerNext) {
       centerNext.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
-        /* You're in / final CTA must end the tour — not loop renderStep */
-        var st = STEPS[state.i];
-        if (!st || st.id === 'done' || state.i >= STEPS.length - 1) {
-          finish(false);
-        } else {
-          next();
-        }
+        /* Working path: next() advances Meet Ava → video → …; on last step next() finishes */
+        next();
       };
     }
     if (centerSkip) {
@@ -34247,6 +34385,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    */
   function skipMythToChoice() {
     try {
+      /* Stay in demo session — choice dock, not finish */
+      state.open = true;
+      window.__synTourActive = true;
+      var rootKeep = $('synTourRoot');
+      if (rootKeep) {
+        rootKeep.classList.add('on');
+        rootKeep.style.display = '';
+        rootKeep.style.pointerEvents = '';
+      }
       hideMeetAvaPanel();
       hideStoryTourBtn();
       /* Ensure myth exists so the choice dock has a moon to sit on */
@@ -34255,9 +34402,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
       var m = state.myth;
       if (!m) {
-        /* Fallback: open hub-style product path */
-        if (typeof skipMythToTour === 'function') skipMythToTour();
-        return;
+        /* Last try: restart myth then hold choice — never auto product-tour / finish */
+        try { if (typeof initMyth === 'function') initMyth(); } catch (eI2) {}
+        m = state.myth;
+        if (!m) {
+          console.warn('[Tour] skipMythToChoice: no myth — holding empty choice');
+          try { showMythChoice(); } catch (eShow) {}
+          return;
+        }
       }
 
       clearMythTimers();
@@ -34267,6 +34419,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
 
       /* Settle scene to home crater (end of intro film) */
+      m.active = true;
       m.phase = 'choice';
       m.waitingChoice = true;
       m.panelShown = false;
@@ -34330,8 +34483,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         } catch (eB) {}
       }
       pinGuideAtPlanet(true);
-      showMythChoice(); /* both: Continue story + Do the tour */
-      showTourSkipMyth(false);
+      try { startFx(); } catch (eFx) {}
+      /* Same hold as natural film end — both CTAs, no auto-end */
+      holdPlanetChoice(m);
       try {
         if (typeof updateNarrationDom === 'function') updateNarrationDom(m);
       } catch (eN) {}
@@ -34340,60 +34494,49 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       } catch (eT) {}
     } catch (err) {
       console.error('[Tour] skipMythToChoice', err);
-      try { skipMythToTour(); } catch (e2) {}
+      /* Last resort: still try to hold choice, never finish the whole demo */
+      try {
+        if (state.myth) holdPlanetChoice(state.myth);
+        else showMythChoice();
+      } catch (e2) {}
     }
   }
 
   function wireTourSkipMyth() {
     var b = $('synTourSkipMyth');
     if (!b) return;
-    /* Always rebind so label + handler stay correct after DOM rebuilds */
+    /* Film-only Skip — jumps to Continue story | Do the tour. Never used on product steps. */
     b.onclick = function (e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
       try {
-        var step = STEPS[state.i];
-        var onFilm = !!(state.myth && state.myth.active) || !!(step && step.myth);
-        if (onFilm) {
-          /* First-time demo / full / story replay → planet choice (story vs tour) */
-          if (state.entryMode === 'story' || state.entryMode === 'full' || !state.entryMode || state.entryMode === '') {
-            skipMythToChoice();
-            return;
-          }
-          skipMythToChoice();
-          return;
-        }
-        if (step && step.mode === 'video') {
-          if (state.entryMode === 'demo') finish(false);
-          else next();
-        } else {
-          next();
-        }
+        skipMythToChoice();
       } catch (err) {
-        try { skipMythToChoice(); } catch (e2) {
-          try { finish(true); } catch (e3) {}
-        }
+        try { holdPlanetChoice(state.myth); } catch (e2) {}
       }
     };
   }
 
   function ensureReplayHubDom() {
     var root = $('synTourRoot');
-    if (!root || $('synTourReplayHub')) return;
-    var hub = document.createElement('div');
-    hub.id = 'synTourReplayHub';
-    hub.setAttribute('aria-label', 'Tour options');
+    if (!root) return;
+    var hub = $('synTourReplayHub');
+    if (!hub) {
+      hub = document.createElement('div');
+      hub.id = 'synTourReplayHub';
+      hub.setAttribute('aria-label', 'Tour options');
+      root.appendChild(hub);
+    }
+    /* Always rewrite — strip legacy "Ava live intro" third option */
     hub.innerHTML =
       '<div class="panel">' +
         '<h2>Welcome back</h2>' +
-        '<p>Film story, Ava live intro, or product tour. Close anytime.</p>' +
+        '<p>Watch the story film, or take the product tour. Close anytime.</p>' +
         '<div class="row">' +
           '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
           '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
-          '<button type="button" class="btn btn-ghost" id="synTourReplayDemo">Ava live intro</button>' +
           '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
         '</div>' +
       '</div>';
-    root.appendChild(hub);
   }
 
   function ensureSkipMythDom() {
@@ -34426,6 +34569,33 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     wireTourSkipMyth();
   }
 
+  function wireTourNavButtons() {
+    var nextBtn = $('synTourNext');
+    var skipBtn = $('synTourSkip');
+    var secBtn = $('synTourSec');
+    if (nextBtn) {
+      nextBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        /* Always go through next() so product tour can reach You're in then finish */
+        next();
+      };
+    }
+    if (skipBtn) {
+      skipBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        finish(true);
+      };
+    }
+    if (secBtn) {
+      secBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        finish(true);
+      };
+    }
+    wireChoiceButtons();
+    wireTourSkipMyth();
+  }
+
   function injectDom() {
     if ($('synTourRoot')) {
       ensureChoiceDom();
@@ -34433,6 +34603,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       ensureNarrationDom();
       ensureReplayHubDom();
       ensureSkipMythDom();
+      wireTourNavButtons();
       return;
     }
     var root = document.createElement('div');
@@ -34477,7 +34648,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           '<div class="row">' +
             '<button type="button" class="btn btn-primary" id="synTourNext">Next</button>' +
             '<button type="button" class="btn btn-ghost" id="synTourSec" style="display:none"></button>' +
-            '<button type="button" class="skip" id="synTourSkip">Skip</button>' +
+            /* Card skip hidden — only film Skip (synTourSkipMyth) on first story */
+            '<button type="button" class="skip" id="synTourSkip" style="display:none!important" aria-hidden="true" tabindex="-1">Skip</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -34489,7 +34661,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           '<button type="button" class="btn btn-primary" id="synTourCenterNext"></button>' +
           '<button type="button" class="btn btn-ghost" id="synTourCenterSec" style="display:none"></button>' +
         '</div>' +
-        '<button type="button" class="skip" id="synTourCenterSkip">Skip tour</button>' +
+        /* No second Skip — exit via Finish / Close on last step only */
+        '<button type="button" class="skip" id="synTourCenterSkip" style="display:none" aria-hidden="true" tabindex="-1">Close</button>' +
       '</div></div>' +
       '<div id="synTourChoice">' +
         '<div class="st-choice-panel">' +
@@ -34502,28 +34675,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '<div id="synTourReplayHub" aria-label="Tour options">' +
         '<div class="panel">' +
           '<h2>Welcome back</h2>' +
-          '<p>Film story, Ava live intro, or product tour. Close anytime.</p>' +
+          '<p>Watch the story film, or take the product tour. Close anytime.</p>' +
           '<div class="row">' +
             '<button type="button" class="btn btn-primary" id="synTourReplayStory">Watch story</button>' +
             '<button type="button" class="btn btn-ghost" id="synTourReplayTour">Take tour</button>' +
-            '<button type="button" class="btn btn-ghost" id="synTourReplayDemo">Ava live intro</button>' +
             '<button type="button" class="btn-close" id="synTourReplayClose">Close</button>' +
           '</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(root);
-
-    $('synTourNext').onclick = function () {
-      var st = STEPS[state.i];
-      if (!st || st.id === 'done' || state.i >= STEPS.length - 1) finish(false);
-      else next();
-    };
-    $('synTourSkip').onclick = function () { finish(true); };
-    $('synTourSec').onclick = function () { finish(true); };
-    wireChoiceButtons(); /* center Next / Sec / Skip — Finish on done step */
-    wireTourSkipMyth();
+    wireTourNavButtons();
     var storyTourBtn = $('synTourStoryTourBtn');
-    if (storyTourBtn) storyTourBtn.onclick = function () { skipMythToTour(); };
+    if (storyTourBtn) storyTourBtn.onclick = function (e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      skipMythToTour();
+    };
   }
 
   /* ── welcome myth: original chaos+orb, then UFO escapes planet → moon home → tour ── */
@@ -34936,34 +35102,68 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       guideFlyTo(siteX, siteY);
     }, 52200));
 
-    /* Choice after spire can settle — bot stays on planet; dock sits right of moon */
+    /* Choice after spire can settle — bot stays on planet; dock sits right of moon.
+       HOLD HERE until user picks Continue story | Do the tour — never auto-end. */
     m._timers.push(setTimeout(function () {
-      if (!state.myth || state.myth !== m) return;
+      if (!state.open || !state.myth || state.myth !== m) return;
       if (m.structure) {
         m.structure.h = m.structure.hMax * 0.92;
         m.structure.floors = 5;
       }
-      m.phase = 'choice';
-      m.waitingChoice = true;
-      pinGuideAtPlanet(true);
-      showMythChoice();
+      holdPlanetChoice(m);
     }, 56500));
 
-    /* Soft safety only if user never picks (~90s stuck) */
+    /* Soft safety: if film finished without a pick, FORCE the choice dock — never auto product-tour / finish */
     state.mythTimer = setTimeout(function () {
       if (!state.open || !state.myth || state.myth !== m) return;
-      if (state.myth.panelShown) return;
-      if (!state.myth.waitingChoice) return;
-      /* Story hub: don't slam Meet Ava — leave them on film dock or exit clean */
-      if (state.entryMode === 'story') {
-        try {
-          /* Keep planet choice dock visible; do not open Meet Ava */
-          showMythChoice();
-        } catch (e) {}
-        return;
-      }
-      skipMythToTour();
+      /* panelShown true only after user started product tour path */
+      if (state.myth.panelShown && !state.myth.waitingChoice) return;
+      /* Still on film / mid-arc / waiting — pin the two CTAs */
+      try { holdPlanetChoice(state.myth); } catch (e) {}
     }, 90000);
+  }
+
+  /**
+   * Planet dock: Continue story | Do the tour.
+   * Must stay up until the user clicks — no auto finish / skipMythToTour.
+   */
+  function holdPlanetChoice(m) {
+    if (!m) m = state.myth;
+    if (!m) return;
+    state.open = true;
+    window.__synTourActive = true;
+    m.active = true;
+    m.phase = 'choice';
+    m.waitingChoice = true;
+    m.panelShown = false; /* product Meet Ava not shown; choice dock is the hold */
+    m.endless = false;
+    try {
+      var root = $('synTourRoot');
+      if (root) {
+        root.classList.add('on');
+        root.style.display = '';
+        root.style.pointerEvents = '';
+      }
+    } catch (eR) {}
+    /* Kill film timers so nothing late-fires past the dock */
+    try {
+      if (m._timers && m._timers.length) {
+        for (var ti = 0; ti < m._timers.length; ti++) clearTimeout(m._timers[ti]);
+        m._timers = [];
+      }
+    } catch (eT) {}
+    if (state.mythTimer) {
+      clearTimeout(state.mythTimer);
+      state.mythTimer = 0;
+    }
+    showTourSkipMyth(false); /* Skip must not cover the two CTAs */
+    hideMeetAvaPanel();
+    pinGuideAtPlanet(true);
+    showMythChoice();
+    try { startFx(); } catch (eFx) {}
+    try {
+      if (typeof synTrack === 'function') synTrack('tour_choice_hold', { mode: state.entryMode || 'full' });
+    } catch (eTr) {}
   }
 
   /** Glass controls sit to the RIGHT of the active planet (not top-left) */
@@ -35024,10 +35224,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     el.style.display = 'flex';
     el.style.visibility = 'visible';
     el.style.pointerEvents = 'auto';
+    el.style.zIndex = '100120'; /* above Skip (100110) so CTAs are always clickable */
     el.classList.add('show');
     /* Park once when the dock appears — no re-pin spam */
     pinGuideAtPlanet(true);
     wireChoiceButtons();
+    /* Keep Skip off while choice is up — it sat on top of the planet dock */
+    showTourSkipMyth(false);
   }
 
   function hideMythChoice() {
@@ -35447,40 +35650,89 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   /** After build: escalating story once, then calm home — until user starts tour */
   function continueMythStory() {
-    var m = state.myth;
-    if (!m || !state.open) {
-      skipMythToTour();
-      return;
+    try {
+      /* Keep session alive — never finish from this path */
+      state.open = true;
+      window.__synTourActive = true;
+      var rootOn = $('synTourRoot');
+      if (rootOn) {
+        rootOn.classList.add('on');
+        rootOn.style.display = '';
+        rootOn.style.pointerEvents = '';
+      }
+
+      var m = state.myth;
+      if (!m || !m.moon) {
+        /* Need a crater — settle film to choice state first */
+        try {
+          if (typeof skipMythToChoice === 'function') skipMythToChoice();
+          m = state.myth;
+        } catch (eI) {}
+      }
+      if (!m) {
+        console.warn('[Tour] continueMythStory: no myth — cannot continue');
+        return;
+      }
+
+      try { clearMythTimers(); } catch (eTm) {}
+      if (!m._timers) m._timers = [];
+
+      m.active = true;
+      m.waitingChoice = false;
+      m.panelShown = false;
+      m.endless = true;
+      m.chapterIndex = 0;
+      m.storyArcDone = false;
+      m.epilogueIndex = 0;
+      m.phase = 'call';
+      m.homeHidden = false;
+      m.awayPlanet = null;
+      m.soft = 1;
+      m.caption = '';
+      m.captionA = 0;
+      m.captionHold = 0;
+      ensureStoryWorlds(m);
+      applyHomeScene(m);
+      if (m.structure) {
+        m.structure.h = m.structure.hMax;
+        m.structure.lit = 1;
+        m.structure.floors = 5;
+        m.structure.visitors = 0.15;
+        m.structure.glow = 0.5;
+        m.structure.a = 1;
+      }
+      if (m.moon) m.moon.a = 1;
+      if (m.home) m.home.a = 1;
+
+      hideMeetAvaPanel();
+      showTourSkipMyth(false); /* Skip is only for first film, not continued story */
+
+      /* "Do the tour" pill only (story already continued) */
+      ensureChoiceDom();
+      var el = $('synTourChoice');
+      if (el) {
+        el.classList.add('show', 'tour-only');
+        el.style.display = 'flex';
+        el.style.visibility = 'visible';
+        el.style.pointerEvents = 'auto';
+        el.style.zIndex = '100120';
+        positionMythChoice();
+      }
+      pinGuideAtPlanet(true);
+      if (!state.guideReleased) {
+        releaseGuideBot(m.moon.x - 20, m.moon.y - m.moon.r * 0.55, true);
+      } else {
+        pinGuideAtPlanet(true);
+      }
+      wireChoiceButtons();
+      try { startFx(); } catch (eFx) {}
+      scheduleStoryChapter(m, 400);
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_continue_story', {});
+      } catch (eT) {}
+    } catch (err) {
+      console.error('[Tour] continueMythStory failed', err);
     }
-    m.waitingChoice = false;
-    m.endless = true;
-    m.chapterIndex = 0;
-    m.storyArcDone = false;
-    m.epilogueIndex = 0;
-    m.phase = 'call';
-    m.homeHidden = false;
-    m.awayPlanet = null;
-    ensureStoryWorlds(m);
-    applyHomeScene(m);
-    if (m.structure) {
-      m.structure.h = m.structure.hMax;
-      m.structure.lit = 1;
-      m.structure.floors = 5;
-      m.structure.visitors = 0.15;
-      m.structure.glow = 0.5;
-    }
-    /* Glass Tour pill stays by the planet */
-    ensureChoiceDom();
-    var el = $('synTourChoice');
-    if (el) {
-      el.classList.add('show', 'tour-only');
-      positionMythChoice();
-    }
-    pinGuideAtPlanet();
-    if (!state.guideReleased) {
-      releaseGuideBot(m.moon.x - 20, m.moon.y - m.moon.r * 0.55, true);
-    }
-    scheduleStoryChapter(m, 400);
   }
 
   /** Fully hide Meet Ava / center glass — never leave it blocking the film */
@@ -35510,24 +35762,45 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   /**
-   * Leave the story film.
-   * - First-run (full): Meet Ava panel (legacy path).
-   * - Watch story / story hub: NEVER Meet Ava — jump to Ava live video or clean exit.
+   * "Do the tour" — proven path from working builds:
+   * film/choice → Meet Ava glass ("Talk with Ava") → next() → video → spotlights → Finish.
+   * Must NOT call finish() / _forceReleaseSynBot here.
    */
   function skipMythToTour() {
     try {
+      state.open = true;
+      window.__synTourActive = true;
+      state.entryMode = state.entryMode === 'story' ? 'tour' : (state.entryMode || 'full');
+      if (state.entryMode === 'full') state.entryMode = 'tour';
+
+      var root = $('synTourRoot');
+      if (!root) {
+        try { injectDom(); } catch (eD) {}
+        root = $('synTourRoot');
+      }
+      if (root) {
+        root.classList.add('on');
+        root.style.display = '';
+        root.style.pointerEvents = '';
+      }
+
       hideMythChoice();
       hideStoryTourBtn();
-      wireChoiceButtons();
-      hideMeetAvaPanel();
+      showTourSkipMyth(false);
+      try { hideReplayHub(); } catch (eH) {}
+      try { clearMythTimers(); } catch (eTm) {}
+      if (state.mythTimer) {
+        clearTimeout(state.mythTimer);
+        state.mythTimer = 0;
+      }
 
       var m = state.myth;
       if (m) {
         m.waitingChoice = false;
         m.endless = false;
         m.phase = 'soft';
-        m.interactive = false;
-        m.panelShown = true; /* block delayed timers from re-opening UI */
+        m.interactive = true;
+        m.panelShown = false;
         m.caption = '';
         m.captionA = 0;
         if (m.structure) {
@@ -35537,27 +35810,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           m.structure.visitors = 1;
           m.structure.floors = 5;
         }
-      }
-
-      /* Hub "Watch story" or pure story mode: no Meet Ava wall — go to Ava video or finish */
-      if (state.entryMode === 'story') {
-        try { stopMyth(); } catch (eS) {}
-        try { updateNarrationDom(null); } catch (eN) {}
-        hideMeetAvaPanel();
-        state.guideReleased = true;
-        window.__synBotStoryReleased = true;
-        state.entryMode = 'tour';
-        state.i = 1; /* Ava live intro video */
-        showTourSkipMyth(true);
-        try {
-          if (typeof synTrack === 'function') synTrack('tour_step', { step: 'ava_video_from_story' });
-        } catch (eT) {}
-        renderStep();
-        return;
-      }
-
-      /* Full first-run only: Meet Ava shell */
-      if (m) {
         try {
           if (!state.guideReleased) {
             releaseGuideBot(m.moon.x, m.moon.y - m.moon.r * 0.42, true);
@@ -35567,16 +35819,19 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         } catch (eBot) {}
       }
 
+      /* Meet Ava shell — Talk with Ava advances via next() into product tour */
       var centerWrap = $('synTourCenter');
       var center = $('synTourCenterPanel');
       var card = $('synTourCard');
       if (card) {
         card.classList.remove('show', 'st-video');
         card.style.display = 'none';
+        card.style.visibility = 'hidden';
       }
+      try { showVideo(false); } catch (eV) {}
       if (centerWrap) {
         centerWrap.style.display = 'flex';
-        centerWrap.style.pointerEvents = 'none';
+        centerWrap.style.pointerEvents = 'auto';
         centerWrap.style.zIndex = '100085';
       }
       if (center) {
@@ -35589,10 +35844,79 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (nextEl) {
           nextEl.textContent = 'Talk with Ava';
           nextEl.style.display = 'inline-flex';
-          nextEl.onclick = function (e) {
-            if (e) { e.preventDefault(); e.stopPropagation(); }
-            next();
-          };
+        }
+        if (secEl) secEl.style.display = 'none';
+        var skipC = $('synTourCenterSkip');
+        if (skipC) {
+          skipC.style.display = 'none';
+          skipC.setAttribute('aria-hidden', 'true');
+        }
+        reflowTextAnims(center);
+        center.classList.remove('myth-climax', 'show');
+        void center.offsetWidth;
+        center.classList.add('show', 'myth-climax');
+        center.style.pointerEvents = 'auto';
+        center.style.opacity = '1';
+        center.style.visibility = 'visible';
+        center.style.transform = 'scale(1) translateY(0)';
+      }
+      enableCenterPanelInteract();
+      if (m) {
+        m.panelShown = true;
+        m.phase = 'done';
+        m.interactive = true;
+        m.active = true; /* keep crater under Meet Ava glass */
+      }
+      state.i = 0; /* welcome — next() → Ava video → spotlights → You're in */
+      try { startFx(); } catch (eFx) {}
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_do_the_tour', { path: 'meet_ava' });
+      } catch (eT) {}
+      return;
+    } catch (err) {
+      console.error('[Tour] skipMythToTour failed', err);
+    }
+    /* Fallback: jump to Ava video (step 1) without killing session */
+    try {
+      state.open = true;
+      window.__synTourActive = true;
+      state.i = 1;
+      state.entryMode = 'tour';
+      state.guideReleased = true;
+      hideMythChoice();
+      hideMeetAvaPanel();
+      renderStep();
+    } catch (e2) {
+      console.error('[Tour] skipMythToTour fallback failed', e2);
+    }
+  }
+
+  /* Legacy Meet Ava path kept as unused helper if needed later */
+  function _showMeetAvaPanelLegacy() {
+    try {
+      var m = state.myth;
+      var centerWrap = $('synTourCenter');
+      var center = $('synTourCenterPanel');
+      var card = $('synTourCard');
+      if (card) {
+        card.classList.remove('show', 'st-video');
+        card.style.display = 'none';
+      }
+      if (centerWrap) {
+        centerWrap.style.display = 'flex';
+        centerWrap.style.pointerEvents = 'auto';
+        centerWrap.style.zIndex = '100085';
+      }
+      if (center) {
+        var titleEl = $('synTourCenterTitle');
+        var bodyEl = $('synTourCenterBody');
+        var nextEl = $('synTourCenterNext');
+        var secEl = $('synTourCenterSec');
+        if (titleEl) titleEl.textContent = 'Meet Ava';
+        if (bodyEl) bodyEl.textContent = 'Scattered tools clash — one signal holds them together.';
+        if (nextEl) {
+          nextEl.textContent = 'Talk with Ava';
+          nextEl.style.display = 'inline-flex';
         }
         if (secEl) secEl.style.display = 'none';
         var skipC = $('synTourCenterSkip');
@@ -35799,18 +36123,27 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       m.phase === 'foes' || m.phase === 'battle' || m.phase === 'victory' ||
       m.phase === 'meet' || m.phase === 'settle_home' || m.phase === 'build' ||
       m.phase === 'choice' || m.phase === 'endless' || m.phase === 'signal' || m.phase === 'travelers' ||
-      m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done'
+      m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done' ||
+      /* continue-story arc phases */
+      m.phase === 'call' || m.phase === 'portal' || m.phase === 'threshold' || m.phase === 'new_world' ||
+      m.phase === 'tests' || m.phase === 'seed' || m.phase === 'return' || m.phase === 'gate' ||
+      m.phase === 'mind_room' || m.phase === 'siege' || m.phase === 'network' || m.phase === 'epilogue' ||
+      m.phase === 'done_story' || m.endless
     ) {
       m.orbAlpha = Math.max(0, m.orbAlpha - dt * 0.7);
       m.orbR += ((m.orbTarget * 0.35) - m.orbR) * Math.min(1, dt * 1.5);
       m.moon.a = Math.min(1, m.moon.a + dt * 1.4);
       if (m.phase === 'settle_home' || m.phase === 'build' || m.phase === 'signal' ||
           m.phase === 'travelers' || m.phase === 'ava_light' || m.phase === 'invite' ||
-          m.phase === 'soft' || m.phase === 'done') {
+          m.phase === 'soft' || m.phase === 'done' || m.phase === 'call' || m.phase === 'portal' ||
+          m.phase === 'gate' || m.phase === 'mind_room' || m.phase === 'siege' || m.phase === 'network' ||
+          m.phase === 'epilogue' || m.phase === 'done_story' || m.phase === 'seed' || m.phase === 'return' ||
+          m.endless) {
         m.home.a = Math.min(1, m.home.a + dt * 1.2);
         m.soft = Math.min(1, m.soft + dt * 0.35);
       }
-      if (m.phase === 'done' && m.soft > 0.85 && state.guideReleased) {
+      /* Only kill myth after Meet Ava handoff — never during continue-story */
+      if (m.phase === 'done' && !m.endless && m.soft > 0.85 && state.guideReleased) {
         m.active = false;
       }
     }
@@ -36977,7 +37310,29 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     try {
       document.cookie = KEY + '=1;path=/;max-age=31536000;SameSite=Lax';
     } catch (e2) {}
+    try {
+      if (typeof window.showSynapsesChatTourIcon === 'function') window.showSynapsesChatTourIcon();
+    } catch (e3) {}
   }
+
+  /** Dev / recovery: clear "already saw tour" so Chrome shows first tour again */
+  window.unlockSynapsesTour = function () {
+    window.__synTourDone = false;
+    try {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem('synapses_tour_btn_docked');
+      localStorage.removeItem('synapses_app_build');
+    } catch (e) {}
+    try {
+      document.cookie = KEY + '=;path=/;max-age=0';
+      document.cookie = KEY + '=;path=/;max-age=0;SameSite=Lax';
+    } catch (e2) {}
+    try {
+      if (typeof window.resetSynapsesTourUx === 'function') window.resetSynapsesTourUx();
+      else if (typeof window.resetSynapsesTour === 'function') window.resetSynapsesTour();
+    } catch (e3) {}
+    console.log('[Tour] unlocked — hard-refresh or click Tour float');
+  };
   function ensureChat() {
     try { if (typeof setView === 'function') setView('sec-chat'); } catch (e) {}
   }
@@ -37730,19 +38085,51 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   function renderStep() {
+    /* Planet choice dock must survive accidental re-renders (resize races, etc.) */
+    try {
+      if (state.myth && state.myth.waitingChoice) {
+        try { positionMythChoice(); } catch (eP) {}
+        try { showMythChoice(); } catch (eS) {}
+        return;
+      }
+    } catch (eHold) {}
+
     var step = STEPS[state.i];
-    if (!step) return finish(false);
+    if (!step) {
+      /* Don't auto-finish if index glitched mid-product tour — clamp to last real step */
+      if (state.open && state.i > 0 && STEPS.length) {
+        state.i = Math.min(state.i, STEPS.length - 1);
+        step = STEPS[state.i];
+      }
+      if (!step) return finish(false);
+    }
+    /* Session must stay open while rendering a step */
+    state.open = true;
+    window.__synTourActive = true;
     if (step.view) ensureChat();
 
     var card = $('synTourCard');
     var center = $('synTourCenterPanel');
     var hole = $('synTourHole');
+    var root = $('synTourRoot');
+    if (root) {
+      root.classList.add('on');
+      root.style.display = '';
+      root.style.pointerEvents = '';
+    }
 
     /* Always park choice dock off-screen on every Next — kills top-left glass glitch */
     hideMythChoice();
     ensureSkipMythDom();
-    /* Subtle skip only on film/myth + Ava demo video — not on product spotlights */
-    showTourSkipMyth(!!(step && (step.myth || step.mode === 'video')));
+    /* ONE Skip only: first-run / story film. Never on video, spotlights, or Meet Ava */
+    showTourSkipMyth(!!(step && step.myth && step.mode === 'center'));
+    /* Keep card / center skip buttons hidden (legacy DOM may still exist) */
+    try {
+      var cardSkip = $('synTourSkip');
+      if (cardSkip) { cardSkip.style.display = 'none'; cardSkip.setAttribute('aria-hidden', 'true'); }
+      var centerSkip = $('synTourCenterSkip');
+      if (centerSkip) { centerSkip.style.display = 'none'; centerSkip.setAttribute('aria-hidden', 'true'); }
+    } catch (eSkHide) {}
 
     /* Leaving welcome myth when advancing */
     if (!(step.myth && step.mode === 'center')) {
@@ -37770,10 +38157,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       card.style.top = '-9999px';
       if (step.mode !== 'video') clearVideoCardStyles(card);
     }
-    center.classList.remove('show', 'myth-climax');
-    hole.classList.remove('pulse', 'show');
-    hole.style.left = '-9999px';
-    hole.style.top = '-9999px';
+    if (center) center.classList.remove('show', 'myth-climax');
+    if (hole) {
+      hole.classList.remove('pulse', 'show');
+      hole.style.left = '-9999px';
+      hole.style.top = '-9999px';
+    }
     showVideo(false);
 
     setTimeout(function () {
@@ -37814,15 +38203,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
             return;
           }
           stopMyth();
-          $('synTourCenterTitle').textContent = step.title;
-          $('synTourCenterBody').textContent = step.body;
-          $('synTourCenterNext').textContent = step.cta || 'Continue';
-          $('synTourCenterSec').style.display = 'none';
+          if ($('synTourCenterTitle')) $('synTourCenterTitle').textContent = step.title;
+          if ($('synTourCenterBody')) $('synTourCenterBody').textContent = step.body;
+          if ($('synTourCenterNext')) $('synTourCenterNext').textContent = step.cta || 'Continue';
+          if ($('synTourCenterSec')) $('synTourCenterSec').style.display = 'none';
           enableCenterPanelInteract();
-          reflowTextAnims(center);
+          if (center) reflowTextAnims(center);
           requestAnimationFrame(function () {
             if (!state.open) return;
-            center.classList.add('show');
+            if (center) center.classList.add('show');
             enableCenterPanelInteract();
           });
         } else {
@@ -37835,26 +38224,28 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
               true
             );
           }
-          $('synTourCenterTitle').textContent = step.title;
-          $('synTourCenterBody').textContent = step.body;
-          $('synTourCenterNext').textContent = step.cta || 'Continue';
+          if ($('synTourCenterTitle')) $('synTourCenterTitle').textContent = step.title;
+          if ($('synTourCenterBody')) $('synTourCenterBody').textContent = step.body;
+          if ($('synTourCenterNext')) $('synTourCenterNext').textContent = step.cta || 'Continue';
           if (step.secondary) {
-            $('synTourCenterSec').style.display = 'inline-flex';
-            $('synTourCenterSec').textContent = step.secondary;
-          } else {
+            if ($('synTourCenterSec')) {
+              $('synTourCenterSec').style.display = 'inline-flex';
+              $('synTourCenterSec').textContent = step.secondary;
+            }
+          } else if ($('synTourCenterSec')) {
             $('synTourCenterSec').style.display = 'none';
           }
-          /* Final "You're in" — label primary as Finish so intent is obvious */
+          /* Final "You're in" — Start talking ends tour; secondary explores; no extra Skip */
           if (step.id === 'done') {
-            $('synTourCenterNext').textContent = step.cta || 'Start talking';
+            if ($('synTourCenterNext')) $('synTourCenterNext').textContent = step.cta || 'Start talking';
             var skipEl = $('synTourCenterSkip');
-            if (skipEl) skipEl.textContent = 'Close';
+            if (skipEl) { skipEl.style.display = 'none'; skipEl.setAttribute('aria-hidden', 'true'); }
           }
           enableCenterPanelInteract();
-          reflowTextAnims(center);
+          if (center) reflowTextAnims(center);
           requestAnimationFrame(function () {
             if (!state.open) return;
-            center.classList.add('show');
+            if (center) center.classList.add('show');
             enableCenterPanelInteract();
             if (step.id !== 'done') {
               spawnBurst(innerWidth / 2, innerHeight / 2 - 40, 36);
@@ -37867,16 +38258,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (state.guideReleased && state.guideSpawn) {
           guideFlyTo(state.guideSpawn.x, state.guideSpawn.y);
         }
-        $('synTourCenter').style.display = 'none';
+        var cwVid = $('synTourCenter');
+        if (cwVid) {
+          cwVid.style.display = 'none';
+          cwVid.style.pointerEvents = 'none';
+        }
         renderPips();
-        $('synTourTitle').textContent = step.title;
-        $('synTourBody').textContent = step.body;
-        $('synTourNext').textContent = step.cta || 'Next';
-        $('synTourSec').style.display = 'none';
+        if ($('synTourTitle')) $('synTourTitle').textContent = step.title;
+        if ($('synTourBody')) $('synTourBody').textContent = step.body;
+        if ($('synTourNext')) $('synTourNext').textContent = step.cta || 'Next';
+        if ($('synTourSec')) $('synTourSec').style.display = 'none';
         showVideo(true, { deferPlay: true });
-        reflowTextAnims(card);
+        if (card) reflowTextAnims(card);
         /* Measure + pixel-center; play kicks after card is visible (iOS needs this) */
-        centerVideoCard(card);
+        if (card) centerVideoCard(card);
         spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 18);
       } else {
         $('synTourCenter').style.display = 'none';
@@ -37929,33 +38324,55 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   function next() {
     try {
-      /* Demo-only run: after Ava video, exit (they can re-open anytime from hub) */
+      if (!state.open) {
+        state.open = true;
+        window.__synTourActive = true;
+      }
       var cur = STEPS[state.i];
+      /* Demo-only: after Ava video, exit */
       if (state.entryMode === 'demo' && cur && cur.mode === 'video') {
         finish(false);
         return;
       }
-      /* You're in / last step — Finish ends tour completely */
-      if (!cur || state.i >= STEPS.length - 1 || cur.id === 'done') {
+      /* Last step (You're in) or past end → finish — proven working logic */
+      if (!cur || cur.id === 'done' || state.i >= STEPS.length - 1) {
         finish(false);
         return;
       }
       state.i++;
-      /* If we just advanced onto done, show it; if already past, finish */
       if (state.i >= STEPS.length) {
         finish(false);
         return;
       }
+      state.open = true;
+      window.__synTourActive = true;
+      /* Leaving Meet Ava / myth for product steps — clear film so it doesn't fight the UI */
+      if (state.myth && STEPS[state.i] && !STEPS[state.i].myth) {
+        try {
+          state.myth.waitingChoice = false;
+          state.myth.panelShown = true;
+          state.myth.active = false;
+        } catch (eM) {}
+      }
       renderStep();
     } catch (eNext) {
       console.error('[Tour] next failed', eNext);
-      try { finish(true); } catch (eF) {}
+      try {
+        if (state.i < STEPS.length - 1) {
+          state.i++;
+          renderStep();
+        } else {
+          finish(true);
+        }
+      } catch (eF) {
+        try { finish(true); } catch (eF2) {}
+      }
     }
   }
 
   function finish(skipped) {
     try {
-      /* Idempotent — safe to call when already closing / stuck */
+      /* Proven working finish (from pre-recovery builds) + hard BR reset for stuck purple */
       state.open = false;
       window.__synTourActive = false;
       window.__synBotStoryReleased = true;
@@ -37969,9 +38386,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       try { stopMyth(); } catch (eM) {}
       try { stopFx(); } catch (eFx) {}
       try { updateNarrationDom(null); } catch (eN) {}
-      state.guideReleased = false;
-      state.myth = null;
-      state.i = 0;
 
       var root = $('synTourRoot');
       if (root) {
@@ -37993,7 +38407,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
       var card = $('synTourCard');
       if (card) {
-        clearVideoCardStyles(card);
+        try { clearVideoCardStyles(card); } catch (eC) {}
         card.classList.remove('show', 'st-video');
         card.style.display = 'none';
         card.style.visibility = 'hidden';
@@ -38001,29 +38415,37 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       var hole = $('synTourHole');
       if (hole) hole.classList.remove('show', 'pulse');
 
-      /* Always hard-reset BR bot — no mid-air stuck after Take tour → Finish */
       var c = tinyBot();
+      var wasGuide = state.guideReleased;
+      state.guideReleased = false;
+      state.myth = null;
+      state.i = 0;
       if (c) {
         try {
           c.removeAttribute('data-myth-hidden');
+          /* Prefer soft tour-end; hard-reset if still fullscreen (stuck purple) */
           if (c._hardResetBR) c._hardResetBR();
           else if (c._tourEnd) c._tourEnd();
           if (c._resume) c._resume();
           c.style.opacity = '0.55';
           c.style.visibility = 'visible';
-        } catch (e) {}
+        } catch (eBot) {}
       }
+      try { window.__synBotEyeBlend = 0; } catch (eEye) {}
       setTimeout(function () {
         try {
-          if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
-          else if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+          if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+          try { window.__synBotEyeBlend = 0; } catch (eE2) {}
+          var c2 = tinyBot();
+          if (c2 && ((c2.style.cssText || '').indexOf('100vw') !== -1 || c2.width > 400)) {
+            if (c2._hardResetBR) c2._hardResetBR();
+            c2.style.opacity = '0.55';
+          }
         } catch (e2) {}
-      }, 80);
-      setTimeout(function () {
-        try {
-          if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
-        } catch (e3) {}
-      }, 600);
+      }, 120);
+      try {
+        if (typeof window.showSynapsesChatTourIcon === 'function') window.showSynapsesChatTourIcon();
+      } catch (eIcon) {}
       try {
         if (typeof synTrack === 'function') synTrack('tour_complete', { skipped: !!skipped });
       } catch (e) {}
@@ -38040,7 +38462,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       try {
         window.__synTourActive = false;
         window.__synBotStoryReleased = true;
-        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+        state.open = false;
+        var c3 = tinyBot();
+        if (c3 && c3._hardResetBR) c3._hardResetBR();
+        try { window.__synBotEyeBlend = 0; } catch (eE3) {}
       } catch (e2) {}
     }
   }
@@ -38052,18 +38477,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (c && c._tourStart) try { c._tourStart(); } catch (e) {}
   }
   function guideEnd() {
+    /* Proven path: _tourEnd then sync — never forceRelease mid startTour restart */
     var c = tinyBot();
     try {
-      if (c && c._hardResetBR) c._hardResetBR();
-      else if (c && c._tourEnd) c._tourEnd();
+      if (c && c._tourEnd) c._tourEnd();
+      else if (c && c._hardResetBR) c._hardResetBR();
       if (c && c._resume) c._resume();
-      if (c) { c.style.opacity = '0.55'; c.style.visibility = 'visible'; }
+      if (c) {
+        c.style.opacity = '0.55';
+        c.style.visibility = 'visible';
+        c.removeAttribute('data-myth-hidden');
+      }
+      try { window.__synBotEyeBlend = 0; } catch (eEye) {}
+      if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
     } catch (e) {}
-    if (typeof window._forceReleaseSynBot === 'function') {
-      try { window._forceReleaseSynBot(); } catch (eF) {}
-    } else if (typeof window._tinyBotSync === 'function') {
-      try { window._tinyBotSync(); } catch (e2) {}
-    }
   }
   function tinyBot() { return document.getElementById('tinyBotCanvas'); }
 
@@ -38088,7 +38515,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   /**
    * Second access (from SYN-BOT tour icon after first finish):
-   * Watch story | Take tour | Close — never leave the chat panel over the film.
+   * Watch story | Take tour | Close only (no separate Ava live intro).
    */
   function showReplayHub() {
     closeSynBotHard();
@@ -38096,14 +38523,18 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     injectDom();
     hideMythChoice();
     hideReplayHub();
+    showTourSkipMyth(false);
     try { showVideo(false); } catch (eV) {}
     try { stopFx(); } catch (eF) {}
-    try { if (state.myth) stopMyth(); } catch (eM) {}
+    try { stopMyth(); } catch (eM) {}
+    try { hideMeetAvaPanel(); } catch (eH) {}
     state.open = true;
     window.__synTourActive = true;
+    window.__synTourIntentionalStart = true;
     state.i = 0;
     state.myth = null;
     state.guideReleased = false;
+    state.entryMode = 'full';
     var root = $('synTourRoot');
     if (root) {
       root.classList.add('on');
@@ -38122,16 +38553,31 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (centerWrap) centerWrap.style.display = 'none';
     var hole = $('synTourHole');
     if (hole) hole.classList.remove('show');
+    /* BR mint bot while hub is open — no purple fullscreen leftover */
+    try {
+      var tb = tinyBot();
+      if (tb) {
+        if (tb._hardResetBR) tb._hardResetBR();
+        else if (tb._tourEnd) tb._tourEnd();
+        tb.style.opacity = '0.55';
+        tb.style.visibility = 'visible';
+      }
+      window.__synBotEyeBlend = 0;
+    } catch (eBot) {}
 
     var hub = $('synTourReplayHub');
     if (!hub) return;
     if (root) root.style.pointerEvents = 'auto';
     hub.classList.add('show');
+    hub.style.pointerEvents = 'auto';
+    hub.style.zIndex = '100130';
 
     var storyBtn = $('synTourReplayStory');
     var tourBtn = $('synTourReplayTour');
-    var demoBtn = $('synTourReplayDemo');
     var closeBtn = $('synTourReplayClose');
+    /* Remove legacy third option if DOM still has it */
+    var demoBtn = $('synTourReplayDemo');
+    if (demoBtn && demoBtn.parentNode) demoBtn.parentNode.removeChild(demoBtn);
     if (storyBtn) {
       storyBtn.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -38143,15 +38589,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       tourBtn.onclick = function (e) {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         hideReplayHub();
-        /* Includes Ava live intro video, then product spotlights */
+        /* Product tour: Ava video + feature spotlights through Finish */
         startTour(true, { mode: 'tour' });
-      };
-    }
-    if (demoBtn) {
-      demoBtn.onclick = function (e) {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        hideReplayHub();
-        startTour(true, { mode: 'demo' });
       };
     }
     if (closeBtn) {
@@ -38161,15 +38600,23 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         showTourSkipMyth(false);
         state.open = false;
         window.__synTourActive = false;
+        window.__synBotStoryReleased = true;
         if (root) {
           root.classList.remove('on');
+          root.style.display = 'none';
           root.style.pointerEvents = '';
         }
         closeSynBotHard();
-        window.__synBotStoryReleased = true;
-        if (typeof window._tinyBotSync === 'function') {
-          try { window._tinyBotSync(); } catch (eS) {}
-        }
+        try {
+          var tb2 = tinyBot();
+          if (tb2) {
+            if (tb2._hardResetBR) tb2._hardResetBR();
+            else if (tb2._tourEnd) tb2._tourEnd();
+            tb2.style.opacity = '0.55';
+          }
+          window.__synBotEyeBlend = 0;
+          if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+        } catch (eS) {}
       };
     }
     try {
@@ -38183,26 +38630,36 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     /* HARD RULE: never auto-proc. Only explicit Tour button (force === true). */
     if (!force) return;
     opts = opts || {};
+    window.__synTourIntentionalStart = true;
     closeSynBotHard();
     hideReplayHub();
-    // Force restart even if tour is mid-flight
-    if (state.open) {
-      try { showVideo(false); stopFx(); guideEnd(); hideGuideBot(); hideMythChoice(); } catch (e) {}
-      var rootStuck = document.getElementById('synTourRoot');
-      if (rootStuck) {
-        rootStuck.classList.remove('on');
-        rootStuck.style.pointerEvents = '';
-      }
-      state.open = false;
+    showTourSkipMyth(false);
+    /* Clean restart if mid-flight — soft bot end, clear flags so recovery can't desync */
+    try { showVideo(false); } catch (eV) {}
+    try { stopFx(); } catch (eF) {}
+    try { stopMyth(); } catch (eM) {}
+    try { hideMythChoice(); } catch (eH) {}
+    try { hideMeetAvaPanel(); } catch (eA) {}
+    try { guideEnd(); } catch (eG0) {}
+    var rootStuck = document.getElementById('synTourRoot');
+    if (rootStuck) {
+      rootStuck.classList.remove('on');
+      rootStuck.style.display = '';
+      rootStuck.style.pointerEvents = '';
     }
+    state.open = false;
+    window.__synTourActive = false; /* clear before re-arm — avoids stuck purple window */
+    state.myth = null;
+    state.i = 0;
+
     injectStyles();
     injectDom();
     ensureVideoControlsDom();
-    /* mode: story = film myth (0); tour = Ava live intro video (1) then product; demo = video only (1);
-       default = full first run from film */
+    wireTourNavButtons();
+    /* mode: story = film; tour = Ava video + product; demo = Ava video only; default = full first run */
     state.entryMode = opts.mode || 'full';
     if (opts.mode === 'tour' || opts.mode === 'demo') {
-      state.i = 1; /* Ava introduces Synapses — live video, always re-watchable */
+      state.i = 1; /* Ava introduces Synapses — live video */
       state.guideReleased = true;
       window.__synBotStoryReleased = true;
     } else {
@@ -38215,14 +38672,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     window.__synTourActive = true;
     state.myth = null;
     ensureChat();
-    /* Kill any leftover Meet Ava / hub glass before film or tour starts */
-    try { hideMeetAvaPanel(); } catch (eH) {}
+    try { hideMeetAvaPanel(); } catch (eH2) {}
     try { hideReplayHub(); } catch (eR) {}
     try {
       closeSynBotHard();
       var tb = document.getElementById('tinyBotCanvas');
-      if (tb && !tb.style.cssText.includes('100vw')) {
-        tb.style.opacity = (opts.mode === 'tour' || opts.mode === 'demo') ? '1' : '0';
+      if (tb) {
+        /* Leave tour-mode canvas alone only if we immediately re-enter tour mode */
+        if (opts.mode === 'tour' || opts.mode === 'demo') {
+          tb.style.opacity = '1';
+          tb.style.visibility = 'visible';
+          tb.removeAttribute('data-myth-hidden');
+        } else {
+          if (tb._hardResetBR) tb._hardResetBR();
+          tb.style.opacity = '0';
+        }
       }
     } catch (e) {}
     if (opts.mode === 'tour' || opts.mode === 'demo') {
@@ -38232,7 +38696,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } else {
       hideGuideBot();
     }
-    showTourSkipMyth(opts.mode === 'story' || opts.mode === 'full' || !opts.mode);
+    /* Skip only appears once renderStep hits the film — not on product-only starts */
+    showTourSkipMyth(false);
     startFx();
     var rootOn = $('synTourRoot');
     if (rootOn) {
@@ -38266,19 +38731,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   /** Kill tour UI immediately + mark finished (for stuck Median launches) */
   window.dismissSynapsesTour = function () {
     try {
-      markDone();
+      /* Soft kill stuck overlay — prefer finish() path for normal exits */
       state.open = false;
       window.__synTourActive = false;
       window.__synBotStoryReleased = true;
-      state.myth = null;
-      state.guideReleased = false;
-      try { if (state.myth) stopMyth(); } catch (eM) {}
+      try { stopMyth(); } catch (eM) {}
       try { showVideo(false); } catch (eV) {}
       try { stopFx(); } catch (eF) {}
       try { hideMythChoice(); } catch (eH) {}
       try { hideReplayHub(); } catch (eHub) {}
       try { showTourSkipMyth(false); } catch (eSk) {}
+      try { hideMeetAvaPanel(); } catch (eA) {}
       try { updateNarrationDom(null); } catch (eN) {}
+      state.myth = null;
+      state.guideReleased = false;
       var root = document.getElementById('synTourRoot');
       if (root) {
         root.classList.remove('on');
@@ -38295,7 +38761,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (center) center.classList.remove('show', 'myth-climax');
       var centerWrap = document.getElementById('synTourCenter');
       if (centerWrap) centerWrap.style.display = 'none';
-      if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+      try {
+        var c = document.getElementById('tinyBotCanvas');
+        if (c) {
+          if (c._hardResetBR) c._hardResetBR();
+          else if (c._tourEnd) c._tourEnd();
+          c.style.opacity = '0.55';
+          c.style.visibility = 'visible';
+        }
+        window.__synBotEyeBlend = 0;
+        if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+      } catch (eBot) {}
     } catch (e) {}
   };
 
@@ -38312,8 +38788,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   /* On every load: kill stuck tour overlay so demo cannot block the app */
   function killStuckTourOnBoot() {
     try {
+      if (window.__synTourActive || window.__synTourIntentionalStart) return;
       var root = document.getElementById('synTourRoot');
-      if (root && root.classList.contains('on') && !window.__synTourIntentionalStart) {
+      if (root && root.classList.contains('on')) {
         window.dismissSynapsesTour();
       }
       /* If user already finished once, never leave overlay around */
@@ -38340,7 +38817,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   window.addEventListener('resize', function () {
     if (!state.open) return;
     fxResize();
-    /* Don't restart welcome myth mid-flight */
+    /* Don't restart welcome myth mid-flight or while choice dock is up */
+    if (state.myth && state.myth.waitingChoice) {
+      try { positionMythChoice(); } catch (eP) {}
+      return;
+    }
     if (state.myth && state.myth.active && !state.myth.panelShown) return;
     var step = STEPS[state.i];
     if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
