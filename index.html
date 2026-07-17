@@ -24099,7 +24099,13 @@ function _neuInjectDownloadInterceptor(frame){
   };
   // Bring mini bot back on screen immediately (cancel any exit/offscreen)
   canvas._bringIn = function(){
+    /* If stuck in full-screen tour layer, hard-reset to BR first */
+    if (_tourMode || W > 400 || canvas.style.width === '100vw' || (canvas.style.cssText || '').indexOf('100vw') !== -1) {
+      canvas._hardResetBR();
+      return;
+    }
     _exiting = false;
+    _paused = false;
     // If off-screen, fly back in from bottom-right edge smoothly
     if(_offScreen || r.x > W || r.y > H){
       _offScreen = false;
@@ -24108,6 +24114,7 @@ function _neuInjectDownloadInterceptor(frame){
       r.vx = -_entrySpeed; r.vy = -_entrySpeed;
       r.trailPoints = [];
       var checkIn = setInterval(function(){
+        if (_tourMode) { clearInterval(checkIn); return; }
         _entrySpeed = Math.max(_entrySpeed * 0.92, 0.6);
         r.vx = r.vx * 0.88 - _entrySpeed * 0.08;
         r.vy = r.vy * 0.88 - _entrySpeed * 0.08;
@@ -24123,6 +24130,7 @@ function _neuInjectDownloadInterceptor(frame){
       r.vx = (Math.random()-0.5)*1.2;
       r.vy = (Math.random()-0.5)*1.2;
       r.trailPoints = [];
+      if (parseFloat(canvas.style.opacity) < 0.2) canvas.style.opacity = '0.55';
       scheduleExit();
     }
   };
@@ -24283,17 +24291,53 @@ function _neuInjectDownloadInterceptor(frame){
     _tourMode = false;
     _tourTarget = null;
     _tourCb = null;
-    if(_tourSaved){
-      W = 180; H = 180;
-      canvas.width = W; canvas.height = H;
-      canvas.style.cssText = 'position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:'+(_tourSaved.opacity||'0.55')+';transition:opacity .4s ease;';
-      r.size = 10;
-      r.x = W * 0.55; r.y = H * 0.55;
-      r.vx = (Math.random()-0.5)*1.0;
-      r.vy = (Math.random()-0.5)*1.0;
-      r.trailPoints = [];
-      _tourSaved = null;
-    }
+    _exiting = false;
+    _offScreen = false;
+    _paused = false;
+    if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
+    /* Never restore opacity 0 from tour start — that made BR bot unclickable */
+    var op = '0.55';
+    try {
+      if (_tourSaved && _tourSaved.opacity != null) {
+        var parsed = parseFloat(_tourSaved.opacity);
+        if (isFinite(parsed) && parsed >= 0.2) op = String(_tourSaved.opacity);
+      }
+    } catch (eOp) {}
+    W = 180; H = 180;
+    canvas.width = W; canvas.height = H;
+    canvas.style.cssText = 'position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:'+op+';transition:opacity .4s ease;visibility:visible;';
+    r.size = 10;
+    r.x = W * 0.55; r.y = H * 0.55;
+    r.vx = (Math.random()-0.5)*1.0;
+    r.vy = (Math.random()-0.5)*1.0;
+    r.trailPoints = [];
+    r._parkX = null;
+    r._parkY = null;
+    _tourSaved = null;
+    scheduleExit();
+  };
+
+  /** Hard reset to BR corner — kills stuck full-screen / mid-air / opacity-0 states */
+  canvas._hardResetBR = function(){
+    _tourMode = false;
+    _tourTarget = null;
+    _tourCb = null;
+    _tourSaved = null;
+    _exiting = false;
+    _offScreen = false;
+    _paused = false;
+    if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
+    W = 180; H = 180;
+    canvas.width = W; canvas.height = H;
+    canvas.style.cssText = 'position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:0.55;transition:opacity .4s ease;visibility:visible;';
+    r.size = 10;
+    r.x = W * 0.55; r.y = H * 0.55;
+    r.vx = (Math.random()-0.5)*1.0;
+    r.vy = (Math.random()-0.5)*1.0;
+    r.trailPoints = [];
+    r._parkX = null;
+    r._parkY = null;
+    canvas.removeAttribute('data-myth-hidden');
     scheduleExit();
   };
 
@@ -24328,12 +24372,80 @@ function _neuInjectDownloadInterceptor(frame){
     }
     window._synBotEntranceReady = _synBotEntranceReady;
     window._tinyBotSync = function(){
-      if(!_synBotAllowed()){ canvas.style.opacity='0'; return; }
+      /* Stuck tour flag with no active tour UI → force release */
+      try {
+        var rootStuck = document.getElementById('synTourRoot');
+        var tourUiOn = rootStuck && rootStuck.classList.contains('on');
+        if (window.__synTourActive && !tourUiOn && !_tourMode) {
+          window.__synTourActive = false;
+          window.__synBotStoryReleased = true;
+        }
+      } catch (eS) {}
+      if(!_synBotAllowed()){
+        /* Only hide if tour is truly flying; otherwise recover */
+        if (window.__synTourActive && !_tourMode) {
+          canvas.style.opacity='0';
+          return;
+        }
+      }
       if(_tourMode){ canvas.style.opacity='1'; return; }
-      // Don't gate on `shown` here — explicit external call (from toggleSynBot)
       if(!document.getElementById('cyberGreeting') && !document.getElementById('appSplash')){
         shown = true;
+        if (W > 400 || (canvas.style.cssText || '').indexOf('100vw') !== -1) {
+          try { canvas._hardResetBR(); } catch (eH) {}
+        }
         canvas.style.opacity='0.55';
+        canvas.style.visibility='visible';
+      }
+    };
+
+    /** Global recovery — call after tour finish, app resume, or when widget "dies" */
+    window._forceReleaseSynBot = function(){
+      try {
+        window.__synTourActive = false;
+        window.__synBotStoryReleased = true;
+        var root = document.getElementById('synTourRoot');
+        if (root) {
+          root.classList.remove('on');
+          root.style.display = 'none';
+          root.style.pointerEvents = 'none';
+        }
+        ['synTourCenter','synTourChoice','synTourSkipMyth','synTourReplayHub','synTourCard'].forEach(function(id){
+          var el = document.getElementById(id);
+          if (!el) return;
+          el.classList.remove('show', 'myth-climax', 'st-video', 'tour-only');
+          if (id === 'synTourCenter' || id === 'synTourReplayHub') el.style.display = 'none';
+          if (id === 'synTourChoice' || id === 'synTourSkipMyth') {
+            el.classList.remove('show');
+            if (id === 'synTourChoice') {
+              el.style.display = 'none';
+              el.style.left = '-9999px';
+            }
+          }
+        });
+        var tip = document.getElementById('robotTooltip');
+        if (tip) {
+          tip.classList.remove('rt-visible');
+          tip.classList.add('rt-hidden');
+          tip.style.opacity = '';
+          tip.style.visibility = '';
+          tip.style.transition = '';
+        }
+        var fly = document.querySelector('canvas[style*="z-index:88889"]');
+        /* best-effort: leave fly canvases alone if not ours */
+        try {
+          if (typeof _flyCanvas !== 'undefined' && _flyCanvas && _flyCanvas.parentNode) {
+            _flyCanvas.parentNode.removeChild(_flyCanvas);
+          }
+        } catch (eF) {}
+        if (canvas._hardResetBR) canvas._hardResetBR();
+        else if (canvas._tourEnd) canvas._tourEnd();
+        if (canvas._resume) canvas._resume();
+        shown = true;
+        canvas.style.opacity = '0.55';
+        canvas.style.visibility = 'visible';
+      } catch (e) {
+        console.warn('[SynBot] forceRelease failed', e);
       }
     };
     var mo = new MutationObserver(function(){
@@ -24423,13 +24535,24 @@ function _neuInjectDownloadInterceptor(frame){
 
   function showRobot(){
     if(!tooltip) return;
-    /* Disabled during first-visit / Synapses tour — guide bot only, no chat popup */
+    /* Disabled during real tour — but recover if tour flags are stuck with UI off */
     try {
-      if (window.__synTourActive || (window.state && document.getElementById('synTourRoot') && document.getElementById('synTourRoot').classList.contains('on'))) return;
+      var rootTour = document.getElementById('synTourRoot');
+      var tourUiOn = rootTour && rootTour.classList.contains('on') && rootTour.style.display !== 'none';
+      if (window.__synTourActive || tourUiOn) {
+        if (!tourUiOn && typeof window._forceReleaseSynBot === 'function') {
+          window._forceReleaseSynBot();
+        } else if (tourUiOn) {
+          return; /* real tour in progress */
+        }
+      }
     } catch (eTour) {}
     /* BR hover chat allowed whenever bot is free (manual tour — no entrance gate) */
     try {
-      if (typeof window._synBotEntranceReady === 'function' && !window._synBotEntranceReady()) return;
+      if (typeof window._synBotEntranceReady === 'function' && !window._synBotEntranceReady()) {
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+        else return;
+      }
     } catch (eEnt) { /* allow */ }
     if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
     if(document.getElementById('appSplash')) return;
@@ -26015,6 +26138,41 @@ function _applySynBotVisualState(){
 }
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
 if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(_applySynBotVisualState,0);
+
+/* Recover SynBot after app sleep / tab back / random stuck states */
+(function(){
+  function _synBotRecover(reason){
+    try {
+      var root = document.getElementById('synTourRoot');
+      var tourUiOn = root && root.classList.contains('on') && root.style.display !== 'none';
+      var tc = document.getElementById('tinyBotCanvas');
+      var stuckTourFlag = window.__synTourActive && !tourUiOn;
+      var stuckFullscreen = tc && ((tc.style.cssText || '').indexOf('100vw') !== -1 || tc.width > 500);
+      var stuckHidden = tc && (tc.style.opacity === '0' || parseFloat(tc.style.opacity) < 0.15) && !tourUiOn;
+      if (stuckTourFlag || stuckFullscreen || (stuckHidden && window.__synBotStoryReleased)) {
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+        else if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+        if (typeof console !== 'undefined' && console.log) console.log('[SynBot] recovered:', reason);
+      } else if (typeof window._tinyBotSync === 'function') {
+        window._tinyBotSync();
+      }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') {
+      setTimeout(function(){ _synBotRecover('visibility'); }, 200);
+      setTimeout(function(){ _synBotRecover('visibility-late'); }, 900);
+    }
+  });
+  window.addEventListener('focus', function(){
+    setTimeout(function(){ _synBotRecover('focus'); }, 300);
+  });
+  /* Light watchdog — random “not interactable” from leftover tour/offscreen */
+  setInterval(function(){
+    if (document.visibilityState !== 'visible') return;
+    _synBotRecover('watchdog');
+  }, 8000);
+})();
 
 // ── Past-chats button visibility toggle (SYN-BOT header hamburger icon) ────
 // First load default: HIDDEN (hamburger → purple morph stays off until user enables it)
@@ -37728,16 +37886,18 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       finish(false);
       return;
     }
-    if (state.i >= STEPS.length - 1) {
+    /* Last step (You're in / Finish) — always complete + free SynBot */
+    if (!cur || state.i >= STEPS.length - 1 || (cur && cur.id === 'done')) {
       finish(false);
       return;
     }
     state.i++;
+    /* After increment, if we landed on done and user mode is tour, still render You're in once */
     renderStep();
   }
 
   function finish(skipped) {
-    if (!state.open) return;
+    /* Allow finish even if state.open already false (stuck recovery) */
     state.open = false;
     window.__synTourActive = false;
     markDone(); /* persist finished so Median/WebView does not re-auto-open */
@@ -37749,32 +37909,53 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     try { hideMeetAvaPanel(); } catch (eH) {}
     showVideo(false);
     closeSynBotHard();
+    try { stopMyth(); } catch (eM) {}
     stopFx(); /* cancels raf + myth timers + clears canvas */
     try { updateNarrationDom(null); } catch (eN) {}
+    state.guideReleased = false;
+    state.myth = null;
+    var root = $('synTourRoot');
+    if (root) {
+      root.classList.remove('on');
+      root.style.display = 'none';
+      root.style.pointerEvents = 'none';
+    }
+    var centerWrap = $('synTourCenter');
+    if (centerWrap) {
+      centerWrap.style.display = 'none';
+      centerWrap.style.pointerEvents = 'none';
+    }
+    var center = $('synTourCenterPanel');
+    if (center) {
+      center.classList.remove('show', 'myth-climax');
+      center.style.opacity = '0';
+      center.style.pointerEvents = 'none';
+    }
+    clearVideoCardStyles($('synTourCard'));
+    /* Always hard-reset BR bot — no more mid-air stuck after Take tour → Finish */
     var c = tinyBot();
-    if (state.guideReleased && c) {
-      if (c._tourHome) {
-        c._tourHome(function () { guideEnd(); });
-        setTimeout(guideEnd, 1000);
-      } else {
-        guideEnd();
-      }
-    } else if (c) {
-      /* Skipped mid-myth: restore normal bot only after tour marked done */
+    if (c) {
       try {
         c.removeAttribute('data-myth-hidden');
+        if (c._hardResetBR) c._hardResetBR();
+        else if (c._tourEnd) c._tourEnd();
         if (c._resume) c._resume();
-        if (c._tourEnd) c._tourEnd();
         c.style.opacity = '0.55';
-        if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+        c.style.visibility = 'visible';
       } catch (e) {}
     }
-    state.guideReleased = false;
-    var root = $('synTourRoot');
-    if (root) root.classList.remove('on');
-    var center = $('synTourCenterPanel');
-    if (center) center.classList.remove('show', 'myth-climax');
-    clearVideoCardStyles($('synTourCard'));
+    /* Second pass in case fly animation overwrote state */
+    setTimeout(function () {
+      try {
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+        else if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
+      } catch (e2) {}
+    }, 120);
+    setTimeout(function () {
+      try {
+        if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
+      } catch (e3) {}
+    }, 700);
     try {
       if (typeof synTrack === 'function') synTrack('tour_complete', { skipped: !!skipped });
     } catch (e) {}
@@ -37796,12 +37977,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
   function guideEnd() {
     var c = tinyBot();
-    if (c && c._tourEnd) try { c._tourEnd(); } catch (e) {}
-    /* _tourEnd() restores whatever opacity was saved when the tour started —
-       which is often '0' (bot was hidden going into the tour), so relying on
-       it alone can leave the BR bot invisible/uninteractable afterward.
-       Re-run the real visibility logic so it settles to its correct state. */
-    if (typeof window._tinyBotSync === 'function') try { window._tinyBotSync(); } catch (e2) {}
+    try {
+      if (c && c._hardResetBR) c._hardResetBR();
+      else if (c && c._tourEnd) c._tourEnd();
+      if (c && c._resume) c._resume();
+      if (c) { c.style.opacity = '0.55'; c.style.visibility = 'visible'; }
+    } catch (e) {}
+    if (typeof window._forceReleaseSynBot === 'function') {
+      try { window._forceReleaseSynBot(); } catch (eF) {}
+    } else if (typeof window._tinyBotSync === 'function') {
+      try { window._tinyBotSync(); } catch (e2) {}
+    }
   }
   function tinyBot() { return document.getElementById('tinyBotCanvas'); }
 
@@ -38007,6 +38193,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       markDone();
       state.open = false;
       window.__synTourActive = false;
+      window.__synBotStoryReleased = true;
+      state.myth = null;
+      state.guideReleased = false;
       try { if (state.myth) stopMyth(); } catch (eM) {}
       try { showVideo(false); } catch (eV) {}
       try { stopFx(); } catch (eF) {}
@@ -38018,6 +38207,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (root) {
         root.classList.remove('on');
         root.style.display = 'none';
+        root.style.pointerEvents = 'none';
       }
       var card = document.getElementById('synTourCard');
       if (card) {
@@ -38029,7 +38219,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (center) center.classList.remove('show', 'myth-climax');
       var centerWrap = document.getElementById('synTourCenter');
       if (centerWrap) centerWrap.style.display = 'none';
-      window.__synBotStoryReleased = true;
+      if (typeof window._forceReleaseSynBot === 'function') window._forceReleaseSynBot();
     } catch (e) {}
   };
 
