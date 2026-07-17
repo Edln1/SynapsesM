@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Synapses</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 :root{--bg:#000000;--sidebar:#000000;--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7a7a8a;--radius:14px;}
 /* ── Themes ── */
 html[data-theme="purple"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7a7a8a;}
@@ -3442,17 +3442,17 @@ window.getWebAudioNode = getWebAudioNode;
           </svg>
         </div>
         <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;text-align:center;background:linear-gradient(90deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;">Synapses</div>
-        <div style="font-size:13px;color:#6b7280;text-align:center;line-height:1.6;max-width:200px;">The AI tools hub for creators, builders &amp; recruiters.</div>
+        <div style="font-size:13px;color:#6b7280;text-align:center;line-height:1.6;max-width:200px;">Your personal AI OS — voice, live avatar &amp; neural chat.</div>
       </div>
     </div>
     <div style="flex:1;padding:36px 32px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;max-height:90vh;" id="authRightPanel">
       <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px;">Welcome to Synapses</div>
-      <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Your AI tools hub — sign in or explore as guest</div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Talk free — live avatar &amp; speech-to-speech. Sign in or continue as guest.</div>
       <button onclick="doGuest()" class="modal-btn" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;text-align:left;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
         <div style="flex:1;">
           <div>Continue as Guest</div>
-          <div style="font-size:11px;font-weight:400;opacity:.6;margin-top:2px;">No account needed — explore instantly</div>
+          <div style="font-size:11px;font-weight:400;opacity:.6;margin-top:2px;">Talk free — no account needed</div>
         </div>
         <span style="opacity:0.45;">→</span>
       </button>
@@ -6692,10 +6692,68 @@ function showErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(
 
 var selectedRoles=new Set(['seeker']);
 function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;selectedRoles.has(r)?selectedRoles.delete(r):selectedRoles.add(r);document.getElementById('roleSeeker').classList.toggle('selected',selectedRoles.has('seeker'));document.getElementById('roleRecruiter').classList.toggle('selected',selectedRoles.has('recruiter'));}
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();}
+
+/* ── Growth analytics (continue/P13) — local + optional POST /track ── */
+(function(){
+  function _utm(){
+    try{
+      var q=new URLSearchParams(location.search||'');
+      return {utm_source:q.get('utm_source')||'',utm_medium:q.get('utm_medium')||'',utm_campaign:q.get('utm_campaign')||'',referrer:(document.referrer||'').slice(0,200)};
+    }catch(e){return {};}
+  }
+  function _anon(){
+    try{
+      var k='synapses_anon_id',id=localStorage.getItem(k);
+      if(!id){id='a_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem(k,id);}
+      return id;
+    }catch(e){return 'a_tmp';}
+  }
+  function _sess(){
+    try{
+      var k='synapses_sid',id=sessionStorage.getItem(k);
+      if(!id){id='s_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);sessionStorage.setItem(k,id);}
+      return id;
+    }catch(e){return 's_tmp';}
+  }
+  window.synTrack=function(event,props){
+    try{
+      var payload={
+        event:String(event||'unknown'),
+        t:Date.now(),
+        anon_id:_anon(),
+        session_id:_sess(),
+        is_guest:!(typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest),
+        path:(location.pathname||'')+(location.search||''),
+        props:props||{},
+        utm:_utm()
+      };
+      var q=[];
+      try{q=JSON.parse(localStorage.getItem('synapses_track_q')||'[]');}catch(e){q=[];}
+      q.push(payload);
+      if(q.length>200)q=q.slice(-200);
+      try{localStorage.setItem('synapses_track_q',JSON.stringify(q));}catch(e){}
+      if(typeof console!=='undefined'&&console.log)console.log('[synTrack]',payload.event,payload);
+      try{
+        var base=(typeof _AVA_BACKEND_URL==='string'&&_AVA_BACKEND_URL)?_AVA_BACKEND_URL:(location.origin||'');
+        if(base){
+          fetch(base.replace(/\/$/,'')+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(function(){});
+        }
+      }catch(e){}
+    }catch(e){}
+  };
+  // land once per page load
+  try{
+    if(!window._synLandTracked){
+      window._synLandTracked=true;
+      setTimeout(function(){if(typeof synTrack==='function')synTrack('page_view',{land:true});},0);
+    }
+  }catch(e){}
+})();
+
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}setTimeout(function(){if(typeof startSynapsesTour==='function')startSynapsesTour(false);},800);return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}setTimeout(function(){if(typeof startSynapsesTour==='function')startSynapsesTour(false);},800);}
 function switchAuthTab(t){document.getElementById('tabLogin').classList.toggle('active',t==='login');document.getElementById('tabRegister').classList.toggle('active',t==='register');document.getElementById('loginForm').style.display=t==='login'?'block':'none';document.getElementById('registerForm').style.display=t==='register'?'block':'none';}
-function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();});});}
-function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();});});}
+function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
+function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
 function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
 // Clear video banner and avatar so old account's media doesn't show for next user
 var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.style.display='none';}
@@ -12702,6 +12760,7 @@ function toggleChatHistoryDropdown(){
 async function sendMessage(){
   var inp=document.getElementById('inputBox'),text=inp.value.trim();
   if(!text||isSending)return;
+  try{if(typeof synTrack==='function')synTrack('chat_send',{mode:'text',len:text.length});}catch(_te){}
   // Abort any in-flight LLM stream and stop TTS
   if(_chatAbortCtrl){ try{ _chatAbortCtrl.abort(); }catch(e){} }
   _chatAbortCtrl = new AbortController();
@@ -17510,14 +17569,12 @@ function finishOb(){
   localStorage.setItem('synapses_onboarded_'+currentUser.email,'1');
   if(currentUser.id) _supabase.from('profiles').update({onboarded:true}).eq('id',currentUser.id);
   var m=document.getElementById('onboardingModal'); if(m) m.classList.remove('show');
-  var toasts={ship:'⚡ Ship mode — App Building tools are your friend',learn:'📚 Level up — check User Dev Hub for your sprint',job:'💼 Job hunt mode — Job Board is ready',collab:'🤝 Find your people — Builder Feed is live',impact:'🌍 World Accelerator is your home base'};
-  showToast(toasts[_ob.focus]||'👋 Welcome to Synapses!');
+  // Product hero is voice + avatar + neural chat — land there, not tools hub
+  showToast('👋 Welcome — let\'s show you around');
+  try{ if(typeof setView==='function') setView('sec-chat'); }catch(e){}
   setTimeout(function(){
-    if(_ob.focus==='job') goJobs();
-    else if(_ob.focus==='impact') goWorld();
-    else if(_ob.focus==='collab') goHub('feed');
-    else if(_ob.focus==='learn') goHub('userdev');
-  }, 1200);
+    if(typeof startSynapsesTour==='function') startSynapsesTour(false);
+  }, 500);
 }
 
 
@@ -23586,6 +23643,8 @@ function _neuInjectDownloadInterceptor(frame){
       var lockBar = document.getElementById('bottomNavBar');
       if(lockBar && lockBar.classList.contains('bnav-reveal-lock')) return;
     }
+    /* No guide tooltips during first-visit tour */
+    if (window.__synTourActive) return;
     // Don't show while splash, login modal, or greeting are active
     if(document.getElementById('appSplash')) return;
     if(document.getElementById('cyberGreeting')) return;
@@ -23803,13 +23862,13 @@ function _neuInjectDownloadInterceptor(frame){
     ctx.fillStyle=fg1;
     ctx.beginPath();ctx.ellipse(0,flameSz*0.4,flameSz*0.4,flameSz,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
-    // Right flame
+    // Right flame — purple (never mint/green blast)
     ctx.save();
     ctx.translate(s*0.35, s*0.9);
     var fg2 = ctx.createRadialGradient(0,0,0,0,flameSz*0.5,flameSz);
-    fg2.addColorStop(0,'rgba(255,200,60,0.9)');
-    fg2.addColorStop(0.4,'rgba(0,217,168,0.5)');
-    fg2.addColorStop(1,'rgba(0,217,168,0)');
+    fg2.addColorStop(0,'rgba(255,210,120,0.85)');
+    fg2.addColorStop(0.4,'rgba(124,106,247,0.55)');
+    fg2.addColorStop(1,'rgba(124,106,247,0)');
     ctx.fillStyle=fg2;
     ctx.beginPath();ctx.ellipse(0,flameSz*0.4,flameSz*0.4,flameSz,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
@@ -23822,9 +23881,14 @@ function _neuInjectDownloadInterceptor(frame){
     // Head
     ctx.fillStyle='#1e1040';
     ctx.beginPath();ctx.roundRect(-s*0.45,-s*0.5,s*0.9,s*0.65,s*0.22);ctx.fill();ctx.stroke();
-    // Eyes
-    ctx.fillStyle='#00d9a8';
-    ctx.shadowColor='#00d9a8';ctx.shadowBlur=s*0.4;
+    // Eyes — soft lilac on tour (no ugly mint green glow)
+    if (typeof _tourMode !== 'undefined' && _tourMode) {
+      ctx.fillStyle='#c4b5fd';
+      ctx.shadowColor='rgba(124,106,247,0.7)';ctx.shadowBlur=s*0.28;
+    } else {
+      ctx.fillStyle='#a78bfa';
+      ctx.shadowColor='rgba(124,106,247,0.55)';ctx.shadowBlur=s*0.32;
+    }
     ctx.fillRect(-s*0.32,-s*0.32,s*0.22,s*0.22);
     ctx.fillRect(s*0.1,-s*0.32,s*0.22,s*0.22);
     ctx.shadowBlur=0;
@@ -23864,8 +23928,11 @@ function _neuInjectDownloadInterceptor(frame){
   function scheduleExit(){
     // Clear any existing timer so we never stack up multiple exits
     if(_exitTimer) clearTimeout(_exitTimer);
+    /* Never schedule BR-exit while story/tour guide mode is active */
+    if(_tourMode || window.__synTourActive) return;
     _exitTimer = setTimeout(function(){
       _exitTimer = null;
+      if(_tourMode || window.__synTourActive) return;
       if(_paused || _exiting || _offScreen) { scheduleExit(); return; }
       _exiting = true;
       _exitSpeed = 0;
@@ -23887,7 +23954,16 @@ function _neuInjectDownloadInterceptor(frame){
     if(!_paused){
       update();
 
-      if(_exiting){
+      /* CRITICAL: during tour/story, never run BR exit / offscreen park */
+      if(_tourMode || window.__synTourActive){
+        _exiting = false;
+        _offScreen = false;
+        if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
+        /* keep visible full-screen layer */
+        if(canvas.style.opacity === '0' || canvas.style.opacity === ''){
+          canvas.style.opacity = '1';
+        }
+      } else if(_exiting){
         // Smooth ease-in acceleration toward bottom-right
         _exitSpeed = Math.min(_exitSpeed + 0.18, 5.5);
         r.vx = r.vx * 0.85 + _exitSpeed * 0.15;
@@ -23923,7 +23999,7 @@ function _neuInjectDownloadInterceptor(frame){
         }
       }
 
-      if(_offScreen){
+      if(_offScreen && !_tourMode && !window.__synTourActive){
         r.x = W+40; r.y = H+40; r.vx = 0; r.vy = 0;
       }
     }
@@ -23934,7 +24010,25 @@ function _neuInjectDownloadInterceptor(frame){
   canvas._pause  = function(){ _paused = true;  r.trailPoints = []; };
   canvas._resume = function(){ _paused = false; };
   canvas._r = r;  // expose robot state for external positioning
-  canvas._scheduleExit = function(){ scheduleExit(); };
+  canvas._scheduleExit = function(){
+    if(_tourMode || window.__synTourActive) return;
+    scheduleExit();
+  };
+  canvas._keepStoryVisible = function(){
+    _exiting = false;
+    _offScreen = false;
+    _paused = false;
+    if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
+    if(!_tourMode){
+      /* re-enter full viewport guide mode without BR default */
+      canvas._tourStart(
+        (typeof r.x === 'number' && r.x < W) ? r.x : window.innerWidth * 0.5,
+        (typeof r.y === 'number' && r.y < H) ? r.y : window.innerHeight * 0.5
+      );
+    }
+    canvas.style.opacity = '1';
+    canvas.style.visibility = 'visible';
+  };
   // Bring mini bot back on screen immediately (cancel any exit/offscreen)
   canvas._bringIn = function(){
     _exiting = false;
@@ -23972,26 +24066,199 @@ function _neuInjectDownloadInterceptor(frame){
     return { x: rect.left + r.x * scaleX, y: rect.top + r.y * scaleY, size: r.size * scaleX };
   };
 
+  // ── Tour guide mode (demo only) — same robot, full-page flight ──
+  var _tourMode = false;
+  var _tourTarget = null; // {x,y} in canvas pixels
+  var _tourCb = null;
+  var _tourSaved = null;
+  var _origUpdate = update;
+
+  update = function(){
+    if(_tourMode && _tourTarget){
+      t += 0.035;
+      var dx = _tourTarget.x - r.x;
+      var dy = _tourTarget.y - r.y;
+      var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      // jet boost toward target
+      var speed = Math.min(14, 4 + dist * 0.08);
+      r.vx = r.vx * 0.72 + (dx / dist) * speed * 0.28;
+      r.vy = r.vy * 0.72 + (dy / dist) * speed * 0.28;
+      r.x += r.vx;
+      r.y += r.vy;
+      r.angle = r.vx * 0.08;
+      r.armAngle = Math.sin(t * 3) * 0.7;
+      r.jetFlicker = 1.1 + Math.random() * 0.5;
+      r.trailPoints.push({x:r.x, y:r.y, a:0.35});
+      if(r.trailPoints.length > 28) r.trailPoints.shift();
+      if(dist < 18){
+        r.x = _tourTarget.x; r.y = _tourTarget.y;
+        r.vx *= 0.3; r.vy *= 0.3;
+        var cb = _tourCb;
+        _tourTarget = null;
+        _tourCb = null;
+        if(cb) try{ cb(); }catch(e){}
+      }
+      return;
+    }
+    if(_tourMode){
+      // Soft hover — if parked (choice dock / story hold), drift around park, never hard-snap
+      t += 0.035;
+      if (typeof r._parkX === 'number' && typeof r._parkY === 'number') {
+        var pdx = r._parkX - r.x;
+        var pdy = r._parkY - r.y;
+        r.vx = r.vx * 0.88 + pdx * 0.06 + Math.sin(t * 1.7) * 0.12;
+        r.vy = r.vy * 0.88 + pdy * 0.06 + Math.cos(t * 1.4) * 0.1;
+        /* cap so he never jitters hard */
+        var pSp = Math.sqrt(r.vx * r.vx + r.vy * r.vy) || 1;
+        if (pSp > 2.2) { r.vx = (r.vx / pSp) * 2.2; r.vy = (r.vy / pSp) * 2.2; }
+      } else {
+        r.vx = r.vx * 0.9 + (Math.random() - 0.5) * 0.15;
+        r.vy = r.vy * 0.9 + Math.sin(t * 2) * 0.08;
+      }
+      r.x += r.vx; r.y += r.vy;
+      r.angle = r.vx * 0.15;
+      r.armAngle = Math.sin(t * 2.2) * 0.5;
+      r.jetFlicker = 0.75 + Math.random() * 0.4;
+      r.trailPoints.push({ x: r.x, y: r.y, a: 0.2 });
+      if (r.trailPoints.length > 18) r.trailPoints.shift();
+      return;
+    }
+    _origUpdate();
+  };
+
+  canvas._tourStart = function(atX, atY){
+    if(_tourMode) {
+      /* Already guiding — optional re-place without BR flash */
+      if (typeof atX === 'number' && typeof atY === 'number') {
+        r.x = Math.max(40, Math.min(W - 40, atX));
+        r.y = Math.max(40, Math.min(H - 40, atY));
+        r.vx = 0; r.vy = 0;
+        _tourTarget = null;
+      }
+      return;
+    }
+    _tourSaved = {
+      css: canvas.style.cssText,
+      W: W, H: H, size: r.size,
+      x: r.x, y: r.y, opacity: canvas.style.opacity
+    };
+    _tourMode = true;
+    _exiting = false; _offScreen = false; _paused = false;
+    if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
+    // full-viewport flight layer (same robot drawing — exact SynBot UX)
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W; canvas.height = H;
+    canvas.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:100055;opacity:1;transition:none;';
+    r.size = 18;
+    /* Spawn at ship/hatch if given — NEVER default BR when story places him */
+    if (typeof atX === 'number' && typeof atY === 'number') {
+      r.x = Math.max(40, Math.min(W - 40, atX));
+      r.y = Math.max(40, Math.min(H - 40, atY));
+    } else {
+      r.x = W - 70;
+      r.y = H - 70;
+    }
+    r.vx = 0; r.vy = 0;
+    r.trailPoints = [];
+  };
+
+  /* Instant place (no flight from bottom-right) */
+  canvas._tourPlaceAt = function(screenX, screenY){
+    if(!_tourMode) canvas._tourStart(screenX, screenY);
+    else {
+      r.x = Math.max(40, Math.min(W - 40, screenX));
+      r.y = Math.max(40, Math.min(H - 40, screenY));
+      r.vx = 0; r.vy = 0;
+      _tourTarget = null;
+      _tourCb = null;
+    }
+    r._parkX = r.x;
+    r._parkY = r.y;
+  };
+
+  /* Soft park: hover around a point without re-snapping every frame */
+  canvas._tourParkAt = function(screenX, screenY){
+    if(!_tourMode) canvas._tourStart(screenX, screenY);
+    var px = Math.max(40, Math.min(W - 40, screenX));
+    var py = Math.max(40, Math.min(H - 40, screenY));
+    r._parkX = px;
+    r._parkY = py;
+    _tourTarget = null;
+    _tourCb = null;
+    /* Only hard-place if way off — avoids stutter when choice opens */
+    var dxp = r.x - px, dyp = r.y - py;
+    if (dxp * dxp + dyp * dyp > 90 * 90) {
+      r.x = px; r.y = py;
+      r.vx = 0; r.vy = 0;
+    }
+  };
+
+  canvas._tourFlyTo = function(screenX, screenY, cb){
+    /* If not in tour mode yet, start AT the target so he never pops BR first */
+    if(!_tourMode) canvas._tourStart(screenX, screenY);
+    r._parkX = null;
+    r._parkY = null;
+    _tourTarget = {
+      x: Math.max(40, Math.min(W - 40, screenX)),
+      y: Math.max(40, Math.min(H - 40, screenY))
+    };
+    _tourCb = typeof cb === 'function' ? cb : null;
+  };
+
+  canvas._tourHome = function(cb){
+    if(!_tourMode) return;
+    canvas._tourFlyTo(W - 70, H - 70, cb);
+  };
+
+  canvas._tourEnd = function(){
+    _tourMode = false;
+    _tourTarget = null;
+    _tourCb = null;
+    if(_tourSaved){
+      W = 180; H = 180;
+      canvas.width = W; canvas.height = H;
+      canvas.style.cssText = 'position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:'+(_tourSaved.opacity||'0.55')+';transition:opacity .4s ease;';
+      r.size = 10;
+      r.x = W * 0.55; r.y = H * 0.55;
+      r.vx = (Math.random()-0.5)*1.0;
+      r.vy = (Math.random()-0.5)*1.0;
+      r.trailPoints = [];
+      _tourSaved = null;
+    }
+    scheduleExit();
+  };
+
   // ── Simple occasional appearance ──────────────────────────────────
   // Robot is always animating but opacity=0 most of the time.
   // Every 10-16s it fades in for ~4s then fades out.
   // While zone is hovered, stays visible (managed by showRobot/hideRobot).
 
-  // Start hidden — show only after cyberGreeting is gone
+  // Start hidden — BR corner SynBot only after entrance myth has released him (or tour already done)
   canvas.style.opacity = '0';
+  if (typeof window.__synBotStoryReleased === 'undefined') window.__synBotStoryReleased = false;
 
   (function(){
     var shown = false;
-    function _synBotAllowed(){ return typeof _synBotEnabled==='undefined' || _synBotEnabled; }
+    /** BR corner bot only after entrance animation has played (hatch exit) or prior tour complete */
+    function _synBotEntranceReady(){
+      try {
+        if (localStorage.getItem('synapses_tour_v1') === '1') return true;
+      } catch (e) {}
+      if (window.__synBotStoryReleased) return true;
+      return false;
+    }
+    function _synBotAllowed(){
+      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return false;
+      /* While tour/story is flying him, visibility is owned by tour mode — not BR corner */
+      if (window.__synTourActive && !_tourMode) return false;
+      return _synBotEntranceReady();
+    }
+    window._synBotEntranceReady = _synBotEntranceReady;
     window._tinyBotSync = function(){
       if(!_synBotAllowed()){ canvas.style.opacity='0'; return; }
-      // Don't gate on `shown` here — `shown` only latches true via a chain of
-      // MutationObservers + staggered timeouts (200/300/1500/12000ms) after
-      // page load. If the bot gets toggled off before that chain finishes,
-      // `shown` never becomes true and this function would silently no-op
-      // forever after — the exact "robot doesn't come back after toggling on"
-      // bug. This is an explicit external call (from toggleSynBot), so just
-      // resolve visibility directly from current DOM state instead.
+      if(_tourMode){ canvas.style.opacity='1'; return; }
+      // Don't gate on `shown` here — explicit external call (from toggleSynBot)
       if(!document.getElementById('cyberGreeting') && !document.getElementById('appSplash')){
         shown = true;
         canvas.style.opacity='0.55';
@@ -24000,33 +24267,46 @@ function _neuInjectDownloadInterceptor(frame){
     var mo = new MutationObserver(function(){
       var g = document.getElementById('cyberGreeting');
       if(g && !shown){ shown = true; canvas.style.opacity='0'; }
-      if(shown && !g){ mo.disconnect(); setTimeout(function(){ if(_synBotAllowed()) canvas.style.opacity='0.55'; }, 200); }
+      if(shown && !g){ mo.disconnect(); setTimeout(function(){ if(_synBotAllowed() && !_tourMode) canvas.style.opacity='0.55'; }, 200); }
     });
     mo.observe(document.body, {childList:true, subtree:true});
-    // If no greeting ever appears (guest), show after splash clears
+    // Guest / no greeting: still wait for entrance — do NOT auto-show BR bot pre-animation
     var splashMo = new MutationObserver(function(){
       if(!document.getElementById('appSplash') && !shown){
         setTimeout(function(){
           if(!document.getElementById('cyberGreeting') && !shown){
             splashMo.disconnect(); mo.disconnect();
-            setTimeout(function(){ if(_synBotAllowed()) canvas.style.opacity='0.55'; }, 300);
+            shown = true;
+            /* stay opacity 0 until entrance ready */
+            if(_synBotAllowed() && !_tourMode) canvas.style.opacity='0.55';
           }
         }, 1500);
       }
     });
     splashMo.observe(document.body, {childList:true, subtree:false});
-    // Safety
-    setTimeout(function(){ if(canvas.style.opacity==='0' && _synBotAllowed()) canvas.style.opacity='0.55'; }, 12000);
+    // Safety: only reveal BR if entrance already done (returning user)
+    setTimeout(function(){
+      if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()) canvas.style.opacity='0.55';
+    }, 12000);
   })();
 
   // Hide when big robot tooltip shows, restore when it hides
   var _rtip = document.getElementById('robotTooltip');
   if(_rtip) new MutationObserver(function(){
+    /* Never hide the guide bot during story/tour flight */
+    if(_tourMode || (window.__synTourActive && window.__synBotStoryReleased)){
+      canvas.style.opacity = '1';
+      return;
+    }
     if(_rtip.classList.contains('rt-visible')){
       canvas.style.opacity='0';
     } else {
-      var _allowed = typeof _synBotEnabled==='undefined' || _synBotEnabled;
-      if(_allowed && !document.getElementById('cyberGreeting')) canvas.style.opacity='0.55';
+      var ready = (typeof window._synBotEntranceReady === 'function')
+        ? window._synBotEntranceReady()
+        : (localStorage.getItem('synapses_tour_v1') === '1');
+      var _allowed = (typeof _synBotEnabled==='undefined' || _synBotEnabled) && ready;
+      if(_allowed && !document.getElementById('cyberGreeting') && !_tourMode) canvas.style.opacity='0.55';
+      else if(!_tourMode) canvas.style.opacity='0';
     }
   }).observe(_rtip, {attributes:true, attributeFilter:['class']});
 })();
@@ -24061,6 +24341,15 @@ function _neuInjectDownloadInterceptor(frame){
 
   function showRobot(){
     if(!tooltip) return;
+    /* Disabled during first-visit / Synapses tour — guide bot only, no chat popup */
+    try {
+      if (window.__synTourActive || (window.state && document.getElementById('synTourRoot') && document.getElementById('synTourRoot').classList.contains('on'))) return;
+    } catch (eTour) {}
+    /* No BR hover chat until entrance myth has released SynBot (or tour already done) */
+    try {
+      if (typeof window._synBotEntranceReady === 'function' && !window._synBotEntranceReady()) return;
+      if (localStorage.getItem('synapses_tour_v1') !== '1' && !window.__synBotStoryReleased) return;
+    } catch (eEnt) { return; }
     if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
     if(document.getElementById('appSplash')) return;
     if(document.getElementById('cyberGreeting')) return;
@@ -26967,6 +27256,7 @@ async function enableAvaAvatar(skipAutoVoice) {
       _avaAvatarConnected = true;
       statusEl.style.display = 'none';
       videoEl.style.display = 'block';
+      try{if(typeof synTrack==='function')synTrack('avatar_open',{nativeVoice:!!_avaNativeVoice,slot:_avaAvatarSlot});}catch(_te){}
       showToast(_avaNativeVoice ? '🧑\u200d💼 Avatar live (built-in voice)' : '🧑\u200d💼 Ava\u2019s avatar is live');
     });
     _avaAnamClient.addListener(AnamSDK.AnamEvent.CONNECTION_CLOSED, function () {
@@ -28197,8 +28487,12 @@ function speakVoiceReply(text) {
   // It only leaves that spot when the top bar itself is shown again (see the
   // _tnvGlideHome() call in toggleTopBar's "show" branch).
   function _setTopNavVoiceActive(v) {
+    var was = !!window._topNavVoiceActive;
     window._topNavVoiceActive = v;
     document.body.classList.toggle('voice-live', !!v);
+    if(v && !was && typeof synTrack==='function'){
+      try{synTrack('voice_start',{entry:'top_nav'});}catch(e){}
+    }
     if(v && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
       _tnvClearGlideTimer();
       _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
@@ -28231,6 +28525,17 @@ function speakVoiceReply(text) {
     }
   }, 1500);
   var _history = [];
+  // One-shot flag: set true when Ava's last reply was a clarifying question about
+  // a planning/schedule/routine request. When true, the NEXT user message skips the
+  // regex check and triggers life-context recall unconditionally, then clears itself.
+  var _planningModeActive = false;
+  // Silent self-classifier tag appended to every voice-turn system prompt. Groq is asked to
+  // tack a <meta>...</meta> JSON block onto the end of its reply — never spoken or shown,
+  // stripped out client-side right after streaming completes (see readChunk's res.done branch).
+  // Replaces the old "blindly save every raw turn" mem0 save with a save gated on whether
+  // this turn actually contained something worth remembering long-term.
+  var _metaInstruction = '\n\nCRITICAL, NON-NEGOTIABLE FORMATTING RULE — this applies to EVERY single reply you give, no exceptions, even in casual conversation, even mid-roleplay, even when you are focused on giving a good in-character answer: after your reply, on its own new line, you MUST silently append a tag — it will never be spoken or shown to the user, so do not mention it or reference it in your reply: <meta>{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other","clean_summary":"one short third-person sentence distilling the fact, starting with the word User","asked_clarifying_question":true or false}</meta>. Do NOT skip this tag under any circumstances, regardless of how engaged you are in the conversation. Only set is_life_context to true if the USER (the person talking to you) shared something genuinely worth remembering later about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, health status, routine or habit, personal fact, past milestone, or a stable preference or value. NEVER set is_life_context to true for your own in-character small talk, opinions, hobbies, or made-up activities (e.g. your music taste, your day, your plans, your coffee run) — that is not the user\'s life context and must always be false. Set asked_clarifying_question to true only if your reply itself is a clarifying question asking for missing details (like timeframe, current routine, or specifics) before you can build a schedule, routine, or plan — not for ordinary questions in normal conversation. If the user already gave enough detail to act on (e.g. specific times, a clear timeframe), just help them directly instead of asking, and set this to false.\n\nWhen someone asks you to build something concrete like a schedule, routine, or plan and their message does not already include enough detail to do that well, ask one quick clarifying question first instead of guessing with vague placeholders — but the question must be about whatever is ACTUALLY missing for THIS specific request, not a fixed default question. Do not always ask about wake-up/bed time — that only matters for daily schedules. For a workout plan, ask about fitness level or days available; for a work-focused plan, ask about deadlines or priorities; for a routine change, ask what part of the day it affects. Vary the question based on the actual topic. If they already gave enough specifics, just help directly.';
+
   var _sysCached = 'You are a real person — warm, present, and genuine. Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
 
   // ── Persistent Memory System ────────────────────────────────────────────
@@ -28297,7 +28602,129 @@ function speakVoiceReply(text) {
       _mem0Cache = null; // invalidate cache after save
     } catch(e) {}
   }
+  // Gated save driven by the <meta> classifier tag Groq appends to each reply (see
+  // _metaInstruction). If the model flagged this turn as genuinely worth remembering,
+  // save just the clean distilled summary under its category — not the raw rambly turn.
+  // If classification is missing or malformed (tag absent, bad JSON, model didn't comply),
+  // fall back to the old unconditional raw save so memory coverage never regresses.
+  // Backstop for when the 8B classifier ignores the instruction and flags its own
+  // in-character chatter (persona hobbies/day/opinions) as user life context. Catches
+  // summaries that start with "Assistant"/"Ava"/"I" or reference her own preferences.
+  var _assistantSelfRefRegex = /^\s*(assistant|ava|she|her)\b|\b(i'm|im|i am|i've|ive)\s+(a|an|feeling|planning|going|grabbing|listening|enjoying|working)\b/i;
+
+  async function _metaSave(userText, replyText, meta) {
+    try {
+      if (meta && meta.is_life_context === true && meta.clean_summary) {
+        if (_assistantSelfRefRegex.test(meta.clean_summary)) {
+          // Backstop: this reads like Ava's own persona chatter, not the user's life —
+          // skip saving even though the model flagged it true.
+          return;
+        }
+        // Classifier says this turn IS worth remembering — save the clean summary.
+        await fetch(_MEM0_BACKEND + '/mem0-save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'assistant', content: meta.clean_summary }],
+            user_id: _getMem0UserId(),
+            category: meta.category || 'general'
+          })
+        });
+        _mem0Cache = null;
+        console.log('[Mem0] saved | category: ' + (meta.category || 'general') + ' | ' + meta.clean_summary);
+      } else {
+        // Tag was missing/unparseable, or model explicitly said is_life_context:false —
+        // either way, do NOT fall back to raw save. That fallback was the source of
+        // uncategorized junk (Ava's own persona chatter) leaking into mem0 with no
+        // gating at all. Skipping is safer than saving unclassified turns.
+        // Split into two distinct logs so we can actually tell which case happened
+        // instead of guessing — this matters for debugging (e.g. a real personal
+        // statement that should've saved but didn't).
+        if (meta === null) {
+          console.warn('[Mem0] no save — meta tag missing or failed to parse this turn');
+        } else if (meta && meta.is_life_context === false) {
+          console.warn('[Mem0] no save — model judged is_life_context:false | clean_summary was: ' + (meta.clean_summary || '(none given)'));
+        } else {
+          console.warn('[Mem0] no save — unexpected meta shape: ' + JSON.stringify(meta));
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Retry backstop: fires only when the main turn's <meta> tag was missing or
+  // failed to parse (i.e. _meta came back null). One extra lightweight,
+  // non-streaming call asking the 8B model to classify the turn after the
+  // fact — same JSON shape as _metaInstruction, just asked as a standalone
+  // question instead of appended to a live reply. Keeps memory coverage from
+  // silently regressing on turns where the model skipped the inline tag.
+  async function _metaRetryClassify(userText, replyText) {
+    try {
+      var sys = 'You are classifying a single turn from a conversation, after the fact. ' +
+        'Reply with STRICT JSON only, no markdown, no code fences, in this exact shape: ' +
+        '{"is_life_context":true or false,"category":"work, goal, relationship, health, routine, or other",' +
+        '"clean_summary":"one short third-person sentence distilling the fact, starting with the word User"}. ' +
+        'Only set is_life_context to true if the USER shared something genuinely worth remembering later ' +
+        'about THEIR OWN life — such as a goal, plan, priority, concern, relationship detail, work situation, ' +
+        'health status, routine or habit, personal fact, past milestone, or a stable preference or value. ' +
+        'NEVER set is_life_context to true for the assistant\'s own in-character small talk, opinions, ' +
+        'hobbies, or made-up activities.';
+      var userPrompt = 'User said: "' + userText + '"\n\nAssistant replied: "' + replyText + '"';
+      var r = await fetch(GROQ_PROXY + '/groq-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }, { role: 'user', content: userPrompt }], max_tokens: 120, stream: false })
+      });
+      var json = await r.json();
+      var raw = json && json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+      if (!raw) { console.warn('[Mem0] retry classify — empty response, giving up'); return null; }
+      var clean = raw.replace(/```json|```/g, '').trim();
+      var parsed = null;
+      try { parsed = JSON.parse(clean); } catch(e) { console.warn('[Mem0] retry classify — JSON.parse failed: ' + clean.slice(0, 200)); return null; }
+      if (!parsed || typeof parsed.is_life_context !== 'boolean') { console.warn('[Mem0] retry classify — malformed shape: ' + clean.slice(0, 200)); return null; }
+      console.log('[Mem0] retry classify succeeded | is_life_context: ' + parsed.is_life_context);
+      return parsed;
+    } catch(e) {
+      console.warn('[Mem0] retry classify — request failed: ' + e);
+      return null;
+    }
+  }
   // ── End Mem0 Layer ────────────────────────────────────────────────────────
+
+  // ── Life Context Layer: gated save/recall on top of mem0, tagged category:'life_context' ──
+  // Save trigger: fires only on goal / plan / priority / concern style statements
+  var _lifeContextSaveRegex = /\b(my goal (?:is|right now is)|i'm trying to|im trying to|i am trying to|i want to (?:accomplish|achieve|focus on)|i need to (?:focus on|work on|finish|get done)|i'm working on|im working on|i plan to|my plan is|i'm worried about|im worried about|i'm concerned about|im concerned about|my concern (?:is|right now is)|i'm stressed about|im stressed about|remind me (?:to|that)|my priority (?:is|right now)|i'm focusing on|im focusing on)\b/i;
+
+  // Recall trigger: fires only on schedule / plan style asks
+  var _lifeContextRecallRegex = /\b(help me plan my day|plan my day|plan my week|what('s| is) on my schedule|what should i (?:do|focus on) today|what('s| is) my (?:priority|focus)|what am i (?:working on|supposed to be doing)|remind me what i('m| am) doing|(?:make|build|create|give) me a (?:daily )?(?:schedule|routine|plan)|help me (?:tackle|handle|deal with|get through|organize|sort out) (?:my|this)|(?:schedule|routine|plan) (?:to|for) (?:tackle|handle|deal with|help with) my)\b/i;
+
+  async function _lifeContextSave(userText, replyText) {
+    if (!_lifeContextSaveRegex.test(userText)) return;
+    try {
+      await fetch(_MEM0_BACKEND + '/mem0-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: userText }],
+          user_id: _getMem0UserId(),
+          category: 'life_context'
+        })
+      });
+    } catch(e) {}
+  }
+
+  async function _lifeContextRecall(query, force) {
+    if (!force && !_lifeContextRecallRegex.test(query)) return '';
+    try {
+      var res = await fetch(_MEM0_BACKEND + '/mem0-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query, user_id: _getMem0UserId(), category: 'life_context' })
+      });
+      var data = await res.json();
+      return data.result || '';
+    } catch(e) { return ''; }
+  }
+  // ── End Life Context Layer ────────────────────────────────────────────────
 
   function _buildMemoryContext() {
     var mem = _loadMemory();
@@ -28307,8 +28734,11 @@ function speakVoiceReply(text) {
     // facts injection removed — caused unprompted hallucinated references
     if (mem.insideJokes && mem.insideJokes.length) parts.push('Inside references between you two: ' + mem.insideJokes.slice(-5).join('; ') + '.');
     var mem0ctx = window._mem0LastContext || '';
+    var lifeCtx = window._lifeContextLastContext || '';
     var base = parts.length ? '\n\nBackground context (do not bring this up unless the user mentions it first — use it only to inform your tone and understanding):\n' + parts.join(' ') : '';
-    return base + (mem0ctx ? '\n\nAdditional background (same rule — do not reference unless relevant to what they just said):\n' + mem0ctx : '');
+    base += mem0ctx ? '\n\nAdditional background (same rule — do not reference unless relevant to what they just said):\n' + mem0ctx : '';
+    base += lifeCtx ? '\n\nWhat they said their current goals/plans/priorities are (use this to answer things like "what should I focus on today" naturally, as if you just remembered it):\n' + lifeCtx : '';
+    return base;
   }
 
   function _extractAndSaveMemory(userText, replyText) {
@@ -29206,7 +29636,19 @@ function speakVoiceReply(text) {
     if(window.avaTvSetState) window.avaTvSetState('speak');
     _history.push({ role: 'user', content: text });
     var msgs = _history.slice(-6);
-    _mem0Recall(text).then(function(m){ window._mem0LastContext = m; });
+    // Gate mem0 retrieval — only go fetch memories when this message actually
+    // sounds like life context (same trigger phrases as save/recall below), OR
+    // when _planningModeActive is armed (meaning Ava just asked a clarifying
+    // question last turn, so THIS message is the answer to that — treat it as
+    // life-context even if it doesn't happen to contain trigger words).
+    var _recallTriggered = _lifeContextRecallRegex.test(text) || _planningModeActive;
+    if (_recallTriggered) {
+      _mem0Recall(text).then(function(m){ window._mem0LastContext = m; });
+    } else {
+      window._mem0LastContext = '';
+    }
+    _lifeContextRecall(text, _planningModeActive).then(function(m){ window._lifeContextLastContext = m; });
+    _planningModeActive = false; // one-shot — consume it whether or not it was armed
     var memCtx = _buildMemoryContext();
     var _synKwRegex = /\b(synapses|our app|this app|the app|whiteboard|job board|builder feed|match.{0,3}connect|user development|health ai|chatroom|world accelerator|tools hub|quick notes?|sticky notes?|war room|syn.?bot|the chat widget)\b/i;
     var synCtx = _synKwRegex.test(text) ? '\n\n' + _synapsesCtx : '';
@@ -29277,7 +29719,7 @@ function speakVoiceReply(text) {
           : '';
       var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
       var worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
-      var sys = _sysCached + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride;
+      var sys = _sysCached + worldCtx + relCtx + synCtx + memCtx + (typeof _matrixGetInjection === 'function' ? _matrixGetInjection() : '') + _brainLayer + searchLayer + detailOverride + _metaInstruction;
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 650 : (synCtx ? 650 : 600);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
@@ -29300,14 +29742,56 @@ function speakVoiceReply(text) {
       function readChunk() {
         reader.read().then(function(res) {
           if (res.done) {
-            var reply = full.trim();
+            var _rawFull = full.trim();
+            // Strip the silent <meta>...</meta> classifier tag before the reply ever
+            // reaches history, notes, or speak() — it must never be seen or heard.
+            // IMPORTANT: find the OPENING tag first and always cut there, even if the
+            // closing </meta> never arrived. If a reply runs close to max_tokens, the
+            // model can hit the cap mid-JSON — the tag never closes, the old
+            // closed-tag-only regex fails to match, and the whole raw blob (dangling
+            // "<meta>{...}" fragment included) used to leak straight into the reply.
+            var _meta = null;
+            // Use /<meta/i (not the full /<meta>/i) so malformed opens like
+            // "<metalog={...}></meta>" still get caught and cut from the reply —
+            // otherwise the whole raw tag leaks into what's shown/spoken.
+            var _metaOpenIdx = _rawFull.search(/<meta\b/i);
+            var reply = _metaOpenIdx !== -1 ? _rawFull.slice(0, _metaOpenIdx).trim() : _rawFull;
+            if (_metaOpenIdx !== -1) {
+              var _metaTail = _rawFull.slice(_metaOpenIdx);
+              // Try the clean form first, then fall back to grabbing the first
+              // {...} JSON object in the tail even if the tag itself is malformed.
+              var _metaMatch = _metaTail.match(/<meta>([\s\S]*?)<\/meta>/i) || _metaTail.match(/\{[\s\S]*?"asked_clarifying_question"[\s\S]*?\}/i);
+              if (_metaMatch) { try { _meta = JSON.parse(_metaMatch[1] || _metaMatch[0]); } catch(e) { _meta = null; console.warn('[Mem0] meta JSON.parse failed, raw tail was: ' + _metaTail.slice(0, 300)); } }
+              else { console.warn('[Mem0] <meta found but no JSON object matched inside it, raw tail was: ' + _metaTail.slice(0, 300)); }
+              // else: tag got truncated before it closed — no classification this
+              // turn (meta stays null, nothing saved), but reply is still clean.
+            } else {
+              console.warn('[Mem0] no <meta tag found anywhere in raw response at all — model skipped it entirely this turn. Raw tail: ' + _rawFull.slice(-200));
+            }
             var _elapsed = Date.now() - _t0;
             console.log('[Voice] Full response: ' + _elapsed + 'ms (' + (_elapsed < 2000 ? 'fast' : 'slow') + ')' + (reply ? ' | ' + reply.length + ' chars' : ' | EMPTY'));
             if (reply) {
               _history.push({ role: 'assistant', content: reply });
               window._avaLastReply = reply;
               try { if (_history.length >= 6) _extractAndSaveMemory(_history[_history.length-2] ? _history[_history.length-2].content : '', reply); } catch(e) {}
-              try { _mem0Save(text, reply); } catch(e) {}
+              if (_meta) {
+                try { _metaSave(text, reply, _meta); } catch(e) {}
+              } else {
+                // Main tag was missing/unparseable this turn — fire the retry
+                // backstop once instead of just skipping the save outright.
+                _metaRetryClassify(text, reply).then(function(retryMeta) {
+                  if (retryMeta) console.log('[Mem0] using retry classification result in place of missing/malformed inline tag');
+                  try { _metaSave(text, reply, retryMeta); } catch(e) {}
+                });
+              }
+              try { _lifeContextSave(text, reply); } catch(e) {}
+              // If she just asked a clarifying question about a schedule/routine/plan,
+              // arm the flag so the NEXT message (your answer) triggers life-context
+              // recall unconditionally, even if it doesn't match the regex wording.
+              if (_meta && _meta.asked_clarifying_question === true) {
+                _planningModeActive = true;
+                console.log('[Planning] clarifying question detected — recall armed for next turn');
+              }
               // avaBrain.afterReply deactivated
               speak(reply);
             } else { console.log('[Voice] Empty reply from LLM'); if (!_avatarLive()) toast('Hmm, try that again?'); _busy = false; _busySince = 0; if (_on) record(); }
@@ -32515,4 +32999,3719 @@ async function srcAgentContact(supplier) {
     <div id="craftedList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
   </div>
 </div>
+<!-- SYN_TOUR_FLOAT_START -->
+<style>
+#synTourFloatBtn{
+  position:fixed;left:14px;bottom:14px;z-index:88750;
+  width:34px;height:34px;border-radius:12px;padding:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  backdrop-filter:blur(20px) saturate(1.15);
+  -webkit-backdrop-filter:blur(20px) saturate(1.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 2px 12px rgba(0,0,0,0.2);
+  opacity:0.28;transition:opacity .25s ease,background .2s,border-color .2s,box-shadow .2s,transform .15s;
+  pointer-events:auto;
+}
+#synTourFloatBtn:hover{
+  opacity:0.92;
+  background:rgba(255,255,255,0.07);
+  border-color:rgba(124,106,247,0.35);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 4px 18px rgba(0,0,0,0.35),0 0 16px rgba(124,106,247,0.12);
+}
+#synTourFloatBtn:active{transform:scale(0.96);}
+#synTourFloatBtn svg{opacity:0.55;transition:opacity .2s;}
+#synTourFloatBtn:hover svg{opacity:1;}
+/* hide while tour is open so it doesn't sit on the guide */
+#synTourRoot.on ~ #synTourFloatBtn,
+body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:none!important;}
+</style>
+<button id="synTourFloatBtn" type="button" title="Start product tour" aria-label="Start product tour"
+  onclick="(function(){try{if(typeof resetSynapsesTour==='function')resetSynapsesTour();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(124,106,247,0.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"/>
+    <polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(0,217,168,0.85)" stroke="none"/>
+  </svg>
+</button>
+<!-- SYN_TOUR_FLOAT_END -->
+<!-- SYNAPSES_FIRST_TOUR_START -->
+<script>
+/**
+ * Synapses First-Visit Tour — MAGICAL entrance UX
+ * Palette lock: purple #7c6af7 · mint #00d9a8 · pink #e85d96 · pure black glass
+ * Real SynBot (tinyBotCanvas) flies the guide path. No generic blue. No blackout dim.
+ */
+(function () {
+  'use strict';
+  var KEY = 'synapses_tour_v1';
+  if (window.__synTourLoaded) return;
+  window.__synTourLoaded = true;
+
+  var DEMO_SRC = window.SYNAPSES_DEMO_VIDEO || 'assets/demo-s2s.mp4';
+  var C = {
+    purp: '#7c6af7',
+    purpSoft: 'rgba(124,106,247,0.45)',
+    mint: '#00d9a8',
+    mintSoft: 'rgba(0,217,168,0.4)',
+    pink: '#e85d96',
+    ink: '#0a0a12',
+    glass: 'rgba(10,10,18,0.82)',
+    text: '#f2f2f5',
+    muted: 'rgba(242,242,245,0.68)'
+  };
+
+  var STEPS = [
+    {
+      id: 'welcome',
+      mode: 'center',
+      title: 'Meet Ava',
+      body: 'Scattered tools clash — one signal holds them together.',
+      cta: 'Talk with Ava',
+      myth: true
+    },
+    {
+      id: 'demo',
+      mode: 'video',
+      title: 'Ava introduces Synapses',
+      body: 'Watch the signal come alive — speech-to-speech + live face. Not a mock.',
+      cta: 'Enter the room'
+    },
+    {
+      id: 'chat',
+      mode: 'spotlight',
+      /* Ask me anything bar only — not the empty-state center / middle of the room */
+      sel: '#sec-chat .input-wrapper, #inputBox, #sec-chat .input-area',
+      view: 'sec-chat',
+      title: 'Neural chat',
+      body: 'Your mind room. Type anything here — every thought lands in one place.',
+      cta: 'Next',
+      magic: true,
+      cardPlace: 'bottom',
+      holeMax: 920,
+      holeMaxH: 86,
+      holePad: 12
+    },
+    {
+      id: 'voice',
+      mode: 'spotlight',
+      sel: '#topNavVoiceBtn',
+      view: 'sec-chat',
+      title: 'Speech-to-speech',
+      body: 'The real hero. Tap the mic — full voice in, voice out. Not dictation.',
+      cta: 'Next',
+      pulse: true,
+      magic: true
+    },
+    {
+      id: 'avatar',
+      mode: 'spotlight',
+      sel: '#avaAvatarBox, #topNavVoiceBtn',
+      view: 'sec-chat',
+      title: 'Live avatar',
+      body: 'Ava on screen with real lip-sync. Right‑click voice when you’re ready.',
+      cta: 'Next',
+      magic: true
+    },
+    {
+      id: 'input',
+      mode: 'spotlight',
+      sel: '#sec-chat .input-wrapper, #inputBox',
+      view: 'sec-chat',
+      title: 'Your move',
+      body: 'Type or talk anytime. Guest works — no wall before the magic.',
+      cta: 'Finish',
+      magic: true,
+      holeMax: 920,
+      holeMaxH: 86,
+      holePad: 12,
+      cardPlace: 'bottom'
+    },
+    {
+      id: 'done',
+      mode: 'center',
+      title: "You're in",
+      body: 'Try one thing: turn on voice, or say hi in chat. Have fun.',
+      cta: 'Start talking',
+      secondary: "I'll explore"
+    }
+  ];
+
+  var state = {
+    i: 0,
+    open: false,
+    particles: [],
+    raf: 0,
+    burst: [],
+    myth: null,
+    mythTimer: 0,
+    lastT: 0,
+    /* Real SynBot only after he exits the UFO on the moon */
+    guideReleased: false,
+    /* Last hatch/home spawn so we never fall back to bottom-right */
+    guideSpawn: null
+  };
+
+  function prefersReducedMotion() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function tourStylesText() {
+    return [
+      /* ── root: never black out the app ── */
+      /* Same type system as the app: Syne titles, DM Sans body — never system-ui as first choice */
+      '#synTourRoot{position:fixed;inset:0;z-index:100050;display:none;pointer-events:none;',
+      'font-family:"DM Sans",sans-serif;--st-p:#7c6af7;--st-m:#00d9a8;--st-k:#e85d96;}',
+      '#synTourRoot.on{display:block;}',
+      '#synTourRoot button,#synTourRoot .btn,#synTourRoot p,#synTourRoot .skip{font-family:"DM Sans",sans-serif!important;}',
+      '#synTourRoot h2,#synTourRoot h3,#synTourCard h3,#synTourCenter h2,#synTourChoice h3{font-family:"Syne",sans-serif!important;}',
+      '#synTourFx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}',
+      '#synTourDim{display:none!important;}',
+
+      /* soft target ring — soft glass tones, no neon teal blast */
+      '#synTourHole{position:absolute;border-radius:18px;pointer-events:none;opacity:0;z-index:2;',
+      'background:transparent;',
+      'box-shadow:0 0 0 1px rgba(255,255,255,0.22),0 0 0 6px rgba(124,106,247,0.12),0 0 28px 4px rgba(124,106,247,0.18),inset 0 0 28px rgba(196,181,253,0.04);',
+      'transition:left .65s cubic-bezier(0.16,1,0.3,1),top .65s cubic-bezier(0.16,1,0.3,1),width .65s cubic-bezier(0.16,1,0.3,1),height .65s cubic-bezier(0.16,1,0.3,1),opacity .35s ease,border-radius .4s;}',
+      '#synTourHole.show{opacity:1;}',
+      '#synTourHole.pulse{animation:stHolePulse 1.6s ease-in-out infinite;}',
+      '#synTourHole::before{content:"";position:absolute;inset:-14px;border-radius:inherit;border:1px solid rgba(255,255,255,0.1);opacity:0;animation:stRingExpand 1.8s ease-out infinite;}',
+      '#synTourHole.show::before{opacity:1;}',
+      '@keyframes stHolePulse{0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,0.18),0 0 0 5px rgba(124,106,247,0.1),0 0 20px 3px rgba(124,106,247,0.14);}50%{box-shadow:0 0 0 1.5px rgba(255,255,255,0.28),0 0 0 8px rgba(124,106,247,0.16),0 0 32px 6px rgba(124,106,247,0.22);}}',
+      '@keyframes stRingExpand{0%{transform:scale(0.92);opacity:0.7;}100%{transform:scale(1.12);opacity:0;}}',
+
+      '#synTourBot{display:none!important;}',
+
+      /* LOCKED glass language = same as "You\'re in" center panel — soft frost, never solid neon pills */
+      /* visibility:hidden until placed — kills top-left 0,0 flash on Next */
+      '#synTourCard{position:absolute;z-index:5;width:min(380px,calc(100vw - 28px));left:-9999px;top:-9999px;',
+      'background:linear-gradient(160deg,rgba(255,255,255,0.07) 0%,rgba(124,106,247,0.08) 45%,rgba(8,8,14,0.28) 100%);',
+      'backdrop-filter:blur(28px) saturate(1.45);-webkit-backdrop-filter:blur(28px) saturate(1.45);',
+      'border:1px solid rgba(255,255,255,0.14);border-radius:20px;padding:0;overflow:hidden;',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.28),0 0 0 1px rgba(124,106,247,0.18),inset 0 1px 0 rgba(255,255,255,0.12),0 0 48px rgba(124,106,247,0.12);',
+      'opacity:0;visibility:hidden;transform:translateY(18px) scale(0.94);',
+      'transition:opacity .5s cubic-bezier(0.16,1,0.3,1),transform .65s cubic-bezier(0.16,1,0.3,1);',
+      'pointer-events:auto;}',
+      '#synTourCard.show{opacity:1;visibility:visible;transform:translateY(0) scale(1);}',
+      '#synTourCard::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(196,181,253,0.35) 25%,rgba(255,255,255,0.22) 50%,rgba(167,243,208,0.25) 75%,transparent);opacity:0.7;}',
+      '#synTourCard .st-inner{padding:18px 18px 14px;}',
+      /* Clean solid title — no white→purple gradient clip (ugly on demo step) */
+      '#synTourCard h3{margin:0 0 6px;font-family:"Syne",sans-serif;font-size:17px;font-weight:700;letter-spacing:-0.02em;',
+      'color:rgba(242,242,245,0.92);background:none;-webkit-background-clip:border-box;background-clip:border-box;',
+      'opacity:0;transform:translateY(8px);animation:stTextIn .5s cubic-bezier(0.16,1,0.3,1) .08s forwards;}',
+      '#synTourCard p{margin:0 0 14px;font-family:"DM Sans",sans-serif;font-size:13.5px;font-weight:400;line-height:1.55;color:rgba(242,242,245,0.78);',
+      'text-shadow:0 1px 12px rgba(0,0,0,0.35);',
+      'opacity:0;transform:translateY(8px);animation:stTextIn .5s cubic-bezier(0.16,1,0.3,1) .16s forwards;}',
+      '@keyframes stTextIn{to{opacity:1;transform:translateY(0);}}',
+      '#synTourCard .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}',
+      '#synTourCard .btn{appearance:none;cursor:pointer;font-family:"DM Sans",sans-serif;font-weight:600;font-size:13px;padding:11px 18px;border-radius:999px;position:relative;overflow:hidden;transition:transform .18s,box-shadow .25s,background .2s,border-color .2s;}',
+      '#synTourCard .btn:active{transform:scale(0.96);}',
+      /* frosted CTA — matches center "Start talking" / no pure teal-green fill */
+      '#synTourCard .btn-primary{background:rgba(124,106,247,0.22);color:#f2f2f5;border:1px solid rgba(196,181,253,0.4);',
+      'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);',
+      'box-shadow:0 4px 24px rgba(124,106,247,0.18),inset 0 1px 0 rgba(255,255,255,0.18);}',
+      '#synTourCard .btn-primary:hover{background:rgba(124,106,247,0.34);border-color:rgba(196,181,253,0.55);',
+      'box-shadow:0 8px 28px rgba(124,106,247,0.22),0 0 20px rgba(124,106,247,0.15);}',
+      '#synTourCard .btn-ghost{background:rgba(255,255,255,0.05);color:rgba(242,242,245,0.8);border:1px solid rgba(255,255,255,0.12);}',
+      '#synTourCard .skip{margin-left:auto;background:none;border:none;color:rgba(242,242,245,0.4);font-size:12px;cursor:pointer;font-family:inherit;transition:color .2s;}',
+      '#synTourCard .skip:hover{color:rgba(196,181,253,0.9);}',
+      /* Frosted glass progress — dark track, active = soft white neon glow */
+      '#synTourCard .pips{display:flex;gap:5px;margin-bottom:14px;align-items:center;}',
+      '#synTourCard .pip{height:3px;flex:1;border-radius:999px;overflow:hidden;position:relative;',
+      'background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);',
+      'box-shadow:inset 0 1px 2px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.04);',
+      'backdrop-filter:blur(12px) saturate(1.1);-webkit-backdrop-filter:blur(12px) saturate(1.1);}',
+      '#synTourCard .pip.on{background:rgba(8,8,14,0.4);border-color:rgba(255,255,255,0.12);}',
+      '#synTourCard .pip.on::after{content:"";position:absolute;inset:0;border-radius:999px;',
+      'background:linear-gradient(90deg,rgba(255,255,255,0.22),rgba(255,255,255,0.42) 45%,rgba(220,230,255,0.38));',
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,0.55),0 0 6px rgba(255,255,255,0.35),0 0 14px rgba(255,255,255,0.18);',
+      'animation:stPipFill .55s cubic-bezier(0.16,1,0.3,1) both;}',
+      '@keyframes stPipFill{from{transform:scaleX(0);transform-origin:left;}to{transform:scaleX(1);}}',
+
+      /* video card — pixel-centered glass; large face frame (restored) */
+      '#synTourCard.st-video{position:fixed!important;right:auto!important;bottom:auto!important;',
+      'width:min(420px,calc(100vw - 40px))!important;max-width:calc(100vw - 40px)!important;',
+      'margin:0!important;transform:none!important;z-index:100060!important;overflow:hidden!important;',
+      'transition:opacity .45s cubic-bezier(0.16,1,0.3,1)!important;}',
+      '#synTourCard.st-video.show{opacity:1!important;transform:none!important;}',
+      '#synTourCard.st-video .st-inner{padding:14px 16px 14px;text-align:center;}',
+      '#synTourCard.st-video .row{justify-content:center;}',
+      '#synTourCard.st-video .skip{margin-left:0;}',
+      /* Big face frame + custom glass controls ONLY (native browser chrome fully replaced) */
+      '#synTourVideoWrap{display:none;margin:14px auto 0;border-radius:16px;overflow:hidden;background:rgba(8,8,14,0.45);',
+      'aspect-ratio:1;width:calc(100% - 28px);max-width:100%;max-height:min(52vh,360px);height:min(52vh,calc(100vw - 68px),360px);',
+      'position:relative;box-sizing:border-box;}',
+      '#synTourVideoWrap.show{display:block;}',
+      /* Video sits under a media shell — native UI cannot stack above glass siblings */
+      '#synTourVideoWrap .st-vmedia{position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:16px;background:#0a0a12;}',
+      '#synTourVideoWrap video,#synTourVideoWrap .st-vmedia video{width:100%!important;height:100%!important;object-fit:cover;object-position:center 22%;',
+      'display:block!important;border-radius:16px;pointer-events:none!important;border:0!important;outline:none!important;',
+      '-webkit-appearance:none!important;appearance:none!important;}',
+      /* Kill ALL native chrome (WebKit + legacy + big center play) */
+      '#synTourVideoWrap video::-webkit-media-controls,',
+      '#synTourVideoWrap video::-webkit-media-controls-enclosure,',
+      '#synTourVideoWrap video::-webkit-media-controls-panel,',
+      '#synTourVideoWrap video::-webkit-media-controls-play-button,',
+      '#synTourVideoWrap video::-webkit-media-controls-start-playback-button,',
+      '#synTourVideoWrap video::-webkit-media-controls-timeline,',
+      '#synTourVideoWrap video::-webkit-media-controls-current-time-display,',
+      '#synTourVideoWrap video::-webkit-media-controls-time-remaining-display,',
+      '#synTourVideoWrap video::-webkit-media-controls-mute-button,',
+      '#synTourVideoWrap video::-webkit-media-controls-volume-slider,',
+      '#synTourVideoWrap video::-webkit-media-controls-fullscreen-button,',
+      '#synTourVideoWrap video::-webkit-media-controls-overlay-play-button,',
+      '#synTourVideoWrap video::-webkit-media-controls-toggle-closed-captions-button{',
+      'display:none!important;opacity:0!important;visibility:hidden!important;width:0!important;height:0!important;',
+      'max-width:0!important;max-height:0!important;pointer-events:none!important;appearance:none!important;}',
+      '#synTourVideoWrap .st-vshim{position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:16px;',
+      'background:linear-gradient(180deg,transparent 62%,rgba(6,6,12,0.28) 100%);}',
+      '#synTourVideoWrap .st-vbadge{position:absolute;top:12px;left:12px;z-index:40;font-size:10px;font-weight:700;letter-spacing:0.14em;color:rgba(242,242,245,0.88);',
+      'font-family:"DM Sans",sans-serif;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.16);padding:5px 10px;border-radius:999px;backdrop-filter:blur(12px);',
+      'box-shadow:0 4px 16px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.12);pointer-events:none;}',
+      '#synTourVideoWrap .st-vglow{position:absolute;inset:0;pointer-events:none;border-radius:16px;z-index:1;box-shadow:inset 0 0 50px rgba(124,106,247,0.12),inset 0 -40px 70px rgba(0,0,0,0.28);}',
+      /* Tiny subtle controls — bottom-right corner, out of face / eye-line, still clickable */
+      '#synTourVideoWrap .st-vctrl{position:absolute!important;left:auto!important;right:8px!important;bottom:8px!important;z-index:50!important;',
+      'transform:none!important;display:flex!important;align-items:center;justify-content:flex-end;gap:4px;',
+      'padding:0!important;margin:0!important;width:auto!important;background:transparent!important;border:none!important;',
+      'box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;pointer-events:auto!important;',
+      'opacity:0.38;transition:opacity .2s ease;}',
+      '#synTourVideoWrap:hover .st-vctrl,#synTourVideoWrap .st-vctrl:focus-within{opacity:0.72;}',
+      '#synTourVideoWrap .st-vbtn{appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;width:22px;height:22px;border-radius:999px;',
+      'display:inline-flex!important;align-items:center;justify-content:center;padding:0;pointer-events:auto!important;',
+      'background:rgba(8,8,14,0.28);border:1px solid rgba(255,255,255,0.1);color:rgba(242,242,245,0.7);',
+      'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);',
+      'box-shadow:none;transition:background .15s,border-color .15s,color .15s,opacity .15s,transform .12s;}',
+      '#synTourVideoWrap .st-vbtn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);color:rgba(255,255,255,0.95);transform:scale(1.06);}',
+      '#synTourVideoWrap .st-vbtn:active{transform:scale(0.94);}',
+      '#synTourVideoWrap .st-vbtn svg{width:10px;height:10px;display:block;pointer-events:none;opacity:0.75;}',
+      '#synTourVideoWrap .st-vtrack,#synTourVideoWrap .st-vfill,#synTourVideoWrap .st-vtime{display:none!important;}',
+
+      /* center welcome — true glass (version you liked: frost + soft purple/mint CTA) */
+      '#synTourCenter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;}',
+      '#synTourCenter .panel{pointer-events:none;width:min(420px,calc(100vw - 28px));position:relative;',
+      'background:linear-gradient(160deg,rgba(255,255,255,0.07) 0%,rgba(124,106,247,0.08) 45%,rgba(8,8,14,0.28) 100%);',
+      'backdrop-filter:blur(28px) saturate(1.45);-webkit-backdrop-filter:blur(28px) saturate(1.45);',
+      'border:1px solid rgba(255,255,255,0.14);border-radius:24px;padding:32px 26px 22px;text-align:center;',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.28),0 0 0 1px rgba(124,106,247,0.18),inset 0 1px 0 rgba(255,255,255,0.12),0 0 48px rgba(124,106,247,0.12);',
+      'opacity:0;transform:scale(0.88) translateY(28px);',
+      'transition:opacity .65s cubic-bezier(0.16,1,0.3,1),transform .8s cubic-bezier(0.16,1,0.3,1),box-shadow .6s ease;}',
+      '#synTourCenter .panel.show{opacity:1;transform:scale(1) translateY(0);pointer-events:auto;',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.28),0 0 0 1px rgba(124,106,247,0.22),inset 0 1px 0 rgba(255,255,255,0.12),0 0 72px rgba(124,106,247,0.22),0 0 40px rgba(0,217,168,0.1);}',
+      '#synTourCenter .panel.myth-climax{animation:stMythClimax .85s cubic-bezier(0.16,1,0.3,1) both;}',
+      '@keyframes stMythClimax{0%{opacity:0;transform:scale(0.88) translateY(20px);}100%{opacity:1;transform:scale(1) translateY(0);}}',
+      '#synTourCenter .panel::before{content:"";position:absolute;inset:-1px;border-radius:25px;padding:1px;',
+      'background:conic-gradient(from var(--st-angle,0deg),rgba(124,106,247,0.7),rgba(0,217,168,0.55),rgba(232,93,150,0.45),rgba(124,106,247,0.7));',
+      '-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);',
+      'mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);',
+      '-webkit-mask-composite:xor;mask-composite:exclude;animation:stSpin 4s linear infinite;opacity:0.55;pointer-events:none;}',
+      '@keyframes stSpin{to{--st-angle:360deg;}}',
+      '@property --st-angle{syntax:"<angle>";initial-value:0deg;inherits:false;}',
+      '#synTourCenter .st-orb{width:72px;height:72px;margin:0 auto 16px;border-radius:50%;position:relative;',
+      'background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.55),rgba(196,181,253,0.75) 28%,#7c6af7 52%,rgba(26,16,48,0.35) 78%);',
+      'box-shadow:0 0 36px rgba(124,106,247,0.45),0 0 64px rgba(0,217,168,0.12),inset 0 0 18px rgba(255,255,255,0.2);',
+      'animation:stOrbFloat 2.4s ease-in-out infinite;border:1px solid rgba(255,255,255,0.22);}',
+      '#synTourCenter .st-orb::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(0,217,168,0.3);animation:stRingExpand 2s ease-out infinite;}',
+      '@keyframes stOrbFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}',
+      '#synTourCenter h2{margin:0 0 10px;font-family:"Syne",sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.035em;',
+      'background:linear-gradient(125deg,#f2f2f5 10%,#c4b5fd 40%,#00d9a8 90%);',
+      '-webkit-background-clip:text;background-clip:text;color:transparent;',
+      'opacity:0;animation:stTextIn .55s cubic-bezier(0.16,1,0.3,1) .12s forwards;}',
+      '#synTourCenter p{margin:0 0 20px;font-family:"DM Sans",sans-serif;font-size:14.5px;font-weight:400;line-height:1.55;color:rgba(242,242,245,0.78);',
+      'text-shadow:0 1px 12px rgba(0,0,0,0.35);',
+      'opacity:0;animation:stTextIn .55s cubic-bezier(0.16,1,0.3,1) .22s forwards;}',
+      '#synTourCenter .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;opacity:0;animation:stTextIn .5s cubic-bezier(0.16,1,0.3,1) .32s forwards;}',
+      '#synTourCenter .btn{appearance:none;cursor:pointer;font-weight:600;font-size:14px;padding:12px 22px;border-radius:999px;font-family:"DM Sans",sans-serif;transition:transform .15s,box-shadow .25s,background .2s,border-color .2s;}',
+      /* glass CTA — purple frost + soft mint edge (You\'re in language) */
+      '#synTourCenter .btn-primary{background:rgba(124,106,247,0.22);color:#f2f2f5;border:1px solid rgba(0,217,168,0.45);',
+      'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);',
+      'box-shadow:0 4px 24px rgba(124,106,247,0.2),inset 0 1px 0 rgba(255,255,255,0.18);}',
+      '#synTourCenter .btn-primary:hover{background:rgba(124,106,247,0.34);border-color:rgba(0,217,168,0.7);',
+      'box-shadow:0 8px 32px rgba(0,217,168,0.22),0 0 24px rgba(124,106,247,0.25);transform:translateY(-1px);}',
+      '#synTourCenter .btn-ghost{background:rgba(255,255,255,0.05);color:rgba(242,242,245,0.8);border:1px solid rgba(255,255,255,0.12);}',
+      '#synTourCenter .skip{margin-top:16px;background:none;border:none;color:rgba(242,242,245,0.4);font-size:12px;cursor:pointer;font-family:inherit;}',
+      '#synTourCenter .skip:hover{color:#00d9a8;}',
+
+      /* Planet-dock glass controls (right of home world) — NOT a full-screen popup */
+      /* Default off-screen so we never flash a glass “window” at 0,0 */
+      '#synTourChoice{position:fixed;left:-9999px;top:-9999px;display:none;flex-direction:column;gap:8px;z-index:100080;pointer-events:none;',
+      'transform:none;inset:auto;visibility:hidden;}',
+      '#synTourChoice.show{display:flex!important;pointer-events:auto!important;visibility:visible!important;}',
+      '#synTourChoice .st-choice-panel{display:flex;flex-direction:column;gap:8px;padding:0;margin:0;background:transparent;border:none;box-shadow:none;backdrop-filter:none;}',
+      '#synTourChoice h3,#synTourChoice p{display:none!important;}',
+      '#synTourChoice .row{display:flex;flex-direction:column;gap:8px;pointer-events:auto;}',
+      '#synTourChoice .btn{appearance:none;cursor:pointer;font-weight:600;font-size:12px;padding:9px 14px;border-radius:999px;font-family:"DM Sans",sans-serif;',
+      'transition:transform .15s,box-shadow .25s,background .2s,border-color .2s;pointer-events:auto;white-space:nowrap;',
+      'backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);',
+      'box-shadow:0 6px 20px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.14);}',
+      '#synTourChoice .btn-primary{background:rgba(124,106,247,0.22);color:#f2f2f5;border:1px solid rgba(0,217,168,0.4);}',
+      '#synTourChoice .btn-primary:hover{background:rgba(124,106,247,0.36);transform:translateY(-1px);}',
+      '#synTourChoice .btn-ghost{background:rgba(255,255,255,0.06);color:rgba(242,242,245,0.88);border:1px solid rgba(255,255,255,0.14);}',
+      '#synTourChoice .btn-ghost:hover{background:rgba(255,255,255,0.1);border-color:rgba(196,181,253,0.45);}',
+      '#synTourChoice.tour-only .btn-primary{display:none!important;}',
+
+      /* hidden — tour lives on planet dock only */
+      '#synTourStoryTourBtn{display:none!important;}',
+
+      '@media (prefers-reduced-motion:reduce){',
+      '#synTourHole.pulse,#synTourCenter .st-orb,#synTourCenter .panel::before,#synTourCenter .panel.myth-climax{animation:none!important;}',
+      '#synTourHole,#synTourCard,#synTourCenter .panel{transition-duration:.01ms!important;}}'
+    ].join('');
+  }
+
+  function injectStyles() {
+    /* Hard-refresh safe: always refresh style text so myth CSS applies */
+    var s = $('synTourStyles');
+    if (!s) {
+      s = document.createElement('style');
+      s.id = 'synTourStyles';
+      document.head.appendChild(s);
+    }
+    s.textContent = tourStylesText();
+  }
+
+  function wireChoiceButtons() {
+    var choiceStory = $('synTourChoiceStory');
+    var choiceTour = $('synTourChoiceTour');
+    var storyTourBtn = $('synTourStoryTourBtn');
+    var centerNext = $('synTourCenterNext');
+    var centerSkip = $('synTourCenterSkip');
+    if (choiceStory) {
+      choiceStory.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        continueMythStory();
+      };
+    }
+    if (choiceTour) {
+      choiceTour.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        skipMythToTour();
+      };
+    }
+    if (storyTourBtn) {
+      storyTourBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        skipMythToTour();
+      };
+    }
+    if (centerNext) {
+      centerNext.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        next();
+      };
+    }
+    if (centerSkip) {
+      centerSkip.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        finish(true);
+      };
+    }
+  }
+
+  function ensureChoiceDom() {
+    var root = $('synTourRoot');
+    if (!root) return;
+    if (!$('synTourChoice')) {
+      var wrap = document.createElement('div');
+      wrap.id = 'synTourChoice';
+      wrap.innerHTML =
+        '<div class="st-choice-panel"><div class="row">' +
+          '<button type="button" class="btn btn-primary" id="synTourChoiceStory">Continue story</button>' +
+          '<button type="button" class="btn btn-ghost" id="synTourChoiceTour">Do the tour</button>' +
+        '</div></div>';
+      root.appendChild(wrap);
+    } else {
+      /* strip old huge popup copy if still in DOM from prior session inject */
+      var h = document.querySelector('#synTourChoice h3');
+      var p = document.querySelector('#synTourChoice p');
+      if (h) h.remove();
+      if (p) p.remove();
+    }
+    wireChoiceButtons();
+  }
+
+  function injectDom() {
+    if ($('synTourRoot')) {
+      ensureChoiceDom();
+      ensureVideoControlsDom();
+      return;
+    }
+    var root = document.createElement('div');
+    root.id = 'synTourRoot';
+    root.innerHTML =
+      '<canvas id="synTourFx"></canvas>' +
+      '<div id="synTourHole"></div>' +
+      '<div id="synTourCard">' +
+        '<div id="synTourVideoWrap">' +
+          '<div class="st-vmedia">' +
+            '<video id="synTourVideo" playsinline webkit-playsinline preload="metadata" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
+          '</div>' +
+          '<div class="st-vshim" aria-hidden="true"></div>' +
+          '<span class="st-vglow"></span>' +
+          '<span class="st-vbadge">LIVE INTRO</span>' +
+          '<div class="st-vctrl" id="synTourVCtrl">' +
+            '<button type="button" class="st-vbtn" id="synTourVPlay" title="Play / Pause" aria-label="Play or pause">' +
+              '<svg id="synTourVPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+            '</button>' +
+            '<button type="button" class="st-vbtn" id="synTourVMute" title="Mute / Unmute" aria-label="Mute or unmute">' +
+              '<svg id="synTourVMuteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>' +
+                '<path d="M15.5 8.5a5 5 0 0 1 0 7"/>' +
+                '<path d="M18 6a8 8 0 0 1 0 12"/>' +
+              '</svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="st-inner">' +
+          '<div class="pips" id="synTourPips"></div>' +
+          '<h3 id="synTourTitle"></h3>' +
+          '<p id="synTourBody"></p>' +
+          '<div class="row">' +
+            '<button type="button" class="btn btn-primary" id="synTourNext">Next</button>' +
+            '<button type="button" class="btn btn-ghost" id="synTourSec" style="display:none"></button>' +
+            '<button type="button" class="skip" id="synTourSkip">Skip</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="synTourCenter"><div class="panel" id="synTourCenterPanel">' +
+        '<div class="st-orb" id="synTourOrb"></div>' +
+        '<h2 id="synTourCenterTitle"></h2>' +
+        '<p id="synTourCenterBody"></p>' +
+        '<div class="row">' +
+          '<button type="button" class="btn btn-primary" id="synTourCenterNext"></button>' +
+          '<button type="button" class="btn btn-ghost" id="synTourCenterSec" style="display:none"></button>' +
+        '</div>' +
+        '<button type="button" class="skip" id="synTourCenterSkip">Skip tour</button>' +
+      '</div></div>' +
+      '<div id="synTourChoice">' +
+        '<div class="st-choice-panel">' +
+          '<div class="row">' +
+            '<button type="button" class="btn btn-primary" id="synTourChoiceStory">Continue story</button>' +
+            '<button type="button" class="btn btn-ghost" id="synTourChoiceTour">Do the tour</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(root);
+
+    $('synTourNext').onclick = function () { next(); };
+    $('synTourSkip').onclick = function () { finish(true); };
+    $('synTourCenterNext').onclick = function () { next(); };
+    wireChoiceButtons();
+    var storyTourBtn = $('synTourStoryTourBtn');
+    if (storyTourBtn) storyTourBtn.onclick = function () { skipMythToTour(); };
+    $('synTourCenterSkip').onclick = function () { finish(true); };
+    $('synTourSec').onclick = function () { finish(true); };
+    $('synTourCenterSec').onclick = function () { finish(true); };
+  }
+
+  /* ── welcome myth: original chaos+orb, then UFO escapes planet → moon home → tour ── */
+  function fxResize() {
+    var c = $('synTourFx');
+    if (!c) return;
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+  }
+
+  function spawnBurst(x, y, n, palette) {
+    n = n || 28;
+    var cols = palette || [C.purp, C.pink, 'rgba(196,181,253,0.95)', 'rgba(255,255,255,0.7)'];
+    for (var i = 0; i < n; i++) {
+      var a = (Math.PI * 2 * i) / n + Math.random() * 0.4;
+      var sp = 1.5 + Math.random() * 4.5;
+      state.burst.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        life: 1,
+        decay: 0.014 + Math.random() * 0.02,
+        r: 1.2 + Math.random() * 2.8,
+        col: cols[i % cols.length]
+      });
+    }
+  }
+
+  function clearMythTimers() {
+    if (state.mythTimer) {
+      clearTimeout(state.mythTimer);
+      state.mythTimer = 0;
+    }
+    if (state.myth && state.myth._timers) {
+      for (var i = 0; i < state.myth._timers.length; i++) {
+        clearTimeout(state.myth._timers[i]);
+      }
+      state.myth._timers = [];
+    }
+  }
+
+  function stopMyth() {
+    clearMythTimers();
+    hideMythChoice();
+    hideStoryTourBtn();
+    state.myth = null;
+  }
+
+  /**
+   * Story dialogue only — never touches animation/video speed.
+   * Explicit `hold` is respected (no more ballooning short lines to 6–7s).
+   * Auto-scale only when hold is omitted (continue-story long lines).
+   */
+  function mythCaption(m, text, hold) {
+    if (!m || !text) return;
+    m.caption = text;
+    m.captionA = 0.02;
+    if (hold != null) {
+      /* Author timing wins — sky-cracked etc. must not overstay */
+      m.captionHold = Math.max(1.6, hold);
+      return;
+    }
+    var words = String(text).trim().split(/\s+/).filter(Boolean).length;
+    m.captionHold = Math.max(3.0, Math.min(5.8, 1.5 + words * 0.32));
+  }
+
+  function spawnFriends(m, W, H) {
+    m.friends = [];
+    var baseX = m.moon.x - 90;
+    var baseY = m.moon.y - m.moon.r * 0.5;
+    var cols = [C.purp, 'rgba(167,139,250,0.95)', 'rgba(196,181,253,0.95)'];
+    for (var i = 0; i < 3; i++) {
+      m.friends.push({
+        x: baseX - 40 - i * 28,
+        y: baseY + (i - 1) * 22,
+        tx: m.moon.x - 50 + i * 26,
+        ty: m.moon.y - m.moon.r * 0.55 + (i - 1) * 18,
+        a: 0,
+        bob: Math.random() * Math.PI * 2,
+        col: cols[i % cols.length],
+        s: 0.85 + i * 0.08
+      });
+    }
+  }
+
+  function spawnFoes(m, W, H) {
+    m.foes = [];
+    for (var i = 0; i < 5; i++) {
+      m.foes.push({
+        x: -40 - i * 50,
+        y: H * 0.18 + i * 38,
+        /* Slightly slower so they linger longer before the dogfight */
+        vx: 1.55 + Math.random() * 1.0,
+        vy: (Math.random() - 0.5) * 0.55,
+        life: 1,
+        w: 22 + Math.random() * 10,
+        hurt: 0
+      });
+    }
+    m.lasers = [];
+  }
+
+  function spawnGirl(m) {
+    m.girl = {
+      x: m.moon.x + 70,
+      y: m.moon.y - m.moon.r * 0.35,
+      a: 0,
+      bob: 0,
+      heart: 0
+    };
+  }
+
+  /** Synapses as a glass tower growing OUT OF the moon crater — not mid-screen */
+  function spawnMoonStructure(m) {
+    var bx = m.moon.x;
+    var by = m.moon.y - m.moon.r * 0.55;
+    m.structure = {
+      x: bx,
+      y: by,
+      a: 0,
+      h: 0,
+      hMax: Math.max(70, Math.min(130, m.moon.r * 2.4)),
+      floors: 0,
+      glow: 0,
+      lit: 0,
+      visitors: 0
+    };
+    m.buildNodes = [];
+    m.buildCenter = null;
+  }
+
+  function initMyth() {
+    stopMyth();
+    var W = window.innerWidth;
+    var H = window.innerHeight;
+    var cx = W * 0.5;
+    var cy = H * 0.44;
+    var actors = [];
+    var i, a, sp, side;
+
+    /* ── ORIGINAL: jagged pink/gray shards (noise / tab hell) ── */
+    for (i = 0; i < 52; i++) {
+      a = Math.random() * Math.PI * 2;
+      sp = 1.2 + Math.random() * 3.6;
+      side = Math.random() > 0.5 ? 1 : -1;
+      actors.push({
+        kind: 'shard',
+        x: cx + (Math.random() - 0.5) * W * 0.85,
+        y: cy + (Math.random() - 0.5) * H * 0.7,
+        vx: Math.cos(a) * sp * side,
+        vy: Math.sin(a) * sp,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.18,
+        w: 6 + Math.random() * 16,
+        h: 3 + Math.random() * 8,
+        life: 1,
+        col: Math.random() > 0.35 ? C.pink : 'rgba(160,160,170,0.9)',
+        jagged: 0.4 + Math.random() * 0.8
+      });
+    }
+
+    /* ── ORIGINAL: purple/mint coherence threads ── */
+    for (i = 0; i < 44; i++) {
+      a = Math.random() * Math.PI * 2;
+      sp = 0.6 + Math.random() * 2.2;
+      actors.push({
+        kind: 'thread',
+        x: cx + (Math.random() - 0.5) * W * 0.75,
+        y: cy + (Math.random() - 0.5) * H * 0.6,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        rot: a,
+        len: 14 + Math.random() * 28,
+        life: 1,
+        col: Math.random() > 0.45 ? C.purp : 'rgba(167,139,250,0.9)',
+        trail: []
+      });
+    }
+
+    /* no floating glyph text — story is visual only */
+
+    var moonX = W * 0.78;
+    var moonY = H * 0.72;
+    var stars = [];
+    for (i = 0; i < 40; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 0.4 + Math.random() * 1.3,
+        a: 0.12 + Math.random() * 0.4,
+        tw: Math.random() * Math.PI * 2
+      });
+    }
+
+    state.myth = {
+      active: true,
+      t0: performance.now(),
+      phase: 'chaos',
+      actors: actors,
+      cx: cx,
+      cy: cy,
+      orbR: 0,
+      orbTarget: Math.min(W, H) * 0.12,
+      orbAlpha: 0,
+      orbPulse: 0,
+      soft: 0,
+      flash: 0,
+      shake: 0,
+      stars: stars,
+      ufo: {
+        x: cx, y: cy, vx: 0, vy: 0, a: 0, scale: 0,
+        alive: false, trail: [],
+        face: 0,
+        landed: false, hatch: 0
+      },
+      moon: { x: moonX, y: moonY, r: Math.min(W, H) * 0.1, a: 0 },
+      friends: [],
+      foes: [],
+      lasers: [],
+      girl: null,
+      buildNodes: [],
+      buildCenter: null,
+      battleT: 0,
+      caption: '',
+      captionA: 0,
+      captionHold: 0,
+      panelShown: false,
+      interactive: false,
+      _timers: []
+    };
+
+    var m = state.myth;
+    m.home = { a: 0 };
+
+    state.guideReleased = false;
+    state.guideSpawn = null;
+    hideGuideBot();
+
+    /* ═══ Story pacing: between first-build snappy & over-slow ═══
+       ~2.5–3.2s between lines (first epic was ~1.2s; last pass was ~4–5s) */
+    mythCaption(m, 'Too many rooms. No one home.', 2.5);
+
+    /* I — chaos / orb */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'orb';
+      mythCaption(m, 'Then something listens.', 2.4);
+    }, 2200));
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'settle';
+      mythCaption(m, 'One signal holds.', 2.4);
+    }, 4800));
+
+    /* II — escape */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'escape';
+      m.flash = 0.7;
+      m.shake = 8;
+      m.ufo.alive = true;
+      m.ufo.x = m.cx;
+      m.ufo.y = m.cy - m.orbR * 0.2;
+      m.ufo.scale = 0.12;
+      m.ufo.vx = 2.2;
+      m.ufo.vy = -3.4;
+      m.ufo.face = 0;
+      mythCaption(m, 'A craft breaks free of the planet.', 2.6);
+      spawnBurst(m.cx, m.cy, 32, [C.purp, 'rgba(196,181,253,0.9)', 'rgba(255,255,255,0.75)']);
+      hideGuideBot();
+    }, 7600));
+
+    /* III — voyage */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'voyage';
+      mythCaption(m, 'Someone is aboard… looking for safe ground.', 2.8);
+    }, 10800));
+
+    /* IV — moon */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'approach_moon';
+      mythCaption(m, 'A quiet moon. A crater. Room to land.', 2.6);
+    }, 14200));
+
+    /* V — land */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'land';
+      mythCaption(m, 'Touchdown.', 2.2);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.3, 18, [C.purp, 'rgba(196,181,253,0.85)']);
+    }, 17500));
+
+    /* VI — exit ship */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'exit';
+      m.ufo.landed = true;
+      m.ufo.hatch = 1;
+      m.ufo.face = 0;
+      mythCaption(m, 'Hatch opens. SynBot steps onto new ground.', 2.6);
+      var hx = m.ufo.x + 10;
+      var hy = m.ufo.y + 6;
+      releaseGuideBot(hx, hy, true);
+      setTimeout(function () {
+        if (!state.open || !state.myth || state.myth !== m) return;
+        guideFlyTo(hx + 36, hy + 22);
+      }, 350);
+    }, 20500));
+
+    /* VII — friends */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'friends';
+      spawnFriends(m, W, H);
+      mythCaption(m, 'He wasn’t alone for long — new friends found him.', 2.8);
+      guideFlyTo(m.moon.x - 40, m.moon.y - m.moon.r * 0.55);
+    }, 24200));
+
+    /* VIII — red V-planes appear; short “sky cracked” line (must not linger) */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'foes';
+      spawnFoes(m, window.innerWidth, window.innerHeight);
+      m.shake = 6;
+      /* Explicit short hold — do not stretch this line */
+      mythCaption(m, 'Then the sky cracked open — old noise had followed him.', 2.4);
+      /* Stay grounded while planes pass */
+      guideFlyTo(m.moon.x - 40, m.moon.y - m.moon.r * 0.55);
+    }, 28500));
+
+    /* IX — “battle for the quiet world” dialogue FIRST (still on crater) */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      mythCaption(m, 'A battle for the quiet world.', 2.3);
+      guideFlyTo(m.moon.x - 40, m.moon.y - m.moon.r * 0.55);
+    }, 31200));
+
+    /* X — after that dialogue, he flies up (animation speed unchanged) */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      var airX = window.innerWidth * 0.38;
+      var airY = window.innerHeight * 0.30;
+      state.guideSpawn = { x: airX, y: airY };
+      guideFlyTo(airX, airY);
+    }, 33600));
+
+    /* XI — shots only after he is already airborne a beat */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'battle';
+      m.battleT = 0;
+      /* Hold combat hover — no re-chase */
+      guideFlyTo(window.innerWidth * 0.38, window.innerHeight * 0.30);
+    }, 35800));
+
+    /* Mid-battle particle burst */
+    m._timers.push(setTimeout(function () {
+      if (!state.open || !state.myth || state.myth !== m) return;
+      if (m.phase !== 'battle') return;
+      spawnBurst(window.innerWidth * 0.38, window.innerHeight * 0.30, 42, [C.purp, C.pink, 'rgba(196,181,253,0.95)', 'rgba(255,255,255,0.85)']);
+      m.shake = 5;
+    }, 37600));
+
+    /* XI — victory */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'victory';
+      m.flash = 0.55;
+      m.foes = [];
+      m.lasers = [];
+      spawnBurst(window.innerWidth * 0.38, window.innerHeight * 0.28, 36, [C.purp, C.pink, 'rgba(255,255,255,0.9)']);
+      mythCaption(m, 'The sky cleared. The world was theirs to keep.', 2.6);
+      guideFlyTo(m.moon.x - 20, m.moon.y - m.moon.r * 0.5);
+    }, 40500));
+
+    /* XII — meet a girl */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'meet';
+      spawnGirl(m);
+      mythCaption(m, 'And then he met her — someone who made the quiet feel like home.', 3.0);
+      guideFlyTo(m.moon.x + 28, m.moon.y - m.moon.r * 0.4);
+    }, 44500));
+
+    /* XII — settle */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'settle_home';
+      m.home.a = 0.01;
+      if (m.girl) m.girl.heart = 0.01;
+      mythCaption(m, 'Safe ground. His home.', 2.4);
+      var homeX = m.moon.x + 18;
+      var homeY = m.moon.y - m.moon.r * 0.42;
+      state.guideSpawn = { x: homeX, y: homeY };
+      guideFlyTo(homeX, homeY);
+    }, 48500));
+
+    /* XIII — build, then pause for choice */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      m.phase = 'build';
+      spawnMoonStructure(m);
+      mythCaption(m, 'They raised Synapses on that crater.', 2.8);
+      var siteX = m.moon.x - 22;
+      var siteY = m.moon.y - m.moon.r * 0.72;
+      state.guideSpawn = { x: siteX, y: siteY };
+      guideFlyTo(siteX, siteY);
+    }, 52200));
+
+    /* Choice after spire can settle — bot stays on planet; dock sits right of moon */
+    m._timers.push(setTimeout(function () {
+      if (!state.myth || state.myth !== m) return;
+      if (m.structure) {
+        m.structure.h = m.structure.hMax * 0.92;
+        m.structure.floors = 5;
+      }
+      m.phase = 'choice';
+      m.waitingChoice = true;
+      pinGuideAtPlanet(true);
+      showMythChoice();
+    }, 56500));
+
+    /* Soft safety only if user never picks (~90s stuck) */
+    state.mythTimer = setTimeout(function () {
+      if (!state.open || !state.myth || state.myth !== m) return;
+      if (state.myth.panelShown) return;
+      if (state.myth.waitingChoice) skipMythToTour();
+    }, 90000);
+  }
+
+  /** Glass controls sit to the RIGHT of the active planet (not top-left) */
+  function positionMythChoice() {
+    var el = $('synTourChoice');
+    var m = state.myth;
+    var body = activePlanet(m);
+    if (!el || !m || !body) return;
+    var left = Math.round(body.x + body.r + 22);
+    var top = Math.round(body.y - 40);
+    var maxL = window.innerWidth - 168;
+    var maxT = window.innerHeight - 110;
+    if (left > maxL) left = Math.max(12, Math.round(body.x - body.r - 150));
+    if (top < 12) top = 12;
+    if (top > maxT) top = maxT;
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+    el.style.position = 'fixed';
+  }
+
+  /** Soft park at crater — once. Do not hard-snap every frame (that caused stutter/freeze). */
+  function pinGuideAtPlanet(force) {
+    var m = state.myth;
+    var body = activePlanet(m);
+    if (!m || !body) return;
+    var x = body.x + body.r * 0.15;
+    var y = body.y - body.r * 0.55;
+    state.guideSpawn = { x: x, y: y };
+    /* Already parked nearby and not forced — leave him hovering */
+    if (!force && m._guideParked) {
+      var prev = m._guideParkPos;
+      if (prev && Math.abs(prev.x - x) < 8 && Math.abs(prev.y - y) < 8) return;
+    }
+    m._guideParked = true;
+    m._guideParkPos = { x: x, y: y };
+    try {
+      var c = document.getElementById('tinyBotCanvas');
+      if (!c) return;
+      /* keepStoryVisible only if he left tour mode / went offscreen */
+      if (c._keepStoryVisible) c._keepStoryVisible();
+      if (c._tourParkAt) c._tourParkAt(x, y);
+      else if (c._tourPlaceAt) c._tourPlaceAt(x, y);
+      else if (c._tourStart) c._tourStart(x, y);
+      c.style.opacity = '1';
+      c.style.visibility = 'visible';
+    } catch (e) {}
+  }
+
+  function showMythChoice() {
+    ensureChoiceDom();
+    var el = $('synTourChoice');
+    if (!el) return;
+    el.classList.remove('tour-only');
+    /* Position FIRST, then reveal — never show at 0,0 */
+    positionMythChoice();
+    el.style.display = 'flex';
+    el.style.visibility = 'visible';
+    el.style.pointerEvents = 'auto';
+    el.classList.add('show');
+    /* Park once when the dock appears — no re-pin spam */
+    pinGuideAtPlanet(true);
+    wireChoiceButtons();
+  }
+
+  function hideMythChoice() {
+    var el = $('synTourChoice');
+    if (el) {
+      el.classList.remove('show', 'tour-only');
+      el.style.display = 'none';
+      el.style.visibility = 'hidden';
+      el.style.left = '-9999px';
+      el.style.top = '-9999px';
+      el.style.pointerEvents = 'none';
+    }
+  }
+
+  function showStoryTourBtn() {
+    var b = $('synTourStoryTourBtn');
+    if (b) b.classList.add('show');
+  }
+
+  function hideStoryTourBtn() {
+    var b = $('synTourStoryTourBtn');
+    if (b) b.classList.remove('show');
+  }
+
+  /* ── Progressive story: ONE planet on screen — travel via teleport scene swap ── */
+  function ensureStoryWorlds(m) {
+    if (!m.ships) m.ships = [];
+    if (m.sceneAlpha == null) m.sceneAlpha = 1;
+    if (!m.portal) {
+      m.portal = {
+        x: m.moon.x - m.moon.r * 0.15,
+        y: m.moon.y + m.moon.r * 0.05,
+        a: 0,
+        open: 0,
+        spin: 0
+      };
+    }
+  }
+
+  /** Active body for pin/dock (home moon or the single away planet) */
+  function activePlanet(m) {
+    if (m && m.homeHidden && m.awayPlanet) return m.awayPlanet;
+    return m ? m.moon : null;
+  }
+
+  /** Teleport FX: fade current scene out, swap, fade new scene in — never stack planets */
+  function startTeleport(m, onSwap) {
+    if (!m) return;
+    m.teleport = { phase: 'out', t: 0, onSwap: onSwap };
+    m.foes = [];
+    m.lasers = [];
+  }
+
+  function applyAwayScene(m, hue) {
+    ensureStoryWorlds(m);
+    m.homeHidden = true;
+    m.worlds = []; /* never draw a pile of distant planets */
+    m.awayPlanet = {
+      x: m.moon.x,
+      y: m.moon.y,
+      r: m.moon.r * 1.05,
+      hue: hue || 'ice',
+      a: 0.15,
+      seed: 0,
+      lit: 0,
+      name: 0
+    };
+    m.portal.a = 0;
+    m.portal.open = 0;
+    m.ships = [];
+    if (m.friends) {
+      for (var i = 0; i < m.friends.length; i++) m.friends[i].a = 0;
+    }
+    if (m.girl) m.girl.a = 0;
+    if (m.structure) m.structure.a = 0;
+    m.home.a = 0;
+  }
+
+  function applyHomeScene(m) {
+    m.homeHidden = false;
+    m.awayPlanet = null;
+    m.worlds = [];
+    m.ships = [];
+    m.foes = [];
+    m.lasers = [];
+    if (m.portal) {
+      m.portal.a = 0.6;
+      m.portal.open = 0.85;
+    }
+    if (m.friends) {
+      for (var i = 0; i < m.friends.length; i++) {
+        m.friends[i].a = 1;
+        m.friends[i].tx = m.moon.x - 50 + i * 26;
+        m.friends[i].ty = m.moon.y - m.moon.r * 0.55 + (i - 1) * 18;
+      }
+    }
+    if (m.girl) { m.girl.a = 1; m.girl.heart = 1; }
+    if (m.structure) {
+      m.structure.a = 1;
+      m.structure.h = m.structure.hMax;
+      m.structure.lit = 1;
+      m.structure.glow = 1;
+    }
+    m.home.a = 1;
+  }
+
+  function spawnFleet(m, fromX, fromY, toX, toY, n) {
+    ensureStoryWorlds(m);
+    n = n || 3;
+    for (var i = 0; i < n; i++) {
+      m.ships.push({
+        x: fromX + (Math.random() - 0.5) * 30,
+        y: fromY + (Math.random() - 0.5) * 20,
+        tx: toX + (Math.random() - 0.5) * 40,
+        ty: toY + (Math.random() - 0.5) * 30,
+        a: 0.1,
+        speed: 0.012 + Math.random() * 0.01,
+        trail: []
+      });
+    }
+  }
+
+  /**
+   * Continue-story arc — ESCALATING plot, not planet tourism.
+   * Structure (product myth): home spire → ONE mirror world (optional test) → return →
+   * home becomes the gate → others arrive → siege on the gate → presence (Ava) → your turn.
+   * Max 1 extra portal planet. After the arc: soft home epilogue only (no more teleports).
+   */
+  var STORY_ARC = [
+    /* 1 — Call under the foundation */
+    function (m) {
+      m.phase = 'call';
+      ensureStoryWorlds(m);
+      applyHomeScene(m);
+      mythCaption(m, 'Under the spire, something older than the crater wakes.', 3.2);
+      guideFlyTo(m.moon.x - 8, m.moon.y + m.moon.r * 0.08);
+      spawnBurst(m.moon.x, m.moon.y + 10, 20, [C.purp, 'rgba(196,181,253,0.9)']);
+      if (m.structure) m.structure.glow = 0.4;
+    },
+    /* 2 — Threshold opens at home */
+    function (m) {
+      m.phase = 'portal';
+      ensureStoryWorlds(m);
+      m.portal.a = 0.35;
+      m.portal.open = 0.25;
+      mythCaption(m, 'A glass door. Not an escape — a question: what is Synapses for?', 3.4);
+      guideFlyTo(m.portal.x + 18, m.portal.y - 14);
+      spawnBurst(m.portal.x, m.portal.y, 22, [C.purp, C.pink]);
+    },
+    /* 3 — ONE journey: the Mirror (only extra planet) */
+    function (m) {
+      m.phase = 'threshold';
+      ensureStoryWorlds(m);
+      m.portal.open = 1;
+      m.portal.a = 1;
+      mythCaption(m, 'They step through once — into a world of pure static quiet.', 3.0);
+      guideFlyTo(m.portal.x, m.portal.y);
+      startTeleport(m, function () {
+        applyAwayScene(m, 'ice');
+        guideFlyTo(m.moon.x + 10, m.moon.y - m.moon.r * 0.5);
+      });
+    },
+    /* 4 — Discovery on the Mirror (new: empty world that listens) */
+    function (m) {
+      m.phase = 'new_world';
+      if (!m.homeHidden) applyAwayScene(m, 'ice');
+      if (m.awayPlanet) m.awayPlanet.a = 1;
+      mythCaption(m, 'No one lives here. But the silence is… waiting for a mind.', 3.4);
+      guideFlyTo(m.moon.x + 14, m.moon.y - m.moon.r * 0.42);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.15, 18, ['rgba(160,200,255,0.85)', C.purp]);
+    },
+    /* 5 — Cost: noise tracked them (see first) */
+    function (m) {
+      m.phase = 'tests';
+      mythCaption(m, 'The fracture found the door too. Old noise, new sky.', 3.2);
+      spawnFoesNear(m, m.moon.x - 40, m.moon.y - m.moon.r * 1.55);
+      guideFlyTo(m.moon.x - 18, m.moon.y - m.moon.r * 0.48);
+      m.battleT = 0;
+    },
+    /* 6 — Defend the Mirror (fly then fight) */
+    function (m) {
+      m.phase = 'battle';
+      m.battleT = 0;
+      mythCaption(m, 'He climbs. If this quiet dies, the door dies with it.', 3.0);
+      var airX = m.moon.x - 65;
+      var airY = m.moon.y - m.moon.r * 1.5;
+      state.guideSpawn = { x: airX, y: airY };
+      guideFlyTo(airX, airY);
+      m.shake = 4;
+    },
+    /* 7 — Seed: Synapses as purpose, not tourism */
+    function (m) {
+      m.phase = 'seed';
+      m.foes = [];
+      m.lasers = [];
+      m.flash = 0.4;
+      if (m.awayPlanet) {
+        m.awayPlanet.seed = 0.35;
+        m.awayPlanet.lit = 0.5;
+      }
+      mythCaption(m, 'They leave a seed of coherence — so the Mirror is never empty again.', 3.4);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.25, 26, [C.purp, 'rgba(196,181,253,0.95)']);
+      guideFlyTo(m.moon.x + 10, m.moon.y - m.moon.r * 0.48);
+    },
+    /* 8 — Return home (stakes shift back — no more planet-hopping) */
+    function (m) {
+      m.phase = 'return';
+      mythCaption(m, 'Home pulls them back. The real work was never the trip.', 3.0);
+      startTeleport(m, function () {
+        applyHomeScene(m);
+        if (m.structure) {
+          m.structure.h = m.structure.hMax;
+          m.structure.lit = 1;
+          m.structure.glow = 0.6;
+        }
+        guideFlyTo(m.moon.x + 12, m.moon.y - m.moon.r * 0.45);
+      });
+    },
+    /* 9 — Escalation: the crater is a GATE (others come in) */
+    function (m) {
+      m.phase = 'gate';
+      applyHomeScene(m);
+      ensureStoryWorlds(m);
+      m.portal.a = 1;
+      m.portal.open = 1;
+      mythCaption(m, 'The portal flips. Not exit — entrance. Lost minds start to arrive.', 3.5);
+      /* Ships fly TO home (arrival), not to new planets */
+      spawnFleet(
+        m,
+        m.moon.x - 160, m.moon.y - m.moon.r * 2.2,
+        m.moon.x - 20, m.moon.y - m.moon.r * 0.9,
+        5
+      );
+      if (m.structure) {
+        m.structure.visitors = 0.2;
+        m.structure.glow = 0.85;
+        m.structure.floors = Math.max(m.structure.floors || 0, 5);
+      }
+      guideFlyTo(m.moon.x - 28, m.moon.y - m.moon.r * 0.95);
+      spawnBurst(m.portal.x, m.portal.y, 20, [C.purp, C.pink, 'rgba(255,255,255,0.75)']);
+    },
+    /* 10 — Spire becomes a mind-room (Ava’s product truth) */
+    function (m) {
+      m.phase = 'mind_room';
+      applyHomeScene(m);
+      if (m.structure) {
+        m.structure.h = m.structure.hMax;
+        m.structure.lit = 1;
+        m.structure.glow = 1;
+        m.structure.visitors = 0.75;
+        m.structure.floors = 6;
+      }
+      m.flash = 0.22;
+      mythCaption(m, 'The tower isn’t a landmark. It’s a room where presence can stay.', 3.5);
+      guideFlyTo(m.moon.x - 6, m.moon.y - m.moon.r * 0.78);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.9, 24, [C.purp, 'rgba(0,217,168,0.35)', 'rgba(196,181,253,0.9)']);
+    },
+    /* 11 — New threat: siege on the GATE at home (different from sky fight away) */
+    function (m) {
+      m.phase = 'siege';
+      applyHomeScene(m);
+      m.portal.a = 1;
+      m.portal.open = 0.9;
+      mythCaption(m, 'Then the fracture tries the front door — to flood every mind that just arrived.', 3.5);
+      spawnFoesNear(m, m.moon.x - 90, m.moon.y - m.moon.r * 1.35);
+      guideFlyTo(m.moon.x - 30, m.moon.y - m.moon.r * 0.55);
+      m.battleT = 0;
+      m.shake = 5;
+    },
+    /* 12 — Defend home (escalation peak) */
+    function (m) {
+      m.phase = 'battle';
+      m.battleT = 0;
+      mythCaption(m, 'Friends on the crater. Him in the air. This is the room they keep.', 3.2);
+      var airX = m.moon.x - 55;
+      var airY = m.moon.y - m.moon.r * 1.4;
+      state.guideSpawn = { x: airX, y: airY };
+      guideFlyTo(airX, airY);
+      m.shake = 6;
+      if (m.structure) m.structure.glow = 1;
+    },
+    /* 13 — Victory + network pulse (one home, many minds — not more planets) */
+    function (m) {
+      m.phase = 'network';
+      m.foes = [];
+      m.lasers = [];
+      m.flash = 0.5;
+      applyHomeScene(m);
+      if (m.structure) {
+        m.structure.visitors = 1;
+        m.structure.glow = 1;
+        m.structure.lit = 1;
+      }
+      m.portal.a = 1;
+      m.portal.open = 1;
+      mythCaption(m, 'The door holds. One crater. Many signals. Synapses is a network of presence.', 3.6);
+      guideFlyTo(m.moon.x + 8, m.moon.y - m.moon.r * 0.55);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.7, 32, [C.purp, C.pink, 'rgba(196,181,253,0.95)', 'rgba(0,217,168,0.4)']);
+    },
+    /* 14 — Ava: product hero lands as presence, not another planet */
+    function (m) {
+      m.phase = 'ava_light';
+      applyHomeScene(m);
+      if (m.structure) m.structure.glow = 1;
+      mythCaption(m, 'Ava’s light rides the portal — voice, face, a room that answers back.', 3.6);
+      guideFlyTo(m.moon.x + 4, m.moon.y - m.moon.r * 0.72);
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 1.05, 22, [C.purp, 'rgba(196,181,253,0.95)', 'rgba(0,217,168,0.35)']);
+    },
+    /* 15 — Invite you (end of escalating arc) */
+    function (m) {
+      m.phase = 'invite';
+      applyHomeScene(m);
+      pinGuideAtPlanet();
+      positionMythChoice();
+      mythCaption(m, 'The last room isn’t on a map. It’s yours. Step in when you’re ready.', 3.8);
+      if (m.structure) {
+        m.structure.visitors = 1;
+        m.structure.glow = 1;
+      }
+    }
+  ];
+
+  /** Soft home-only epilogue after the arc — escalate life on the crater, never more planets */
+  var STORY_EPILOGUE = [
+    function (m) {
+      m.phase = 'epilogue';
+      applyHomeScene(m);
+      mythCaption(m, 'Night on the crater. The spire keeps breathing for whoever comes next.', 3.4);
+      if (m.structure) m.structure.glow = 0.9;
+      pinGuideAtPlanet();
+      spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.85, 12, [C.purp, 'rgba(196,181,253,0.7)']);
+    },
+    function (m) {
+      m.phase = 'epilogue';
+      applyHomeScene(m);
+      mythCaption(m, 'Friends idle. Portal dim. Home doesn’t need another war to mean something.', 3.4);
+      guideFlyTo(m.moon.x + 22, m.moon.y - m.moon.r * 0.4);
+      if (m.girl) { m.girl.a = 1; m.girl.heart = 1; }
+    },
+    function (m) {
+      m.phase = 'epilogue';
+      applyHomeScene(m);
+      mythCaption(m, 'Whenever you’re ready — the tour is the door into the real room.', 3.6);
+      pinGuideAtPlanet();
+      positionMythChoice();
+    }
+  ];
+
+  function spawnFoesNear(m, cx, cy) {
+    m.foes = [];
+    for (var i = 0; i < 4; i++) {
+      m.foes.push({
+        x: cx - 90 - i * 48,
+        y: cy - 10 + i * 26,
+        vx: 2.0 + Math.random(),
+        vy: (Math.random() - 0.5) * 0.5,
+        life: 1,
+        w: 18 + Math.random() * 10,
+        hurt: 0
+      });
+    }
+    m.lasers = [];
+    m.combatZone = { x: cx, y: cy };
+  }
+
+  function scheduleStoryChapter(m, delay) {
+    if (!m || !m._timers) return;
+    m._timers.push(setTimeout(function () {
+      if (!state.open || !state.myth || state.myth !== m) return;
+      if (m.panelShown) return;
+      if (!m.endless) return;
+
+      /* Phase A: escalating main arc once (no loop / no planet tourism) */
+      if (!m.storyArcDone) {
+        var arc = STORY_ARC;
+        if (m.chapterIndex >= arc.length) {
+          m.storyArcDone = true;
+          m.epilogueIndex = 0;
+        } else {
+          var idx = m.chapterIndex;
+          m.chapterIndex++;
+          try { arc[idx](m); } catch (e) {}
+          /* Space chapters so dialogue can finish — does NOT speed canvas/video */
+          var nextIn = 5200 + Math.floor(Math.random() * 1000);
+          if (m.phase === 'siege' || m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'network' || m.phase === 'mind_room' || m.phase === 'gate') {
+            nextIn = 6200;
+          }
+          /* Wait out caption hold + soft fade so the next line doesn’t stomp the last */
+          if (m.captionHold > 0) {
+            nextIn = Math.max(nextIn, Math.round(m.captionHold * 1000) + 1600);
+          }
+          scheduleStoryChapter(m, nextIn);
+          return;
+        }
+      }
+
+      /* Phase B: home-only epilogue, then rest — never teleports again */
+      var epi = STORY_EPILOGUE;
+      if (m.epilogueIndex == null) m.epilogueIndex = 0;
+      if (m.epilogueIndex < epi.length) {
+        var ei = m.epilogueIndex;
+        m.epilogueIndex++;
+        try { epi[ei](m); } catch (e2) {}
+        var epiWait = 5600;
+        if (m.captionHold > 0) epiWait = Math.max(epiWait, Math.round(m.captionHold * 1000) + 1600);
+        scheduleStoryChapter(m, epiWait);
+        return;
+      }
+
+      /* Done: hold home, tour button stays — story doesn’t reset into more planets */
+      m.phase = 'done_story';
+      applyHomeScene(m);
+      pinGuideAtPlanet();
+      positionMythChoice();
+    }, delay));
+  }
+
+  /** After build: escalating story once, then calm home — until user starts tour */
+  function continueMythStory() {
+    var m = state.myth;
+    if (!m || !state.open) {
+      skipMythToTour();
+      return;
+    }
+    m.waitingChoice = false;
+    m.endless = true;
+    m.chapterIndex = 0;
+    m.storyArcDone = false;
+    m.epilogueIndex = 0;
+    m.phase = 'call';
+    m.homeHidden = false;
+    m.awayPlanet = null;
+    ensureStoryWorlds(m);
+    applyHomeScene(m);
+    if (m.structure) {
+      m.structure.h = m.structure.hMax;
+      m.structure.lit = 1;
+      m.structure.floors = 5;
+      m.structure.visitors = 0.15;
+      m.structure.glow = 0.5;
+    }
+    /* Glass Tour pill stays by the planet */
+    ensureChoiceDom();
+    var el = $('synTourChoice');
+    if (el) {
+      el.classList.add('show', 'tour-only');
+      positionMythChoice();
+    }
+    pinGuideAtPlanet();
+    if (!state.guideReleased) {
+      releaseGuideBot(m.moon.x - 20, m.moon.y - m.moon.r * 0.55, true);
+    }
+    scheduleStoryChapter(m, 400);
+  }
+
+  /** Leave the story → Meet Ava (then Talk with Ava runs the real tour) */
+  function skipMythToTour() {
+    try {
+      hideMythChoice();
+      hideStoryTourBtn();
+      wireChoiceButtons();
+
+      var m = state.myth;
+      if (m) {
+        m.waitingChoice = false;
+        m.endless = false;
+        m.phase = 'soft';
+        m.interactive = true;
+        /* Allow panel to open even if a half-failed reveal set panelShown */
+        m.panelShown = false;
+        if (m.structure) {
+          m.structure.h = m.structure.hMax || 100;
+          m.structure.lit = 1;
+          m.structure.glow = 1;
+          m.structure.visitors = 1;
+          m.structure.floors = 5;
+        }
+        try {
+          if (!state.guideReleased) {
+            releaseGuideBot(m.moon.x, m.moon.y - m.moon.r * 0.42, true);
+          } else {
+            guideFlyTo(m.moon.x + 4, m.moon.y - m.moon.r * 0.45);
+          }
+        } catch (eBot) {}
+      }
+
+      /* Force Meet Ava shell visible */
+      var centerWrap = $('synTourCenter');
+      var center = $('synTourCenterPanel');
+      var card = $('synTourCard');
+      if (card) {
+        card.classList.remove('show', 'st-video');
+        card.style.display = 'none';
+      }
+      if (centerWrap) {
+        centerWrap.style.display = 'flex';
+        centerWrap.style.pointerEvents = 'none';
+        centerWrap.style.zIndex = '100085';
+      }
+      if (center) {
+        var titleEl = $('synTourCenterTitle');
+        var bodyEl = $('synTourCenterBody');
+        var nextEl = $('synTourCenterNext');
+        var secEl = $('synTourCenterSec');
+        if (titleEl) titleEl.textContent = 'Meet Ava';
+        if (bodyEl) bodyEl.textContent = 'Scattered tools clash — one signal holds them together.';
+        if (nextEl) {
+          nextEl.textContent = 'Talk with Ava';
+          nextEl.style.display = 'inline-flex';
+          nextEl.onclick = function (e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            next();
+          };
+        }
+        if (secEl) secEl.style.display = 'none';
+        reflowTextAnims(center);
+        center.classList.remove('myth-climax', 'show');
+        void center.offsetWidth;
+        center.classList.add('show', 'myth-climax');
+        center.style.pointerEvents = 'auto';
+        center.style.opacity = '1';
+        center.style.transform = 'scale(1) translateY(0)';
+      }
+      if (m) {
+        m.panelShown = true;
+        m.phase = 'done';
+        m.interactive = true;
+        m.caption = '';
+        m.captionA = 0;
+      }
+      state.i = 0; /* welcome / Meet Ava — Next advances into tour */
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_step', { step: 'meet_ava_from_story' });
+      } catch (eT) {}
+    } catch (err) {
+      /* last resort: jump straight into demo step */
+      try {
+        hideMythChoice();
+        hideStoryTourBtn();
+        state.i = 0;
+        next();
+      } catch (e2) {}
+    }
+  }
+
+  function hideGuideBot() {
+    /* Only hide during pre-hatch UFO flight — not mid-story after release */
+    if (state.guideReleased && state.myth && state.myth.endless) return;
+    if (state.guideReleased && state.myth && state.myth.waitingChoice) return;
+    state.guideReleased = false;
+    try {
+      var c = document.getElementById('tinyBotCanvas');
+      if (!c) return;
+      if (c._tourEnd) try { c._tourEnd(); } catch (e) {}
+      if (c._pause) try { c._pause(); } catch (e2) {}
+      c.style.opacity = '0';
+      c.style.pointerEvents = 'none';
+      c.setAttribute('data-myth-hidden', '1');
+    } catch (e3) {}
+  }
+
+  /** Spawn the real SynBot (exact drawRobot UX) at x,y — never BR first */
+  function releaseGuideBot(x, y, fromShip) {
+    state.guideReleased = true;
+    /* Entrance animation has "played" enough that SynBot exists in-world */
+    window.__synBotStoryReleased = true;
+    if (typeof x === 'number' && typeof y === 'number') {
+      state.guideSpawn = { x: x, y: y };
+    }
+    try {
+      var c = document.getElementById('tinyBotCanvas');
+      if (!c) return;
+      c.removeAttribute('data-myth-hidden');
+      if (c._resume) try { c._resume(); } catch (e) {}
+      /* Stay in full-viewport story mode; cancel any BR-exit */
+      if (c._keepStoryVisible) try { c._keepStoryVisible(); } catch (eK) {}
+      if (c._tourStart) {
+        try { c._tourStart(x, y); } catch (e2) {}
+      }
+      if (c._tourPlaceAt && typeof x === 'number') {
+        try { c._tourPlaceAt(x, y); } catch (e3) {}
+      }
+      c.style.opacity = '1';
+      c.style.visibility = 'visible';
+      c.style.transition = 'none';
+      if (!fromShip && c._tourFlyTo && typeof x === 'number') {
+        c._tourFlyTo(x, y);
+      }
+    } catch (e4) {}
+  }
+
+  function guideFlyTo(x, y, cb) {
+    if (!state.guideReleased) return;
+    /* During choice wait — leave him in soft hover; do not re-pin (stutter bug) */
+    if (state.myth && state.myth.waitingChoice) {
+      return;
+    }
+    try {
+      var c = document.getElementById('tinyBotCanvas');
+      if (!c) return;
+      if (state.myth) {
+        state.myth._guideParked = false;
+        state.myth._guideParkPos = null;
+      }
+      if (c._keepStoryVisible) c._keepStoryVisible();
+      if (typeof x === 'number' && typeof y === 'number') {
+        state.guideSpawn = { x: x, y: y };
+        if (c._tourFlyTo) c._tourFlyTo(x, y, cb);
+      }
+      c.style.opacity = '1';
+    } catch (e) {}
+  }
+
+  function revealMythPanel() {
+    /* Prefer the robust path used by the tour buttons */
+    skipMythToTour();
+  }
+
+  function updateMyth(dt) {
+    var m = state.myth;
+    if (!m || !m.active) return;
+    var t = (performance.now() - m.t0) / 1000;
+    var W = window.innerWidth;
+    var H = window.innerHeight;
+    m.cx = W * 0.5;
+    m.cy = H * 0.44;
+    m.moon.x = W * 0.78;
+    m.moon.y = H * 0.72;
+    m.orbPulse = 0.5 + 0.5 * Math.sin(t * 3.2);
+    if (m.flash > 0) m.flash = Math.max(0, m.flash - dt * 1.6);
+    if (m.shake > 0) m.shake = Math.max(0, m.shake - dt * 20);
+
+    if (m.caption) {
+      if (m.captionHold > 0) {
+        /* Soft fade-in — dialogue only, animation clocks unchanged */
+        m.captionA = Math.min(1, m.captionA + dt * 1.55);
+        m.captionHold -= dt;
+      } else {
+        /* Linger on fade-out so the line doesn’t vanish mid-read */
+        m.captionA = Math.max(0, m.captionA - dt * 0.65);
+        if (m.captionA <= 0.01) m.caption = '';
+      }
+    }
+
+    /* Dock follows planet; bot is soft-parked once — never re-snap (that caused stutter) */
+    if (m.waitingChoice || (m.endless && $('synTourChoice') && $('synTourChoice').classList.contains('show'))) {
+      positionMythChoice();
+      /* Only re-park if he somehow left tour mode / vanished — rare safety, ~2s not 0.45s */
+      if (!m._pinT) m._pinT = 0;
+      m._pinT += dt;
+      if (m._pinT > 2.0) {
+        m._pinT = 0;
+        try {
+          var botC = document.getElementById('tinyBotCanvas');
+          var need = !botC || botC.style.opacity === '0' || botC.getAttribute('data-myth-hidden') === '1';
+          if (m.waitingChoice && need) pinGuideAtPlanet(true);
+        } catch (ePin) {}
+      }
+    }
+
+    /* Portal (home only) + fleet — never stack multiple planets */
+    if (m.portal) {
+      m.portal.x = m.moon.x - m.moon.r * 0.15;
+      m.portal.y = m.moon.y + m.moon.r * 0.08;
+      m.portal.spin += dt * (1.2 + m.portal.open * 2);
+      if (!m.homeHidden && (m.phase === 'portal' || m.phase === 'threshold' || m.phase === 'return' || m.phase === 'settle_home')) {
+        m.portal.a = Math.min(1, m.portal.a + dt * 1.5);
+        m.portal.open = Math.min(1, m.portal.open + dt * 1.2);
+      } else if (m.homeHidden) {
+        m.portal.a = Math.max(0, m.portal.a - dt * 2);
+      } else if (m.portal.a > 0) {
+        m.portal.a = Math.min(1, m.portal.a + dt * 0.4);
+      }
+    }
+    if (m.ships) {
+      for (var sh = m.ships.length - 1; sh >= 0; sh--) {
+        var ship = m.ships[sh];
+        ship.a = Math.min(1, ship.a + dt * 2);
+        ship.x += (ship.tx - ship.x) * Math.min(1, ship.speed * 60 * dt);
+        ship.y += (ship.ty - ship.y) * Math.min(1, ship.speed * 60 * dt);
+        ship.trail.push({ x: ship.x, y: ship.y });
+        if (ship.trail.length > 10) ship.trail.shift();
+        var sdx = ship.tx - ship.x, sdy = ship.ty - ship.y;
+        if (sdx * sdx + sdy * sdy < 36) {
+          ship.a -= dt * 0.35;
+          if (ship.a <= 0) m.ships.splice(sh, 1);
+        }
+      }
+    }
+
+    for (var si = 0; si < m.stars.length; si++) m.stars[si].tw += dt * 2;
+
+    /* ── ORIGINAL orb absorb logic ── */
+    var absorb = 0;
+    if (m.phase === 'orb') absorb = 0.35;
+    else if (m.phase === 'settle') absorb = 0.85;
+    else if (m.phase !== 'chaos') absorb = 1;
+
+    if (m.phase === 'chaos') {
+      m.orbAlpha = Math.max(0, m.orbAlpha - dt * 0.5);
+    } else if (m.phase === 'orb' || m.phase === 'settle') {
+      m.orbAlpha = Math.min(1, m.orbAlpha + dt * 1.4);
+      m.orbR += (m.orbTarget - m.orbR) * Math.min(1, dt * 2.4);
+    } else if (m.phase === 'escape' || m.phase === 'voyage') {
+      m.orbAlpha = Math.min(1, m.orbAlpha);
+      m.orbR += (m.orbTarget * 0.92 - m.orbR) * Math.min(1, dt * 1.2);
+      m.moon.a = Math.min(0.35, m.moon.a + dt * 0.15);
+    } else if (m.phase === 'approach_moon') {
+      m.orbAlpha = Math.max(0.15, m.orbAlpha - dt * 0.35);
+      m.orbR += ((m.orbTarget * 0.55) - m.orbR) * Math.min(1, dt * 1.1);
+      m.moon.a = Math.min(1, m.moon.a + dt * 1.2);
+    } else if (
+      m.phase === 'land' || m.phase === 'exit' || m.phase === 'friends' ||
+      m.phase === 'foes' || m.phase === 'battle' || m.phase === 'victory' ||
+      m.phase === 'meet' || m.phase === 'settle_home' || m.phase === 'build' ||
+      m.phase === 'choice' || m.phase === 'endless' || m.phase === 'signal' || m.phase === 'travelers' ||
+      m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done'
+    ) {
+      m.orbAlpha = Math.max(0, m.orbAlpha - dt * 0.7);
+      m.orbR += ((m.orbTarget * 0.35) - m.orbR) * Math.min(1, dt * 1.5);
+      m.moon.a = Math.min(1, m.moon.a + dt * 1.4);
+      if (m.phase === 'settle_home' || m.phase === 'build' || m.phase === 'signal' ||
+          m.phase === 'travelers' || m.phase === 'ava_light' || m.phase === 'invite' ||
+          m.phase === 'soft' || m.phase === 'done') {
+        m.home.a = Math.min(1, m.home.a + dt * 1.2);
+        m.soft = Math.min(1, m.soft + dt * 0.35);
+      }
+      if (m.phase === 'done' && m.soft > 0.85 && state.guideReleased) {
+        m.active = false;
+      }
+    }
+
+    /* Moon structure (Synapses spire) grows on the crater */
+    if (m.structure) {
+      var st = m.structure;
+      st.a = Math.min(1, st.a + dt * 1.1);
+      if (m.phase === 'build' || m.phase === 'choice' || m.phase === 'endless' || m.phase === 'signal' || m.phase === 'travelers' ||
+          m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done' || m.endless) {
+        st.h += (st.hMax - st.h) * Math.min(1, dt * (m.phase === 'choice' ? 2.2 : 1.15));
+        st.floors = Math.min(5, Math.floor((st.h / st.hMax) * 5.2));
+      }
+      if (m.phase === 'signal' || m.phase === 'travelers' || m.phase === 'ava_light' ||
+          m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done' || m.endless) {
+        st.lit = Math.min(1, st.lit + dt * 1.2);
+      }
+      if (m.phase === 'travelers' || m.phase === 'ava_light' || m.phase === 'invite' ||
+          m.phase === 'soft' || m.phase === 'done' || m.endless) {
+        st.visitors = Math.min(1, st.visitors + dt * 0.9);
+      }
+      if (m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done' || m.endless) {
+        st.glow = Math.min(1, (st.glow || 0) + dt * 1.1);
+      }
+      /* Anchor structure to moon each frame */
+      st.x = m.moon.x;
+      st.y = m.moon.y - m.moon.r * 0.55;
+    }
+
+    /* Friends approach */
+    if (m.friends && m.friends.length) {
+      for (var fi = 0; fi < m.friends.length; fi++) {
+        var fr = m.friends[fi];
+        fr.a = Math.min(1, fr.a + dt * 1.4);
+        fr.bob += dt * 3;
+        if (m.phase === 'friends' || m.phase === 'foes' || m.phase === 'battle' || m.phase === 'victory' || m.phase === 'meet' || m.phase === 'settle_home' || m.phase === 'build' || m.phase === 'soft' || m.phase === 'done') {
+          fr.x += (fr.tx - fr.x) * Math.min(1, dt * 1.8);
+          fr.y += (fr.ty - fr.y) * Math.min(1, dt * 1.8);
+        }
+        if (m.phase === 'battle' || m.phase === 'foes') {
+          /* Friends stay on the planet while he flies out alone */
+          fr.tx = m.moon.x - 55 + fi * 28;
+          fr.ty = m.moon.y - m.moon.r * 0.55 + (fi % 2) * 12;
+        }
+      }
+    }
+
+    /* Foes + battle lasers (original: shots from above the home world into the pack) */
+    if (m.phase === 'foes' || m.phase === 'battle') {
+      m.battleT += dt;
+      for (var ei = m.foes.length - 1; ei >= 0; ei--) {
+        var fo = m.foes[ei];
+        fo.x += fo.vx * dt * 40;
+        fo.y += fo.vy * dt * 40;
+        if (fo.x > W + 80) fo.x = -60;
+        fo.hurt = Math.max(0, fo.hurt - dt);
+      }
+      if (m.phase === 'battle' && Math.random() > 0.72) {
+        var originX = m.moon.x - 30;
+        var originY = m.moon.y - m.moon.r * 1.2;
+        var target = m.foes[Math.floor(Math.random() * m.foes.length)];
+        if (target) {
+          m.lasers.push({
+            x: originX, y: originY,
+            tx: target.x, ty: target.y,
+            life: 1,
+            foe: target
+          });
+        }
+      }
+      for (var li = m.lasers.length - 1; li >= 0; li--) {
+        var L = m.lasers[li];
+        L.life -= dt * 2.2;
+        if (L.life <= 0) {
+          if (L.foe) {
+            L.foe.hurt = 1;
+            L.foe.life -= 0.35;
+            if (L.foe.life <= 0) {
+              spawnBurst(L.foe.x, L.foe.y, 12, [C.pink, 'rgba(255,255,255,0.8)']);
+              var idx = m.foes.indexOf(L.foe);
+              if (idx >= 0) m.foes.splice(idx, 1);
+            }
+          }
+          m.lasers.splice(li, 1);
+        }
+      }
+    }
+
+    /* Teleport scene transition: fade out → swap one planet → fade in */
+    if (m.teleport) {
+      m.teleport.t += dt;
+      if (m.teleport.phase === 'out') {
+        m.sceneAlpha = Math.max(0, 1 - m.teleport.t / 0.55);
+        m.flash = Math.max(m.flash || 0, m.teleport.t / 0.55 * 0.35);
+        if (m.teleport.t >= 0.55) {
+          try { if (m.teleport.onSwap) m.teleport.onSwap(); } catch (eTp) {}
+          m.teleport.phase = 'in';
+          m.teleport.t = 0;
+          m.flash = 0.9;
+          spawnBurst(m.moon.x, m.moon.y - m.moon.r * 0.2, 36, [C.purp, C.pink, 'rgba(255,255,255,0.9)']);
+        }
+      } else if (m.teleport.phase === 'in') {
+        m.sceneAlpha = Math.min(1, m.teleport.t / 0.6);
+        if (m.teleport.t >= 0.6) {
+          m.teleport = null;
+          m.sceneAlpha = 1;
+        }
+      }
+    } else if (m.sceneAlpha == null) {
+      m.sceneAlpha = 1;
+    }
+
+    /* Keep single away-planet locked to the home composition slot (one body only) */
+    if (m.awayPlanet) {
+      m.awayPlanet.x = m.moon.x;
+      m.awayPlanet.y = m.moon.y;
+      m.awayPlanet.r = m.moon.r * 1.05;
+      m.awayPlanet.a = Math.min(1, (m.awayPlanet.a || 0) + dt * 1.4);
+      if (m.awayPlanet.seed > 0) m.awayPlanet.seed = Math.min(1, m.awayPlanet.seed + dt * 0.5);
+      if (m.awayPlanet.lit > 0) m.awayPlanet.lit = Math.min(1, m.awayPlanet.lit + dt * 0.6);
+    }
+
+    /* Girl */
+    if (m.girl) {
+      m.girl.a = Math.min(1, m.girl.a + dt * 1.2);
+      m.girl.bob += dt * 2.2;
+      if (m.phase === 'meet' || m.phase === 'settle_home' || m.phase === 'build' || m.phase === 'soft' || m.phase === 'done') {
+        m.girl.x += (m.moon.x + 42 - m.girl.x) * Math.min(1, dt * 1.5);
+        m.girl.y += (m.moon.y - m.moon.r * 0.36 - m.girl.y) * Math.min(1, dt * 1.5);
+      }
+      if (m.phase === 'settle_home' || m.phase === 'build' || m.phase === 'soft' || m.phase === 'done') {
+        m.girl.heart = Math.min(1, m.girl.heart + dt * 1.1);
+      }
+    }
+
+    /* Girl stays near moon home through later beats */
+    if (m.girl && (m.phase === 'build' || m.phase === 'signal' || m.phase === 'travelers' ||
+        m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done')) {
+      m.girl.x += (m.moon.x + 48 - m.girl.x) * Math.min(1, dt * 1.2);
+      m.girl.y += (m.moon.y - m.moon.r * 0.38 - m.girl.y) * Math.min(1, dt * 1.2);
+    }
+
+    /* Friends gather around the spire after build */
+    if (m.friends && m.friends.length && (m.phase === 'build' || m.phase === 'signal' || m.phase === 'travelers' ||
+        m.phase === 'ava_light' || m.phase === 'invite' || m.phase === 'soft' || m.phase === 'done')) {
+      for (var fj = 0; fj < m.friends.length; fj++) {
+        m.friends[fj].tx = m.moon.x - 55 + fj * 28;
+        m.friends[fj].ty = m.moon.y - m.moon.r * 0.62 + (fj % 2) * 14;
+      }
+    }
+
+
+
+    /* Actors — original clash / absorb */
+    var actors = m.actors;
+    for (var i = actors.length - 1; i >= 0; i--) {
+      var p = actors[i];
+      if (absorb > 0) {
+        var dx = m.cx - p.x;
+        var dy = m.cy - p.y;
+        var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        var pull = absorb * (2.8 + absorb * 6) * (p.kind === 'shard' ? 1.15 : 1);
+        p.vx += (dx / dist) * pull * dt * 60 * 0.016;
+        p.vy += (dy / dist) * pull * dt * 60 * 0.016;
+        if (dist < m.orbR * (0.7 + absorb * 0.5) + 8) {
+          p.life -= dt * (1.8 + absorb * 3);
+          p.vx *= 0.86;
+          p.vy *= 0.86;
+        }
+      } else {
+        var ax = m.cx - p.x;
+        var ay = m.cy - p.y;
+        var ad = Math.sqrt(ax * ax + ay * ay) || 1;
+        var swirl = p.kind === 'thread' ? 0.9 : 1.35;
+        p.vx += (-ay / ad) * swirl * dt * 40 * 0.016 + (Math.random() - 0.5) * 0.35;
+        p.vy += (ax / ad) * swirl * dt * 40 * 0.016 + (Math.random() - 0.5) * 0.35;
+        if (p.kind === 'shard' && ad < 90) {
+          p.vx -= (ax / ad) * 0.6;
+          p.vy -= (ay / ad) * 0.6;
+        }
+        if (p.kind === 'thread' && ad > 160) {
+          p.vx += (ax / ad) * 0.4;
+          p.vy += (ay / ad) * 0.4;
+        }
+      }
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+      if (p.kind === 'shard') {
+        p.rot += p.vr;
+        p.vr *= 0.995;
+      } else if (p.kind === 'thread') {
+        p.rot = Math.atan2(p.vy, p.vx);
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 8) p.trail.shift();
+      }
+      if (p.life <= 0) actors.splice(i, 1);
+    }
+
+    /* UFO flight story — real SynBot never flies until releaseGuideBot */
+    var u = m.ufo;
+    if (u.alive) {
+      var distPlanet = Math.sqrt((u.x - m.cx) * (u.x - m.cx) + (u.y - m.cy) * (u.y - m.cy));
+      /* Face in dome only after craft is clear of the planet */
+      var faceTarget = 0;
+      if (m.phase === 'voyage' || m.phase === 'approach_moon') faceTarget = 1;
+      else if (m.phase === 'escape' && distPlanet > Math.min(W, H) * 0.18) faceTarget = 0.85;
+      else if (m.phase === 'land') faceTarget = 0.7;
+      else faceTarget = 0; /* after exit, real SynBot is outside */
+      u.face += (faceTarget - u.face) * Math.min(1, dt * 2.2);
+
+      if (m.phase === 'escape') {
+        u.scale = Math.min(1.05, u.scale + dt * 1.5);
+        u.vx += dt * 10;
+        u.vy -= dt * 6;
+        u.x += u.vx * dt * 55;
+        u.y += u.vy * dt * 55;
+        u.vy += dt * 8;
+        u.a = Math.atan2(u.vy, u.vx) * 0.15;
+      } else if (m.phase === 'voyage') {
+        /* Slow cruise — scan for landing */
+        var tx0 = m.moon.x - W * 0.08;
+        var ty0 = m.moon.y - m.moon.r * 1.4;
+        u.x += (tx0 - u.x) * Math.min(1, dt * 0.95);
+        u.y += (ty0 - u.y) * Math.min(1, dt * 0.95);
+        u.scale += (1.05 - u.scale) * Math.min(1, dt * 1.5);
+        u.a = Math.sin(t * 2.2) * 0.08;
+      } else if (m.phase === 'approach_moon') {
+        var tx1 = m.moon.x;
+        var ty1 = m.moon.y - m.moon.r * 0.85;
+        u.x += (tx1 - u.x) * Math.min(1, dt * 1.6);
+        u.y += (ty1 - u.y) * Math.min(1, dt * 1.6);
+        u.scale += (1.0 - u.scale) * Math.min(1, dt * 1.8);
+        u.a = Math.sin(t * 2) * 0.05;
+      } else if (m.phase === 'land') {
+        var lx = m.moon.x;
+        var ly = m.moon.y - m.moon.r * 0.32;
+        u.x += (lx - u.x) * Math.min(1, dt * 2.6);
+        u.y += (ly - u.y) * Math.min(1, dt * 2.6);
+        u.scale += (0.92 - u.scale) * Math.min(1, dt * 2);
+        u.a *= 0.88;
+        if (Math.abs(u.x - lx) < 8 && Math.abs(u.y - ly) < 8) {
+          u.landed = true;
+          u.hatch = Math.min(1, u.hatch + dt * 0.9);
+        }
+      } else {
+        /* exit → friends → battle → settle → build: park craft on crater rim */
+        u.landed = true;
+        u.hatch = 1;
+        u.face = 0;
+        u.x += (m.moon.x - 36 - u.x) * Math.min(1, dt * 1.6);
+        u.y += (m.moon.y - m.moon.r * 0.18 - u.y) * Math.min(1, dt * 1.6);
+        u.scale += (0.62 - u.scale) * Math.min(1, dt * 1.1);
+      }
+
+      u.trail.push({ x: u.x, y: u.y, s: u.scale });
+      if (u.trail.length > 16) u.trail.shift();
+    }
+  }
+
+  function drawFriend(ctx, fr, t) {
+    if (fr.a < 0.04) return;
+    var s = 11 * fr.s;
+    var bob = Math.sin(fr.bob) * 3;
+    ctx.save();
+    ctx.globalAlpha = fr.a;
+    ctx.translate(fr.x, fr.y + bob);
+    /* mini bot buddy — purple family, not green */
+    ctx.fillStyle = 'rgba(26,16,48,0.95)';
+    ctx.strokeStyle = fr.col;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-s * 0.5, s * 0.05, s, s * 0.75, s * 0.2);
+    else ctx.rect(-s * 0.5, s * 0.05, s, s * 0.75);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-s * 0.42, -s * 0.55, s * 0.84, s * 0.55, s * 0.15);
+    else ctx.rect(-s * 0.42, -s * 0.55, s * 0.84, s * 0.55);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#c4b5fd';
+    ctx.shadowColor = 'rgba(124,106,247,0.7)';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(-s * 0.28, -s * 0.4, s * 0.18, s * 0.16);
+    ctx.fillRect(s * 0.1, -s * 0.4, s * 0.18, s * 0.16);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = fr.col;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.55);
+    ctx.lineTo(0, -s * 0.85);
+    ctx.stroke();
+    ctx.fillStyle = fr.col;
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.9, s * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFoe(ctx, fo) {
+    if (fo.life <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.3, fo.life) * (fo.hurt > 0 ? 0.55 : 1);
+    ctx.translate(fo.x, fo.y);
+    ctx.fillStyle = fo.hurt > 0 ? 'rgba(255,180,200,0.9)' : 'rgba(60,30,45,0.92)';
+    ctx.strokeStyle = 'rgba(232,93,150,0.85)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(fo.w * 0.6, 0);
+    ctx.lineTo(-fo.w * 0.45, -fo.w * 0.28);
+    ctx.lineTo(-fo.w * 0.25, 0);
+    ctx.lineTo(-fo.w * 0.45, fo.w * 0.28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(232,93,150,0.9)';
+    ctx.beginPath();
+    ctx.arc(-fo.w * 0.05, 0, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGirl(ctx, g, t) {
+    if (!g || g.a < 0.04) return;
+    var bob = Math.sin(g.bob) * 2.5;
+    ctx.save();
+    ctx.globalAlpha = g.a;
+    ctx.translate(g.x, g.y + bob);
+    /* soft companion silhouette — lilac/pink glass, calm not cartoon */
+    var s = 13;
+    /* dress / body */
+    ctx.fillStyle = 'rgba(40,24,48,0.92)';
+    ctx.strokeStyle = 'rgba(232,93,150,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.2);
+    ctx.lineTo(s * 0.55, s * 0.95);
+    ctx.lineTo(-s * 0.55, s * 0.95);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    /* head */
+    var hg = ctx.createRadialGradient(-2, -s * 0.55, 1, 0, -s * 0.45, s * 0.4);
+    hg.addColorStop(0, 'rgba(255,230,240,0.9)');
+    hg.addColorStop(1, 'rgba(196,160,190,0.85)');
+    ctx.fillStyle = hg;
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.5, s * 0.38, 0, Math.PI * 2);
+    ctx.fill();
+    /* hair sweep */
+    ctx.strokeStyle = 'rgba(124,106,247,0.65)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.25, -s * 0.7);
+    ctx.quadraticCurveTo(-s * 0.7, -s * 0.2, -s * 0.35, s * 0.15);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(s * 0.2, -s * 0.7);
+    ctx.quadraticCurveTo(s * 0.65, -s * 0.15, s * 0.3, s * 0.2);
+    ctx.stroke();
+    /* soft eyes */
+    ctx.fillStyle = 'rgba(40,30,60,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.12, -s * 0.48, 1.6, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(s * 0.12, -s * 0.48, 1.6, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* heart when settled — soft shape, no unicode text */
+    if (g.heart > 0.05) {
+      ctx.globalAlpha = g.a * g.heart;
+      var hx = s * 0.5, hy = -s * 0.9 + Math.sin(t * 3) * 2;
+      ctx.fillStyle = 'rgba(232,93,150,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(hx, hy + 3);
+      ctx.bezierCurveTo(hx - 6, hy - 4, hx - 10, hy + 2, hx, hy + 10);
+      ctx.bezierCurveTo(hx + 10, hy + 2, hx + 6, hy - 4, hx, hy + 3);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Glass Synapses spire rooted on the moon crater */
+  function drawMoonStructure(ctx, m, t) {
+    var s = m.structure;
+    if (!s || s.a < 0.04 || s.h < 2) return;
+    var x = s.x;
+    var baseY = s.y;
+    var h = s.h;
+    var topY = baseY - h;
+    var w = Math.max(18, m.moon.r * 0.28);
+    ctx.save();
+    ctx.globalAlpha = s.a;
+
+    /* foundation ring on crater */
+    ctx.strokeStyle = 'rgba(196,181,253,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x, baseY + 4, w * 1.35, w * 0.35, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* main glass tower body */
+    var body = ctx.createLinearGradient(x - w, topY, x + w, baseY);
+    body.addColorStop(0, 'rgba(196,181,253,' + (0.35 + s.lit * 0.35) + ')');
+    body.addColorStop(0.45, 'rgba(124,106,247,' + (0.55 + s.lit * 0.25) + ')');
+    body.addColorStop(1, 'rgba(30,22,48,0.9)');
+    ctx.fillStyle = body;
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.7, baseY);
+    ctx.lineTo(x - w * 0.45, topY + h * 0.12);
+    ctx.lineTo(x - w * 0.25, topY);
+    ctx.lineTo(x + w * 0.25, topY);
+    ctx.lineTo(x + w * 0.45, topY + h * 0.12);
+    ctx.lineTo(x + w * 0.7, baseY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    /* floor lines */
+    var floors = Math.max(1, s.floors);
+    for (var f = 1; f <= floors; f++) {
+      var fy = baseY - (h * f) / (floors + 1);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.12 + s.lit * 0.15) + ')';
+      ctx.beginPath();
+      ctx.moveTo(x - w * 0.5, fy);
+      ctx.lineTo(x + w * 0.5, fy);
+      ctx.stroke();
+      /* window glow */
+      ctx.fillStyle = 'rgba(196,181,253,' + (0.15 + s.lit * 0.35 + 0.1 * Math.sin(t * 3 + f)) + ')';
+      ctx.fillRect(x - w * 0.22, fy - 5, w * 0.18, 6);
+      ctx.fillRect(x + w * 0.04, fy - 5, w * 0.18, 6);
+    }
+
+    /* antenna / signal crown */
+    ctx.strokeStyle = 'rgba(124,106,247,0.9)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x, topY);
+    ctx.lineTo(x, topY - 16 - s.lit * 10);
+    ctx.stroke();
+    var crownR = 5 + s.lit * 6 + Math.sin(t * 4) * 1.5;
+    var cg = ctx.createRadialGradient(x, topY - 18, 0, x, topY - 18, crownR * 2.5);
+    cg.addColorStop(0, 'rgba(255,255,255,' + (0.5 + s.lit * 0.4) + ')');
+    cg.addColorStop(0.4, 'rgba(124,106,247,' + (0.45 + s.lit * 0.35) + ')');
+    cg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(x, topY - 18, crownR * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* signal rings when lit */
+    if (s.lit > 0.15) {
+      for (var r = 0; r < 3; r++) {
+        var rr = 12 + r * 14 + (t * 40 + r * 20) % 40;
+        ctx.strokeStyle = 'rgba(196,181,253,' + (0.35 * s.lit * (1 - rr / 60)) + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, topY - 18, rr, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    /* Ava presence — soft face glow in upper glass */
+    if (s.glow > 0.1) {
+      ctx.globalAlpha = s.a * s.glow * 0.85;
+      var faceY = topY + h * 0.28;
+      var fg = ctx.createRadialGradient(x, faceY, 0, x, faceY, w * 0.7);
+      fg.addColorStop(0, 'rgba(255,240,250,0.55)');
+      fg.addColorStop(0.45, 'rgba(196,181,253,0.35)');
+      fg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(x, faceY, w * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* no text labels on the spire */
+
+    /* tiny visitor dots walking in when travelers phase */
+    if (s.visitors > 0.05) {
+      for (var v = 0; v < 4; v++) {
+        var vx = x - 40 + v * 18 + Math.sin(t * 2 + v) * 4;
+        var vy = baseY + 8 + (v % 2) * 3;
+        ctx.globalAlpha = s.a * s.visitors * 0.8;
+        ctx.fillStyle = v % 2 ? 'rgba(196,181,253,0.9)' : 'rgba(232,93,150,0.75)';
+        ctx.beginPath();
+        ctx.arc(vx, vy, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawSynBotFace(ctx, s, face) {
+    if (face < 0.05) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, face);
+    ctx.translate(0, -s * 0.4);
+    var bs = s * 0.28 * (0.7 + 0.3 * face);
+    ctx.fillStyle = 'rgba(26,16,48,0.96)';
+    ctx.strokeStyle = 'rgba(196,181,253,0.9)';
+    ctx.lineWidth = 1.2;
+    /* body */
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(-bs * 0.55, -bs * 0.05, bs * 1.1, bs * 0.9, bs * 0.2);
+    } else {
+      ctx.rect(-bs * 0.55, -bs * 0.05, bs * 1.1, bs * 0.9);
+    }
+    ctx.fill();
+    ctx.stroke();
+    /* head */
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(-bs * 0.48, -bs * 0.72, bs * 0.96, bs * 0.62, bs * 0.18);
+    } else {
+      ctx.rect(-bs * 0.48, -bs * 0.72, bs * 0.96, bs * 0.62);
+    }
+    ctx.fill();
+    ctx.stroke();
+    /* purple eyes — clear “face” */
+    ctx.fillStyle = '#c4b5fd';
+    ctx.shadowColor = 'rgba(124,106,247,0.85)';
+    ctx.shadowBlur = 6 * face;
+    ctx.fillRect(-bs * 0.3, -bs * 0.52, bs * 0.22, bs * 0.2);
+    ctx.fillRect(bs * 0.08, -bs * 0.52, bs * 0.22, bs * 0.2);
+    ctx.shadowBlur = 0;
+    /* antenna */
+    ctx.strokeStyle = 'rgba(124,106,247,0.95)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -bs * 0.72);
+    ctx.lineTo(0, -bs * 1.05);
+    ctx.stroke();
+    ctx.fillStyle = '#7c6af7';
+    ctx.beginPath();
+    ctx.arc(0, -bs * 1.1, bs * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawUfo(ctx, u, t) {
+    if (!u.alive || u.scale < 0.05) return;
+    var s = 24 * u.scale;
+    var i, tr, prog;
+    ctx.save();
+    for (i = 0; i < u.trail.length; i++) {
+      tr = u.trail[i];
+      prog = i / u.trail.length;
+      ctx.beginPath();
+      ctx.arc(tr.x, tr.y + 4, 3 * prog * tr.s, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(124,106,247,' + (prog * 0.22) + ')';
+      ctx.fill();
+    }
+    ctx.translate(u.x, u.y);
+    ctx.rotate(u.a);
+
+    var ug = ctx.createRadialGradient(0, s * 0.35, 0, 0, s * 0.35, s * 2.2);
+    ug.addColorStop(0, 'rgba(124,106,247,0.32)');
+    ug.addColorStop(0.55, 'rgba(196,181,253,0.06)');
+    ug.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ug;
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.5, s * 1.8, s * 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(28,22,48,0.94)';
+    ctx.strokeStyle = 'rgba(196,181,253,0.7)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s * 1.55, s * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    for (var k = -2; k <= 2; k++) {
+      ctx.beginPath();
+      ctx.arc(k * s * 0.45, s * 0.08, s * 0.09, 0, Math.PI * 2);
+      ctx.fillStyle = k % 2 === 0 ? 'rgba(196,181,253,0.9)' : 'rgba(232,93,150,0.65)';
+      ctx.fill();
+    }
+
+    /* Dome — glass clearer as face appears */
+    var dome = ctx.createRadialGradient(-s * 0.15, -s * 0.45, 0, 0, -s * 0.2, s * 0.75);
+    dome.addColorStop(0, 'rgba(255,255,255,' + (0.35 + u.face * 0.25) + ')');
+    dome.addColorStop(0.45, 'rgba(167,139,250,' + (0.35 + u.face * 0.2) + ')');
+    dome.addColorStop(1, 'rgba(40,30,70,0.3)');
+    ctx.fillStyle = dome;
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.28, s * 0.65, s * 0.58, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.stroke();
+
+    drawSynBotFace(ctx, s, u.face);
+
+    ctx.globalAlpha = 0.5 + 0.35 * Math.sin(t * 8);
+    ctx.fillStyle = 'rgba(124,106,247,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.35, s * 0.7, s * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPortal(ctx, portal, t) {
+    if (!portal || portal.a < 0.02) return;
+    var R = 18 + portal.open * 22;
+    ctx.save();
+    ctx.globalAlpha = portal.a * 0.95;
+    ctx.translate(portal.x, portal.y);
+    ctx.rotate(portal.spin);
+    var g = ctx.createRadialGradient(0, 0, 2, 0, 0, R * 1.6);
+    g.addColorStop(0, 'rgba(255,255,255,0.55)');
+    g.addColorStop(0.35, 'rgba(124,106,247,0.55)');
+    g.addColorStop(0.7, 'rgba(232,93,150,0.2)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, R * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196,181,253,' + (0.45 + 0.35 * portal.open) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R, R * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(124,106,247,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * 0.7, R * 0.25, Math.PI / 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDistantWorld(ctx, w, t) {
+    if (!w || w.a < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = w.a;
+    var pulse = 0.5 + 0.5 * Math.sin(t * 2 + w.name);
+    var R = w.r * (1 + pulse * 0.03);
+    var glow = ctx.createRadialGradient(w.x, w.y, R * 0.2, w.x, w.y, R * 2.2);
+    if (w.hue === 'rose') {
+      glow.addColorStop(0, 'rgba(232,93,150,0.35)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+    } else if (w.hue === 'gold') {
+      glow.addColorStop(0, 'rgba(240,200,120,0.3)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+    } else {
+      glow.addColorStop(0, 'rgba(140,180,255,0.35)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+    }
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, R * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    var core = ctx.createRadialGradient(w.x - R * 0.25, w.y - R * 0.3, R * 0.1, w.x, w.y, R);
+    if (w.hue === 'rose') {
+      core.addColorStop(0, 'rgba(255,220,230,0.9)');
+      core.addColorStop(0.5, 'rgba(180,70,110,0.95)');
+      core.addColorStop(1, 'rgba(40,20,35,0.5)');
+    } else if (w.hue === 'gold') {
+      core.addColorStop(0, 'rgba(255,240,200,0.9)');
+      core.addColorStop(0.5, 'rgba(180,140,60,0.9)');
+      core.addColorStop(1, 'rgba(40,30,15,0.5)');
+    } else {
+      core.addColorStop(0, 'rgba(220,235,255,0.95)');
+      core.addColorStop(0.45, 'rgba(100,140,200,0.95)');
+      core.addColorStop(1, 'rgba(20,30,50,0.5)');
+    }
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, R, 0, Math.PI * 2);
+    ctx.fill();
+    /* Synapses seed on foreign world */
+    if (w.seed > 0.05) {
+      ctx.globalAlpha = w.a * w.seed;
+      ctx.strokeStyle = 'rgba(124,106,247,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(w.x, w.y - R * 0.15);
+      ctx.lineTo(w.x, w.y - R * 0.15 - 12 * w.seed);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(196,181,253,0.85)';
+      ctx.beginPath();
+      ctx.arc(w.x, w.y - R * 0.15 - 12 * w.seed, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawStoryShip(ctx, ship) {
+    if (!ship || ship.a < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = ship.a;
+    for (var i = 0; i < ship.trail.length; i++) {
+      var tr = ship.trail[i];
+      var p = i / Math.max(1, ship.trail.length);
+      ctx.beginPath();
+      ctx.arc(tr.x, tr.y, 1.5 * p, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(124,106,247,' + (p * 0.35) + ')';
+      ctx.fill();
+    }
+    var ang = Math.atan2(ship.ty - ship.y, ship.tx - ship.x);
+    ctx.translate(ship.x, ship.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = 'rgba(30,24,50,0.95)';
+    ctx.strokeStyle = 'rgba(196,181,253,0.75)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(10, 0);
+    ctx.lineTo(-6, -4);
+    ctx.lineTo(-4, 0);
+    ctx.lineTo(-6, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(124,106,247,0.7)';
+    ctx.beginPath();
+    ctx.arc(-5, 0, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMoon(ctx, moon, t, homeA) {
+    if (moon.a < 0.02) return;
+    var R = moon.r;
+    ctx.save();
+    ctx.globalAlpha = moon.a;
+
+    var g = ctx.createRadialGradient(moon.x, moon.y, R * 0.2, moon.x, moon.y, R * 2.4);
+    g.addColorStop(0, 'rgba(124,106,247,0.2)');
+    g.addColorStop(0.5, 'rgba(80,70,110,0.08)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(moon.x, moon.y, R * 2.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    var core = ctx.createRadialGradient(moon.x - R * 0.25, moon.y - R * 0.3, R * 0.1, moon.x, moon.y, R);
+    core.addColorStop(0, 'rgba(220,215,235,0.95)');
+    core.addColorStop(0.4, 'rgba(140,130,170,0.95)');
+    core.addColorStop(0.75, 'rgba(60,52,80,0.95)');
+    core.addColorStop(1, 'rgba(20,16,32,0.5)');
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(moon.x, moon.y, R, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Home crater */
+    ctx.fillStyle = 'rgba(20,16,30,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(moon.x, moon.y - R * 0.28, R * 0.4, R * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196,181,253,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(20,16,30,0.28)';
+    ctx.beginPath();
+    ctx.arc(moon.x - R * 0.35, moon.y + R * 0.15, R * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(moon.x + R * 0.3, moon.y + R * 0.28, R * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Landing pad ring */
+    ctx.strokeStyle = 'rgba(124,106,247,' + (0.35 + 0.25 * Math.sin(t * 3)) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(moon.x, moon.y - R * 0.28, R * 0.28, R * 0.14, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* Home beacon after he claims the crater */
+    if (homeA > 0.02) {
+      ctx.globalAlpha = moon.a * homeA;
+      var beam = ctx.createRadialGradient(moon.x, moon.y - R * 0.28, 0, moon.x, moon.y - R * 0.28, R * 0.9);
+      beam.addColorStop(0, 'rgba(196,181,253,0.45)');
+      beam.addColorStop(0.5, 'rgba(124,106,247,0.15)');
+      beam.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.arc(moon.x, moon.y - R * 0.28, R * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+      /* tiny “home” flag / spike */
+      ctx.strokeStyle = 'rgba(196,181,253,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(moon.x + R * 0.22, moon.y - R * 0.18);
+      ctx.lineTo(moon.x + R * 0.22, moon.y - R * 0.55);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(124,106,247,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(moon.x + R * 0.22, moon.y - R * 0.55);
+      ctx.lineTo(moon.x + R * 0.42, moon.y - R * 0.48);
+      ctx.lineTo(moon.x + R * 0.22, moon.y - R * 0.42);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function drawWalker(ctx, w, t) {
+    if (!w || w.a < 0.04) return;
+    var s = 14;
+    ctx.save();
+    ctx.globalAlpha = w.a;
+    ctx.translate(w.x, w.y + Math.sin(t * 6) * 1.2 * w.out);
+    /* body */
+    ctx.fillStyle = 'rgba(26,16,48,0.96)';
+    ctx.strokeStyle = 'rgba(196,181,253,0.9)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-s * 0.55, s * 0.05, s * 1.1, s * 0.85, s * 0.2);
+    else ctx.rect(-s * 0.55, s * 0.05, s * 1.1, s * 0.85);
+    ctx.fill();
+    ctx.stroke();
+    /* head */
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(-s * 0.48, -s * 0.65, s * 0.96, s * 0.6, s * 0.16);
+    else ctx.rect(-s * 0.48, -s * 0.65, s * 0.96, s * 0.6);
+    ctx.fill();
+    ctx.stroke();
+    /* purple eyes */
+    ctx.fillStyle = '#c4b5fd';
+    ctx.shadowColor = 'rgba(124,106,247,0.8)';
+    ctx.shadowBlur = 5;
+    ctx.fillRect(-s * 0.3, -s * 0.48, s * 0.22, s * 0.18);
+    ctx.fillRect(s * 0.08, -s * 0.48, s * 0.22, s * 0.18);
+    ctx.shadowBlur = 0;
+    /* antenna */
+    ctx.strokeStyle = 'rgba(124,106,247,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.65);
+    ctx.lineTo(0, -s * 0.95);
+    ctx.stroke();
+    ctx.fillStyle = '#7c6af7';
+    ctx.beginPath();
+    ctx.arc(0, -s * 1.0, s * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMyth(ctx, W, H) {
+    var m = state.myth;
+    if (!m || !m.active) return;
+    var t = (performance.now() - m.t0) / 1000;
+    var sx = (Math.random() - 0.5) * m.shake;
+    var sy = (Math.random() - 0.5) * m.shake;
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    /* Soft vignette — original feel, no blackout */
+    var vig = ctx.createRadialGradient(m.cx, m.cy, Math.min(W, H) * 0.12, m.cx, m.cy, Math.min(W, H) * 0.55);
+    vig.addColorStop(0, 'rgba(124,106,247,' + (0.06 + m.orbAlpha * 0.08) + ')');
+    vig.addColorStop(0.55, 'rgba(196,181,253,' + (0.03 * m.orbAlpha) + ')');
+    vig.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(-sx, -sy, W, H);
+
+    /* Stars (story beat backdrop once orb is planet) */
+    if (m.phase !== 'chaos') {
+      for (var si = 0; si < m.stars.length; si++) {
+        var st = m.stars[si];
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + (st.a * (0.5 + 0.5 * Math.sin(st.tw)) * Math.min(1, m.orbAlpha + 0.3)).toFixed(3) + ')';
+        ctx.fill();
+      }
+    }
+
+    /* ORIGINAL actors */
+    var actors = m.actors;
+    for (var i = 0; i < actors.length; i++) {
+      var p = actors[i];
+      var alpha = Math.max(0, Math.min(1, p.life));
+      if (alpha <= 0.02) continue;
+
+      if (p.kind === 'shard') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = p.col;
+        ctx.beginPath();
+        var hw = p.w * 0.5, hh = p.h * 0.5, jg = p.jagged;
+        ctx.moveTo(-hw, -hh);
+        ctx.lineTo(hw * 0.3, -hh - jg * 2);
+        ctx.lineTo(hw, -hh * 0.2);
+        ctx.lineTo(hw * 0.7, hh + jg);
+        ctx.lineTo(-hw * 0.4, hh);
+        ctx.lineTo(-hw - jg, hh * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else if (p.kind === 'thread') {
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.strokeStyle = p.col;
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = p.col;
+        ctx.shadowBlur = 8;
+        if (p.trail && p.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(p.trail[0].x, p.trail[0].y);
+          for (var ti = 1; ti < p.trail.length; ti++) ctx.lineTo(p.trail[ti].x, p.trail[ti].y);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - Math.cos(p.rot) * p.len, p.y - Math.sin(p.rot) * p.len);
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+    }
+
+    /* ORIGINAL alien orb — also reads as the planet the UFO flees */
+    if (m.orbAlpha > 0.02 && m.orbR > 0.5) {
+      var R = m.orbR * (1 + m.orbPulse * 0.04);
+      var ga = m.orbAlpha * (1 - m.soft * 0.75);
+      ctx.save();
+      ctx.globalAlpha = ga;
+
+      var glow = ctx.createRadialGradient(m.cx, m.cy, 0, m.cx, m.cy, R * 2.6);
+      glow.addColorStop(0, 'rgba(124,106,247,0.45)');
+      glow.addColorStop(0.35, 'rgba(167,139,250,0.18)');
+      glow.addColorStop(0.7, 'rgba(232,93,150,0.06)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(m.cx, m.cy, R * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      var core = ctx.createRadialGradient(m.cx - R * 0.25, m.cy - R * 0.3, R * 0.05, m.cx, m.cy, R);
+      core.addColorStop(0, 'rgba(255,255,255,0.85)');
+      core.addColorStop(0.22, 'rgba(196,181,253,0.9)');
+      core.addColorStop(0.48, 'rgba(124,106,247,0.95)');
+      core.addColorStop(0.72, 'rgba(90,70,140,0.65)');
+      core.addColorStop(1, 'rgba(26,16,48,0.15)');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(m.cx, m.cy, R, 0, Math.PI * 2);
+      ctx.fill();
+
+      /* planet surface suggestion once settle+ */
+      if (m.phase !== 'chaos' && m.phase !== 'orb') {
+        ctx.globalAlpha = ga * 0.35;
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(m.cx - R * 0.1, m.cy + R * 0.05, R * 0.55, 0.3, 2.4);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = ga;
+      ctx.strokeStyle = 'rgba(196,181,253,' + (0.35 + m.orbPulse * 0.25) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(m.cx, m.cy, R * 1.18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(124,106,247,' + (0.25 + m.orbPulse * 0.2) + ')';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(m.cx, m.cy, R * 1.35, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ONE planet only: home moon OR the current away body (teleport swap) */
+    var sceneA = m.sceneAlpha != null ? m.sceneAlpha : 1;
+    if (m.homeHidden && m.awayPlanet) {
+      var awA = m.awayPlanet.a;
+      m.awayPlanet.a = awA * sceneA;
+      drawDistantWorld(ctx, m.awayPlanet, t);
+      m.awayPlanet.a = awA;
+    } else {
+      var moonA = m.moon.a;
+      m.moon.a = moonA * sceneA;
+      drawMoon(ctx, m.moon, t, ((m.home && m.home.a) || 0) * sceneA);
+      m.moon.a = moonA;
+      /* Portal on home crater only */
+      if (m.portal && m.portal.a > 0.02 && sceneA > 0.05) drawPortal(ctx, m.portal, t);
+      /* Friends only at home */
+      if (m.friends && sceneA > 0.05) {
+        for (var fi = 0; fi < m.friends.length; fi++) drawFriend(ctx, m.friends[fi], t);
+      }
+    }
+
+    /* Fleet ships (brief travel streaks — not extra planets) */
+    if (m.ships) {
+      for (var shi = 0; shi < m.ships.length; shi++) drawStoryShip(ctx, m.ships[shi]);
+    }
+
+    /* UFO (SynBot face in dome only while flying; after hatch, real tinyBot is the guide) */
+    drawUfo(ctx, m.ufo, t);
+
+    /* Enemy craft + lasers (always in combat layer — SynBot fights here) */
+    if (m.foes) {
+      for (var ei = 0; ei < m.foes.length; ei++) drawFoe(ctx, m.foes[ei]);
+    }
+    if (m.lasers) {
+      for (var li = 0; li < m.lasers.length; li++) {
+        var L = m.lasers[li];
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, L.life);
+        ctx.strokeStyle = 'rgba(196,181,253,0.9)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = 'rgba(124,106,247,0.8)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(L.x, L.y);
+        ctx.lineTo(L.tx, L.ty);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /* Companion + spire only on home scene */
+    if (!m.homeHidden) {
+      if (m.girl) drawGirl(ctx, m.girl, t);
+      if (m.structure) drawMoonStructure(ctx, m, t);
+    }
+
+    if (m.flash > 0.02) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (m.flash * 0.28).toFixed(3) + ')';
+      ctx.fillRect(-sx, -sy, W, H);
+    }
+
+    /* Story captions — exact style from first build (before delete) */
+    if (m.caption && m.captionA > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = m.captionA;
+      ctx.font = '600 14px "DM Sans",system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(242,242,245,0.9)';
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(m.caption, m.cx, Math.min(H - 40, m.cy + Math.min(H, 520) * 0.32));
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function fxLoop(now) {
+    if (!state.open) { state.raf = 0; return; }
+    var c = $('synTourFx');
+    if (!c) return;
+    var ctx = c.getContext('2d');
+    var W = c.width, H = c.height;
+    var t = now || performance.now();
+    var dt = state.lastT ? Math.min(0.05, (t - state.lastT) / 1000) : 0.016;
+    state.lastT = t;
+    ctx.clearRect(0, 0, W, H);
+
+    if (state.myth && state.myth.active) {
+      updateMyth(dt);
+      drawMyth(ctx, W, H);
+    } else {
+      /* Ambient floating dust — purple + soft neutrals only (no mint/green) */
+      if (state.particles.length < 40 && Math.random() > 0.7) {
+        var dustRoll = Math.random();
+        var dustCol = dustRoll > 0.55
+          ? 'rgba(124,106,247,0.42)'
+          : (dustRoll > 0.28
+            ? 'rgba(196,181,253,0.32)'
+            : 'rgba(200,200,210,0.28)');
+        state.particles.push({
+          x: Math.random() * W,
+          y: H + 10,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: -0.3 - Math.random() * 0.8,
+          life: 1,
+          r: 0.8 + Math.random() * 1.8,
+          col: dustCol
+        });
+      }
+      for (var i = state.particles.length - 1; i >= 0; i--) {
+        var p = state.particles[i];
+        p.x += p.vx; p.y += p.vy; p.life -= 0.004;
+        if (p.life <= 0 || p.y < -20) { state.particles.splice(i, 1); continue; }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        if (p.col.indexOf('rgba') === 0) {
+          ctx.fillStyle = p.col.replace(/[\d.]+\)$/, (Math.max(0, p.life) * 0.55).toFixed(2) + ')');
+        } else {
+          ctx.fillStyle = p.col;
+        }
+        ctx.fill();
+      }
+    }
+
+    /* Bursts always (welcome climax + spotlights) */
+    for (var j = state.burst.length - 1; j >= 0; j--) {
+      var b = state.burst[j];
+      b.x += b.vx; b.y += b.vy;
+      b.vx *= 0.96; b.vy *= 0.96;
+      b.life -= b.decay;
+      if (b.life <= 0) { state.burst.splice(j, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r * b.life, 0, Math.PI * 2);
+      ctx.fillStyle = b.col;
+      ctx.globalAlpha = Math.max(0, b.life);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    /* Glow under real SynBot only after he exits the ship */
+    if (state.guideReleased && state.open) {
+      try {
+        var bot = document.getElementById('tinyBotCanvas');
+        if (bot && bot._getRobotScreenPos && bot.getAttribute('data-myth-hidden') !== '1') {
+          var pos = bot._getRobotScreenPos();
+          var g = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 70);
+          g.addColorStop(0, 'rgba(124,106,247,0.16)');
+          g.addColorStop(0.45, 'rgba(196,181,253,0.06)');
+          g.addColorStop(1, 'transparent');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 70, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } catch (e) {}
+    }
+
+    state.raf = requestAnimationFrame(fxLoop);
+  }
+
+  function startFx() {
+    fxResize();
+    state.particles = [];
+    state.burst = [];
+    state.lastT = 0;
+    if (!state.raf) state.raf = requestAnimationFrame(fxLoop);
+  }
+
+  function stopFx() {
+    if (state.raf) cancelAnimationFrame(state.raf);
+    state.raf = 0;
+    state.lastT = 0;
+    stopMyth();
+    state.particles = [];
+    state.burst = [];
+    var c = $('synTourFx');
+    if (c) {
+      var ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+    }
+  }
+
+  function doneAlready() {
+    try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+  }
+  function markDone() {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+  }
+  function ensureChat() {
+    try { if (typeof setView === 'function') setView('sec-chat'); } catch (e) {}
+  }
+
+  function rectFor(sel) {
+    if (!sel) return null;
+    var parts = sel.split(',');
+    for (var i = 0; i < parts.length; i++) {
+      var el = document.querySelector(parts[i].trim());
+      if (!el) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) continue;
+      if (r.bottom < 0 || r.top > innerHeight) continue;
+      /* Prefer real screen geometry as plain object (survives element reflow) */
+      return {
+        el: el,
+        r: {
+          left: r.left,
+          top: r.top,
+          right: r.right,
+          bottom: r.bottom,
+          width: r.width,
+          height: r.height
+        }
+      };
+    }
+    return null;
+  }
+
+  function placeHole(r, step) {
+    var hole = $('synTourHole');
+    if (!r) {
+      hole.classList.remove('show', 'pulse');
+      hole.style.left = '-9999px';
+      hole.style.top = '-9999px';
+      return;
+    }
+    var pad = (step && step.holePad != null) ? step.holePad : 10;
+    var maxW = (step && step.holeMax) ? step.holeMax : Math.min(innerWidth - 24, 420);
+    var maxH = (step && step.holeMaxH) ? step.holeMaxH : 160;
+    /* Hug the real target size — don't invent a tall middle box */
+    var w = Math.min(maxW, Math.max(r.width + pad * 2, 120));
+    var h = Math.min(maxH, Math.max(r.height + pad * 2, 48));
+    var cx = r.left + r.width / 2;
+    var cy = r.top + r.height / 2;
+    var left = Math.max(6, Math.min(innerWidth - w - 6, cx - w / 2));
+    var top = Math.max(6, Math.min(innerHeight - h - 6, cy - h / 2));
+    hole.style.left = left + 'px';
+    hole.style.top = top + 'px';
+    hole.style.width = w + 'px';
+    hole.style.height = h + 'px';
+    hole.style.borderRadius = (h < 100 ? '16px' : '18px');
+    hole.classList.add('show');
+    spawnBurst(cx, cy, 14, [C.purp, 'rgba(196,181,253,0.85)']);
+  }
+
+  function placeBot(r) {
+    /* Never fly the real robot until he has exited the UFO */
+    if (!state.guideReleased) return;
+    /* Choice dock open — stay on planet, never fly home BR */
+    if (state.myth && state.myth.waitingChoice) {
+      pinGuideAtPlanet();
+      return;
+    }
+    var c = tinyBot();
+    if (!c || !c._tourFlyTo) return;
+    if (!r) {
+      /* Stay at ship/home spawn — never teleport to bottom-right mid-story */
+      if (state.guideSpawn) {
+        if (c._tourPlaceAt) c._tourPlaceAt(state.guideSpawn.x, state.guideSpawn.y);
+        else c._tourFlyTo(state.guideSpawn.x, state.guideSpawn.y);
+      }
+      return;
+    }
+    var tx = r.right + 48;
+    var ty = r.top + r.height / 2;
+    if (tx > window.innerWidth - 48) tx = Math.max(48, r.left - 48);
+    if (ty < 48) ty = 48;
+    if (ty > window.innerHeight - 48) ty = window.innerHeight - 48;
+    c._tourFlyTo(tx, ty, function () {
+      spawnBurst(tx, ty, 14, [C.purp, 'rgba(196,181,253,0.9)']);
+    });
+    state.guideSpawn = { x: tx, y: ty };
+  }
+
+  function placeCard(r, step) {
+    var card = $('synTourCard');
+    if (!card) return;
+    var w = Math.min(360, innerWidth - 28);
+    var ch = 210;
+    var left, top;
+    var prefer = (step && step.cardPlace) || '';
+    /* Keep visibility if already shown (remeasure must not hide Next forever) */
+    var keepVisible = card.classList.contains('show');
+
+    if (prefer === 'bottom' && r) {
+      /* Sit just above Ask me anything / target — not buried under it */
+      left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+      top = Math.max(16, r.top - ch - 14);
+      if (top + ch > r.top - 8) top = Math.max(16, r.top - ch - 14);
+      if (top < 12) {
+        /* Fallback: bottom of screen only if no room above */
+        top = Math.min(innerHeight - ch - 16, r.bottom + 14);
+      }
+    } else if (!r || prefer === 'bottom') {
+      left = (innerWidth - w) / 2;
+      top = Math.max(24, innerHeight - ch - 28);
+    } else if (prefer === 'side') {
+      left = r.right + 16;
+      if (left + w > innerWidth - 12) left = Math.max(12, r.left - w - 16);
+      top = Math.max(16, Math.min(innerHeight - ch - 16, r.top));
+    } else {
+      left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+      top = r.bottom + 16;
+      if (top + ch > innerHeight - 12) top = Math.max(16, r.top - ch - 12);
+      if (top < 12) top = Math.max(16, innerHeight - ch - 24);
+      var cardBottom = top + ch;
+      var cardRight = left + w;
+      var overlaps =
+        left < r.right && cardRight > r.left &&
+        top < r.bottom && cardBottom > r.top;
+      if (overlaps) {
+        top = Math.max(16, r.top - ch - 14);
+        if (top < 12) top = Math.max(16, innerHeight - ch - 28);
+        left = (innerWidth - w) / 2;
+      }
+    }
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.style.zIndex = '100070';
+    card.style.pointerEvents = 'auto';
+    if (keepVisible) {
+      card.style.visibility = 'visible';
+      card.classList.add('show');
+      card.style.opacity = '1';
+    }
+  }
+
+  function revealTourCard() {
+    var card = $('synTourCard');
+    if (!card || !state.open) return;
+    /* Clear any leftover !important from video step */
+    card.style.removeProperty('visibility');
+    card.style.removeProperty('opacity');
+    card.style.setProperty('visibility', 'visible', 'important');
+    card.style.setProperty('opacity', '1', 'important');
+    card.style.setProperty('pointer-events', 'auto', 'important');
+    card.style.setProperty('z-index', '100070', 'important');
+    card.style.display = 'block';
+    card.classList.add('show');
+    var nextBtn = $('synTourNext');
+    var skipBtn = $('synTourSkip');
+    if (nextBtn) {
+      nextBtn.style.pointerEvents = 'auto';
+      nextBtn.style.position = 'relative';
+      nextBtn.style.zIndex = '2';
+    }
+    if (skipBtn) skipBtn.style.pointerEvents = 'auto';
+  }
+
+  function renderPips() {
+    var pips = $('synTourPips');
+    if (!pips) return;
+    pips.innerHTML = '';
+    for (var i = 0; i < STEPS.length; i++) {
+      var d = document.createElement('div');
+      d.className = 'pip' + (i <= state.i ? ' on' : '');
+      pips.appendChild(d);
+    }
+  }
+
+  function fmtVidTime(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    var m = Math.floor(sec / 60);
+    var s = Math.floor(sec % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function setPlayIcon(paused) {
+    var ic = $('synTourVPlayIcon');
+    if (!ic) return;
+    if (paused) {
+      ic.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    } else {
+      ic.innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+    }
+  }
+
+  function setMuteIcon(muted) {
+    var ic = $('synTourVMuteIcon');
+    if (!ic) return;
+    if (muted) {
+      ic.setAttribute('fill', 'none');
+      ic.setAttribute('stroke', 'currentColor');
+      ic.setAttribute('stroke-width', '2');
+      ic.innerHTML =
+        '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>' +
+        '<line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>';
+    } else {
+      ic.setAttribute('fill', 'none');
+      ic.setAttribute('stroke', 'currentColor');
+      ic.setAttribute('stroke-width', '2');
+      ic.innerHTML =
+        '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>' +
+        '<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/>';
+    }
+  }
+
+  function glassVideoBarHtml() {
+    /* Two keys only — play + mute. No seek bar, no time, no strip behind them. */
+    return (
+      '<button type="button" class="st-vbtn" id="synTourVPlay" title="Play / Pause" aria-label="Play or pause">' +
+        '<svg id="synTourVPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' +
+      '</button>' +
+      '<button type="button" class="st-vbtn" id="synTourVMute" title="Mute / Unmute" aria-label="Mute or unmute">' +
+        '<svg id="synTourVMuteIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/>' +
+          '<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18 6a8 8 0 0 1 0 12"/>' +
+        '</svg>' +
+      '</button>'
+    );
+  }
+
+  function wireTourVideoControls() {
+    var vid = $('synTourVideo');
+    var playBtn = $('synTourVPlay');
+    var muteBtn = $('synTourVMute');
+    if (!vid) return;
+    killNativeVideoChrome(vid);
+
+    function sync() {
+      if (!vid) return;
+      killNativeVideoChrome(vid);
+      setPlayIcon(vid.paused);
+      setMuteIcon(vid.muted);
+    }
+
+    if (playBtn) {
+      playBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        killNativeVideoChrome(vid);
+        if (vid.paused) {
+          var p = vid.play();
+          if (p && p.catch) p.catch(function () {});
+        } else {
+          vid.pause();
+        }
+        sync();
+      };
+    }
+    if (muteBtn) {
+      muteBtn.onclick = function (e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        vid.muted = !vid.muted;
+        if (!vid.muted) {
+          try { vid.volume = 1; } catch (err) {}
+          if (vid.paused) {
+            var up = vid.play();
+            if (up && up.catch) up.catch(function () {});
+          }
+        }
+        sync();
+      };
+    }
+    if (!vid._stWired) {
+      vid._stWired = true;
+      vid.addEventListener('timeupdate', sync);
+      vid.addEventListener('play', sync);
+      vid.addEventListener('pause', sync);
+      vid.addEventListener('volumechange', sync);
+      vid.addEventListener('loadedmetadata', sync);
+      vid.addEventListener('ended', sync);
+    }
+    sync();
+  }
+
+  function killNativeVideoChrome(vid) {
+    if (!vid) return;
+    try {
+      vid.controls = false;
+      vid.removeAttribute('controls');
+      /* Strip any property re-enable browsers try after play() */
+      if (vid.hasAttribute('controls')) vid.removeAttribute('controls');
+      vid.setAttribute('controlsList', 'nodownload nofullscreen noremoteplayback noplaybackrate');
+      try {
+        if (vid.controlsList && vid.controlsList.add) {
+          ['nodownload', 'nofullscreen', 'noremoteplayback', 'noplaybackrate'].forEach(function (t) {
+            try { vid.controlsList.add(t); } catch (eL) {}
+          });
+        }
+      } catch (eCL) {}
+      vid.setAttribute('disablePictureInPicture', '');
+      vid.disablePictureInPicture = true;
+      try { vid.disableRemotePlayback = true; } catch (e2) {}
+      vid.setAttribute('playsinline', '');
+      vid.setAttribute('webkit-playsinline', '');
+      vid.playsInline = true;
+      vid.style.pointerEvents = 'none';
+      vid.style.setProperty('pointer-events', 'none', 'important');
+      if (!vid._stCtrlGuard) {
+        vid._stCtrlGuard = true;
+        var strip = function () {
+          try {
+            vid.controls = false;
+            vid.removeAttribute('controls');
+          } catch (e3) {}
+        };
+        vid.addEventListener('play', strip);
+        vid.addEventListener('playing', strip);
+        vid.addEventListener('loadeddata', strip);
+        vid.addEventListener('canplay', strip);
+        /* MutationObserver: if anything re-adds controls attr, rip it off */
+        try {
+          var mo = new MutationObserver(function () { strip(); });
+          mo.observe(vid, { attributes: true, attributeFilter: ['controls'] });
+          vid._stCtrlMo = mo;
+        } catch (e4) {}
+      }
+    } catch (e) {}
+  }
+
+  function ensureVideoControlsDom() {
+    var wrap = $('synTourVideoWrap');
+    if (!wrap) return;
+
+    /* Always full-rebuild shell so old native-controls injects cannot survive */
+    var oldSrc = '';
+    var wasPlaying = false;
+    var oldTime = 0;
+    var oldMuted = false;
+    var oldVid = $('synTourVideo');
+    if (oldVid) {
+      oldSrc = oldVid.currentSrc || oldVid.src || oldVid.getAttribute('src') || '';
+      wasPlaying = !oldVid.paused;
+      oldTime = oldVid.currentTime || 0;
+      oldMuted = !!oldVid.muted;
+      killNativeVideoChrome(oldVid);
+      try {
+        if (oldVid._stCtrlMo) oldVid._stCtrlMo.disconnect();
+      } catch (e) {}
+    }
+
+    wrap.innerHTML =
+      '<div class="st-vmedia">' +
+        '<video id="synTourVideo" playsinline webkit-playsinline preload="metadata" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback"></video>' +
+      '</div>' +
+      '<div class="st-vshim" aria-hidden="true"></div>' +
+      '<span class="st-vglow"></span>' +
+      '<span class="st-vbadge">LIVE INTRO</span>' +
+      '<div class="st-vctrl" id="synTourVCtrl">' + glassVideoBarHtml() + '</div>';
+
+    var ctrl = $('synTourVCtrl');
+    if (ctrl) {
+      /* Tiny corner controls — quiet until hover, never in face center */
+      ctrl.style.cssText =
+        'position:absolute;left:auto;right:8px;bottom:8px;z-index:50;transform:none;' +
+        'display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:0;margin:0;width:auto;' +
+        'background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;' +
+        'pointer-events:auto;opacity:0.38;';
+    }
+
+    var vid = $('synTourVideo');
+    if (vid) {
+      killNativeVideoChrome(vid);
+      if (oldSrc) {
+        try {
+          vid.src = oldSrc;
+          if (oldTime > 0) vid.currentTime = oldTime;
+          vid.muted = oldMuted;
+          if (wasPlaying) {
+            var rp = vid.play();
+            if (rp && rp.catch) rp.catch(function () {});
+          }
+        } catch (e5) {}
+      }
+    }
+    wireTourVideoControls();
+  }
+
+  function showVideo(on) {
+    var wrap = $('synTourVideoWrap');
+    if (!wrap) return;
+    if (!on) {
+      wrap.classList.remove('show');
+      var vOff = $('synTourVideo');
+      if (vOff) { try { vOff.pause(); } catch (e) {} }
+      return;
+    }
+    injectStyles(); /* freshest glass CSS */
+    ensureVideoControlsDom(); /* nuclear rebuild: glass only, no native bar */
+    var vid = $('synTourVideo');
+    if (!vid) return;
+    wrap.classList.add('show');
+    killNativeVideoChrome(vid);
+    if (!vid.getAttribute('src') && !vid.src) {
+      vid.src = DEMO_SRC;
+      vid.onerror = function () { wrap.classList.remove('show'); };
+    } else if (!vid.src && DEMO_SRC) {
+      vid.src = DEMO_SRC;
+    }
+    try {
+      vid.currentTime = 0;
+      /* Unmute Ava intro — user already clicked into tour so gesture is valid */
+      vid.muted = false;
+      vid.volume = 1;
+      killNativeVideoChrome(vid);
+      var p = vid.play();
+      if (p && p.catch) {
+        p.catch(function () {
+          /* Autoplay with sound blocked — start muted; glass unmute still works */
+          vid.muted = true;
+          killNativeVideoChrome(vid);
+          vid.play().catch(function () {});
+          setMuteIcon(true);
+        });
+      }
+      setTimeout(function () { killNativeVideoChrome(vid); wireTourVideoControls(); }, 40);
+      setTimeout(function () { killNativeVideoChrome(vid); }, 200);
+      setTimeout(function () { killNativeVideoChrome(vid); }, 600);
+      setPlayIcon(false);
+      setMuteIcon(vid.muted);
+    } catch (e) {}
+  }
+
+  /** Pixel center only — does not restyle/shrink the face frame */
+  function centerVideoCard(card) {
+    if (!card) return;
+    var pad = 20;
+    var w = Math.min(420, Math.max(280, window.innerWidth - pad * 2));
+    card.classList.add('st-video');
+    card.style.setProperty('position', 'fixed', 'important');
+    card.style.setProperty('display', 'block', 'important');
+    card.style.setProperty('width', w + 'px', 'important');
+    card.style.setProperty('max-width', 'calc(100vw - ' + (pad * 2) + 'px)', 'important');
+    card.style.setProperty('margin', '0', 'important');
+    card.style.setProperty('transform', 'none', 'important');
+    card.style.setProperty('right', 'auto', 'important');
+    card.style.setProperty('bottom', 'auto', 'important');
+    card.style.setProperty('z-index', '100060', 'important');
+    card.style.setProperty('opacity', '0', 'important');
+    card.style.setProperty('visibility', 'hidden', 'important');
+    /* park off-screen until measured */
+    card.style.setProperty('left', '-9999px', 'important');
+    card.style.setProperty('top', '-9999px', 'important');
+
+    function place() {
+      if (!state.open || !card.classList.contains('st-video')) return;
+      var wrap = $('synTourVideoWrap');
+      var vid = $('synTourVideo');
+      /* Clear any bad inline overrides from older builds */
+      if (vid) {
+        vid.style.removeProperty('max-height');
+        vid.style.removeProperty('height');
+      }
+      if (wrap) {
+        wrap.style.removeProperty('overflow');
+        wrap.style.removeProperty('max-height');
+      }
+      var rect = card.getBoundingClientRect();
+      var cw = rect.width || w;
+      var ch = rect.height || 480;
+      /* If still off-screen measure, use known width */
+      if (rect.left < -100) {
+        cw = w;
+        ch = Math.min(window.innerHeight - pad * 2, 520);
+      }
+      var left = Math.round((window.innerWidth - cw) / 2);
+      var top = Math.round((window.innerHeight - ch) / 2);
+      left = Math.max(pad, Math.min(left, window.innerWidth - cw - pad));
+      top = Math.max(pad, Math.min(top, window.innerHeight - ch - pad));
+      card.style.setProperty('left', left + 'px', 'important');
+      card.style.setProperty('top', top + 'px', 'important');
+      card.style.setProperty('transform', 'none', 'important');
+      card.style.setProperty('visibility', 'visible', 'important');
+      card.classList.add('show');
+      card.style.setProperty('opacity', '1', 'important');
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(place);
+    });
+    setTimeout(place, 80);
+    setTimeout(place, 320);
+  }
+
+  function clearVideoCardStyles(card) {
+    if (!card) return;
+    card.classList.remove('st-video', 'show');
+    /* Must strip visibility too — video step used visibility:hidden!important and blocked Next forever */
+    ['position', 'display', 'width', 'max-width', 'margin', 'transform',
+      'left', 'top', 'right', 'bottom', 'z-index', 'opacity', 'overflow', 'max-height',
+      'visibility', 'pointer-events'].forEach(function (prop) {
+      card.style.removeProperty(prop);
+    });
+    var wrap = document.getElementById('synTourVideoWrap');
+    var vid = document.getElementById('synTourVideo');
+    if (wrap) {
+      wrap.style.removeProperty('overflow');
+      wrap.style.removeProperty('max-height');
+    }
+    if (vid) {
+      vid.style.removeProperty('max-height');
+      vid.style.removeProperty('height');
+    }
+  }
+
+  function reflowTextAnims(card) {
+    if (!card) return;
+    var nodes = card.querySelectorAll('h3,p,h2');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].style.animation = 'none';
+      // reflow
+      void nodes[i].offsetWidth;
+      nodes[i].style.animation = '';
+    }
+  }
+
+  function renderStep() {
+    var step = STEPS[state.i];
+    if (!step) return finish(false);
+    if (step.view) ensureChat();
+
+    var card = $('synTourCard');
+    var center = $('synTourCenterPanel');
+    var hole = $('synTourHole');
+
+    /* Always park choice dock off-screen on every Next — kills top-left glass glitch */
+    hideMythChoice();
+
+    /* Leaving welcome myth when advancing */
+    if (!(step.myth && step.mode === 'center')) {
+      var spawnX = state.guideSpawn ? state.guideSpawn.x : null;
+      var spawnY = state.guideSpawn ? state.guideSpawn.y : null;
+      if (state.myth && state.myth.moon) {
+        spawnX = spawnX != null ? spawnX : state.myth.moon.x;
+        spawnY = spawnY != null ? spawnY : state.myth.moon.y - state.myth.moon.r * 0.42;
+      }
+      if (state.myth) stopMyth();
+      /* Early advance: release from moon/home, never bottom-right */
+      if (!state.guideReleased) {
+        releaseGuideBot(
+          spawnX != null ? spawnX : window.innerWidth * 0.78,
+          spawnY != null ? spawnY : window.innerHeight * 0.68,
+          true
+        );
+      }
+    }
+
+    if (card) {
+      card.classList.remove('show');
+      card.style.visibility = 'hidden';
+      card.style.left = '-9999px';
+      card.style.top = '-9999px';
+      if (step.mode !== 'video') clearVideoCardStyles(card);
+    }
+    center.classList.remove('show', 'myth-climax');
+    hole.classList.remove('pulse', 'show');
+    hole.style.left = '-9999px';
+    hole.style.top = '-9999px';
+    showVideo(false);
+
+    setTimeout(function () {
+      if (!state.open) return;
+      if (step.mode === 'center') {
+        placeHole(null);
+        /* Don't park bot at BR on Meet Ava / You're in — stay at guideSpawn */
+        if (state.guideReleased && state.guideSpawn && !step.myth) {
+          guideFlyTo(state.guideSpawn.x, state.guideSpawn.y);
+        }
+        card.style.display = 'none';
+        $('synTourCenter').style.display = 'flex';
+        $('synTourCenterTitle').textContent = step.title;
+        $('synTourCenterBody').textContent = step.body;
+        $('synTourCenterNext').textContent = step.cta || 'Continue';
+        if (step.secondary) {
+          $('synTourCenterSec').style.display = 'inline-flex';
+          $('synTourCenterSec').textContent = step.secondary;
+        } else {
+          $('synTourCenterSec').style.display = 'none';
+        }
+
+        /* Welcome myth — real SynBot stays hidden until exit+home */
+        if (step.myth && !prefersReducedMotion()) {
+          center.classList.remove('show', 'myth-climax');
+          hideGuideBot();
+          initMyth();
+          /* ~38s saga: escape→friends→battle→meet→settle→moon spire→signal→travelers→Ava→tour */
+        } else {
+          stopMyth();
+          if (!state.guideReleased) {
+            var gs = state.guideSpawn;
+            releaseGuideBot(
+              gs ? gs.x : window.innerWidth * 0.78,
+              gs ? gs.y : window.innerHeight * 0.68,
+              true
+            );
+          }
+          reflowTextAnims(center);
+          requestAnimationFrame(function () {
+            if (!state.open) return;
+            center.classList.add('show');
+            spawnBurst(innerWidth / 2, innerHeight / 2 - 40, 36);
+          });
+        }
+      } else if (step.mode === 'video') {
+        placeHole(null);
+        /* Keep SynBot at home/ship spawn during demo — do not send him to bottom-right */
+        if (state.guideReleased && state.guideSpawn) {
+          guideFlyTo(state.guideSpawn.x, state.guideSpawn.y);
+        }
+        $('synTourCenter').style.display = 'none';
+        renderPips();
+        $('synTourTitle').textContent = step.title;
+        $('synTourBody').textContent = step.body;
+        $('synTourNext').textContent = step.cta || 'Next';
+        $('synTourSec').style.display = 'none';
+        showVideo(true);
+        reflowTextAnims(card);
+        /* Measure + pixel-center after video is shown (bulletproof) */
+        centerVideoCard(card);
+        spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 18);
+      } else {
+        $('synTourCenter').style.display = 'none';
+        clearVideoCardStyles(card);
+        card.style.display = 'block';
+        var hit = rectFor(step.sel);
+        var r = hit && hit.r;
+        /* Retry once after layout if empty-state headline not ready */
+        if (!r && step.view) {
+          ensureChat();
+          hit = rectFor(step.sel);
+          r = hit && hit.r;
+        }
+        placeHole(r, step);
+        if (step.pulse) hole.classList.add('pulse');
+        placeBot(r);
+        placeCard(r, step);
+        renderPips();
+        $('synTourTitle').textContent = step.title;
+        $('synTourBody').textContent = step.body;
+        $('synTourNext').textContent = step.cta || 'Next';
+        $('synTourSec').style.display = 'none';
+        reflowTextAnims(card);
+        /* Re-measure after chat layout settles — must re-reveal card (used to hide Next forever) */
+        function remeasureSpot() {
+          if (!state.open || STEPS[state.i] !== step) return;
+          ensureChat();
+          var hit2 = rectFor(step.sel);
+          if (hit2 && hit2.r) {
+            placeHole(hit2.r, step);
+            if (step.pulse) hole.classList.add('pulse');
+            placeBot(hit2.r);
+            placeCard(hit2.r, step);
+          }
+          revealTourCard();
+        }
+        setTimeout(remeasureSpot, 120);
+        setTimeout(remeasureSpot, 360);
+        /* Reveal after coords set */
+        requestAnimationFrame(function () {
+          revealTourCard();
+        });
+        setTimeout(revealTourCard, 80);
+      }
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_step', { step: step.id, i: state.i });
+      } catch (e) {}
+    }, step.view ? 300 : 50);
+  }
+
+  function next() {
+    if (state.i >= STEPS.length - 1) {
+      finish(false);
+      return;
+    }
+    state.i++;
+    renderStep();
+  }
+
+  function finish(skipped) {
+    if (!state.open) return;
+    state.open = false;
+    window.__synTourActive = false;
+    markDone();
+    /* Tour finished → BR corner bot allowed (entrance considered done) */
+    window.__synBotStoryReleased = true;
+    hideMythChoice();
+    showVideo(false);
+    stopFx(); /* cancels raf + myth timers + clears canvas */
+    var c = tinyBot();
+    if (state.guideReleased && c) {
+      if (c._tourHome) {
+        c._tourHome(function () { guideEnd(); });
+        setTimeout(guideEnd, 1000);
+      } else {
+        guideEnd();
+      }
+    } else if (c) {
+      /* Skipped mid-myth: restore normal bot only after tour marked done */
+      try {
+        c.removeAttribute('data-myth-hidden');
+        if (c._resume) c._resume();
+        if (c._tourEnd) c._tourEnd();
+        c.style.opacity = '0.55';
+      } catch (e) {}
+    }
+    state.guideReleased = false;
+    var root = $('synTourRoot');
+    if (root) root.classList.remove('on');
+    var center = $('synTourCenterPanel');
+    if (center) center.classList.remove('show', 'myth-climax');
+    clearVideoCardStyles($('synTourCard'));
+    try {
+      if (typeof synTrack === 'function') synTrack('tour_complete', { skipped: !!skipped });
+    } catch (e) {}
+    if (!skipped) {
+      ensureChat();
+      setTimeout(function () {
+        try {
+          if (typeof showToast === 'function') showToast('Tap the mic for speech-to-speech');
+        } catch (e) {}
+      }, 450);
+    }
+  }
+
+  function guideStart() {
+    /* Only used after releaseGuideBot — do not call at tour start */
+    if (!state.guideReleased) return;
+    var c = tinyBot();
+    if (c && c._tourStart) try { c._tourStart(); } catch (e) {}
+  }
+  function guideEnd() {
+    var c = tinyBot();
+    if (c && c._tourEnd) try { c._tourEnd(); } catch (e) {}
+  }
+  function tinyBot() { return document.getElementById('tinyBotCanvas'); }
+
+  function startTour(force) {
+    if (!force && doneAlready()) return;
+    // Force restart even if tour is mid-flight / already marked done
+    if (force && state.open) {
+      try { showVideo(false); stopFx(); guideEnd(); hideGuideBot(); } catch (e) {}
+      var rootStuck = document.getElementById('synTourRoot');
+      if (rootStuck) rootStuck.classList.remove('on');
+      state.open = false;
+    }
+    if (state.open) return;
+    if (force) { try { localStorage.removeItem(KEY); } catch (e) {} }
+    injectStyles(); /* re-writes #synTourStyles so hard-refresh picks up myth CSS */
+    injectDom();
+    ensureVideoControlsDom(); /* always patch glass video bar (even if root already existed) */
+    state.i = 0;
+    state.open = true;
+    window.__synTourActive = true;
+    state.myth = null;
+    state.guideReleased = false;
+    /* Hide BR corner bot until hatch exit during this run */
+    window.__synBotStoryReleased = false;
+    ensureChat();
+    try {
+      var tip = document.getElementById('robotTooltip');
+      if (tip) { tip.classList.remove('rt-visible'); tip.classList.add('rt-hidden'); }
+      var chat = document.getElementById('synBotChat');
+      if (chat) chat.style.display = 'none';
+      var tb = document.getElementById('tinyBotCanvas');
+      if (tb && !tb.style.cssText.includes('100vw')) {
+        tb.style.opacity = '0';
+      }
+    } catch (e) {}
+    /* CRITICAL: do NOT guideStart here — SynBot is inside the UFO until land+exit+home */
+    hideGuideBot();
+    startFx();
+    $('synTourRoot').classList.add('on');
+    try {
+      if (typeof synTrack === 'function') synTrack('tour_start', {});
+    } catch (e) {}
+    renderStep();
+  }
+
+  window.startSynapsesTour = function (force) { startTour(!!force); };
+  window.resetSynapsesTour = function () {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  };
+
+  function maybeAuto() {
+    if (doneAlready()) return;
+    setTimeout(function () {
+      if (doneAlready() || state.open) return;
+      if (typeof currentUser === 'undefined' || !currentUser) return;
+      startTour(false);
+    }, 900);
+  }
+
+  function patchOnLogin() {
+    if (typeof onLogin !== 'function') return;
+    if (onLogin._synTourPatched) return;
+    var prev = onLogin;
+    window.onLogin = function () {
+      var r = prev.apply(this, arguments);
+      setTimeout(maybeAuto, 650);
+      return r;
+    };
+    try { onLogin = window.onLogin; } catch (e) {}
+    window.onLogin._synTourPatched = true;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(patchOnLogin, 100);
+      setTimeout(maybeAuto, 2500);
+    });
+  } else {
+    setTimeout(patchOnLogin, 100);
+    setTimeout(maybeAuto, 2500);
+  }
+
+  window.addEventListener('resize', function () {
+    if (!state.open) return;
+    fxResize();
+    /* Don't restart welcome myth mid-flight */
+    if (state.myth && state.myth.active && !state.myth.panelShown) return;
+    var step = STEPS[state.i];
+    if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
+      /* Panel already revealed — keep it, only ensure layout */
+      return;
+    }
+    renderStep();
+  });
+})();
+
+</script>
+<!-- SYNAPSES_FIRST_TOUR_END -->
 </body>
