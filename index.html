@@ -5948,13 +5948,8 @@ function renderIconRail(){
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"},
     tour:       {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:"window.startTourFromNav&&window.startTourFromNav()"}
   };
-  /* If user already used the bottom-left float once, keep Tour in rail/bottom nav forever */
-  try {
-    if (localStorage.getItem('synapses_tour_btn_docked') === '1') {
-      navMainIds = navMainIds.filter(function (x) { return x !== 'tour'; });
-      navMainIds.push('tour');
-    }
-  } catch (eTourRail) {}
+  /* Tour lives in the SYN-BOT chat header icon row after first use, not the rail/bottom nav */
+  navMainIds = navMainIds.filter(function (x) { return x !== 'tour'; });
   rail.innerHTML = '';
   navMainIds.forEach(function(id){
     if(id === 'chat') return; // pen icon already hardcoded above the rail
@@ -23746,6 +23741,9 @@ function _neuInjectDownloadInterceptor(frame){
     <button onclick="synBotOpenAccount()" title="Account" style="background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </button>
+    <button id="synBotTourBtn" onclick="window.startTourFromNav && window.startTourFromNav()" title="Replay tour" style="display:none;background:none;border:none;color:rgba(255,255,255,0.25);cursor:pointer;font-size:13px;line-height:1;padding:0;align-items:center;" onmouseover="this.style.color='rgba(124,106,247,0.85)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="currentColor" stroke="none"/></svg>
+    </button>
     <button onclick="var _t=document.getElementById('robotTooltip');if(_t){_t.style.transition='';_t.style.opacity='';_t.style.visibility='';}document.getElementById('synBotChat').style.display='none';" style="background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:16px;line-height:1;padding:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">×</button>
   </div>
   <!-- Messages -->
@@ -26686,6 +26684,7 @@ var _wsIntentionalClose = false;
 
 // ── Web Audio state ────────────────────────────────────────────────────────────
 var _actx = null;
+var _actxWarm = false; // false right after a (re)created/suspended ctx — first chunk needs a lead-in so hardware isn't still waking up and clipping the start of speech
 var _actxGain = null; // master output gain — muted when avatar uses Anam's own native voice
 var _playbackTime = 0; // when to schedule next buffer (in AudioContext time)
 
@@ -27929,6 +27928,7 @@ function _ensureAudioCtx() {
   if (!_actx || _actx.state === 'closed') {
     _actx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
     _playbackTime = 0; // reset — only set when actually scheduling audio buffers
+    _actxWarm = false; // brand new context — hardware needs a moment to wake up
     // Master gain — muted when the avatar is using Anam's own native voice
     // (so we don't hear Deepgram's audio layered under Anam's own Siobhan
     // audio). Lip-sync passthrough mode leaves this at full volume.
@@ -27941,7 +27941,7 @@ function _ensureAudioCtx() {
     _wsAnalyser.smoothingTimeConstant = 0.0;
     _wsAnalyser.connect(_actxGain);
   }
-  if (_actx.state === 'suspended') _actx.resume();
+  if (_actx.state === 'suspended') { _actxWarm = false; _actx.resume(); }
 }
 
 function _startWsWaveform() {
@@ -28159,7 +28159,15 @@ function _scheduleChunk(arrayBuf) {
       avaDelay = Math.max(0, _avaMeasuredDelaySec + _AVA_RENDER_FUDGE_SEC);
     }
 
-    var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay;
+    // On a freshly created/resumed AudioContext the output device hasn't actually
+    // started running yet — scheduling the first chunk at currentTime (~"now")
+    // means the real hardware wakes up mid-buffer and clips the opening words.
+    // Give only that first chunk a short lead-in so playback starts after the
+    // device is truly awake; every chunk after it just chains off _playbackTime
+    // as before, so this adds a one-time ~150ms delay, not per-chunk lag.
+    var warmupLead = _actxWarm ? 0 : 0.15;
+    _actxWarm = true;
+    var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay + warmupLead;
     src.start(startAt);
     _playbackTime = startAt + buf.duration;
 
@@ -29806,7 +29814,18 @@ function speakVoiceReply(text) {
 
       function _findMetaOpen(s) {
         /* Search full buffer so <me + ta> split across SSE chunks still matches */
-        return s.search(/<meta\b/i);
+        var tagIdx = s.search(/<meta\b/i);
+        if (tagIdx !== -1) return tagIdx;
+        /* Fallback: model sometimes skips the <meta> wrapper entirely and
+           streams the raw classifier JSON straight into the reply. Without
+           this, _findMetaOpen returns -1 and the raw {"is_life_context":...}
+           blob gets treated as part of the visible/spoken reply. Catch it
+           by its distinctive key — even mid-stream, before the JSON has
+           finished arriving — and cut at the nearest preceding "{". */
+        var keyIdx = s.search(/"is_life_context"/i);
+        if (keyIdx === -1) return -1;
+        var braceIdx = s.lastIndexOf('{', keyIdx);
+        return braceIdx !== -1 ? braceIdx : keyIdx;
       }
       function _parseMetaFrom(raw) {
         var open = _findMetaOpen(raw);
@@ -33229,6 +33248,16 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (typeof startSynapsesTour === 'function') startSynapsesTour(true);
     } catch (e) { console.error(e); }
   }
+  /** After first use: Tour lives inside the SYN-BOT chat header icon row, not the main nav */
+  function showChatTourIcon() {
+    var b = document.getElementById('synBotTourBtn');
+    if (b) b.style.display = 'flex';
+  }
+  function hideChatTourIcon() {
+    var b = document.getElementById('synBotTourBtn');
+    if (b) b.style.display = 'none';
+  }
+  window.showSynapsesChatTourIcon = showChatTourIcon;
   function ensureTourInNavCatalog() {
     if (typeof NAV_ALL_ITEMS === 'undefined' || !NAV_ALL_ITEMS) return;
     var exists = NAV_ALL_ITEMS.some(function (x) { return x.id === 'tour'; });
@@ -33277,27 +33306,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   window.dockSynapsesTourBtn = function () {
     try { localStorage.setItem(TOUR_BTN_KEY, '1'); } catch (e) {}
     hideFloat();
-    ensureTourInNavCatalog();
-    placeTourInMainNav();
-    try { if (typeof saveNavConfig === 'function') saveNavConfig(); } catch (e2) {}
-    try {
-      if (typeof renderBottomNav === 'function') renderBottomNav();
-      else if (typeof renderIconRail === 'function') renderIconRail();
-    } catch (e3) {}
+    showChatTourIcon();
   };
   function applyDockedState() {
     /* Recovery: if somehow marked done with no dock, still fine to hide only when docked */
     if (!isTourBtnDocked()) {
       showFloat();
+      hideChatTourIcon();
       return;
     }
     hideFloat();
-    ensureTourInNavCatalog();
-    placeTourInMainNav();
-    try {
-      if (typeof renderBottomNav === 'function') renderBottomNav();
-      else if (typeof renderIconRail === 'function') renderIconRail();
-    } catch (e) {}
+    showChatTourIcon();
   }
   window._applyDockedTourBtn = applyDockedState;
   function bootTourFloat() {
@@ -33348,7 +33367,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   if (window.__synTourLoaded) return;
   window.__synTourLoaded = true;
 
-  var DEMO_SRC = window.SYNAPSES_DEMO_VIDEO || 'assets/demo-s2s.mp4';
+  var DEMO_SRC = window.SYNAPSES_DEMO_VIDEO || 'https://files.catbox.moe/e19g8l.mp4';
   function resolveDemoSrc() {
     var s = DEMO_SRC || 'assets/demo-s2s.mp4';
     if (/^https?:\/\//i.test(s) || s.indexOf('//') === 0 || s.indexOf('data:') === 0 || s.indexOf('blob:') === 0) return s;
@@ -37149,6 +37168,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (c._resume) c._resume();
         if (c._tourEnd) c._tourEnd();
         c.style.opacity = '0.55';
+        if (typeof window._tinyBotSync === 'function') window._tinyBotSync();
       } catch (e) {}
     }
     state.guideReleased = false;
@@ -37179,6 +37199,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function guideEnd() {
     var c = tinyBot();
     if (c && c._tourEnd) try { c._tourEnd(); } catch (e) {}
+    /* _tourEnd() restores whatever opacity was saved when the tour started —
+       which is often '0' (bot was hidden going into the tour), so relying on
+       it alone can leave the BR bot invisible/uninteractable afterward.
+       Re-run the real visibility logic so it settles to its correct state. */
+    if (typeof window._tinyBotSync === 'function') try { window._tinyBotSync(); } catch (e2) {}
   }
   function tinyBot() { return document.getElementById('tinyBotCanvas'); }
 
