@@ -957,13 +957,8 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
 /* Stack stage */
-#synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:900px;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent;}
-#synPulsePanel .pp-stage.wheel-spin .pp-card.depth-0{animation:ppWheelFlip .11s ease-in-out infinite;}
-@keyframes ppWheelFlip{
-  0%{transform:translateY(0) scale(1) rotateX(0);filter:blur(0);}
-  50%{transform:translateY(-10px) scale(0.96) rotateX(12deg);filter:blur(1px);opacity:0.75;}
-  100%{transform:translateY(0) scale(1) rotateX(0);filter:blur(0);}
-}
+#synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:none;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent;overflow:hidden;}
+/* no continuous wheel animation — was pure battery drain */
 /* Bottom row: ONE line — [dot] Pulse  hint  ☰  all same vertical center */
 #synPulsePanel .pp-foot{
   display:flex;align-items:center;justify-content:center;gap:0;
@@ -975,8 +970,8 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-brand-dot{
   width:5px;height:5px;border-radius:50%;background:#00d9a8;
-  box-shadow:0 0 6px rgba(0,217,168,0.55);flex-shrink:0;
-  animation:pulseDotBlink 2s ease-in-out infinite;
+  box-shadow:0 0 6px rgba(0,217,168,0.45);flex-shrink:0;
+  animation:none; /* infinite blink drains battery in WebViews */
   display:block;margin:0;
   transform:translateY(-1px);
 }
@@ -1012,43 +1007,40 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-cats-toggle:hover{color:rgba(242,242,245,0.55);background:transparent!important;opacity:1;}
 #synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
-/* Cards: fogged glass — soft frost, NOT clear. Blur + dark fog so UI under doesn't bleed text. */
+/* Cards: solid glass look WITHOUT live backdrop-filter (huge GPU/battery cost when stacked) */
 #synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:16px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
   background:
-    linear-gradient(160deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 28%,transparent 55%),
-    linear-gradient(155deg,rgba(28,26,42,0.82) 0%,rgba(16,14,28,0.88) 45%,rgba(10,10,16,0.9) 100%);
-  backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);-webkit-backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);
-  border:1px solid rgba(255,255,255,0.16);
-  box-shadow:0 14px 36px rgba(0,0,0,0.45),0 0 0 1px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.16);
+    linear-gradient(160deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.03) 28%,transparent 55%),
+    linear-gradient(155deg,rgba(30,28,44,0.94) 0%,rgba(14,12,22,0.96) 100%);
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  border:1px solid rgba(255,255,255,0.14);
+  box-shadow:0 10px 28px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.12);
   transform-origin:center bottom;
-  transition:transform .55s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,filter .45s ease,box-shadow .45s ease;
-  will-change:transform,opacity;}
+  transition:transform .3s ease,opacity .22s ease;
+  will-change:auto;contain:layout style paint;}
 #synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:radial-gradient(120% 80% at 20% 0%,rgba(124,106,247,0.16),transparent 55%),
-    radial-gradient(90% 70% at 100% 100%,rgba(0,217,168,0.07),transparent 50%),
-    rgba(8,8,14,0.22);}
-#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none;z-index:2;}
+  background:rgba(8,8,14,0.12);}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);pointer-events:none;z-index:2;}
 #synPulsePanel .pp-card > *{position:relative;z-index:1;}
-/* Stack depth: front full, next 2–3 peek underneath (iOS notification style) */
+/* Stack depth — only 2 peeks (cheaper) */
 #synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
   transform:translateY(0) scale(1);filter:none;
-  box-shadow:0 16px 40px rgba(0,0,0,0.48),0 0 0 1px rgba(196,181,253,0.14),inset 0 1px 0 rgba(255,255,255,0.18);}
+  box-shadow:0 12px 32px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.08),inset 0 1px 0 rgba(255,255,255,0.14);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
-#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.95;pointer-events:none;
-  transform:translateY(14px) scale(0.94);filter:brightness(0.94);}
-#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.82;pointer-events:none;
-  transform:translateY(26px) scale(0.88);filter:brightness(0.88);}
-#synPulsePanel .pp-card.depth-3{z-index:1;opacity:0.62;pointer-events:none;
-  transform:translateY(36px) scale(0.82);filter:brightness(0.8);}
-#synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;
-  transform:translateY(44px) scale(0.78);filter:brightness(0.7);}
-/* Swiping front card away */
-#synPulsePanel .pp-card.swiping{transition:none!important;}
-#synPulsePanel .pp-card.fly-out{z-index:6;pointer-events:none;opacity:0;transform:translateY(-28px) scale(0.96);filter:blur(2px);transition:transform .32s cubic-bezier(0.22,1,0.36,1),opacity .28s ease,filter .28s ease;}
-#synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
-#synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
-#synPulsePanel .pp-card.fly-out-fast{transition-duration:.18s!important;}
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.92;pointer-events:none;
+  transform:translateY(12px) scale(0.94);filter:none;}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.72;pointer-events:none;
+  transform:translateY(22px) scale(0.88);filter:none;}
+#synPulsePanel .pp-card.depth-3,
+#synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
+  transform:translateY(32px) scale(0.84);filter:none;}
+/* Swiping front card away — no filter:blur (expensive) */
+#synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;}
+#synPulsePanel .pp-card.fly-out{z-index:6;pointer-events:none;opacity:0;transform:translateY(-24px) scale(0.97);transition:transform .22s ease,opacity .18s ease;}
+#synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-100%) rotate(-5deg) scale(0.97);transition:transform .24s ease,opacity .18s ease;}
+#synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(100%) rotate(5deg) scale(0.97);transition:transform .24s ease,opacity .18s ease;}
+#synPulsePanel .pp-card.fly-out-fast{transition-duration:.14s!important;}
 /* Card corner labels (MEETUPS / NEWS / JOBS) — quiet white, app has no pink */
 #synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 #synPulsePanel .pp-tag{
@@ -1300,45 +1292,23 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
-/* Pulse open lift: MOBILE ONLY — only lift light text/input, NOT whole empty state (orb kills FPS) */
+/* Pulse open on mobile: NO home-lift animation (was janky + battery-heavy). Pause ambience instead. */
 @media (max-width:768px){
-  #sec-chat .syn-greeting,
-  #sec-chat .syn-sub{
-    transition:transform .28s cubic-bezier(0.25,0.8,0.25,1);
-    will-change:auto;
-    transform:translate3d(0,0,0);
-    backface-visibility:hidden;
-    -webkit-backface-visibility:hidden;
-  }
-  #sec-chat .input-area{
-    transition:transform .28s cubic-bezier(0.25,0.8,0.25,1)!important;
-    will-change:auto;
-    transform:translate3d(0,0,0);
-    backface-visibility:hidden;
-    -webkit-backface-visibility:hidden;
-  }
-  /* While lifting, drop expensive blur so the slide stays smooth on phone GPUs */
-  body.pulse-open #sec-chat .input-box{
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    background:rgba(12,12,22,0.72)!important;
-  }
-  body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
-  body.pulse-open #chatEmptyState:not(.hidden) .syn-sub{
-    transform:translate3d(0,-64px,0);
-  }
-  body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-    transform:translate3d(0,-76px,0)!important;
-  }
-  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area{
-    transform:translate3d(0,-72px,0)!important;
-  }
-  /* Pause heavy ambient motion while Pulse is open */
   body.pulse-open .syn-ring,
   body.pulse-open .syn-node,
-  body.pulse-open .syn-glyph{animation-play-state:paused!important;}
-  body.pulse-open .syn-orb-wrap{opacity:0.55;transition:opacity .2s ease;}
-  #synPulsePanel{left:50%!important;right:auto!important;width:min(268px,calc(100vw - 40px))!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;transform:translate(-50%,12px) scale(0.94)!important;}
+  body.pulse-open .syn-glyph,
+  body.pulse-open .pp-brand-dot{animation:none!important;}
+  body.pulse-open .syn-orb-wrap{opacity:0.35;pointer-events:none;}
+  body.pulse-open #chatFlowCanvas,
+  body.pulse-open #chatBeamsWrap{opacity:0.25!important;}
+  /* Solid cards on phone — backdrop-filter on stacked cards kills FPS/battery */
+  #synPulsePanel .pp-card{
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    background:linear-gradient(155deg,rgba(32,30,48,0.96) 0%,rgba(14,12,24,0.98) 100%)!important;
+    will-change:auto!important;
+    transition:transform .28s ease,opacity .22s ease!important;
+  }
+  #synPulsePanel{left:50%!important;right:auto!important;width:min(268px,calc(100vw - 40px))!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;transform:translate(-50%,10px) scale(0.96)!important;}
   #synPulsePanel.open{transform:translate(-50%,0) scale(1)!important;}
   #synPulsePanel .pp-stage{height:168px!important;}
   #synPulsePanel .pp-card{height:124px!important;padding:12px 12px 10px!important;}
@@ -4003,7 +3973,7 @@ window.getWebAudioNode = getWebAudioNode;
       <div class="pp-line">
         <span class="pp-brand-dot" aria-hidden="true"></span>
         <span class="pp-name">Pulse</span>
-        <span class="pp-hint" id="synPulseHint">Swipe to peek · flick to spin · tap open</span>
+        <span class="pp-hint" id="synPulseHint">Scroll card up to next · side skip · tap open</span>
         <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Categories" aria-label="Toggle categories" aria-expanded="false">☰</button>
       </div>
     </div>
@@ -18376,8 +18346,8 @@ function goNotes() {
   var READ_KEY = 'synapses_pulse_read_v1';
   var CACHE_KEY = 'synapses_pulse_meetup_cache_v6'; /* v6: real Tavily news + jobs */
   var FILTER_KEY = 'synapses_pulse_filter_v2'; /* all | meetups | news | jobs */
-  var AUTO_MS = 4800;
-  var PEEK = 3;
+  var AUTO_MS = 0; /* 0 = no auto-advance (was draining battery with constant layout) */
+  var PEEK = 2; /* only 2 peek cards under front */
   var _open = false;
   var _i = 0;
   var _timer = null;
@@ -18409,7 +18379,7 @@ function goNotes() {
   function _setSub(text){
     /* One-row footer hint — default keeps 3 short phrases with · separators */
     var hint = document.getElementById('synPulseHint') || document.querySelector('#synPulsePanel .pp-hint');
-    var def = 'Swipe to peek · flick to spin · tap open';
+    var def = 'Scroll card up to next · side skip · tap open';
     if(!hint) return;
     if(!text || /swipe|peek|spin|tap/i.test(text)){ hint.textContent = def; return; }
     hint.textContent = String(text).slice(0, 36);
@@ -18662,41 +18632,114 @@ function goNotes() {
         }
       });
   }
+  /** Only mount a few cards (prev + front + next peeks) — full FEED in DOM was a battery killer */
+  var _domWin = []; /* absolute FEED indices currently in the stage */
+  function _windowIndices(){
+    var n = FEED.length;
+    if(!n) return [];
+    var out = [];
+    /* prev, front, +2 next = max 4 nodes */
+    var offsets = [-1, 0, 1, 2];
+    for(var k = 0; k < offsets.length; k++){
+      var idx = (_i + offsets[k] + n * 4) % n;
+      if(out.indexOf(idx) < 0) out.push(idx);
+    }
+    return out;
+  }
   function _buildStack(){
     var stage = document.getElementById('synPulseStage');
     if(!stage) return;
     if(!FEED.length) FEED = SEED.slice();
-    stage.innerHTML = FEED.map(function(it, idx){
+    _domWin = _windowIndices();
+    stage.innerHTML = _domWin.map(function(idx){
+      var it = FEED[idx];
       var plat = _platformOf(it);
       return '<article class="pp-card" data-i="'+idx+'" data-id="'+_esc(it.id)+'" data-platform="'+_esc(plat)+'" data-url="'+_esc(it.url||'')+'">'+_cardHtml(it)+'</article>';
     }).join('');
     _layoutStack(false);
     _wireFrontDrag();
   }
-  /** Assign depth-0 (front) … depth-3 (peek) based on _i */
-  function _layoutStack(animate){
+  /** Depth layout: 0 front, 1–2 peek. progress +1 = front scrolled fully up off-screen */
+  function _depthPose(d){
+    if(d < -0.001){
+      var t = Math.max(-1.25, d);
+      var k = -t;
+      return { y: -k * 130, s: 1 - k * 0.04, o: Math.max(0, 1 - k * 0.95), z: 6, vis: k < 1.05 };
+    }
+    if(d <= 0.001) return { y: 0, s: 1, o: 1, z: 4, vis: true };
+    if(d < 1){
+      var u = d;
+      return { y: 14 * u, s: 0.94 + 0.06 * (1 - u), o: 0.9 + 0.1 * (1 - u), z: 3, vis: true };
+    }
+    if(d < 2){
+      var v = d - 1;
+      return { y: 14 + 12 * v, s: 0.94 - 0.06 * v, o: 0.88 - 0.16 * v, z: 2, vis: true };
+    }
+    if(d < 2.6){
+      var w = d - 2;
+      return { y: 26 + 10 * w, s: 0.88 - 0.04 * w, o: Math.max(0, 0.7 - 0.55 * w), z: 1, vis: true };
+    }
+    return { y: 40, s: 0.82, o: 0, z: 0, vis: false };
+  }
+  function _applyStackScroll(progress, withTransition){
     var stage = document.getElementById('synPulseStage');
-    if(!stage) return;
+    if(!stage || !FEED.length) return;
+    var n = FEED.length;
     var cards = stage.querySelectorAll('.pp-card');
-    for(var s = 0; s < cards.length; s++){
-      var card = cards[s];
-      var idx = parseInt(card.getAttribute('data-i'), 10);
-      var depth = (idx - _i + FEED.length) % FEED.length;
-      card.classList.remove('depth-0','depth-1','depth-2','depth-3','depth-hide','swiping','fly-out','fly-out-left','fly-out-right','fly-out-fast');
-      card.style.transform = '';
-      card.style.opacity = '';
-      card.style.transition = animate ? '' : 'none';
-      if(depth === 0) card.classList.add('depth-0');
-      else if(depth === 1) card.classList.add('depth-1');
-      else if(depth === 2) card.classList.add('depth-2');
-      else if(depth === 3 && PEEK >= 3) card.classList.add('depth-3');
-      else card.classList.add('depth-hide');
+    var s, card, idx, depth, d, pose;
+    for(s = 0; s < cards.length; s++){
+      card = cards[s];
+      idx = parseInt(card.getAttribute('data-i'), 10);
+      depth = (idx - _i + n) % n;
+      if(depth > n / 2) depth = depth - n;
+      d = depth - progress;
+      pose = _depthPose(d);
+      /* During drag: only touch transform/opacity/z — no classList thrash every frame */
+      if(!withTransition && _drag && _drag.axis === 'y'){
+        if(!pose.vis || pose.o < 0.04){
+          card.style.visibility = 'hidden';
+          card.style.opacity = '0';
+          card.style.pointerEvents = 'none';
+        } else {
+          card.style.visibility = '';
+          card.style.transition = 'none';
+          card.style.zIndex = String(pose.z);
+          card.style.opacity = String(pose.o);
+          card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
+          card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
+        }
+        continue;
+      }
+      card.className = 'pp-card';
+      if(!pose.vis || pose.o < 0.04){
+        card.classList.add('depth-hide');
+        card.style.visibility = 'hidden';
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
+        card.style.transform = '';
+      } else {
+        card.style.visibility = '';
+        if(Math.abs(d) < 0.5) card.classList.add('depth-0');
+        else if(d < 1.5) card.classList.add('depth-1');
+        else card.classList.add('depth-2');
+        card.style.transition = withTransition ? 'transform .28s ease,opacity .22s ease' : 'none';
+        card.style.zIndex = String(pose.z);
+        card.style.opacity = String(pose.o);
+        card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
+        card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
+      }
     }
-    if(!animate){
-      void stage.offsetWidth;
-      for(var c = 0; c < cards.length; c++) cards[c].style.transition = '';
+  }
+  function _layoutStack(animate){
+    /* Remount window if indices drifted (after commit) */
+    var need = _windowIndices();
+    var same = need.length === _domWin.length && need.every(function(v, i){ return v === _domWin[i]; });
+    if(!same){
+      _buildStack();
+      return;
     }
-    var front = stage.querySelector('.pp-card.depth-0');
+    _applyStackScroll(0, !!animate);
+    var front = document.querySelector('#synPulseStage .pp-card.depth-0');
     if(front) _markRead(front.getAttribute('data-id'));
   }
   function _clearAuto(){
@@ -18704,8 +18747,8 @@ function goNotes() {
   }
   function _armAuto(){
     _clearAuto();
-    if(!_open || _busy || _drag) return;
-    _timer = setTimeout(function(){ advance('auto'); }, AUTO_MS);
+    if(!AUTO_MS || !_open || _busy || _drag) return;
+    _timer = setTimeout(function(){ advance('left', 1); }, AUTO_MS);
   }
   var _spinTimer = null;
   function advance(how, steps){
@@ -18717,8 +18760,7 @@ function goNotes() {
     if(!stage){ _busy = false; return; }
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front){ _busy = false; return; }
-    /* Horizontal only for single-card fly (left/right). Vertical uses spinCarousel. */
-    var fly = how === 'left' ? 'fly-out-left' : how === 'right' ? 'fly-out-right' : 'fly-out-left';
+    var fly = how === 'right' ? 'fly-out-right' : 'fly-out-left';
     front.classList.add(fly);
     setTimeout(function(){
       _i = (_i + steps) % FEED.length;
@@ -18726,37 +18768,7 @@ function goNotes() {
       _wireFrontDrag();
       _busy = false;
       _armAuto();
-    }, 300);
-  }
-  /** Vertical swipe: rapid carousel flip through the deck */
-  function spinCarousel(dir, strength){
-    if(_busy || !_open || !FEED.length) return;
-    _busy = true;
-    _clearAuto();
-    if(_spinTimer){ clearInterval(_spinTimer); _spinTimer = null; }
-    var stage = document.getElementById('synPulseStage');
-    if(stage) stage.classList.add('wheel-spin');
-    var n = FEED.length;
-    /* Stronger flick = more flips; at least almost a full deck for a real spin feel */
-    var flips = Math.max(n, Math.min(n * 2, Math.round(n * (0.9 + (strength || 1) * 0.8))));
-    var stepDir = dir < 0 ? 1 : -1; /* swipe up → forward */
-    var left = flips;
-    var tickMs = Math.max(55, Math.min(95, 720 / Math.max(6, flips)));
-    _spinTimer = setInterval(function(){
-      if(left <= 0){
-        clearInterval(_spinTimer);
-        _spinTimer = null;
-        if(stage) stage.classList.remove('wheel-spin');
-        _layoutStack(true);
-        _wireFrontDrag();
-        _busy = false;
-        _armAuto();
-        return;
-      }
-      _i = (_i + stepDir + FEED.length) % FEED.length;
-      _layoutStack(false);
-      left--;
-    }, tickMs);
+    }, 240);
   }
   function _wireFrontDrag(){
     var stage = document.getElementById('synPulseStage');
@@ -18764,12 +18776,18 @@ function goNotes() {
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front || front._pulseWired) return;
     front._pulseWired = true;
+    var STEP = 100;
+    var _rafMove = 0;
 
     function start(x, y){
       if(_busy) return;
       _clearAuto();
-      _drag = { x:x, y:y, dx:0, dy:0, t0: Date.now(), card:front };
+      _drag = { x:x, y:y, dx:0, dy:0, t0: Date.now(), card:front, axis: null, progress: 0 };
       front.classList.add('swiping');
+      var cards = stage.querySelectorAll('.pp-card');
+      for(var i = 0; i < cards.length; i++){
+        cards[i].style.transition = 'none';
+      }
     }
     function move(x, y){
       if(!_drag || _drag.card !== front) return;
@@ -18777,50 +18795,74 @@ function goNotes() {
       _drag.dy = y - _drag.y;
       var dx = _drag.dx, dy = _drag.dy;
       var ax = Math.abs(dx), ay = Math.abs(dy);
-      /* Lock axis: vertical drag = tilt only Y; horizontal = slide X */
-      if(ay > ax){
-        var ty = Math.max(-70, Math.min(70, dy));
-        front.style.transform = 'translateY('+ty+'px) scale('+(1 - Math.min(0.06, ay/900))+')';
-        front.style.opacity = String(Math.max(0.55, 1 - ay/220));
-      } else {
+      if(!_drag.axis && (ax > 8 || ay > 8)){
+        _drag.axis = ay >= ax ? 'y' : 'x';
+      }
+      if(_drag.axis === 'y'){
+        var p = Math.max(-1.05, Math.min(1.05, -dy / STEP));
+        _drag.progress = p;
+        /* rAF: at most one layout pass per frame (pointermove can fire 100+/s) */
+        if(!_rafMove){
+          _rafMove = requestAnimationFrame(function(){
+            _rafMove = 0;
+            if(_drag && _drag.axis === 'y') _applyStackScroll(_drag.progress, false);
+          });
+        }
+      } else if(_drag.axis === 'x'){
         var rot = Math.max(-10, Math.min(10, dx * 0.06));
-        front.style.transform = 'translate('+dx+'px,0) rotate('+rot+'deg) scale(1.02)';
+        front.style.transform = 'translate3d('+dx+'px,0,0) rotate('+rot+'deg) scale(1.02)';
         front.style.opacity = String(Math.max(0.35, 1 - ax/280));
       }
     }
     function end(){
       if(!_drag || _drag.card !== front) return;
-      var dx = _drag.dx, dy = _drag.dy;
+      var dx = _drag.dx, dy = _drag.dy, progress = _drag.progress || 0;
+      var axis = _drag.axis;
       var dt = Math.max(16, Date.now() - (_drag.t0 || Date.now()));
       var ax = Math.abs(dx), ay = Math.abs(dy);
       var moved = ax > 10 || ay > 10;
+      var cards = stage.querySelectorAll('.pp-card');
+      for(var i = 0; i < cards.length; i++) cards[i].classList.remove('swiping');
       front.classList.remove('swiping');
       _drag = null;
-      front.style.transform = '';
-      front.style.opacity = '';
 
-      /* Vertical: carousel spin (NOT same as left/right) */
-      if(ay > 40 && ay >= ax){
-        var vy = ay / dt;
-        var strength = Math.min(2.2, 0.7 + vy * 1.4 + ay / 180);
-        spinCarousel(dy, strength);
+      if(axis === 'y'){
+        var vy = (-dy) / dt; /* + = flick up = scroll current off */
+        /* commit when mostly scrolled off, or a decisive flick */
+        var commit = progress > 0.28 || (progress > 0.1 && vy > 0.35);
+        var back = progress < -0.28 || (progress < -0.1 && vy < -0.35);
+        if(commit){
+          _i = (_i + 1) % FEED.length;
+          _layoutStack(true);
+          _wireFrontDrag();
+        } else if(back){
+          _i = (_i - 1 + FEED.length) % FEED.length;
+          _layoutStack(true);
+          _wireFrontDrag();
+        } else {
+          _layoutStack(true);
+          _wireFrontDrag();
+        }
+        _armAuto();
         return;
       }
-      /* Horizontal: one card left/right */
-      if(ax > 48 && ax > ay){
+      if(axis === 'x' && ax > 48){
+        front.style.transform = '';
+        front.style.opacity = '';
         advance(dx < 0 ? 'left' : 'right', 1);
         return;
       }
+      front.style.transform = '';
+      front.style.opacity = '';
       if(!moved){
         var link = front.getAttribute('data-url') || '';
         if(link && /^https?:\/\//i.test(link)){
           try { window.open(link, '_blank', 'noopener'); } catch(eO){}
           _markRead(front.getAttribute('data-id'));
-          _armAuto();
-        } else {
-          advance('left', 1);
         }
-        return;
+      } else {
+        _layoutStack(true);
+        _wireFrontDrag();
       }
       _armAuto();
     }
@@ -18837,10 +18879,12 @@ function goNotes() {
     front.addEventListener('pointerup', end);
     front.addEventListener('pointercancel', function(){
       if(!_drag) return;
+      var cards = stage.querySelectorAll('.pp-card');
+      for(var i = 0; i < cards.length; i++) cards[i].classList.remove('swiping');
       front.classList.remove('swiping');
-      front.style.transform = '';
-      front.style.opacity = '';
       _drag = null;
+      _layoutStack(true);
+      _wireFrontDrag();
       _armAuto();
     });
   }
@@ -18872,25 +18916,31 @@ function goNotes() {
     var panel = document.getElementById('synPulsePanel');
     var btn = document.getElementById('bnavPulseBtn');
     if(!panel) return;
-    _i = 0;
     _busy = false;
     _drag = null;
-    /* Prefer cached live meetups, then seed; always re-fetch so stack updates when ready */
-    if(!_loadCachedMeetups()) {
-      FEED = SEED.slice();
-      _setSub('');
+    /* Cache first — avoid empty seed flash + double work */
+    if(!_allEvents.length){
+      if(!_loadCachedMeetups()){
+        FEED = SEED.slice();
+        _setSub('');
+      }
+    } else if(!FEED.length){
+      _setFilter(_filter);
     }
-    _buildStack();
-    _setCatsOpen(true); /* categories stay visible */
-    _setPulseLift(true);
+    _setCatsOpen(true);
+    _setPulseLift(false);
+    _open = true;
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
-    _open = true;
-    _armAuto();
-    /* Always hit server (force if still on seed so we don't sit on "Loading…") */
-    _fetchMeetups(FEED[0] && FEED[0].id === 'seed1');
-    if(typeof _haptic === 'function') try { _haptic(8); } catch(e){}
+    /* One rAF: mount only the visible window of cards */
+    requestAnimationFrame(function(){
+      if(!_open) return;
+      _buildStack();
+      if(!_allEvents.length || (FEED[0] && FEED[0].id === 'seed1')){
+        _fetchMeetups(false);
+      }
+    });
   }
   function closePulse(){
     var panel = document.getElementById('synPulsePanel');
@@ -18903,6 +18953,9 @@ function goNotes() {
     if(panel){ panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); }
     if(btn) btn.classList.remove('active');
     _open = false;
+    /* Drop live card DOM when closed — free GPU/compositor layers */
+    var stage = document.getElementById('synPulseStage');
+    if(stage){ stage.innerHTML = ''; _domWin = []; }
   }
   function togglePulse(){
     if(_open) closePulse();
@@ -18940,18 +18993,17 @@ function goNotes() {
     }
     _loadCachedMeetups();
     _updateBadge();
-    /* Prefetch so first open is already live (Render may cold-start ~30–60s once) */
-    setTimeout(function(){ _fetchMeetups(false); }, 1200);
+    /* One quiet prefetch only — avoid double network hammer on every boot */
     setTimeout(function(){
-      if(!FEED.length || FEED[0].id === 'seed1') _fetchMeetups(true);
-    }, 8000);
+      if(!_allEvents.length) _fetchMeetups(false);
+    }, 4000);
     document.addEventListener('keydown', function(e){
       if(!_open) return;
       if(e.key === 'Escape') closePulse();
       if(e.key === 'ArrowRight'){ e.preventDefault(); advance('right', 1); }
       if(e.key === 'ArrowLeft' || e.key === ' '){ e.preventDefault(); advance('left', 1); }
-      if(e.key === 'ArrowUp'){ e.preventDefault(); spinCarousel(-1, 1.4); }
-      if(e.key === 'ArrowDown'){ e.preventDefault(); spinCarousel(1, 1.4); }
+      if(e.key === 'ArrowUp'){ e.preventDefault(); _i = (_i + 1) % FEED.length; _layoutStack(true); _wireFrontDrag(); }
+      if(e.key === 'ArrowDown'){ e.preventDefault(); _i = (_i - 1 + FEED.length) % FEED.length; _layoutStack(true); _wireFrontDrag(); }
     });
     document.addEventListener('mousedown', function(e){
       if(!_open) return;
