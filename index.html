@@ -423,6 +423,7 @@ body.bottom-nav .sidebar{display:none!important;}
 
 body.bottom-nav #bottomNavBar{display:flex!important;}
 body.bottom-nav #bnavNotesBtn{display:flex!important;}
+body.bottom-nav #bnavPulseBtn{display:flex!important;}
 /* pill: floats over content, main takes full height */
 body.bottom-nav .main{height:100vh;max-height:100vh;overflow:hidden;}
 /* fullwidth: flush to bottom, shrink main */
@@ -891,6 +892,83 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 @media (hover:hover) and (pointer:fine){ #bnavNotesBtn:hover{background:rgba(124,106,247,0.07);} }
 #bnavNotesBtn.active{background:rgba(124,106,247,0.14)!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
+/* Pulse feed — tiny control just right of Notes (bottom-left chrome) */
+#bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;padding:0;}
+@media (hover:hover) and (pointer:fine){ #bnavPulseBtn:hover{background:rgba(0,217,168,0.06);} }
+#bnavPulseBtn.active{background:rgba(0,217,168,0.1)!important;}
+#bnavPulseBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
+#bnavPulseBtn.active svg,#bnavPulseBtn:hover svg{stroke:rgba(0,217,168,0.85);}
+#bnavPulseBtn .pulse-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#00d9a8;box-shadow:0 0 8px rgba(0,217,168,0.75);display:none;}
+#bnavPulseBtn.has-unread .pulse-dot{display:block;animation:pulseDotBlink 1.8s ease-in-out infinite;}
+@keyframes pulseDotBlink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.55;transform:scale(0.85);}}
+/* Pulse — floating stack only (no tray behind cards). Frosted glass cards = readable fog. */
+#synPulsePanel{position:fixed;bottom:58px;left:10px;width:min(300px,calc(100vw - 20px));z-index:100040;display:none;flex-direction:column;pointer-events:none;opacity:0;transform:translateY(12px) scale(0.96);transition:opacity .28s ease,transform .38s cubic-bezier(0.16,1,0.3,1);font-family:'DM Sans',sans-serif;background:transparent;border:none;box-shadow:none;}
+#synPulsePanel.open{display:flex;pointer-events:auto;opacity:1;transform:translateY(0) scale(1);}
+/* Shell is invisible — only the cards exist visually */
+#synPulsePanel .pp-glass{position:relative;display:flex;flex-direction:column;overflow:visible;padding:0;background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+#synPulsePanel .pp-glass::before{display:none!important;}
+#synPulsePanel .pp-head{display:flex;align-items:center;gap:8px;padding:0 4px 8px;flex-shrink:0;position:relative;z-index:8;}
+#synPulsePanel .pp-brand{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
+#synPulsePanel .pp-brand-dot{width:6px;height:6px;border-radius:50%;background:#00d9a8;box-shadow:0 0 8px rgba(0,217,168,0.6);flex-shrink:0;animation:pulseDotBlink 2s ease-in-out infinite;}
+#synPulsePanel .pp-head h3{margin:0;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:rgba(242,242,245,0.78);letter-spacing:-0.02em;text-shadow:0 1px 8px rgba(0,0,0,0.55);}
+#synPulsePanel .pp-head .pp-sub{font-size:9px;color:rgba(242,242,245,0.4);font-weight:500;margin-top:1px;text-shadow:0 1px 6px rgba(0,0,0,0.5);}
+#synPulsePanel .pp-close{width:26px;height:26px;border-radius:999px;background:rgba(12,12,18,0.55);border:1px solid rgba(255,255,255,0.12);color:rgba(242,242,245,0.55);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;flex-shrink:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+#synPulsePanel .pp-close:hover{background:rgba(20,20,30,0.75);color:#fff;}
+/* Stack stage — room for peek cards below front */
+#synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none;background:transparent;}
+#synPulsePanel .pp-hint{text-align:center;font-size:9.5px;color:rgba(242,242,245,0.32);padding:6px 0 2px;letter-spacing:0.02em;position:relative;z-index:5;text-shadow:0 1px 6px rgba(0,0,0,0.55);}
+/* Cards: fogged glass — soft frost, NOT clear. Blur + dark fog so UI under doesn't bleed text. */
+#synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:16px;padding:14px 14px 12px;box-sizing:border-box;
+  display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
+  /* Fog layer: enough density that text underneath is unreadable, still feels glassy */
+  background:
+    linear-gradient(160deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 28%,transparent 55%),
+    linear-gradient(155deg,rgba(28,26,42,0.82) 0%,rgba(16,14,28,0.88) 45%,rgba(10,10,16,0.9) 100%);
+  backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);-webkit-backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 14px 36px rgba(0,0,0,0.45),0 0 0 1px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.16);
+  transform-origin:center bottom;
+  transition:transform .55s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,filter .45s ease,box-shadow .45s ease;
+  will-change:transform,opacity;}
+/* Soft purple/mint fog tint without letting the page show through as readable content */
+#synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 80% at 20% 0%,rgba(124,106,247,0.16),transparent 55%),
+    radial-gradient(90% 70% at 100% 100%,rgba(0,217,168,0.07),transparent 50%),
+    rgba(8,8,14,0.22);}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none;z-index:2;}
+#synPulsePanel .pp-card > *{position:relative;z-index:1;}
+/* Stack depth: front full, next 2–3 peek underneath (iOS notification style) */
+#synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
+  transform:translateY(0) scale(1);filter:none;
+  box-shadow:0 16px 40px rgba(0,0,0,0.48),0 0 0 1px rgba(196,181,253,0.14),inset 0 1px 0 rgba(255,255,255,0.18);}
+#synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.95;pointer-events:none;
+  transform:translateY(14px) scale(0.94);filter:brightness(0.94);}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.82;pointer-events:none;
+  transform:translateY(26px) scale(0.88);filter:brightness(0.88);}
+#synPulsePanel .pp-card.depth-3{z-index:1;opacity:0.62;pointer-events:none;
+  transform:translateY(36px) scale(0.82);filter:brightness(0.8);}
+#synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;
+  transform:translateY(44px) scale(0.78);filter:brightness(0.7);}
+/* Swiping front card away */
+#synPulsePanel .pp-card.swiping{transition:none!important;}
+#synPulsePanel .pp-card.fly-out{z-index:6;pointer-events:none;opacity:0;transform:translateY(-28px) scale(0.96);filter:blur(2px);transition:transform .4s cubic-bezier(0.22,1,0.36,1),opacity .35s ease,filter .35s ease;}
+#synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .35s ease;}
+#synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .35s ease;}
+#synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+#synPulsePanel .pp-tag{font-size:9.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(0,217,168,0.88);text-shadow:0 1px 4px rgba(0,0,0,0.35);}
+#synPulsePanel .pp-tag.meetup{color:rgba(196,181,253,0.95);}
+#synPulsePanel .pp-tag.jobs{color:rgba(255,150,190,0.92);}
+#synPulsePanel .pp-tag.ai{color:rgba(0,217,168,0.9);}
+#synPulsePanel .pp-tag.community{color:rgba(180,250,220,0.88);}
+#synPulsePanel .pp-tag.product{color:rgba(196,181,253,0.9);}
+#synPulsePanel .pp-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:rgba(250,250,252,0.98);line-height:1.28;margin:0 0 5px;letter-spacing:-0.02em;text-shadow:0 1px 10px rgba(0,0,0,0.45);}
+#synPulsePanel .pp-desc{font-size:11.5px;color:rgba(235,236,245,0.78);line-height:1.45;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 8px rgba(0,0,0,0.4);}
+#synPulsePanel .pp-meta{font-size:10px;color:rgba(220,222,235,0.48);margin-top:8px;text-shadow:0 1px 6px rgba(0,0,0,0.35);}
+#synPulsePanel .pp-grip{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:28px;height:3px;border-radius:99px;background:rgba(255,255,255,0.22);z-index:2;}
+@media (prefers-reduced-motion:reduce){
+  #synPulsePanel .pp-card{transition-duration:.01ms!important;}
+}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
 #chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
@@ -3755,6 +3833,29 @@ window.getWebAudioNode = getWebAudioNode;
 
 <!-- Bottom Nav Bar -->
 <button id="bnavNotesBtn" onclick="goNotes()" title="My Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<!-- Pulse feed — right of Notes (bottom-left). Meetup / community / AI updates -->
+<button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" title="Pulse — meetups & updates" aria-label="Open Pulse updates" style="display:none;">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+  </svg>
+  <span class="pulse-dot" aria-hidden="true"></span>
+</button>
+<div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
+  <div class="pp-glass">
+    <div class="pp-head">
+      <div class="pp-brand">
+        <span class="pp-brand-dot" aria-hidden="true"></span>
+        <div>
+          <h3>Pulse</h3>
+          <div class="pp-sub">Swipe to peek more</div>
+        </div>
+      </div>
+      <button type="button" class="pp-close" onclick="window.closeSynPulse&&window.closeSynPulse()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="pp-stage" id="synPulseStage" aria-live="polite"></div>
+    <div class="pp-hint">Swipe up or sideways · tap stack to cycle</div>
+  </div>
+</div>
 <nav id="bottomNavBar" style="overflow:hidden;">
   <span style="font-size:13px;color:var(--muted);padding:0 4px;cursor:grab;flex-shrink:0;" id="bnavDragHandle">⠿</span>
   <div class="bnav-divider"></div>
@@ -3782,13 +3883,21 @@ window.getWebAudioNode = getWebAudioNode;
     var b = bar(); if(!b) return;
     var orbWrap = b.querySelector('.bnav-orb-wrap'); if(!orbWrap) return;
     var notesBtn = document.getElementById('bnavNotesBtn');
+    var pulseBtn = document.getElementById('bnavPulseBtn');
     var barRect = b.getBoundingClientRect();
     var left = null;
-    if(notesBtn){
+    /* Park orb just right of Notes + Pulse pair when both are visible */
+    var anchor = null;
+    if(pulseBtn){
+      var pr = pulseBtn.getBoundingClientRect();
+      if(pr.width > 0 && pulseBtn.style.display !== 'none') anchor = pr;
+    }
+    if(!anchor && notesBtn){
       var nr = notesBtn.getBoundingClientRect();
-      if(nr.width > 0){
-        left = (nr.right + NOTES_GAP - barRect.left + orbWrap.offsetWidth/2) + 'px';
-      }
+      if(nr.width > 0) anchor = nr;
+    }
+    if(anchor){
+      left = (anchor.right + NOTES_GAP - barRect.left + orbWrap.offsetWidth/2) + 'px';
     }
     if(!left) left = '40px'; // safe fallback if the notes icon isn't visible
     orbWrap.style.left = left;
@@ -18105,6 +18214,248 @@ function goNotes() {
     if (nb && !nb.locked) { var ed = document.getElementById('notesEditor'); if(ed) ed.focus(); }
   }, 100);
 }
+
+// ══════════════════════════════════════════════
+// PULSE — iOS-style stacked glass notifications
+// Front card full · 2–3 peek behind · swipe to reveal
+// ══════════════════════════════════════════════
+(function(){
+  var READ_KEY = 'synapses_pulse_read_v1';
+  var AUTO_MS = 4800;
+  var PEEK = 3; /* cards partially visible behind front */
+  var _open = false;
+  var _i = 0;
+  var _timer = null;
+  var _busy = false;
+  var _drag = null;
+
+  var FEED = [
+    { id:'m1', cat:'meetup', ico:'☕', tag:'Meetup', title:'Vancouver AI Builders — casual cowork', desc:'Weekly laptop session. Ship, ask, meet people building with AI in the city.', meta:'This week · Vancouver' },
+    { id:'m2', cat:'meetup', ico:'🎤', tag:'Meetup', title:'Speech-to-speech demo night', desc:'Show-and-tell for live voice agents, lip-sync avatars, and companion UX.', meta:'Sat evening · Hybrid' },
+    { id:'c1', cat:'community', ico:'📡', tag:'Community', title:'Builder Feed: shipping in public', desc:'Launch checklists, soft launches, and first-10-user stories heating up.', meta:'Builder Feed' },
+    { id:'c2', cat:'community', ico:'💬', tag:'Community', title:'Chatroom: what are you building?', desc:'Drop your stack, get unstuck, or find a collab partner this month.', meta:'Community room' },
+    { id:'j1', cat:'jobs', ico:'💼', tag:'Jobs', title:'Remote AI product roles trending', desc:'Prompt eng, AI CS, and no-code builder postings on the board.', meta:'Job Board' },
+    { id:'a1', cat:'ai', ico:'⚡', tag:'AI signal', title:'Tools worth a look this week', desc:'Fast video gen, better TTS, and local agents — skim Hub filters.', meta:'Tools Hub' },
+    { id:'p1', cat:'product', ico:'✨', tag:'Synapses', title:'Tour & companion polish', desc:'First-run film, product tour, and SynBot recovery — try Tour anytime.', meta:'Product' },
+    { id:'p2', cat:'product', ico:'📓', tag:'Synapses', title:'Notes stay your co-pilot', desc:'Park ideas mid-conversation; pinned notes stick when you switch pages.', meta:'Notes' }
+  ];
+
+  function _readMap(){
+    try { return JSON.parse(localStorage.getItem(READ_KEY) || '{}') || {}; } catch(e){ return {}; }
+  }
+  function _saveRead(map){
+    try { localStorage.setItem(READ_KEY, JSON.stringify(map)); } catch(e){}
+  }
+  function _unreadCount(){
+    var m = _readMap(), n = 0;
+    for(var i=0;i<FEED.length;i++) if(!m[FEED[i].id]) n++;
+    return n;
+  }
+  function _updateBadge(){
+    var btn = document.getElementById('bnavPulseBtn');
+    if(!btn) return;
+    if(_unreadCount() > 0) btn.classList.add('has-unread');
+    else btn.classList.remove('has-unread');
+  }
+  function _markRead(id){
+    if(!id) return;
+    var m = _readMap();
+    if(m[id]) return;
+    m[id] = 1;
+    _saveRead(m);
+    _updateBadge();
+  }
+  function _tagClass(cat){
+    if(cat==='meetup'||cat==='jobs'||cat==='ai'||cat==='community'||cat==='product') return cat;
+    return '';
+  }
+  function _cardHtml(it){
+    return '<div class="pp-grip" aria-hidden="true"></div>' +
+      '<div class="pp-slide-top">' +
+        '<div class="pp-tag '+_tagClass(it.cat)+'">'+it.tag+'</div>' +
+      '</div>' +
+      '<h4 class="pp-title">'+it.title+'</h4>' +
+      '<p class="pp-desc">'+it.desc+'</p>' +
+      '<div class="pp-meta">'+it.meta+'</div>';
+  }
+  function _buildStack(){
+    var stage = document.getElementById('synPulseStage');
+    if(!stage) return;
+    stage.innerHTML = FEED.map(function(it, idx){
+      return '<article class="pp-card" data-i="'+idx+'" data-id="'+it.id+'">'+_cardHtml(it)+'</article>';
+    }).join('');
+    _layoutStack(false);
+    _wireFrontDrag();
+  }
+  /** Assign depth-0 (front) … depth-3 (peek) based on _i */
+  function _layoutStack(animate){
+    var stage = document.getElementById('synPulseStage');
+    if(!stage) return;
+    var cards = stage.querySelectorAll('.pp-card');
+    for(var s = 0; s < cards.length; s++){
+      var card = cards[s];
+      var idx = parseInt(card.getAttribute('data-i'), 10);
+      var depth = (idx - _i + FEED.length) % FEED.length;
+      card.classList.remove('depth-0','depth-1','depth-2','depth-3','depth-hide','swiping','fly-out','fly-out-left','fly-out-right');
+      card.style.transform = '';
+      card.style.opacity = '';
+      card.style.transition = animate ? '' : 'none';
+      if(depth === 0) card.classList.add('depth-0');
+      else if(depth === 1) card.classList.add('depth-1');
+      else if(depth === 2) card.classList.add('depth-2');
+      else if(depth === 3 && PEEK >= 3) card.classList.add('depth-3');
+      else card.classList.add('depth-hide');
+    }
+    if(!animate){
+      void stage.offsetWidth;
+      for(var c = 0; c < cards.length; c++) cards[c].style.transition = '';
+    }
+    var front = stage.querySelector('.pp-card.depth-0');
+    if(front) _markRead(front.getAttribute('data-id'));
+  }
+  function _clearAuto(){
+    if(_timer){ clearTimeout(_timer); _timer = null; }
+  }
+  function _armAuto(){
+    _clearAuto();
+    if(!_open || _busy || _drag) return;
+    _timer = setTimeout(function(){ advance('auto'); }, AUTO_MS);
+  }
+  function advance(how){
+    if(_busy || !_open) return;
+    _busy = true;
+    _clearAuto();
+    var stage = document.getElementById('synPulseStage');
+    if(!stage){ _busy = false; return; }
+    var front = stage.querySelector('.pp-card.depth-0');
+    if(!front){ _busy = false; return; }
+    var fly = how === 'left' ? 'fly-out-left' : how === 'right' ? 'fly-out-right' : 'fly-out';
+    front.classList.add(fly);
+    setTimeout(function(){
+      _i = (_i + 1) % FEED.length;
+      _layoutStack(true);
+      _wireFrontDrag();
+      _busy = false;
+      _armAuto();
+    }, 380);
+  }
+  function _wireFrontDrag(){
+    var stage = document.getElementById('synPulseStage');
+    if(!stage) return;
+    var front = stage.querySelector('.pp-card.depth-0');
+    if(!front || front._pulseWired) return;
+    front._pulseWired = true;
+
+    function start(x, y){
+      if(_busy) return;
+      _clearAuto();
+      _drag = { x:x, y:y, dx:0, dy:0, card:front };
+      front.classList.add('swiping');
+    }
+    function move(x, y){
+      if(!_drag || _drag.card !== front) return;
+      _drag.dx = x - _drag.x;
+      _drag.dy = y - _drag.y;
+      var dx = _drag.dx, dy = Math.min(16, Math.max(-80, _drag.dy));
+      var rot = Math.max(-10, Math.min(10, dx * 0.06));
+      front.style.transform = 'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg) scale(1.02)';
+      front.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx)/280 - Math.max(0, -_drag.dy)/180));
+    }
+    function end(){
+      if(!_drag || _drag.card !== front) return;
+      var dx = _drag.dx, dy = _drag.dy;
+      var moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+      front.classList.remove('swiping');
+      _drag = null;
+      /* Swipe up / left / right → reveal next peek card. Light tap also cycles. */
+      if(dy < -36 || Math.abs(dx) > 48){
+        front.style.transform = '';
+        front.style.opacity = '';
+        advance(dx < -36 ? 'left' : dx > 36 ? 'right' : 'auto');
+      } else if(!moved){
+        front.style.transform = '';
+        front.style.opacity = '';
+        advance('auto');
+      } else {
+        front.style.transform = '';
+        front.style.opacity = '';
+        _armAuto();
+      }
+    }
+
+    front.addEventListener('pointerdown', function(e){
+      if(e.button != null && e.button !== 0) return;
+      try { front.setPointerCapture(e.pointerId); } catch(err){}
+      start(e.clientX, e.clientY);
+    });
+    front.addEventListener('pointermove', function(e){
+      if(!_drag) return;
+      move(e.clientX, e.clientY);
+    });
+    front.addEventListener('pointerup', end);
+    front.addEventListener('pointercancel', function(){
+      if(!_drag) return;
+      front.classList.remove('swiping');
+      front.style.transform = '';
+      front.style.opacity = '';
+      _drag = null;
+      _armAuto();
+    });
+  }
+
+  function openPulse(){
+    var panel = document.getElementById('synPulsePanel');
+    var btn = document.getElementById('bnavPulseBtn');
+    if(!panel) return;
+    _i = 0;
+    _busy = false;
+    _drag = null;
+    _buildStack();
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    if(btn) btn.classList.add('active');
+    _open = true;
+    _armAuto();
+    if(typeof _haptic === 'function') try { _haptic(8); } catch(e){}
+  }
+  function closePulse(){
+    var panel = document.getElementById('synPulsePanel');
+    var btn = document.getElementById('bnavPulseBtn');
+    _clearAuto();
+    _drag = null;
+    _busy = false;
+    if(panel){ panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); }
+    if(btn) btn.classList.remove('active');
+    _open = false;
+  }
+  function togglePulse(){
+    if(_open) closePulse();
+    else openPulse();
+  }
+
+  window.toggleSynPulse = togglePulse;
+  window.closeSynPulse = closePulse;
+  window.openSynPulse = openPulse;
+
+  function boot(){
+    _updateBadge();
+    document.addEventListener('keydown', function(e){
+      if(!_open) return;
+      if(e.key === 'Escape') closePulse();
+      if(e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); advance(e.key==='ArrowRight'?'right':'auto'); }
+    });
+    document.addEventListener('mousedown', function(e){
+      if(!_open) return;
+      var panel = document.getElementById('synPulsePanel');
+      var btn = document.getElementById('bnavPulseBtn');
+      if(panel && panel.contains(e.target)) return;
+      if(btn && btn.contains(e.target)) return;
+      closePulse();
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
 
 // ══════════════════════════════════════════════
 // WHITEBOARD — clean rebuild
