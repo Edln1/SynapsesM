@@ -1074,57 +1074,50 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
     inset 0 1px 0 rgba(255, 255, 255, 0.04);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
 /*
-  Peeks: only bottom lip at rest (clip). Unclip while dragging/cycling so deck physics work.
+  Peeks: ALWAYS solid + rim-clip when depth-1/2.
+  Never unclip on swipe/to-back — that let the stack show through the new clear front
+  right after a successful replace.
 */
-#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.55;pointer-events:none;
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:1;pointer-events:none;
   transform:translateY(14px) scale(0.95);filter:none;
-  background:rgba(18, 16, 26, 0.55);
+  background:rgba(18, 16, 26, 0.82)!important;
+  color:transparent!important; /* hide text in rim so no ghost letters under glass */
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   clip-path:inset(calc(100% - 14px) 2% 0 2% round 0 0 16px 16px);
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease,clip-path .35s ease;}
-#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.35;pointer-events:none;
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
+#synPulsePanel .pp-card.depth-1 *{visibility:hidden!important;}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:1;pointer-events:none;
   transform:translateY(24px) scale(0.90);filter:none;
-  background:rgba(14, 12, 22, 0.45);
+  background:rgba(14, 12, 22, 0.75)!important;
+  color:transparent!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   clip-path:inset(calc(100% - 12px) 4% 0 4% round 0 0 14px 14px);
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease,clip-path .35s ease;}
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
+#synPulsePanel .pp-card.depth-2 *{visibility:hidden!important;}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
   transform:translateY(32px) scale(0.86);filter:none;
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  clip-path:inset(100% 0 0 0);}
-/* While interacting: full peeks for wheel/promote (restored) */
-#synPulsePanel .pp-stage:has(.pp-card.swiping) .pp-card.depth-1,
-#synPulsePanel .pp-stage:has(.pp-card.swiping) .pp-card.depth-2,
-#synPulsePanel .pp-stage:has(.pp-card.to-back) .pp-card.depth-1,
-#synPulsePanel .pp-stage:has(.pp-card.to-back) .pp-card.depth-2,
-#synPulsePanel .pp-stage:has(.pp-card.fly-out-left) .pp-card.depth-1,
-#synPulsePanel .pp-stage:has(.pp-card.fly-out-left) .pp-card.depth-2,
-#synPulsePanel .pp-stage:has(.pp-card.fly-out-right) .pp-card.depth-1,
-#synPulsePanel .pp-stage:has(.pp-card.fly-out-right) .pp-card.depth-2{
-  clip-path:none;
-}
-/* Swiping */
-#synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;clip-path:none!important;}
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+/* Swiping — do not open peek clip */
+#synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;}
 /* Side dismiss only — up-swipe uses deck “to back of stack”, not fly away */
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-fast{transition-duration:.18s!important;}
-/* Front card sinking to the back of the deck — multi-phase settle (no hard pop-off) */
+/* Leaving card = solid plate dissolve (not transparent ghost over the new front) */
 #synPulsePanel .pp-card.to-back{
   z-index:1!important;pointer-events:none;visibility:visible!important;
   transform:translateY(22px) scale(0.90)!important;
-  opacity:0.34!important;filter:none;
-  background:transparent!important;
+  opacity:0.75!important;filter:none;
+  background:rgba(18, 16, 26, 0.8)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .5s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,box-shadow .45s ease!important;
 }
-/* After landing at back: dissolve into the deck (smooth, not abrupt) */
 #synPulsePanel .pp-card.to-back-out{
   z-index:0!important;pointer-events:none;visibility:visible!important;
   transform:translateY(36px) scale(0.84)!important;
   opacity:0!important;
-  background:transparent!important;
+  background:rgba(14, 12, 22, 0.55)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease!important;
 }
@@ -19059,7 +19052,8 @@ function goNotes() {
     if(front) _markRead(front.getAttribute('data-id'));
   }
   /**
-   * Drag feedback — full stack poses via _depthPose (restored after broken front-only pass).
+   * Drag feedback: front moves with glass; peeks stay solid rims (no full-body unclip,
+   no opacity ghost stack through the clear front).
    */
   function _applyStackScroll(progress, withTransition){
     var stage = document.getElementById('synPulseStage');
@@ -19087,12 +19081,23 @@ function goNotes() {
       card.style.visibility = '';
       card.style.transition = 'none';
       card.style.zIndex = String(pose.z);
-      card.style.opacity = String(pose.o);
       card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
-      card.style.webkitBackdropFilter = 'none';
-      card.style.backdropFilter = 'none';
-      card.style.clipPath = 'none';
       card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
+      /* Front = glass; everything under = solid plate, never translucent text stack */
+      if(Math.abs(d) < 0.45){
+        card.style.opacity = '1';
+        card.style.background = '';
+        card.style.webkitBackdropFilter = '';
+        card.style.backdropFilter = '';
+        card.style.clipPath = '';
+      } else {
+        card.style.opacity = '1';
+        card.style.webkitBackdropFilter = 'none';
+        card.style.backdropFilter = 'none';
+        card.style.background = 'rgba(18, 16, 26, 0.82)';
+        /* Keep rim-only so body never shows through the clear front */
+        card.style.clipPath = 'inset(calc(100% - 14px) 2% 0 2% round 0 0 16px 16px)';
+      }
     }
   }
   function _layoutStack(animate){
