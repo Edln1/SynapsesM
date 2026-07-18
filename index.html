@@ -696,9 +696,23 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
   input,textarea,select{font-size:16px!important;}
   /* ── Chat/coach inputs: pill style ── */
-  #sec-chat .input-box,#sec-coach .input-box{font-size:16px!important;overflow:hidden!important;padding:12px 50px 12px 46px!important;min-height:48px!important;}
+  /* Ask bar: clock centered; placeholder aligned to vertical center of clock’s right edge */
+  #sec-chat .input-box,#sec-coach .input-box{
+    font-size:16px!important;overflow:hidden!important;
+    min-height:52px!important;height:52px!important;line-height:20px!important;
+    padding:16px 100px 16px 52px!important; /* left: clock 14+26 + 12 gap = 52 */
+    box-sizing:border-box!important;
+  }
+  #sec-chat #chatHistoryBtn{
+    left:14px!important;top:50%!important;bottom:auto!important;
+    transform:translateY(-50%)!important;width:26px!important;height:26px!important;
+  }
+  #sec-chat #voiceModeBtn,#sec-chat #aiModeToggle{
+    top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;
+  }
   /* ── Welcome section: dock handles search on mobile, hide standalone ── */
   .input-box::placeholder{font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:rgba(200,200,220,0.5)!important;}
+  #sec-chat .input-box::placeholder{font-size:14px!important;line-height:20px!important;}
   textarea::placeholder{font-size:12px!important;}
   input::placeholder{font-size:12px!important;}
   
@@ -903,8 +917,9 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 @keyframes pulseDotBlink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.55;transform:scale(0.85);}}
 /* Pulse — floating stack only (no tray behind cards). Desktop: bottom-left like before. Mobile center/lift only in media query. */
 /* Wider stack so side-swipes stay on-screen longer; overflow visible so cards don't clip mid-drag */
-#synPulsePanel{position:fixed;bottom:58px;left:10px;width:min(340px,calc(100vw - 20px));z-index:100040;display:none;flex-direction:column;pointer-events:none;opacity:0;transform:translateY(12px) scale(0.96);transition:opacity .28s ease,transform .38s cubic-bezier(0.16,1,0.3,1);font-family:'DM Sans',sans-serif;background:transparent;border:none;box-shadow:none;margin:0;overflow:visible;}
-#synPulsePanel.open{display:flex;pointer-events:auto;opacity:1;transform:translateY(0) scale(1);}
+/* Elegant fade in/out — no fly-up / sheet slide */
+#synPulsePanel{position:fixed;bottom:58px;left:10px;width:min(340px,calc(100vw - 20px));z-index:100040;display:none;flex-direction:column;pointer-events:none;opacity:0;transform:none;transition:opacity .38s cubic-bezier(0.22,1,0.36,1);font-family:'DM Sans',sans-serif;background:transparent;border:none;box-shadow:none;margin:0;overflow:visible;}
+#synPulsePanel.open{display:flex;pointer-events:auto;opacity:1;transform:none;}
 /* Shell is invisible — only the cards exist visually */
 #synPulsePanel .pp-glass{position:relative;display:flex;flex-direction:column;overflow:visible;padding:0;background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 #synPulsePanel .pp-glass::before{display:none!important;}
@@ -1162,7 +1177,8 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .chp-empty{padding:20px 16px;font-size:12px;color:rgba(255,255,255,0.25);font-style:italic;}
 
 .tts-speak-btn{position:absolute;bottom:6px;right:-46px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:rgba(15,15,26,0.85);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.6;transition:all .25s;z-index:10;color:rgba(255,255,255,0.8);padding:0;box-shadow:0 0 5px 1px rgba(0,217,168,0.3);}.tts-speak-btn:hover{opacity:1;border-color:rgba(0,217,168,0.9);box-shadow:0 0 6px 2px rgba(0,217,168,0.6);}.tts-speak-btn svg{pointer-events:none;}
-#chatHistoryBtn{position:absolute;left:14px;bottom:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;}
+/* Clock widget: true vertical center of the ask bar (matches placeholder text center) */
+#chatHistoryBtn{position:absolute;left:14px;top:50%;bottom:auto;transform:translateY(-50%);width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;z-index:2;}
 #chatHistoryBtn:hover{opacity:1;border-color:rgba(255,255,255,0.3);}
 #chatHistoryDropdown{position:fixed;width:280px;background:rgba(30,30,34,0.78);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:99999;display:none;max-height:320px;overflow-y:auto;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);}
 #chatHistoryDropdown.open{display:block;}
@@ -1317,24 +1333,16 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
+  /* Keep ask-bar (and empty-state greeting) at the “pulse open” height by default — no jump when Pulse opens */
   #sec-chat .syn-greeting,
   #sec-chat .syn-sub{
-    transition:transform .42s cubic-bezier(0.16,1,0.3,1);
-    transform:translate3d(0,0,0);
-  }
-  #sec-chat .input-area{
-    transition:transform .42s cubic-bezier(0.16,1,0.3,1)!important;
-    transform:translate3d(0,0,0);
-  }
-  body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
-  body.pulse-open #chatEmptyState:not(.hidden) .syn-sub{
     transform:translate3d(0,-48px,0);
   }
-  body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-    transform:translate3d(0,-56px,0)!important;
-  }
-  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area{
+  #sec-chat .input-area{
     transform:translate3d(0,-48px,0)!important;
+  }
+  #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
+    transform:translate3d(0,-56px,0)!important;
   }
   body.pulse-open #sec-chat .input-box{
     backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
@@ -1346,7 +1354,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   body.pulse-open .syn-orb-wrap{opacity:0.4;pointer-events:none;}
   body.pulse-open #chatFlowCanvas,
   body.pulse-open #chatBeamsWrap{opacity:0.3!important;}
-  /* Mobile sheet: sit above bottom nav, slide UP from below the fold */
+  /* Mobile: centered, elegant fade only (no fly-in from bottom) */
   #synPulsePanel{
     left:50%!important;right:auto!important;
     width:min(320px,calc(100vw - 28px))!important;
@@ -1356,12 +1364,10 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
     opacity:0;
     visibility:hidden;
     pointer-events:none;
-    /* start fully under the screen edge so it reads as rising from bottom */
-    transform:translate(-50%, calc(100% + 28px))!important;
+    transform:translate(-50%, 0)!important;
     transition:
-      transform .42s cubic-bezier(0.16,1,0.3,1),
-      opacity .34s ease,
-      visibility 0s linear .42s!important;
+      opacity .36s cubic-bezier(0.22,1,0.36,1),
+      visibility 0s linear .36s!important;
   }
   #synPulsePanel.open{
     opacity:1;
@@ -1369,8 +1375,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
     pointer-events:auto;
     transform:translate(-50%, 0)!important;
     transition:
-      transform .42s cubic-bezier(0.16,1,0.3,1),
-      opacity .28s ease,
+      opacity .36s cubic-bezier(0.22,1,0.36,1),
       visibility 0s linear 0s!important;
   }
   #synPulsePanel .pp-stage{height:176px!important;overflow:visible!important;}
@@ -1395,9 +1400,19 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   #synPulsePanel .pp-desc{font-size:11.5px!important;-webkit-line-clamp:2;}
 }
 .input-wrapper{max-width:800px;margin:0 auto;position:relative;}
-.input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 50px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;}
-.input-box::placeholder{color:var(--muted);}
-#sec-chat .input-box,#sec-coach .input-box{background:transparent!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;box-shadow:0 0 0 1px rgba(124,106,247,0.3),0 4px 24px rgba(0,0,0,0.3);}
+.input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 52px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;box-sizing:border-box;}
+.input-box::placeholder{color:var(--muted);line-height:20px;vertical-align:middle;}
+/* Chat ask-bar: text vertically centered with clock (left 14 + 26 + gap → pad-left 52) */
+#sec-chat .input-box,#sec-coach .input-box{
+  background:transparent!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;
+  box-shadow:0 0 0 1px rgba(124,106,247,0.3),0 4px 24px rgba(0,0,0,0.3);
+  min-height:52px;height:52px;line-height:20px;
+  padding:16px 100px 16px 52px!important; /* (52-20)/2=16 → true vertical center */
+  box-sizing:border-box;
+}
+#sec-chat .input-box::placeholder,#sec-coach .input-box::placeholder{
+  line-height:20px;position:relative;top:0;
+}
 @keyframes synapseOrbit{0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}}
 @keyframes synapseNodePulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.4);opacity:1}}
 @keyframes chatEmptyIn{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
@@ -5086,8 +5101,8 @@ window.getWebAudioNode = getWebAudioNode;
       <div class="input-wrapper">
         <textarea class="input-box" id="inputBox" placeholder="Ask me anything…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)" style="height:52px;"></textarea>
         <button id="chatHistoryBtn" onclick="toggleChatHistoryDropdown()" title="Chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
-        <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;bottom:14px;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:all .3s;padding:0;opacity:0.6;z-index:10;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-        <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;bottom:14px;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
+        <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:all .3s;padding:0;opacity:0.6;z-index:10;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+        <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
         <button class="send-btn" onclick="sendMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
       </div>
     </div>
@@ -19182,21 +19197,20 @@ function goNotes() {
     _open = true;
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
-    /* Snap-build stack while off-screen (no transition thrash), then sheet slides up */
+    /* Snap-build, then elegant fade-in (no fly/slide) */
     _buildStack();
     void panel.offsetWidth;
     requestAnimationFrame(function(){
       if(!_open) return;
       _setPulseLift(true);
       panel.classList.add('open');
-      /* Defer network + auto until after open anim — cuts load lag */
       setTimeout(function(){
         if(!_open) return;
         _armAuto();
         if(!_allEvents.length || (FEED[0] && FEED[0].id === 'seed1')){
           _fetchMeetups(false);
         }
-      }, 420);
+      }, 380);
     });
   }
   function closePulse(){
@@ -19213,12 +19227,12 @@ function goNotes() {
       panel.setAttribute('aria-hidden', 'true');
     }
     if(btn) btn.classList.remove('active');
-    /* Wait for bottom-sheet exit, then free card DOM */
+    /* Wait for fade-out, then free card DOM */
     setTimeout(function(){
       if(_open) return;
       var stage = document.getElementById('synPulseStage');
       if(stage){ stage.innerHTML = ''; _domWin = []; }
-    }, 420);
+    }, 380);
   }
   function togglePulse(){
     if(_open) closePulse();
