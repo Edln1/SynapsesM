@@ -1005,7 +1005,8 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-cats-toggle:hover{color:rgba(255,255,255,0.18);background:transparent!important;opacity:0.4;}
 #synPulsePanel .pp-cats-toggle:active{opacity:0.35;}
-#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.1)!important;background:transparent!important;opacity:0.28;}
+/* .on = chrome HIDDEN (tiles-only) — “hidden” icon look */
+#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.06)!important;background:transparent!important;opacity:0.18;}
 /* When chrome is collapsed: hide Pulse logo, filters, bottom hint — tiles only */
 #synPulsePanel.pp-chrome-off .pp-brand{
   opacity:0;visibility:hidden;pointer-events:none;width:0;overflow:hidden;margin:0;padding:0;gap:0;
@@ -19377,7 +19378,8 @@ function goNotes() {
       else panel.classList.add('pp-chrome-off');
     }
     if(tog){
-      tog.classList.toggle('on', on);
+      /* .on = labels HIDDEN (reversed: was tied to shown before) */
+      tog.classList.toggle('on', !on);
       tog.setAttribute('aria-expanded', on ? 'true' : 'false');
       tog.title = on ? 'Hide labels' : 'Show labels';
       tog.setAttribute('aria-label', on ? 'Hide Pulse labels' : 'Show Pulse labels');
@@ -19505,14 +19507,7 @@ function goNotes() {
       if(e.key === 'ArrowUp'){ e.preventDefault(); _i = (_i + 1) % FEED.length; _layoutStack(true); _wireFrontDrag(); }
       if(e.key === 'ArrowDown'){ e.preventDefault(); _i = (_i - 1 + FEED.length) % FEED.length; _layoutStack(true); _wireFrontDrag(); }
     });
-    document.addEventListener('mousedown', function(e){
-      if(!_open) return;
-      var panel = document.getElementById('synPulsePanel');
-      var btn = document.getElementById('bnavPulseBtn');
-      if(panel && panel.contains(e.target)) return;
-      if(btn && btn.contains(e.target)) return;
-      closePulse();
-    });
+    /* Outside tap / theme (sun-moon) must NOT close Pulse — only Pulse btn or Escape */
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
