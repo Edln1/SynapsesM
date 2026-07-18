@@ -1035,54 +1035,58 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-head,#synPulsePanel .pp-close{display:none!important;}
 /*
-  Pulse tiles — transparent film, ONE tone only: light greyish purple
-  (soft lilac-lavender, no multi-color wash, no dark slab)
+  Pulse tiles — matte frost v1
+  Problem: pure transparent blur + saturate/brightness lets wallpaper dyes
+  the tile (sky blue → half-blue card). Fix: tile owns a fixed lilac matte
+  plate; blur only softens edges; desaturate kills hue pickup.
+  Safe (transparentsafe) is untouched — this is a new working copy.
 */
 /* Default card = peek plate (no blur). Only .depth-0 gets live glass blur. */
 #synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:18px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
-  background:rgba(210, 200, 230, 0.06);
+  /* deeper charcoal plate — grey tone pulled way down */
+  background:rgba(32, 30, 42, 0.52);
   -webkit-backdrop-filter:none;
   backdrop-filter:none;
-  border:1px solid rgba(220, 210, 240, 0.11);
+  border:1px solid rgba(110, 105, 130, 0.10);
   box-shadow:
-    0 6px 20px rgba(20, 12, 40, 0.08),
-    inset 0 1px 0 rgba(240, 234, 255, 0.18);
+    0 8px 22px rgba(4, 3, 10, 0.32),
+    inset 0 1px 0 rgba(160, 155, 180, 0.06),
+    inset 0 0 0 1px rgba(255,255,255,0.015);
   transform-origin:center bottom;
   transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;
   will-change:auto;contain:layout style;}
+/* Soft matte veil — very low brightness */
 #synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:linear-gradient(165deg,rgba(240,234,255,0.1) 0%,transparent 42%);}
-#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(245,240,255,0.32),transparent);pointer-events:none;z-index:2;}
+  background:linear-gradient(165deg,
+    rgba(70, 66, 88, 0.10) 0%,
+    rgba(28, 26, 38, 0.14) 48%,
+    rgba(14, 12, 20, 0.22) 100%);}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(170,165,190,0.10),transparent);pointer-events:none;z-index:2;}
 #synPulsePanel .pp-card > *{position:relative;z-index:1;}
-/* Front only: transparent glass look (single blur layer = no milky stack) */
+/* Front: matte frost — darker still */
 #synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
   transform:translateY(0) scale(1);filter:none;
-  background:rgba(210, 200, 230, 0.028);
-  -webkit-backdrop-filter:blur(18px) saturate(1.22) brightness(1.16);
-  backdrop-filter:blur(18px) saturate(1.22) brightness(1.16);
-  border:1px solid rgba(220, 210, 240, 0.14);
+  background:rgba(28, 26, 38, 0.55);
+  -webkit-backdrop-filter:blur(22px) saturate(0.38) brightness(0.72);
+  backdrop-filter:blur(22px) saturate(0.38) brightness(0.72);
+  border:1px solid rgba(100, 95, 120, 0.12);
   box-shadow:
-    0 8px 28px rgba(20, 12, 40, 0.09),
-    inset 0 1px 0 rgba(245, 240, 255, 0.36);}
+    0 10px 30px rgba(4, 3, 10, 0.34),
+    inset 0 1px 0 rgba(170, 165, 190, 0.08),
+    inset 0 -14px 32px rgba(6, 4, 14, 0.28);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
-/* Peeks: solid-ish dim plates only — stacked blur was causing white/grey wash on land */
-/* Until .pp-settled: hide peeks so fade-in never shows stack through the front tile */
-#synPulsePanel:not(.pp-settled) .pp-card.depth-1,
-#synPulsePanel:not(.pp-settled) .pp-card.depth-2{
-  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
-}
+/* Peeks: solid dim plates (no blur) — full stack visible on open with front */
 #synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.5;pointer-events:none;
   transform:translateY(12px) scale(0.95);filter:none;
-  background:rgba(210, 200, 230, 0.07);
+  background:rgba(24, 22, 34, 0.48);
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .45s ease .05s,visibility .45s,box-shadow .4s ease;}
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
 #synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.32;pointer-events:none;
   transform:translateY(22px) scale(0.90);filter:none;
-  background:rgba(210, 200, 230, 0.05);
+  background:rgba(18, 16, 26, 0.40);
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .5s ease .08s,visibility .5s,box-shadow .4s ease;
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
   transform:translateY(32px) scale(0.86);filter:none;
@@ -1098,7 +1102,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   z-index:1!important;pointer-events:none;visibility:visible!important;
   transform:translateY(22px) scale(0.90)!important;
   opacity:0.34!important;filter:none;
-  background:rgba(210, 200, 230, 0.05)!important;
+  background:rgba(18, 16, 26, 0.40)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .5s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,box-shadow .45s ease!important;
 }
@@ -1107,7 +1111,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   z-index:0!important;pointer-events:none;visibility:visible!important;
   transform:translateY(36px) scale(0.84)!important;
   opacity:0!important;
-  background:rgba(210, 200, 230, 0.03)!important;
+  background:rgba(12, 10, 18, 0.28)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease!important;
 }
@@ -1441,15 +1445,15 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   #synPulsePanel .pp-stage{height:176px!important;overflow:visible!important;}
   #synPulsePanel .pp-card{
     height:132px!important;padding:13px 13px 11px!important;
-    background:rgba(210, 200, 230, 0.06)!important;
+    background:rgba(32, 30, 42, 0.52)!important;
     -webkit-backdrop-filter:none!important;
     backdrop-filter:none!important;
-    border-color:rgba(220, 210, 240, 0.1)!important;
+    border-color:rgba(110, 105, 130, 0.10)!important;
   }
   #synPulsePanel .pp-card.depth-0{
-    background:rgba(210, 200, 230, 0.028)!important;
-    -webkit-backdrop-filter:blur(16px) saturate(1.22) brightness(1.16)!important;
-    backdrop-filter:blur(16px) saturate(1.22) brightness(1.16)!important;
+    background:rgba(28, 26, 38, 0.55)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(0.38) brightness(0.72)!important;
+    backdrop-filter:blur(20px) saturate(0.38) brightness(0.72)!important;
   }
   #synPulsePanel .pp-card.depth-1,
   #synPulsePanel .pp-card.depth-2{
@@ -18585,6 +18589,7 @@ function goNotes() {
   var READ_KEY = 'synapses_pulse_read_v1';
   var CACHE_KEY = 'synapses_pulse_meetup_cache_v6'; /* v6: real Tavily news + jobs */
   var FILTER_KEY = 'synapses_pulse_filter_v2'; /* all | meetups | news | jobs */
+  var CHROME_KEY = 'synapses_pulse_chrome_on'; /* '1' show labels, '0' tiles-only */
   var AUTO_MS = 5200; /* gentle auto-peek like original */
   var PEEK = 3;
   var _open = false;
@@ -19037,51 +19042,41 @@ function goNotes() {
     if(front) _markRead(front.getAttribute('data-id'));
   }
   /**
-   * Drag feedback: ONLY front + one undercard move (motion).
-   * Never fade peeks transparent — that stacked text and looked milky.
-   * Progress clamped to ~0–1 (one card at a time, not a full wheel bleed).
+   * Drag feedback — restored from first good wheel (pre multi-card mess + pre front-only clamp).
+   * Full stack poses via _depthPose so the deck scrolls as one wheel; one card per swipe commit.
    */
   function _applyStackScroll(progress, withTransition){
     var stage = document.getElementById('synPulseStage');
     if(!stage || !FEED.length) return;
+    /* No drag offset → ORIGINAL CSS stack animation */
     if(Math.abs(progress) < 0.001){
       _layoutStackCSS(!!withTransition);
       return;
     }
-    var k = Math.max(0, Math.min(1.05, progress));
-    var front = stage.querySelector('.pp-card.depth-0');
-    var d1 = stage.querySelector('.pp-card.depth-1');
-    var d2 = stage.querySelector('.pp-card.depth-2');
-    /* Front: lift slightly / start sinking back — stays fully solid */
-    if(front && !_isFlying(front)){
-      front.style.transition = 'none';
-      front.style.visibility = 'visible';
-      front.style.opacity = '1';
-      front.style.pointerEvents = 'auto';
-      front.style.zIndex = '5';
-      front.style.transform = 'translate3d(0,' + (-18 * k + 22 * k) + 'px,0) scale(' + (1 - 0.08 * k) + ')';
-    }
-    /* Undercard: rises a bit into place — solid plate, no opacity trick */
-    if(d1 && !_isFlying(d1)){
-      d1.style.transition = 'none';
-      d1.style.visibility = 'visible';
-      d1.style.opacity = '1';
-      d1.style.pointerEvents = 'none';
-      d1.style.zIndex = '3';
-      d1.style.webkitBackdropFilter = 'none';
-      d1.style.backdropFilter = 'none';
-      d1.style.transform = 'translate3d(0,' + (14 * (1 - k)) + 'px,0) scale(' + (0.94 + 0.06 * k) + ')';
-    }
-    /* Deep peek: stay put, solid, no fade-in of text through front */
-    if(d2 && !_isFlying(d2)){
-      d2.style.transition = 'none';
-      d2.style.visibility = 'visible';
-      d2.style.opacity = '0.45';
-      d2.style.pointerEvents = 'none';
-      d2.style.zIndex = '2';
-      d2.style.webkitBackdropFilter = 'none';
-      d2.style.backdropFilter = 'none';
-      d2.style.transform = 'translate3d(0,22px,0) scale(0.90)';
+    var n = FEED.length;
+    var cards = stage.querySelectorAll('.pp-card');
+    for(var s = 0; s < cards.length; s++){
+      var card = cards[s];
+      if(_isFlying(card)) continue;
+      var idx = parseInt(card.getAttribute('data-i'), 10);
+      var depth = (idx - _i + n) % n;
+      if(depth > n / 2) depth = depth - n;
+      var d = depth - progress;
+      var pose = _depthPose(d);
+      if(!pose.vis || pose.o < 0.04){
+        card.style.visibility = 'hidden';
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
+        continue;
+      }
+      card.style.visibility = '';
+      card.style.transition = 'none';
+      card.style.zIndex = String(pose.z);
+      card.style.opacity = String(pose.o);
+      card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
+      card.style.webkitBackdropFilter = 'none';
+      card.style.backdropFilter = 'none';
+      card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
     }
   }
   function _layoutStack(animate){
@@ -19344,10 +19339,19 @@ function goNotes() {
       else document.body.classList.remove('pulse-open');
     } catch(e){}
   }
-  function _setCatsOpen(on){
+  function _readChromeOn(){
+    try {
+      var v = localStorage.getItem(CHROME_KEY);
+      if(v === '0') return false;
+      if(v === '1') return true;
+    } catch(e){}
+    return true; /* default: labels on */
+  }
+  function _setCatsOpen(on, persist){
     var panel = document.getElementById('synPulsePanel');
     var filt = document.getElementById('synPulseFilters');
     var tog = document.getElementById('synPulseCatsToggle');
+    on = !!on;
     /* on = show all chrome (logo, cats, hint); off = tiles only + ghost hamburger */
     if(filt){
       if(on){ filt.classList.add('show'); filt.removeAttribute('hidden'); }
@@ -19358,10 +19362,13 @@ function goNotes() {
       else panel.classList.add('pp-chrome-off');
     }
     if(tog){
-      tog.classList.toggle('on', !!on);
+      tog.classList.toggle('on', on);
       tog.setAttribute('aria-expanded', on ? 'true' : 'false');
       tog.title = on ? 'Hide labels' : 'Show labels';
       tog.setAttribute('aria-label', on ? 'Hide Pulse labels' : 'Show Pulse labels');
+    }
+    if(persist !== false){
+      try { localStorage.setItem(CHROME_KEY, on ? '1' : '0'); } catch(eP){}
     }
   }
   function closePulseCleanupSpin(){
@@ -19384,12 +19391,12 @@ function goNotes() {
     } else if(!FEED.length){
       _setFilter(_filter);
     }
-    _setCatsOpen(true);
+    _setCatsOpen(_readChromeOn(), false); /* restore last hamburger state */
     _open = true;
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
-    /* Snap-build, fade front only first (no peeks), then settle stack */
-    try { panel.classList.remove('pp-settled'); } catch(eS){}
+    /* Full stack ready before fade — all 3 tiles visible together (no 1-then-2 pop) */
+    try { panel.classList.add('pp-settled'); } catch(eS){}
     _buildStack();
     void panel.offsetWidth;
     requestAnimationFrame(function(){
@@ -19398,8 +19405,6 @@ function goNotes() {
       panel.classList.add('open');
       setTimeout(function(){
         if(!_open) return;
-        /* After front fade completes, soft-show peeks (no see-through on open) */
-        try { panel.classList.add('pp-settled'); } catch(eS2){}
         _armAuto();
         if(!_allEvents.length || (FEED[0] && FEED[0].id === 'seed1')){
           _fetchMeetups(false);
@@ -19442,7 +19447,7 @@ function goNotes() {
     try { _filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch(e){ _filter = 'all'; }
     if(_filter === 'luma' || _filter === 'meetup') _filter = 'all';
     _syncFilterButtons();
-    _setCatsOpen(true); /* default: categories on */
+    _setCatsOpen(_readChromeOn(), false); /* remember hamburger hide/show across relaunch */
     /* App-wide: pause heavy work when tab/app backgrounded */
     try {
       document.addEventListener('visibilitychange', function(){
@@ -19458,7 +19463,7 @@ function goNotes() {
         e.stopPropagation();
         var filt = document.getElementById('synPulseFilters');
         var open = !(filt && filt.classList.contains('show'));
-        _setCatsOpen(open);
+        _setCatsOpen(open, true); /* user toggle → persist */
       };
     }
     var filt = document.getElementById('synPulseFilters');
