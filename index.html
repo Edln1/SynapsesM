@@ -18888,33 +18888,37 @@ function goNotes() {
     _layoutStackCSS(false);
     _wireFrontDrag();
   }
-  /** Finger-drag pose. Negative depth = front card sliding to BACK of deck (not flying off-screen). */
+  /**
+   * Drag pose — motion only (y/scale/z). Opacity stays solid by stack role so
+   * peeks are REVEALED by the front moving, not by everyone going transparent.
+   */
   function _depthPose(d){
     if(d < -0.001){
-      /* k 0→1: front sinks into the rear of the stack while peeks promote */
-      var k = Math.min(1.15, -d);
+      /* Front sliding toward back of deck */
+      var k = Math.min(1.2, -d);
       return {
-        y: 12 * k + 22 * Math.min(1, k),
-        s: 1 - 0.16 * Math.min(1, k),
-        o: Math.max(0.42, 1 - 0.4 * Math.min(1, k)),
-        z: Math.max(0, 4 - Math.round(k * 4)),
+        y: 8 * k + 18 * Math.min(1, k),
+        s: 1 - 0.12 * Math.min(1, k),
+        o: 1, /* stay solid — no ghost wash */
+        z: Math.max(0, 4 - Math.round(k * 3)),
         vis: true
       };
     }
     if(d <= 0.001) return { y: 0, s: 1, o: 1, z: 4, vis: true };
     if(d < 1){
       var u = d;
-      return { y: 14 * u, s: 0.94 + 0.06 * (1 - u), o: 0.92 + 0.08 * (1 - u), z: 3, vis: true };
+      /* Undercard rising into view (reveal) */
+      return { y: 14 * (1 - u) + 0 * u, s: 0.94 + 0.06 * u, o: 1, z: 3, vis: true };
     }
     if(d < 2){
       var v = d - 1;
-      return { y: 14 + 12 * v, s: 0.94 - 0.06 * v, o: 0.9 - 0.12 * v, z: 2, vis: true };
+      return { y: 14 + 10 * v, s: 0.94 - 0.05 * v, o: 1, z: 2, vis: true };
     }
     if(d < 3){
       var w = d - 2;
-      return { y: 26 + 10 * w, s: 0.88 - 0.06 * w, o: Math.max(0.35, 0.72 - 0.25 * w), z: 1, vis: true };
+      return { y: 24 + 8 * w, s: 0.88 - 0.04 * w, o: 1, z: 1, vis: w < 0.95 };
     }
-    return { y: 40, s: 0.8, o: 0, z: 0, vis: false };
+    return { y: 36, s: 0.84, o: 0, z: 0, vis: false };
   }
   /** Original rest layout: CSS depth classes + cubic transitions (this is the animation you had). */
   function _layoutStackCSS(animate){
@@ -18954,33 +18958,61 @@ function goNotes() {
   function _applyStackScroll(progress, withTransition){
     var stage = document.getElementById('synPulseStage');
     if(!stage || !FEED.length) return;
-    /* No drag offset → ORIGINAL CSS stack animation */
     if(Math.abs(progress) < 0.001){
       _layoutStackCSS(!!withTransition);
       return;
     }
     var n = FEED.length;
+    if(!n) return;
+    /* Wheel: whole steps + fractional drag — flip through many tiles on long drag */
+    var whole = Math.floor(progress);
+    var frac = progress - whole;
+    var baseI = ((_i + whole) % n + n) % n;
+    /* Ensure window cards for the drag range */
+    try {
+      var needSet = {}, kk, off;
+      for(off = 0; off <= 3; off++){
+        needSet[((_i + whole + off) % n + n) % n] = 1;
+        if(whole > 0) needSet[((_i + whole - 1 + off) % n + n) % n] = 1;
+      }
+      for(kk in needSet){
+        if(needSet.hasOwnProperty(kk) && !stage.querySelector('.pp-card[data-i="'+kk+'"]')){
+          var el = _makeCardEl(parseInt(kk, 10));
+          if(el) stage.appendChild(el);
+        }
+      }
+    } catch(eW){}
     var cards = stage.querySelectorAll('.pp-card');
     for(var s = 0; s < cards.length; s++){
       var card = cards[s];
       if(_isFlying(card)) continue;
       var idx = parseInt(card.getAttribute('data-i'), 10);
-      var depth = (idx - _i + n) % n;
+      var depth = (idx - baseI + n) % n;
       if(depth > n / 2) depth = depth - n;
-      var d = depth - progress;
+      var d = depth - frac;
       var pose = _depthPose(d);
-      if(!pose.vis || pose.o < 0.04){
+      if(!pose.vis){
         card.style.visibility = 'hidden';
         card.style.opacity = '0';
         card.style.pointerEvents = 'none';
         continue;
       }
-      card.style.visibility = '';
+      card.style.visibility = 'visible';
       card.style.transition = 'none';
       card.style.zIndex = String(pose.z);
-      card.style.opacity = String(pose.o);
-      card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
+      /* Keep solid opacity — reveal is from motion/scale, not fade */
+      card.style.opacity = (depth === 0 || (depth === 1 && frac > 0.05) || depth === 2) ? '1' : String(pose.o);
+      /* ONLY the current front receives pointers (fixes wrong-card after cycle) */
+      card.style.pointerEvents = (depth === 0 && frac < 0.85) ? 'auto' : 'none';
       card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
+      /* No blur on non-front during drag (perf + no milky stack) */
+      if(depth === 0 && frac < 0.5){
+        card.style.webkitBackdropFilter = '';
+        card.style.backdropFilter = '';
+      } else {
+        card.style.webkitBackdropFilter = 'none';
+        card.style.backdropFilter = 'none';
+      }
     }
   }
   function _layoutStack(animate){
@@ -18998,7 +19030,7 @@ function goNotes() {
     _timer = setTimeout(function(){ advance('auto', 1); }, AUTO_MS);
   }
   var _spinTimer = null;
-  /** Cycle deck: front sinks to back of stack, peeks promote, then soft-dissolve into deck. */
+  /** Cycle deck: front sinks to back; peeks promote; soft dissolve. Wire NEW front only after cleanup. */
   function _cycleToBack(steps){
     if(_isStaticFeed()){ _busy = false; _layoutStack(false); return; }
     steps = Math.max(1, Math.min(FEED.length || 1, steps || 1));
@@ -19006,21 +19038,33 @@ function goNotes() {
     if(!stage){ _busy = false; return; }
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front){ _busy = false; return; }
+    /* Kill leftover flyers from a previous cycle (fixes “controls card under deck”) */
+    try {
+      var stale = stage.querySelectorAll('.pp-card[data-flying="1"], .pp-card.to-back, .pp-card.to-back-out');
+      for(var si = 0; si < stale.length; si++){
+        if(stale[si] !== front && stale[si].parentNode) stale[si].parentNode.removeChild(stale[si]);
+      }
+    } catch(eSt){}
     front.classList.remove('swiping','depth-0','depth-1','depth-2','depth-3','depth-hide','to-back-out');
     front.classList.add('to-back');
     front.setAttribute('data-flying', '1');
+    front.style.pointerEvents = 'none';
     front.style.transform = '';
     front.style.opacity = '';
     front.style.zIndex = '';
     front.style.visibility = 'visible';
-    /* Advance index — under-cards promote while old front lands behind */
+    front.style.webkitBackdropFilter = 'none';
+    front.style.backdropFilter = 'none';
+    /* Advance — promote undercards; do NOT wire drag yet (old front still has listeners) */
     _i = (_i + steps) % FEED.length;
     _ensureWindowSoft(false);
     _layoutStackCSS(true);
-    _wireFrontDrag();
-    /* Phase 1 done (~land at back). Phase 2: soft dissolve into deck — no hard prune snap */
+    /* Phase 1: land behind. Phase 2: dissolve. Then wire ONLY the new front. */
     setTimeout(function(){
       if(!front || !front.parentNode){
+        _ensureWindowSoft(true);
+        _layoutStackCSS(false);
+        _wireFrontDrag();
         _busy = false;
         _armAuto();
         return;
@@ -19030,19 +19074,28 @@ function goNotes() {
       setTimeout(function(){
         if(front && front.parentNode) front.parentNode.removeChild(front);
         try {
-          var others = stage.querySelectorAll('.pp-card');
-          for(var ci = 0; ci < others.length; ci++){
-            others[ci].classList.remove('to-back','to-back-out');
-            others[ci].removeAttribute('data-flying');
+          var left = stage.querySelectorAll('.pp-card');
+          for(var ci = 0; ci < left.length; ci++){
+            left[ci].classList.remove('to-back','to-back-out','swiping');
+            left[ci].removeAttribute('data-flying');
+            left[ci].style.pointerEvents = '';
+            left[ci].style.webkitBackdropFilter = '';
+            left[ci].style.backdropFilter = '';
+            left[ci].style.opacity = '';
+            left[ci].style.transform = '';
+            left[ci].style.zIndex = '';
+            left[ci].style.visibility = '';
+            /* Force re-wire next front — clear stale wire flag on everyone */
+            try { left[ci]._pulseWired = false; } catch(eW){}
           }
         } catch(eC){}
         _ensureWindowSoft(true);
-        _layoutStackCSS(true);
+        _layoutStackCSS(false);
         _wireFrontDrag();
         _busy = false;
         _armAuto();
-      }, 420);
-    }, 500);
+      }, 400);
+    }, 480);
   }
   function advance(how, steps){
     if(_busy || !_open) return;
@@ -19117,9 +19170,10 @@ function goNotes() {
         _drag.axis = ay >= ax ? 'y' : 'x';
       }
       if(_drag.axis === 'y'){
-        var p = Math.max(-1.05, Math.min(1.05, -dy / STEP));
+        /* Long drag = wheel through many cards (cap ~FEED length) */
+        var maxP = Math.min(8, Math.max(1, (FEED.length || 1) - 0.05));
+        var p = Math.max(-1.2, Math.min(maxP, -dy / STEP));
         _drag.progress = p;
-        /* rAF: at most one layout pass per frame (pointermove can fire 100+/s) */
         if(!_rafMove){
           _rafMove = requestAnimationFrame(function(){
             _rafMove = 0;
@@ -19145,24 +19199,40 @@ function goNotes() {
       _drag = null;
 
       if(axis === 'y'){
-        var vy = (-dy) / dt; /* + = flick up = send front to back of deck */
+        var vy = (-dy) / dt; /* + = flick up */
+        var stepsUp = Math.max(1, Math.round(progress));
         var commit = progress > 0.28 || (progress > 0.1 && vy > 0.35);
         var back = progress < -0.28 || (progress < -0.1 && vy < -0.35);
         if(commit){
-          /* Deck cycle: front sinks to back of stack, peeks promote */
+          /* Wheel commit: cycle 1+ cards (long drag flips through many) */
           if(!_busy){
             _busy = true;
-            _cycleToBack(1);
+            _cycleToBack(stepsUp);
           } else {
-            _layoutStack(true);
+            /* Still animating previous cycle — snap clean, re-wire front only */
+            try {
+              var flying = stage.querySelectorAll('.pp-card[data-flying],.pp-card.to-back,.pp-card.to-back-out');
+              for(var fi = 0; fi < flying.length; fi++){
+                if(flying[fi].parentNode) flying[fi].parentNode.removeChild(flying[fi]);
+              }
+            } catch(eF){}
+            _layoutStack(false);
+            try {
+              var allC = stage.querySelectorAll('.pp-card');
+              for(var ai = 0; ai < allC.length; ai++) allC[ai]._pulseWired = false;
+            } catch(eA){}
             _wireFrontDrag();
+            _busy = false;
             _armAuto();
           }
           return;
         } else if(back){
-          /* Pull previous card forward from back of deck */
           _i = (_i - 1 + FEED.length) % FEED.length;
           _layoutStack(true);
+          try {
+            var allB = stage.querySelectorAll('.pp-card');
+            for(var bi = 0; bi < allB.length; bi++) allB[bi]._pulseWired = false;
+          } catch(eB){}
           _wireFrontDrag();
         } else {
           _layoutStack(true);
