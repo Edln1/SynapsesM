@@ -985,9 +985,8 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-cats-toggle:hover{color:rgba(242,242,245,0.55);background:transparent!important;opacity:1;}
 #synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
-/* Stack stage — MUST be overflow:visible so side-drag / fly-out aren't chopped at the box edge */
+/* Stack stage — overflow visible for side-drag */
 #synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:none;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent;overflow:visible;}
-/* Bottom hint tight under cards */
 #synPulsePanel .pp-foot{
   display:flex;align-items:center;justify-content:center;
   padding:2px 4px 0;margin:0;position:relative;z-index:8;width:100%;box-sizing:border-box;
@@ -1000,42 +999,59 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   line-height:1.15;white-space:nowrap;min-width:0;
 }
 #synPulsePanel .pp-head,#synPulsePanel .pp-close{display:none!important;}
-/* Cards: ORIGINAL glass look. Perf via ~4 cards in DOM. No paint-contain (it clips transforms). */
-#synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:16px;padding:14px 14px 12px;box-sizing:border-box;
+/*
+  Pulse tiles — transparent film, ONE tone only: light greyish purple
+  (soft lilac-lavender, no multi-color wash, no dark slab)
+*/
+#synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:18px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
-  background:
-    linear-gradient(160deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.04) 28%,transparent 55%),
-    linear-gradient(155deg,rgba(28,26,42,0.82) 0%,rgba(16,14,28,0.88) 45%,rgba(10,10,16,0.9) 100%);
-  backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);-webkit-backdrop-filter:blur(40px) saturate(1.35) brightness(0.92);
-  border:1px solid rgba(255,255,255,0.16);
-  box-shadow:0 14px 36px rgba(0,0,0,0.45),0 0 0 1px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.16);
+  /* ghostly film: keep high transparency, restore brightness */
+  background:rgba(210, 200, 230, 0.04);
+  -webkit-backdrop-filter:blur(18px) saturate(1.12) brightness(1.04);
+  backdrop-filter:blur(18px) saturate(1.12) brightness(1.04);
+  border:1px solid rgba(220, 210, 240, 0.16);
+  box-shadow:
+    0 6px 24px rgba(20, 12, 40, 0.08),
+    inset 0 1px 0 rgba(240, 234, 255, 0.28);
   transform-origin:center bottom;
   transition:transform .55s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,filter .45s ease,box-shadow .45s ease;
   will-change:auto;contain:layout style;}
+/* no second-color overlays — keep one tone */
 #synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:radial-gradient(120% 80% at 20% 0%,rgba(124,106,247,0.16),transparent 55%),
-    radial-gradient(90% 70% at 100% 100%,rgba(0,217,168,0.07),transparent 50%),
-    rgba(8,8,14,0.22);}
-#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:8%;right:8%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);pointer-events:none;z-index:2;}
+  background:linear-gradient(165deg,rgba(240,234,255,0.12) 0%,transparent 42%);}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(245,240,255,0.4),transparent);pointer-events:none;z-index:2;}
 #synPulsePanel .pp-card > *{position:relative;z-index:1;}
-/* Stack depth — original peek styling */
 #synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
   transform:translateY(0) scale(1);filter:none;
-  box-shadow:0 16px 40px rgba(0,0,0,0.48),0 0 0 1px rgba(196,181,253,0.14),inset 0 1px 0 rgba(255,255,255,0.18);}
+  background:rgba(210, 200, 230, 0.05);
+  -webkit-backdrop-filter:blur(18px) saturate(1.15) brightness(1.06);
+  backdrop-filter:blur(18px) saturate(1.15) brightness(1.06);
+  box-shadow:
+    0 8px 28px rgba(20, 12, 40, 0.1),
+    inset 0 1px 0 rgba(245, 240, 255, 0.32);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
-#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.95;pointer-events:none;
-  transform:translateY(14px) scale(0.94);filter:brightness(0.94);}
-#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.82;pointer-events:none;
-  transform:translateY(26px) scale(0.88);filter:brightness(0.88);}
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.88;pointer-events:none;
+  transform:translateY(12px) scale(0.95);filter:none;
+  background:rgba(210, 200, 230, 0.035);}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.72;pointer-events:none;
+  transform:translateY(22px) scale(0.90);filter:none;
+  background:rgba(210, 200, 230, 0.025);}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
-  transform:translateY(36px) scale(0.82);filter:brightness(0.8);}
+  transform:translateY(32px) scale(0.86);filter:none;}
 /* Swiping */
 #synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;}
-#synPulsePanel .pp-card.fly-out{z-index:6;pointer-events:none;opacity:0;transform:translateY(-28px) scale(0.96);filter:blur(2px);transition:transform .32s cubic-bezier(0.22,1,0.36,1),opacity .28s ease,filter .28s ease;}
+/* Side dismiss only — up-swipe uses deck “to back of stack”, not fly away */
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-fast{transition-duration:.18s!important;}
+/* Front card sinking to the back of the deck (stays in the stack) */
+#synPulsePanel .pp-card.to-back{
+  z-index:0!important;pointer-events:none;
+  transform:translateY(34px) scale(0.84)!important;
+  opacity:0.55!important;filter:brightness(0.82);
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,filter .4s ease,box-shadow .4s ease!important;
+}
 /* Card corner labels (MEETUPS / NEWS / JOBS) — quiet white, app has no pink */
 #synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 #synPulsePanel .pp-tag{
@@ -1292,15 +1308,15 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
-/* Pulse open on mobile: light lift of greeting + ask bar; pause heavy ambience */
+/* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
   #sec-chat .syn-greeting,
   #sec-chat .syn-sub{
-    transition:transform .22s ease-out;
+    transition:transform .42s cubic-bezier(0.16,1,0.3,1);
     transform:translate3d(0,0,0);
   }
   #sec-chat .input-area{
-    transition:transform .22s ease-out!important;
+    transition:transform .42s cubic-bezier(0.16,1,0.3,1)!important;
     transform:translate3d(0,0,0);
   }
   body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
@@ -1323,11 +1339,46 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   body.pulse-open .syn-orb-wrap{opacity:0.4;pointer-events:none;}
   body.pulse-open #chatFlowCanvas,
   body.pulse-open #chatBeamsWrap{opacity:0.3!important;}
-  /* Mobile: wider stack + visible overflow so side-swipe doesn't clip mid-card */
-  #synPulsePanel{left:50%!important;right:auto!important;width:min(320px,calc(100vw - 28px))!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;transform:translate(-50%,10px) scale(0.96)!important;overflow:visible!important;}
-  #synPulsePanel.open{transform:translate(-50%,0) scale(1)!important;}
+  /* Mobile sheet: sit above bottom nav, slide UP from below the fold */
+  #synPulsePanel{
+    left:50%!important;right:auto!important;
+    width:min(320px,calc(100vw - 28px))!important;
+    bottom:calc(64px + env(safe-area-inset-bottom,0px))!important;
+    display:flex!important;
+    overflow:visible!important;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    /* start fully under the screen edge so it reads as rising from bottom */
+    transform:translate(-50%, calc(100% + 28px))!important;
+    transition:
+      transform .42s cubic-bezier(0.16,1,0.3,1),
+      opacity .34s ease,
+      visibility 0s linear .42s!important;
+  }
+  #synPulsePanel.open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:translate(-50%, 0)!important;
+    transition:
+      transform .42s cubic-bezier(0.16,1,0.3,1),
+      opacity .28s ease,
+      visibility 0s linear 0s!important;
+  }
   #synPulsePanel .pp-stage{height:176px!important;overflow:visible!important;}
-  #synPulsePanel .pp-card{height:132px!important;padding:13px 13px 11px!important;}
+  #synPulsePanel .pp-card{
+    height:132px!important;padding:13px 13px 11px!important;
+    background:rgba(210, 200, 230, 0.04)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(1.1) brightness(1.03)!important;
+    backdrop-filter:blur(16px) saturate(1.1) brightness(1.03)!important;
+    border-color:rgba(220, 210, 240, 0.14)!important;
+  }
+  #synPulsePanel .pp-card.depth-0{
+    background:rgba(210, 200, 230, 0.05)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12) brightness(1.05)!important;
+    backdrop-filter:blur(16px) saturate(1.12) brightness(1.05)!important;
+  }
   #synPulsePanel .pp-title{font-size:13.5px!important;}
   #synPulsePanel .pp-desc{font-size:11.5px!important;-webkit-line-clamp:2;}
 }
@@ -18402,6 +18453,29 @@ function goNotes() {
   ];
   var FEED = SEED.slice();
   var _fetchGen = 0;
+  /** Empty / loading / single card = no stack shuffle, no auto-advance, one static tile */
+  function _isStaticFeed(){
+    if(!FEED || !FEED.length) return true;
+    if(FEED.length <= 1) return true;
+    var id0 = String(FEED[0].id || '');
+    if(id0 === 'empty1' || id0 === 'seed1') return true;
+    var allEmpty = true;
+    for(var i = 0; i < FEED.length; i++){
+      var id = String(FEED[i].id || '');
+      if(id !== 'empty1' && id !== 'seed1'){ allEmpty = false; break; }
+    }
+    return allEmpty;
+  }
+  function _emptyCardForFilter(f){
+    f = f || _filter || 'all';
+    var map = {
+      news:   { id:'empty1', topic:'news', platform:'news', tag:'News', title:'Nothing in this category', desc:'No news cards right now. Try All or Meetups.', meta:'News', url:'' },
+      jobs:   { id:'empty1', topic:'jobs', platform:'jobs', tag:'Jobs', title:'Nothing in this category', desc:'No job cards right now. Try All or Meetups.', meta:'Jobs', url:'' },
+      meetups:{ id:'empty1', topic:'meetups', platform:'luma', tag:'Meetups', title:'Nothing in this category', desc:'No meetups right now. Try All, or open the Vancouver AI Luma calendar.', meta:'Luma · Vancouver', url:'https://lu.ma/vancouver-ai' },
+      all:    { id:'empty1', topic:'meetups', platform:'luma', tag:'Pulse', title:'Nothing in this category', desc:'No Pulse cards right now. Pull to refresh later or try another filter.', meta:'Pulse', url:'https://lu.ma/vancouver-ai' }
+    };
+    return [map[f] || map.all];
+  }
 
   function _proxyBase(){
     try {
@@ -18574,8 +18648,9 @@ function goNotes() {
     _syncFilterButtons();
     var filtered = _filterList(_allEvents.length ? _allEvents : FEED);
     if(!filtered.length){
-      FEED = EMPTY.slice();
+      FEED = _emptyCardForFilter(_filter);
       _i = 0;
+      _clearAuto();
       if(_open) _buildStack();
       var emptyMsg = { meetups:'No meetups right now', news:'No news cards', jobs:'No job cards', all:'No events' };
       _setSub(emptyMsg[_filter] || 'No events');
@@ -18671,6 +18746,8 @@ function goNotes() {
   function _windowIndices(){
     var n = FEED.length;
     if(!n) return [];
+    /* Empty / single placeholder: one static tile, no fake stack of clones */
+    if(_isStaticFeed()) return [0];
     var out = [], offsets = [-1, 0, 1, 2, 3];
     for(var k = 0; k < offsets.length; k++){
       var idx = (_i + offsets[k] + n * 5) % n;
@@ -18681,6 +18758,7 @@ function goNotes() {
   function _isFlying(card){
     return !!(card && (
       card.getAttribute('data-flying') === '1' ||
+      card.classList.contains('to-back') ||
       card.classList.contains('fly-out') ||
       card.classList.contains('fly-out-left') ||
       card.classList.contains('fly-out-right') ||
@@ -18738,11 +18816,18 @@ function goNotes() {
     _layoutStackCSS(false);
     _wireFrontDrag();
   }
-  /** Finger-drag pose only. Rest pose uses CSS .depth-0/1/2 (original animation). */
+  /** Finger-drag pose. Negative depth = front card sliding to BACK of deck (not flying off-screen). */
   function _depthPose(d){
     if(d < -0.001){
-      var k = Math.min(1.25, -d);
-      return { y: -k * 130, s: 1 - k * 0.04, o: Math.max(0, 1 - k * 0.95), z: 6, vis: k < 1.05 };
+      /* k 0→1: front sinks into the rear of the stack while peeks promote */
+      var k = Math.min(1.15, -d);
+      return {
+        y: 12 * k + 22 * Math.min(1, k),
+        s: 1 - 0.16 * Math.min(1, k),
+        o: Math.max(0.42, 1 - 0.4 * Math.min(1, k)),
+        z: Math.max(0, 4 - Math.round(k * 4)),
+        vis: true
+      };
     }
     if(d <= 0.001) return { y: 0, s: 1, o: 1, z: 4, vis: true };
     if(d < 1){
@@ -18755,7 +18840,7 @@ function goNotes() {
     }
     if(d < 3){
       var w = d - 2;
-      return { y: 26 + 10 * w, s: 0.88 - 0.06 * w, o: Math.max(0, 0.72 - 0.35 * w), z: 1, vis: true };
+      return { y: 26 + 10 * w, s: 0.88 - 0.06 * w, o: Math.max(0.35, 0.72 - 0.25 * w), z: 1, vis: true };
     }
     return { y: 40, s: 0.8, o: 0, z: 0, vis: false };
   }
@@ -18837,11 +18922,44 @@ function goNotes() {
   function _armAuto(){
     _clearAuto();
     if(!AUTO_MS || !_open || _busy || _drag) return;
+    if(_isStaticFeed()) return; /* nothing to shuffle */
     _timer = setTimeout(function(){ advance('auto', 1); }, AUTO_MS);
   }
   var _spinTimer = null;
+  /** Cycle deck: front tile sinks to the BACK of the stack; peeks promote. No fly-off. */
+  function _cycleToBack(steps){
+    if(_isStaticFeed()){ _busy = false; _layoutStack(false); return; }
+    steps = Math.max(1, Math.min(FEED.length || 1, steps || 1));
+    var stage = document.getElementById('synPulseStage');
+    if(!stage){ _busy = false; return; }
+    var front = stage.querySelector('.pp-card.depth-0');
+    if(!front){ _busy = false; return; }
+    front.classList.remove('swiping','depth-0','depth-1','depth-2','depth-3','depth-hide');
+    front.classList.add('to-back');
+    front.setAttribute('data-flying', '1');
+    front.style.transform = '';
+    front.style.opacity = '';
+    front.style.zIndex = '';
+    /* Advance index — under-cards promote to front with CSS depth transition */
+    _i = (_i + steps) % FEED.length;
+    _ensureWindowSoft(false);
+    _layoutStackCSS(true);
+    _wireFrontDrag();
+    setTimeout(function(){
+      front.classList.remove('to-back');
+      front.removeAttribute('data-flying');
+      front.style.transition = '';
+      /* Card stays in the deck at its new depth (back); soft-prune only extras */
+      _ensureWindowSoft(true);
+      _layoutStackCSS(true);
+      _wireFrontDrag();
+      _busy = false;
+      _armAuto();
+    }, 480);
+  }
   function advance(how, steps){
     if(_busy || !_open) return;
+    if(_isStaticFeed()){ _busy = false; return; }
     steps = Math.max(1, Math.min(FEED.length || 1, steps || 1));
     _busy = true;
     _clearAuto();
@@ -18849,14 +18967,18 @@ function goNotes() {
     if(!stage){ _busy = false; return; }
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front){ _busy = false; return; }
-    /* Original fly-out + simultaneous under-card promote (depth-1→0 with CSS) */
-    var fly = how === 'right' ? 'fly-out-right' : (how === 'up' || how === 'auto' ? 'fly-out' : 'fly-out-left');
+    /* Up / auto / default = send to back of stack (deck cycle) */
+    if(how !== 'left' && how !== 'right'){
+      _cycleToBack(steps);
+      return;
+    }
+    /* Side swipe only: fly off left/right */
+    var fly = how === 'right' ? 'fly-out-right' : 'fly-out-left';
     front.classList.add(fly);
     front.setAttribute('data-flying', '1');
     front.classList.remove('depth-0','depth-1','depth-2','depth-3');
-    /* Promote peeks NOW (while front exits) — do not wait for fly-out to finish */
     _i = (_i + steps) % FEED.length;
-    _ensureWindowSoft(false); /* append next peeks; keep flying card until prune */
+    _ensureWindowSoft(false);
     _layoutStackCSS(true);
     _wireFrontDrag();
     setTimeout(function(){
@@ -18874,6 +18996,17 @@ function goNotes() {
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front || front._pulseWired) return;
     front._pulseWired = true;
+    /* Empty category: allow tap-to-open only, no deck shuffle */
+    if(_isStaticFeed()){
+      front.style.cursor = 'default';
+      front.addEventListener('click', function(){
+        var link = front.getAttribute('data-url') || '';
+        if(link && /^https?:\/\//i.test(link)){
+          try { window.open(link, '_blank', 'noopener'); } catch(eO){}
+        }
+      });
+      return;
+    }
     var STEP = 100;
     var _rafMove = 0;
 
@@ -18925,21 +19058,26 @@ function goNotes() {
       _drag = null;
 
       if(axis === 'y'){
-        var vy = (-dy) / dt; /* + = flick up = scroll current off */
-        /* commit when mostly scrolled off, or a decisive flick */
+        var vy = (-dy) / dt; /* + = flick up = send front to back of deck */
         var commit = progress > 0.28 || (progress > 0.1 && vy > 0.35);
         var back = progress < -0.28 || (progress < -0.1 && vy < -0.35);
         if(commit){
-          /* finish scroll-off with smooth CSS restack (original feel) */
-          _i = (_i + 1) % FEED.length;
-          _layoutStack(true);
-          _wireFrontDrag();
+          /* Deck cycle: front sinks to back of stack, peeks promote */
+          if(!_busy){
+            _busy = true;
+            _cycleToBack(1);
+          } else {
+            _layoutStack(true);
+            _wireFrontDrag();
+            _armAuto();
+          }
+          return;
         } else if(back){
+          /* Pull previous card forward from back of deck */
           _i = (_i - 1 + FEED.length) % FEED.length;
           _layoutStack(true);
           _wireFrontDrag();
         } else {
-          /* spring back using original CSS transitions */
           _layoutStack(true);
           _wireFrontDrag();
         }
@@ -19028,15 +19166,17 @@ function goNotes() {
       _setFilter(_filter);
     }
     _setCatsOpen(true);
-    _setPulseLift(true); /* slight ask-me / greeting lift on mobile */
     _open = true;
-    panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
+    /* Build cards first while sheet is still off-screen (bottom), then slide up + lift ask bar together */
+    _buildStack();
+    void panel.offsetWidth;
     requestAnimationFrame(function(){
       if(!_open) return;
-      _buildStack();
-      _armAuto(); /* restore gentle auto-peek animation */
+      _setPulseLift(true); /* ask-me rises with the sheet */
+      panel.classList.add('open');
+      _armAuto();
       if(!_allEvents.length || (FEED[0] && FEED[0].id === 'seed1')){
         _fetchMeetups(false);
       }
@@ -19049,13 +19189,19 @@ function goNotes() {
     closePulseCleanupSpin();
     _drag = null;
     _busy = false;
-    _setPulseLift(false);
-    if(panel){ panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); }
-    if(btn) btn.classList.remove('active');
     _open = false;
-    /* Drop live card DOM when closed — free GPU/compositor layers */
-    var stage = document.getElementById('synPulseStage');
-    if(stage){ stage.innerHTML = ''; _domWin = []; }
+    _setPulseLift(false); /* ask-me settles as sheet slides down */
+    if(panel){
+      panel.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+    if(btn) btn.classList.remove('active');
+    /* Wait for bottom-sheet exit, then free card DOM */
+    setTimeout(function(){
+      if(_open) return;
+      var stage = document.getElementById('synPulseStage');
+      if(stage){ stage.innerHTML = ''; _domWin = []; }
+    }, 420);
   }
   function togglePulse(){
     if(_open) closePulse();
