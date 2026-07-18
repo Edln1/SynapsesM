@@ -1073,14 +1073,23 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-fast{transition-duration:.18s!important;}
-/* Front card sinking to the back of the deck (stays in the stack) */
+/* Front card sinking to the back of the deck — multi-phase settle (no hard pop-off) */
 #synPulsePanel .pp-card.to-back{
-  z-index:0!important;pointer-events:none;
-  transform:translateY(34px) scale(0.84)!important;
-  opacity:0.4!important;filter:none;
-  background:rgba(210, 200, 230, 0.06)!important;
+  z-index:1!important;pointer-events:none;visibility:visible!important;
+  transform:translateY(22px) scale(0.90)!important;
+  opacity:0.34!important;filter:none;
+  background:rgba(210, 200, 230, 0.05)!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease!important;
+  transition:transform .5s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,box-shadow .45s ease!important;
+}
+/* After landing at back: dissolve into the deck (smooth, not abrupt) */
+#synPulsePanel .pp-card.to-back-out{
+  z-index:0!important;pointer-events:none;visibility:visible!important;
+  transform:translateY(36px) scale(0.84)!important;
+  opacity:0!important;
+  background:rgba(210, 200, 230, 0.03)!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease!important;
 }
 /* Card corner labels (MEETUPS / NEWS / JOBS) — quiet white, app has no pink */
 #synPulsePanel .pp-slide-top{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
@@ -18821,6 +18830,7 @@ function goNotes() {
     return !!(card && (
       card.getAttribute('data-flying') === '1' ||
       card.classList.contains('to-back') ||
+      card.classList.contains('to-back-out') ||
       card.classList.contains('fly-out') ||
       card.classList.contains('fly-out-left') ||
       card.classList.contains('fly-out-right') ||
@@ -18988,7 +18998,7 @@ function goNotes() {
     _timer = setTimeout(function(){ advance('auto', 1); }, AUTO_MS);
   }
   var _spinTimer = null;
-  /** Cycle deck: front tile sinks to the BACK of the stack; peeks promote. No fly-off. */
+  /** Cycle deck: front sinks to back of stack, peeks promote, then soft-dissolve into deck. */
   function _cycleToBack(steps){
     if(_isStaticFeed()){ _busy = false; _layoutStack(false); return; }
     steps = Math.max(1, Math.min(FEED.length || 1, steps || 1));
@@ -18996,28 +19006,43 @@ function goNotes() {
     if(!stage){ _busy = false; return; }
     var front = stage.querySelector('.pp-card.depth-0');
     if(!front){ _busy = false; return; }
-    front.classList.remove('swiping','depth-0','depth-1','depth-2','depth-3','depth-hide');
+    front.classList.remove('swiping','depth-0','depth-1','depth-2','depth-3','depth-hide','to-back-out');
     front.classList.add('to-back');
     front.setAttribute('data-flying', '1');
     front.style.transform = '';
     front.style.opacity = '';
     front.style.zIndex = '';
-    /* Advance index — under-cards promote to front with CSS depth transition */
+    front.style.visibility = 'visible';
+    /* Advance index — under-cards promote while old front lands behind */
     _i = (_i + steps) % FEED.length;
     _ensureWindowSoft(false);
     _layoutStackCSS(true);
     _wireFrontDrag();
+    /* Phase 1 done (~land at back). Phase 2: soft dissolve into deck — no hard prune snap */
     setTimeout(function(){
+      if(!front || !front.parentNode){
+        _busy = false;
+        _armAuto();
+        return;
+      }
       front.classList.remove('to-back');
-      front.removeAttribute('data-flying');
-      front.style.transition = '';
-      /* Card stays in the deck at its new depth (back); soft-prune only extras */
-      _ensureWindowSoft(true);
-      _layoutStackCSS(true);
-      _wireFrontDrag();
-      _busy = false;
-      _armAuto();
-    }, 480);
+      front.classList.add('to-back-out');
+      setTimeout(function(){
+        if(front && front.parentNode) front.parentNode.removeChild(front);
+        try {
+          var others = stage.querySelectorAll('.pp-card');
+          for(var ci = 0; ci < others.length; ci++){
+            others[ci].classList.remove('to-back','to-back-out');
+            others[ci].removeAttribute('data-flying');
+          }
+        } catch(eC){}
+        _ensureWindowSoft(true);
+        _layoutStackCSS(true);
+        _wireFrontDrag();
+        _busy = false;
+        _armAuto();
+      }, 420);
+    }, 500);
   }
   function advance(how, steps){
     if(_busy || !_open) return;
