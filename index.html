@@ -989,17 +989,37 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   background:rgba(255,255,255,0.75);
   box-shadow:none;
 }
+/* Hamburger: almost invisible; still tappable. Toggles ALL chrome (logo, cats, hint). */
 #synPulsePanel .pp-cats-toggle{
-  width:auto;height:14px;min-width:0;border-radius:0;margin:0 0 0 auto;
+  width:22px;height:18px;min-width:22px;border-radius:0;margin:0 0 0 auto;
   background:transparent!important;border:none!important;box-shadow:none!important;
-  color:rgba(242,242,245,0.28);cursor:pointer;font-size:11px;font-weight:500;
+  color:rgba(255,255,255,0.07);cursor:pointer;font-size:9px;font-weight:400;
   display:inline-flex;align-items:center;justify-content:center;
-  transition:color .15s,opacity .15s;padding:0;line-height:1;
-  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:0.75;
-  flex-shrink:0;
+  transition:color .2s,opacity .2s;padding:0;line-height:1;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:0.22;
+  flex-shrink:0;position:relative;z-index:12;
 }
-#synPulsePanel .pp-cats-toggle:hover{color:rgba(242,242,245,0.55);background:transparent!important;opacity:1;}
-#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.65)!important;background:transparent!important;opacity:1;}
+#synPulsePanel .pp-cats-toggle:hover{color:rgba(255,255,255,0.18);background:transparent!important;opacity:0.4;}
+#synPulsePanel .pp-cats-toggle:active{opacity:0.35;}
+#synPulsePanel .pp-cats-toggle.on{color:rgba(255,255,255,0.1)!important;background:transparent!important;opacity:0.28;}
+/* When chrome is collapsed: hide Pulse logo, filters, bottom hint — tiles only */
+#synPulsePanel.pp-chrome-off .pp-brand{
+  opacity:0;visibility:hidden;pointer-events:none;width:0;overflow:hidden;margin:0;padding:0;gap:0;
+  transition:opacity .22s ease,visibility .22s;
+}
+#synPulsePanel.pp-chrome-off .pp-filters{
+  display:none!important;opacity:0!important;pointer-events:none!important;
+}
+#synPulsePanel.pp-chrome-off .pp-foot{
+  opacity:0;visibility:hidden;max-height:0;padding:0;margin:0;overflow:hidden;pointer-events:none;
+  transition:opacity .22s ease,max-height .28s ease,padding .28s,visibility .22s;
+}
+#synPulsePanel.pp-chrome-off .pp-top{
+  padding:0 2px 2px;min-height:16px;justify-content:flex-end;
+}
+#synPulsePanel .pp-brand,#synPulsePanel .pp-foot{
+  transition:opacity .22s ease,visibility .22s,max-height .28s ease;
+}
 /* Stack stage — overflow visible for side-drag */
 #synPulsePanel .pp-stage{position:relative;height:188px;margin:0;perspective:none;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent;overflow:visible;}
 #synPulsePanel .pp-foot{
@@ -4094,7 +4114,7 @@ window.getWebAudioNode = getWebAudioNode;
         <button type="button" class="pp-filter" data-f="news">News</button>
         <button type="button" class="pp-filter" data-f="jobs">Jobs</button>
       </div>
-      <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Categories" aria-label="Toggle categories" aria-expanded="true">☰</button>
+      <button type="button" class="pp-cats-toggle" id="synPulseCatsToggle" title="Hide labels" aria-label="Hide Pulse labels" aria-expanded="true">☰</button>
     </div>
     <div class="pp-stage" id="synPulseStage" aria-live="polite"></div>
     <div class="pp-foot">
@@ -19260,15 +19280,23 @@ function goNotes() {
     } catch(e){}
   }
   function _setCatsOpen(on){
+    var panel = document.getElementById('synPulsePanel');
     var filt = document.getElementById('synPulseFilters');
     var tog = document.getElementById('synPulseCatsToggle');
+    /* on = show all chrome (logo, cats, hint); off = tiles only + ghost hamburger */
     if(filt){
       if(on){ filt.classList.add('show'); filt.removeAttribute('hidden'); }
       else { filt.classList.remove('show'); filt.setAttribute('hidden', ''); }
     }
+    if(panel){
+      if(on) panel.classList.remove('pp-chrome-off');
+      else panel.classList.add('pp-chrome-off');
+    }
     if(tog){
       tog.classList.toggle('on', !!on);
       tog.setAttribute('aria-expanded', on ? 'true' : 'false');
+      tog.title = on ? 'Hide labels' : 'Show labels';
+      tog.setAttribute('aria-label', on ? 'Hide Pulse labels' : 'Show Pulse labels');
     }
   }
   function closePulseCleanupSpin(){
