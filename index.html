@@ -907,12 +907,16 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #bnavNotesBtn.active{background:rgba(124,106,247,0.14)!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
 /* Pulse feed — tiny control just right of Notes (bottom-left chrome) */
-#bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;padding:0;}
-@media (hover:hover) and (pointer:fine){ #bnavPulseBtn:hover{background:rgba(0,217,168,0.06);} }
-#bnavPulseBtn.active{background:rgba(0,217,168,0.1)!important;}
-#bnavPulseBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
-#bnavPulseBtn.active svg,#bnavPulseBtn:hover svg{stroke:rgba(0,217,168,0.85);}
-#bnavPulseBtn .pulse-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#00d9a8;box-shadow:0 0 8px rgba(0,217,168,0.75);display:none;}
+/* Pulse toggle: muted idle; green stroke on icon only when .active — no green plate/glow */
+#bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:none;padding:0;}
+@media (hover:hover) and (pointer:fine){
+  #bnavPulseBtn:hover{background:transparent;}
+  #bnavPulseBtn:hover:not(.active) svg{stroke:rgba(200,203,230,0.55);}
+}
+#bnavPulseBtn.active{background:transparent!important;}
+#bnavPulseBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;filter:none;}
+#bnavPulseBtn.active svg{stroke:rgba(0,217,168,0.9);filter:none;}
+#bnavPulseBtn .pulse-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px rgba(0,217,168,0.55);display:none;}
 #bnavPulseBtn.has-unread .pulse-dot{display:block;animation:pulseDotBlink 1.8s ease-in-out infinite;}
 @keyframes pulseDotBlink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.55;transform:scale(0.85);}}
 /* Pulse — floating stack only (no tray behind cards). Desktop: bottom-left like before. Mobile center/lift only in media query. */
@@ -1035,64 +1039,72 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 }
 #synPulsePanel .pp-head,#synPulsePanel .pp-close{display:none!important;}
 /*
-  Pulse tiles — matte frost v1
-  Problem: pure transparent blur + saturate/brightness lets wallpaper dyes
-  the tile (sky blue → half-blue card). Fix: tile owns a fixed lilac matte
-  plate; blur only softens edges; desaturate kills hue pickup.
-  Safe (transparentsafe) is untouched — this is a new working copy.
+  Pulse tiles — glass panel v1
+  Very high transparency + lower tone (no white slab).
+  Glass = almost clear film + soft blur + quiet edge only.
 */
 /* Default card = peek plate (no blur). Only .depth-0 gets live glass blur. */
 #synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:18px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
-  /* deeper charcoal plate — grey tone pulled way down */
-  background:rgba(32, 30, 42, 0.52);
+  background:rgba(255, 255, 255, 0.001);
   -webkit-backdrop-filter:none;
   backdrop-filter:none;
-  border:1px solid rgba(110, 105, 130, 0.10);
+  border:1px solid rgba(255, 255, 255, 0.04);
   box-shadow:
-    0 8px 22px rgba(4, 3, 10, 0.32),
-    inset 0 1px 0 rgba(160, 155, 180, 0.06),
-    inset 0 0 0 1px rgba(255,255,255,0.015);
+    0 3px 12px rgba(0, 0, 0, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transform-origin:center bottom;
   transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;
   will-change:auto;contain:layout style;}
-/* Soft matte veil — very low brightness */
+/* Near-invisible sheen — barely there, not a white wash */
 #synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:linear-gradient(165deg,
-    rgba(70, 66, 88, 0.10) 0%,
-    rgba(28, 26, 38, 0.14) 48%,
-    rgba(14, 12, 20, 0.22) 100%);}
-#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(170,165,190,0.10),transparent);pointer-events:none;z-index:2;}
+  background:transparent;}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:16%;right:16%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);pointer-events:none;z-index:2;}
 #synPulsePanel .pp-card > *{position:relative;z-index:1;}
-/* Front: matte frost — darker still */
+/* Front: clear glass. Peeks clipped to rim at rest so under-text doesn't show through. */
 #synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
   transform:translateY(0) scale(1);filter:none;
-  background:rgba(28, 26, 38, 0.55);
-  -webkit-backdrop-filter:blur(22px) saturate(0.38) brightness(0.72);
-  backdrop-filter:blur(22px) saturate(0.38) brightness(0.72);
-  border:1px solid rgba(100, 95, 120, 0.12);
+  background:transparent;
+  -webkit-backdrop-filter:blur(10px) saturate(1) brightness(1);
+  backdrop-filter:blur(10px) saturate(1) brightness(1);
+  border:1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
-    0 10px 30px rgba(4, 3, 10, 0.34),
-    inset 0 1px 0 rgba(170, 165, 190, 0.08),
-    inset 0 -14px 32px rgba(6, 4, 14, 0.28);}
+    0 4px 18px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
-/* Peeks: solid dim plates (no blur) — full stack visible on open with front */
-#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.5;pointer-events:none;
-  transform:translateY(12px) scale(0.95);filter:none;
-  background:rgba(24, 22, 34, 0.48);
+/*
+  Peeks: only bottom lip at rest (clip). Unclip while dragging/cycling so deck physics work.
+*/
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.55;pointer-events:none;
+  transform:translateY(14px) scale(0.95);filter:none;
+  background:rgba(18, 16, 26, 0.55);
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
-#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.32;pointer-events:none;
-  transform:translateY(22px) scale(0.90);filter:none;
-  background:rgba(18, 16, 26, 0.40);
+  clip-path:inset(calc(100% - 14px) 2% 0 2% round 0 0 16px 16px);
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease,clip-path .35s ease;}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.35;pointer-events:none;
+  transform:translateY(24px) scale(0.90);filter:none;
+  background:rgba(14, 12, 22, 0.45);
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
-  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease;}
+  clip-path:inset(calc(100% - 12px) 4% 0 4% round 0 0 14px 14px);
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease,clip-path .35s ease;}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
   transform:translateY(32px) scale(0.86);filter:none;
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  clip-path:inset(100% 0 0 0);}
+/* While interacting: full peeks for wheel/promote (restored) */
+#synPulsePanel .pp-stage:has(.pp-card.swiping) .pp-card.depth-1,
+#synPulsePanel .pp-stage:has(.pp-card.swiping) .pp-card.depth-2,
+#synPulsePanel .pp-stage:has(.pp-card.to-back) .pp-card.depth-1,
+#synPulsePanel .pp-stage:has(.pp-card.to-back) .pp-card.depth-2,
+#synPulsePanel .pp-stage:has(.pp-card.fly-out-left) .pp-card.depth-1,
+#synPulsePanel .pp-stage:has(.pp-card.fly-out-left) .pp-card.depth-2,
+#synPulsePanel .pp-stage:has(.pp-card.fly-out-right) .pp-card.depth-1,
+#synPulsePanel .pp-stage:has(.pp-card.fly-out-right) .pp-card.depth-2{
+  clip-path:none;
+}
 /* Swiping */
-#synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;}
+#synPulsePanel .pp-card.swiping{transition:none!important;will-change:transform,opacity;clip-path:none!important;}
 /* Side dismiss only — up-swipe uses deck “to back of stack”, not fly away */
 #synPulsePanel .pp-card.fly-out-left{z-index:6;pointer-events:none;opacity:0;transform:translateX(-110%) rotate(-6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
 #synPulsePanel .pp-card.fly-out-right{z-index:6;pointer-events:none;opacity:0;transform:translateX(110%) rotate(6deg) scale(0.96);transition:transform .34s cubic-bezier(0.22,1,0.36,1),opacity .28s ease;}
@@ -1102,7 +1114,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   z-index:1!important;pointer-events:none;visibility:visible!important;
   transform:translateY(22px) scale(0.90)!important;
   opacity:0.34!important;filter:none;
-  background:rgba(18, 16, 26, 0.40)!important;
+  background:transparent!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .5s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,box-shadow .45s ease!important;
 }
@@ -1111,7 +1123,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   z-index:0!important;pointer-events:none;visibility:visible!important;
   transform:translateY(36px) scale(0.84)!important;
   opacity:0!important;
-  background:rgba(12, 10, 18, 0.28)!important;
+  background:transparent!important;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   transition:transform .42s cubic-bezier(0.22,1,0.36,1),opacity .4s ease,box-shadow .4s ease!important;
 }
@@ -1445,15 +1457,15 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   #synPulsePanel .pp-stage{height:176px!important;overflow:visible!important;}
   #synPulsePanel .pp-card{
     height:132px!important;padding:13px 13px 11px!important;
-    background:rgba(32, 30, 42, 0.52)!important;
+    background:transparent!important;
     -webkit-backdrop-filter:none!important;
     backdrop-filter:none!important;
-    border-color:rgba(110, 105, 130, 0.10)!important;
+    border-color:rgba(255, 255, 255, 0.04)!important;
   }
   #synPulsePanel .pp-card.depth-0{
-    background:rgba(28, 26, 38, 0.55)!important;
-    -webkit-backdrop-filter:blur(20px) saturate(0.38) brightness(0.72)!important;
-    backdrop-filter:blur(20px) saturate(0.38) brightness(0.72)!important;
+    background:transparent!important;
+    -webkit-backdrop-filter:blur(10px) saturate(1) brightness(1)!important;
+    backdrop-filter:blur(10px) saturate(1) brightness(1)!important;
   }
   #synPulsePanel .pp-card.depth-1,
   #synPulsePanel .pp-card.depth-2{
@@ -19025,6 +19037,10 @@ function goNotes() {
       card.style.visibility = '';
       card.style.pointerEvents = '';
       card.style.filter = '';
+      card.style.background = '';
+      card.style.webkitBackdropFilter = '';
+      card.style.backdropFilter = '';
+      card.style.clipPath = '';
       card.style.transition = animate ? '' : 'none';
       if(depth === 0) card.classList.add('depth-0');
       else if(depth === 1) card.classList.add('depth-1');
@@ -19042,13 +19058,11 @@ function goNotes() {
     if(front) _markRead(front.getAttribute('data-id'));
   }
   /**
-   * Drag feedback — restored from first good wheel (pre multi-card mess + pre front-only clamp).
-   * Full stack poses via _depthPose so the deck scrolls as one wheel; one card per swipe commit.
+   * Drag feedback — full stack poses via _depthPose (restored after broken front-only pass).
    */
   function _applyStackScroll(progress, withTransition){
     var stage = document.getElementById('synPulseStage');
     if(!stage || !FEED.length) return;
-    /* No drag offset → ORIGINAL CSS stack animation */
     if(Math.abs(progress) < 0.001){
       _layoutStackCSS(!!withTransition);
       return;
@@ -19076,6 +19090,7 @@ function goNotes() {
       card.style.pointerEvents = (Math.abs(d) < 0.45) ? 'auto' : 'none';
       card.style.webkitBackdropFilter = 'none';
       card.style.backdropFilter = 'none';
+      card.style.clipPath = 'none';
       card.style.transform = 'translate3d(0,'+pose.y+'px,0) scale('+pose.s+')';
     }
   }
