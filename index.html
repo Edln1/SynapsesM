@@ -1005,37 +1005,37 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 */
 #synPulsePanel .pp-card{position:absolute;left:0;right:0;top:0;height:142px;border-radius:18px;padding:14px 14px 12px;box-sizing:border-box;
   display:flex;flex-direction:column;justify-content:center;isolation:isolate;overflow:hidden;
-  /* ghostly film: keep high transparency, restore brightness */
-  background:rgba(210, 200, 230, 0.04);
-  -webkit-backdrop-filter:blur(18px) saturate(1.12) brightness(1.04);
-  backdrop-filter:blur(18px) saturate(1.12) brightness(1.04);
-  border:1px solid rgba(220, 210, 240, 0.16);
+  /* transparent2: more transparent than t1; brightness lifted to compensate */
+  background:rgba(210, 200, 230, 0.022);
+  -webkit-backdrop-filter:blur(18px) saturate(1.18) brightness(1.14);
+  backdrop-filter:blur(18px) saturate(1.18) brightness(1.14);
+  border:1px solid rgba(220, 210, 240, 0.11);
   box-shadow:
-    0 6px 24px rgba(20, 12, 40, 0.08),
-    inset 0 1px 0 rgba(240, 234, 255, 0.28);
+    0 6px 24px rgba(20, 12, 40, 0.07),
+    inset 0 1px 0 rgba(240, 234, 255, 0.34);
   transform-origin:center bottom;
   transition:transform .55s cubic-bezier(0.22,1,0.36,1),opacity .45s ease,filter .45s ease,box-shadow .45s ease;
   will-change:auto;contain:layout style;}
 /* no second-color overlays — keep one tone */
 #synPulsePanel .pp-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:linear-gradient(165deg,rgba(240,234,255,0.12) 0%,transparent 42%);}
-#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(245,240,255,0.4),transparent);pointer-events:none;z-index:2;}
+  background:linear-gradient(165deg,rgba(240,234,255,0.14) 0%,transparent 42%);}
+#synPulsePanel .pp-card::before{content:"";position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(245,240,255,0.38),transparent);pointer-events:none;z-index:2;}
 #synPulsePanel .pp-card > *{position:relative;z-index:1;}
 #synPulsePanel .pp-card.depth-0{z-index:4;opacity:1;pointer-events:auto;cursor:grab;
   transform:translateY(0) scale(1);filter:none;
-  background:rgba(210, 200, 230, 0.05);
-  -webkit-backdrop-filter:blur(18px) saturate(1.15) brightness(1.06);
-  backdrop-filter:blur(18px) saturate(1.15) brightness(1.06);
+  background:rgba(210, 200, 230, 0.028);
+  -webkit-backdrop-filter:blur(18px) saturate(1.22) brightness(1.16);
+  backdrop-filter:blur(18px) saturate(1.22) brightness(1.16);
   box-shadow:
-    0 8px 28px rgba(20, 12, 40, 0.1),
-    inset 0 1px 0 rgba(245, 240, 255, 0.32);}
+    0 8px 28px rgba(20, 12, 40, 0.09),
+    inset 0 1px 0 rgba(245, 240, 255, 0.36);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
-#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.88;pointer-events:none;
+#synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.86;pointer-events:none;
   transform:translateY(12px) scale(0.95);filter:none;
-  background:rgba(210, 200, 230, 0.035);}
-#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.72;pointer-events:none;
+  background:rgba(210, 200, 230, 0.018);}
+#synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.7;pointer-events:none;
   transform:translateY(22px) scale(0.90);filter:none;
-  background:rgba(210, 200, 230, 0.025);}
+  background:rgba(210, 200, 230, 0.012);}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
   transform:translateY(32px) scale(0.86);filter:none;}
@@ -1369,15 +1369,15 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   #synPulsePanel .pp-stage{height:176px!important;overflow:visible!important;}
   #synPulsePanel .pp-card{
     height:132px!important;padding:13px 13px 11px!important;
-    background:rgba(210, 200, 230, 0.04)!important;
-    -webkit-backdrop-filter:blur(16px) saturate(1.1) brightness(1.03)!important;
-    backdrop-filter:blur(16px) saturate(1.1) brightness(1.03)!important;
-    border-color:rgba(220, 210, 240, 0.14)!important;
+    background:rgba(210, 200, 230, 0.022)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(1.18) brightness(1.14)!important;
+    backdrop-filter:blur(16px) saturate(1.18) brightness(1.14)!important;
+    border-color:rgba(220, 210, 240, 0.1)!important;
   }
   #synPulsePanel .pp-card.depth-0{
-    background:rgba(210, 200, 230, 0.05)!important;
-    -webkit-backdrop-filter:blur(16px) saturate(1.12) brightness(1.05)!important;
-    backdrop-filter:blur(16px) saturate(1.12) brightness(1.05)!important;
+    background:rgba(210, 200, 230, 0.028)!important;
+    -webkit-backdrop-filter:blur(16px) saturate(1.22) brightness(1.16)!important;
+    backdrop-filter:blur(16px) saturate(1.22) brightness(1.16)!important;
   }
   #synPulsePanel .pp-title{font-size:13.5px!important;}
   #synPulsePanel .pp-desc{font-size:11.5px!important;-webkit-line-clamp:2;}
