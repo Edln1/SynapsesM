@@ -704,11 +704,11 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
     box-sizing:border-box!important;
   }
   #sec-chat #chatHistoryBtn{
-    left:14px!important;top:50%!important;bottom:auto!important;
-    transform:translateY(-50%)!important;width:26px!important;height:26px!important;
+    left:14px!important;top:0!important;bottom:0!important;margin:auto 0!important;
+    transform:none!important;width:26px!important;height:26px!important;
   }
   #sec-chat #voiceModeBtn,#sec-chat #aiModeToggle{
-    top:50%!important;bottom:auto!important;transform:translateY(-50%)!important;
+    top:0!important;bottom:0!important;margin:auto 0!important;transform:none!important;
   }
   /* ── Welcome section: dock handles search on mobile, hide standalone ── */
   .input-box::placeholder{font-size:13px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;color:rgba(200,200,220,0.5)!important;}
@@ -1370,26 +1370,39 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
-  /* Ask-bar sits lower by default; lifts only when Pulse is open */
+  /* Ask-bar lifts with Pulse via top/margin — NOT transform.
+     Transform on .input-area breaks mic/send (top:50% + translateY(-50%)) on iOS. */
   #sec-chat .syn-greeting,
   #sec-chat .syn-sub{
     transition:transform .42s cubic-bezier(0.22,1,0.36,1);
     transform:translate3d(0,0,0);
   }
   #sec-chat .input-area{
-    transition:transform .42s cubic-bezier(0.22,1,0.36,1)!important;
-    transform:translate3d(0,0,0)!important;
+    transition:margin-bottom .42s cubic-bezier(0.22,1,0.36,1)!important;
+    transform:none!important;
+  }
+  /* Mic / mode / history / send — keep true vertical center (match desktop) */
+  #sec-chat #voiceModeBtn,
+  #sec-chat #aiModeToggle,
+  #sec-chat #chatHistoryBtn,
+  #sec-chat .send-btn{
+    top:0!important;bottom:0!important;margin-top:auto!important;margin-bottom:auto!important;
+    transform:none!important;
   }
   body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
   body.pulse-open #chatEmptyState:not(.hidden) .syn-sub{
     transform:translate3d(0,-48px,0);
   }
+  /* Empty-state bar is position:absolute with top:360px — lift by reducing top */
   body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-    transform:translate3d(0,-56px,0)!important;
+    top:304px!important; /* 360 - 56 */
+    transform:none!important;
   }
+  /* Chat-active bar sits at bottom — lift with margin, keep mic centered */
   body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area,
   body.pulse-open #sec-chat .input-area{
-    transform:translate3d(0,-48px,0)!important;
+    margin-bottom:48px!important;
+    transform:none!important;
   }
   body.pulse-open #sec-chat .input-box{
     backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
@@ -1446,7 +1459,8 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   #synPulsePanel .pp-title{font-size:13.5px!important;}
   #synPulsePanel .pp-desc{font-size:11.5px!important;-webkit-line-clamp:2;}
 }
-.input-wrapper{max-width:800px;margin:0 auto;position:relative;}
+/* Wrapper height = bar height so absolute icons center correctly */
+.input-wrapper{max-width:800px;margin:0 auto;position:relative;min-height:52px;}
 .input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 52px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;box-sizing:border-box;}
 .input-box::placeholder{color:var(--muted);line-height:20px;vertical-align:middle;}
 /* Chat ask-bar: text vertically centered with clock (left 14 + 26 + gap → pad-left 52) */
@@ -1459,6 +1473,57 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 }
 #sec-chat .input-box::placeholder,#sec-coach .input-box::placeholder{
   line-height:20px;position:relative;top:0;
+}
+/* Mic / mode / clock / send — true vertical center of the 52px bar (no transform fight) */
+#sec-chat .input-wrapper > #voiceModeBtn,
+#sec-chat .input-wrapper > #aiModeToggle,
+#sec-chat .input-wrapper > #chatHistoryBtn,
+#sec-chat .input-wrapper > .send-btn{
+  position:absolute!important;
+  top:0!important;bottom:0!important;
+  height:26px!important;width:26px!important;
+  margin-top:auto!important;margin-bottom:auto!important;
+  transform:none!important;
+  box-sizing:border-box!important;
+}
+#sec-chat .input-wrapper > .send-btn{
+  width:34px!important;height:34px!important;right:10px!important;
+}
+#sec-chat .input-wrapper > #voiceModeBtn{
+  right:84px!important;
+  border-width:1.5px!important;
+  line-height:0!important;
+  font-size:0!important;
+}
+#sec-chat .input-wrapper > #voiceModeBtn svg{
+  display:block!important;margin:0!important;flex-shrink:0;
+}
+#sec-chat .input-wrapper > #aiModeToggle{
+  right:52px!important;
+  line-height:0!important;
+}
+#sec-chat .input-wrapper > #aiModeToggle svg{
+  display:block!important;width:16px!important;height:16px!important;margin:0!important;
+}
+#sec-chat .input-wrapper > #chatHistoryBtn{
+  left:14px!important;right:auto!important;
+  line-height:0!important;
+}
+#sec-chat .input-wrapper > .send-btn{
+  line-height:0!important;
+}
+#sec-chat .input-wrapper > .send-btn svg{
+  display:block!important;margin:0!important;
+}
+/* Kill base send-btn transform centering (fights true center on PC) */
+#sec-chat .input-wrapper > .send-btn,
+#sec-chat .send-btn{
+  top:0!important;bottom:0!important;margin-top:auto!important;margin-bottom:auto!important;
+  transform:none!important;
+}
+#sec-chat .send-btn:hover{
+  transform:none!important;
+  box-shadow:0 0 20px rgba(99,102,241,0.3);
 }
 @keyframes synapseOrbit{0%{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}100%{transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}}
 @keyframes synapseNodePulse{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.4);opacity:1}}
@@ -5148,8 +5213,8 @@ window.getWebAudioNode = getWebAudioNode;
       <div class="input-wrapper">
         <textarea class="input-box" id="inputBox" placeholder="Ask me anything…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)" style="height:52px;"></textarea>
         <button id="chatHistoryBtn" onclick="toggleChatHistoryDropdown()" title="Chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
-        <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:all .3s;padding:0;opacity:0.6;z-index:10;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-        <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;padding:0;opacity:0.45;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
+        <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:opacity .3s,border-color .3s,background .3s,box-shadow .3s;padding:0;opacity:0.6;z-index:10;box-sizing:border-box;transform:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+        <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
         <button class="send-btn" onclick="sendMessage()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
       </div>
     </div>
@@ -28831,8 +28896,8 @@ function closeVoiceMode() {
   if (btn) { btn.style.background='transparent'; btn.style.borderColor='rgba(99,102,241,0.4)'; btn.style.boxShadow='none'; btn.style.opacity='0.6'; btn.style.color='rgba(255,255,255,0.55)'; }
   setTimeout(window._speakerOnLastBubble, 150);
 }
-function setBtnGreen() { var btn=document.getElementById('voiceModeBtn'); if(btn){btn.classList.remove('tts-breathing');btn.style.animation='';btn.style.transform='';btn.style.background='rgba(0,180,120,0.35)';btn.style.borderColor='rgba(0,217,168,1)';btn.style.boxShadow='0 0 8px rgba(0,217,168,0.9)';btn.style.opacity='1';btn.style.color='rgba(0,217,168,1)';} if(typeof _ttsUpdateFloatingPill==='function') _ttsUpdateFloatingPill(); }
-function setBtnPurple(){ var btn=document.getElementById('voiceModeBtn'); if(btn){btn.style.background='rgba(124,106,247,0.4)';btn.style.borderColor='rgba(124,106,247,0.9)';btn.style.boxShadow='0 0 22px rgba(124,106,247,0.7)';btn.style.opacity='1';} if(typeof _ttsUpdateFloatingPill==='function') _ttsUpdateFloatingPill(); }
+function setBtnGreen() { var btn=document.getElementById('voiceModeBtn'); if(btn){btn.classList.remove('tts-breathing');btn.style.animation='';btn.style.transform='none';btn.style.top='0';btn.style.bottom='0';btn.style.marginTop='auto';btn.style.marginBottom='auto';btn.style.background='rgba(0,180,120,0.35)';btn.style.borderColor='rgba(0,217,168,1)';btn.style.boxShadow='0 0 8px rgba(0,217,168,0.9)';btn.style.opacity='1';btn.style.color='rgba(0,217,168,1)';} if(typeof _ttsUpdateFloatingPill==='function') _ttsUpdateFloatingPill(); }
+function setBtnPurple(){ var btn=document.getElementById('voiceModeBtn'); if(btn){btn.style.transform='none';btn.style.top='0';btn.style.bottom='0';btn.style.marginTop='auto';btn.style.marginBottom='auto';btn.style.background='rgba(124,106,247,0.4)';btn.style.borderColor='rgba(124,106,247,0.9)';btn.style.boxShadow='0 0 22px rgba(124,106,247,0.7)';btn.style.opacity='1';} if(typeof _ttsUpdateFloatingPill==='function') _ttsUpdateFloatingPill(); }
 
 // ── Ava Anam Avatar (right-click on the voice button to toggle) ────────────────
 // Renders a realistic talking avatar (Anam persona) in the top-right of the
@@ -29913,13 +29978,16 @@ function _scheduleChunk(arrayBuf) {
   st.id = '_micBreathStyle';
   st.textContent =
     '@keyframes _micBreathe{' +
-      '0%,100%{box-shadow:0 0 8px rgba(124,106,247,0.5),0 0 18px rgba(124,106,247,0.2);transform:scale(1);}' +
-      '50%{box-shadow:0 0 22px rgba(124,106,247,1),0 0 44px rgba(124,106,247,0.55);transform:scale(1.13);}' +
+      '0%,100%{box-shadow:0 0 8px rgba(124,106,247,0.5),0 0 18px rgba(124,106,247,0.2);}' +
+      '50%{box-shadow:0 0 22px rgba(124,106,247,1),0 0 44px rgba(124,106,247,0.55);}' +
     '}' +
     '#voiceModeBtn.tts-breathing{' +
       'animation:_micBreathe 1.8s ease-in-out infinite!important;' +
       'transition:none!important;' +
-    '}';
+      'top:0!important;bottom:0!important;margin-top:auto!important;margin-bottom:auto!important;' +
+    '}' +
+    /* Scale via zoom on pseudo-feel — keep layout center; breathe only box-shadow if transform breaks center */
+    '@media (min-width:0){#voiceModeBtn.tts-breathing{transform:none!important;}}';
   document.head.appendChild(st);
 })();
 
