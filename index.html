@@ -1333,16 +1333,26 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
-  /* Keep ask-bar (and empty-state greeting) at the “pulse open” height by default — no jump when Pulse opens */
+  /* Ask-bar sits lower by default; lifts only when Pulse is open */
   #sec-chat .syn-greeting,
   #sec-chat .syn-sub{
-    transform:translate3d(0,-48px,0);
+    transition:transform .42s cubic-bezier(0.22,1,0.36,1);
+    transform:translate3d(0,0,0);
   }
   #sec-chat .input-area{
-    transform:translate3d(0,-48px,0)!important;
+    transition:transform .42s cubic-bezier(0.22,1,0.36,1)!important;
+    transform:translate3d(0,0,0)!important;
   }
-  #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
+  body.pulse-open #chatEmptyState:not(.hidden) .syn-greeting,
+  body.pulse-open #chatEmptyState:not(.hidden) .syn-sub{
+    transform:translate3d(0,-48px,0);
+  }
+  body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
     transform:translate3d(0,-56px,0)!important;
+  }
+  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area,
+  body.pulse-open #sec-chat .input-area{
+    transform:translate3d(0,-48px,0)!important;
   }
   body.pulse-open #sec-chat .input-box{
     backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
