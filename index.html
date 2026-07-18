@@ -1047,13 +1047,21 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
     inset 0 1px 0 rgba(245, 240, 255, 0.36);}
 #synPulsePanel .pp-card.depth-0:active{cursor:grabbing;}
 /* Peeks: solid-ish dim plates only — stacked blur was causing white/grey wash on land */
+/* Until .pp-settled: hide peeks so fade-in never shows stack through the front tile */
+#synPulsePanel:not(.pp-settled) .pp-card.depth-1,
+#synPulsePanel:not(.pp-settled) .pp-card.depth-2{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+}
 #synPulsePanel .pp-card.depth-1{z-index:3;opacity:0.5;pointer-events:none;
   transform:translateY(12px) scale(0.95);filter:none;
   background:rgba(210, 200, 230, 0.07);
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .45s ease .05s,visibility .45s,box-shadow .4s ease;}
 #synPulsePanel .pp-card.depth-2{z-index:2;opacity:0.32;pointer-events:none;
   transform:translateY(22px) scale(0.90);filter:none;
   background:rgba(210, 200, 230, 0.05);
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  transition:transform .48s cubic-bezier(0.22,1,0.36,1),opacity .5s ease .08s,visibility .5s,box-shadow .4s ease;
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
 #synPulsePanel .pp-card.depth-3,
 #synPulsePanel .pp-card.depth-hide{z-index:0;opacity:0;pointer-events:none;visibility:hidden;
@@ -19223,7 +19231,8 @@ function goNotes() {
     _open = true;
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
-    /* Snap-build, then elegant fade-in (no fly/slide) */
+    /* Snap-build, fade front only first (no peeks), then settle stack */
+    try { panel.classList.remove('pp-settled'); } catch(eS){}
     _buildStack();
     void panel.offsetWidth;
     requestAnimationFrame(function(){
@@ -19232,11 +19241,13 @@ function goNotes() {
       panel.classList.add('open');
       setTimeout(function(){
         if(!_open) return;
+        /* After front fade completes, soft-show peeks (no see-through on open) */
+        try { panel.classList.add('pp-settled'); } catch(eS2){}
         _armAuto();
         if(!_allEvents.length || (FEED[0] && FEED[0].id === 'seed1')){
           _fetchMeetups(false);
         }
-      }, 380);
+      }, 400);
     });
   }
   function closePulse(){
@@ -19250,6 +19261,7 @@ function goNotes() {
     _setPulseLift(false); /* ask-me settles as sheet slides down */
     if(panel){
       panel.classList.remove('open');
+      panel.classList.remove('pp-settled');
       panel.setAttribute('aria-hidden', 'true');
     }
     if(btn) btn.classList.remove('active');
