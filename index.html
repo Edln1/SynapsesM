@@ -17933,8 +17933,13 @@ function clearRoomDot(){
 var _ob = {role:'', interests:[], focus:''};
 
 function checkOnboarding(){
-  if(!currentUser||currentUser.isGuest) return;
-  if(localStorage.getItem('synapses_onboarded_'+currentUser.email)) return;
+  if(!currentUser) return;
+  /* Guests can still open once — skip stores synapses_onboarded_guest */
+  if(currentUser.isGuest && localStorage.getItem('synapses_onboarded_guest')) return;
+  if(currentUser.email && localStorage.getItem('synapses_onboarded_'+currentUser.email)) return;
+  if(currentUser.isGuest){
+    /* optional guest onboarding — allow skip only path via modal if shown */
+  }
   // Check Supabase profiles too
   if(currentUser.id){
     _supabase.from('profiles').select('onboarded').eq('id',currentUser.id).single().then(function(r){
@@ -17965,14 +17970,25 @@ function nextOb(step){
   var cp=document.getElementById('obpip'+step); if(cp) cp.classList.add('done');
 }
 function finishOb(){
-  if(!currentUser) return;
-  localStorage.setItem('synapses_onboarded_'+currentUser.email,'1');
-  if(currentUser.id) _supabase.from('profiles').update({onboarded:true}).eq('id',currentUser.id);
+  try {
+    if(currentUser && currentUser.email) localStorage.setItem('synapses_onboarded_'+currentUser.email,'1');
+    else localStorage.setItem('synapses_onboarded_guest','1');
+  } catch(e){}
+  try {
+    if(currentUser && currentUser.id) _supabase.from('profiles').update({onboarded:true}).eq('id',currentUser.id);
+  } catch(e2){}
   var m=document.getElementById('onboardingModal'); if(m) m.classList.remove('show');
-  // Product hero is voice + avatar + neural chat — land there, not tools hub
   showToast('👋 Welcome');
   try{ if(typeof setView==='function') setView('sec-chat'); }catch(e){}
-  /* Tour is manual only (Tour button) — no auto-start after onboarding */
+  /* Mark film/product tour done so demo won’t force itself again this install */
+  try {
+    window.__synTourDone = true;
+    localStorage.setItem('synapses_tour_v1','1');
+    document.cookie = 'synapses_tour_v1=1;path=/;max-age=31536000;SameSite=Lax';
+  } catch(eT){}
+  try {
+    if(typeof window.dismissSynapsesTour==='function') window.dismissSynapsesTour();
+  } catch(eD){}
 }
 
 
@@ -24062,6 +24078,7 @@ function _openNeutralinoWindow(url){ _openInternalBrowser(url); }
       <div class="ob-opt" onclick="selectOb(this,'role','founder')">🚀 Founder / Entrepreneur</div>
       <div class="ob-opt" onclick="selectOb(this,'role','explorer')">🌍 Explorer / Curious</div>
       <button class="ob-next" onclick="nextOb(2)">Continue →</button>
+      <button type="button" onclick="finishOb()" style="margin-top:12px;width:100%;padding:10px;background:transparent;border:none;color:rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-decoration:underline;">Skip entire demo</button>
     </div>
     <!-- Step 2 -->
     <div class="ob-step" id="obstep2">
@@ -24085,6 +24102,7 @@ function _openNeutralinoWindow(url){ _openInternalBrowser(url); }
       <div class="ob-opt" onclick="selectOb(this,'focus','collab')">🤝 Find collaborators</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','impact')">🌍 Make an impact</div>
       <button class="ob-next" onclick="finishOb()">Let's go →</button>
+      <button type="button" onclick="finishOb()" style="margin-top:12px;width:100%;padding:10px;background:transparent;border:none;color:rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-decoration:underline;">Skip entire demo</button>
     </div>
   </div>
 </div>
@@ -35582,6 +35600,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function showTourSkipMyth(on) {
     var b = $('synTourSkipMyth');
     if (!b) return;
+    /* Keep “Skip entire demo” visible for the whole tour session (not only the film) */
+    if (state && state.open) on = true;
     if (on) b.classList.add('show');
     else b.classList.remove('show');
   }
@@ -35712,13 +35732,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function wireTourSkipMyth() {
     var b = $('synTourSkipMyth');
     if (!b) return;
-    /* Film-only Skip — jumps to Continue story | Do the tour. Never used on product steps. */
+    /* Skip ENTIRE demo — marks tour done so reinstalls / re-opens don’t force the full run */
     b.onclick = function (e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
       try {
-        skipMythToChoice();
+        if (typeof finish === 'function') finish(true);
+        else if (typeof window.dismissSynapsesTour === 'function') {
+          try { markDone(); } catch (eM) {}
+          window.dismissSynapsesTour();
+        }
+        try {
+          if (typeof synTrack === 'function') synTrack('tour_skip_entire', {});
+        } catch (eT) {}
       } catch (err) {
-        try { holdPlanetChoice(state.myth); } catch (e2) {}
+        try { markDone(); } catch (e2) {}
+        try { window.dismissSynapsesTour(); } catch (e3) {}
       }
     };
   }
@@ -35754,23 +35782,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         '<polygon points="5 4 15 12 5 20 5 4"/>' +
         '<line x1="19" y1="5" x2="19" y2="19"/>' +
       '</svg>' +
-      '<span class="st-skip-label">Skip</span>';
+      '<span class="st-skip-label">Skip entire demo</span>';
     var b = $('synTourSkipMyth');
     if (b) {
-      /* Upgrade old icon-only skip to labeled control */
-      if (!b.querySelector('.st-skip-label')) {
-        b.innerHTML = skipHtml;
-        b.title = 'Skip to choose story or tour';
-        b.setAttribute('aria-label', 'Skip to choose story or tour');
-      }
+      /* Always keep label current — Skip entire demo ends everything */
+      b.innerHTML = skipHtml;
+      b.title = 'Skip entire demo and enter the app';
+      b.setAttribute('aria-label', 'Skip entire demo and enter the app');
       wireTourSkipMyth();
       return;
     }
     b = document.createElement('button');
     b.id = 'synTourSkipMyth';
     b.type = 'button';
-    b.title = 'Skip to choose story or tour';
-    b.setAttribute('aria-label', 'Skip to choose story or tour');
+    b.title = 'Skip entire demo and enter the app';
+    b.setAttribute('aria-label', 'Skip entire demo and enter the app');
     b.innerHTML = skipHtml;
     root.appendChild(b);
     wireTourSkipMyth();
@@ -35818,12 +35844,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     root.innerHTML =
       '<canvas id="synTourFx"></canvas>' +
       '<div id="synTourNarration" aria-live="polite"><span class="st-nar-text"></span></div>' +
-      '<button type="button" id="synTourSkipMyth" title="Skip to choose story or tour" aria-label="Skip to choose story or tour">' +
+      '<button type="button" id="synTourSkipMyth" title="Skip entire demo and enter the app" aria-label="Skip entire demo and enter the app">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
           '<polygon points="5 4 15 12 5 20 5 4"/>' +
           '<line x1="19" y1="5" x2="19" y2="19"/>' +
         '</svg>' +
-        '<span class="st-skip-label">Skip</span>' +
+        '<span class="st-skip-label">Skip entire demo</span>' +
       '</button>' +
       '<div id="synTourHole"></div>' +
       '<div id="synTourCard">' +
@@ -39903,8 +39929,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } else {
       hideGuideBot();
     }
-    /* Skip only appears once renderStep hits the film — not on product-only starts */
-    showTourSkipMyth(false);
     startFx();
     var rootOn = $('synTourRoot');
     if (rootOn) {
@@ -39916,6 +39940,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (typeof synTrack === 'function') synTrack('tour_start', { mode: opts.mode || 'full' });
     } catch (e) {}
     renderStep();
+    /* Always offer exit — don’t force the full demo on reinstalls */
+    try {
+      ensureSkipMythDom();
+      showTourSkipMyth(true);
+    } catch (eSkip) {}
   }
 
   window.startSynapsesTour = function (force, opts) {
