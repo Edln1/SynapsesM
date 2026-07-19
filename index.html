@@ -1415,12 +1415,8 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
     top:304px!important; /* 360 - 56 */
     transform:none!important;
   }
-  /* Chat-active bar sits at bottom — lift with margin, keep mic centered */
-  body.pulse-open #sec-chat #chatEmptyState.hidden ~ .input-area,
-  body.pulse-open #sec-chat .input-area{
-    margin-bottom:48px!important;
-    transform:none!important;
-  }
+  /* Chat-active bar (chats page) stays put — Pulse should only shift the
+     home/"What's on your mind?" empty-state bar (rule above), not this one. */
   body.pulse-open #sec-chat .input-box{
     backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
     background:rgba(12,12,22,0.55)!important;
@@ -12923,11 +12919,43 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
      */
     if (_aiMode !== 'llm_nocontext' && maxTok >= 1000) {
       var _lu = ''; for(var _i=msgs.length-1;_i>=0;_i--){ if(msgs[_i].role==='user'){ _lu=msgs[_i].content; break; } }
-      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking)\b/i.test(_lu);
+      // NOTE: this gate decides whether /classify even gets CALLED at all — if a message
+      // doesn't match here, the server-side classify prompt (which already knows "best
+      // restaurants" etc. count as BASIC) never gets a chance to run. Widened to match:
+      // recommendation/ranking questions (best/top/worst X), "where's", and common
+      // recency phrasing, so those messages actually reach the classifier now.
+      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|wheres|where's|where is|when is|when are|when's|tell me|show me|find me|figure out|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet)\b/i.test(_lu);
 
-      if (_keywordHit) {
-        var _recentCtx = msgs.slice(-4).filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return (m.role==='user'?'User: ':'AI: ')+String(m.content||'').slice(0,80); }).join('\n');
-        var _clAnswer = 'BASIC'; /* keyword already says search is likely */
+      /* FOLLOW-UP DETECTION:
+       * A live search just happened → window._searchFollowUpBudget is armed (>0).
+       * While armed, a message that LOOKS LIKE A QUESTION (not just a reaction/comment)
+       * is eligible for classify even without hitting the keyword regex above.
+       * This is a cheap free pre-filter — it does NOT call classify by itself,
+       * it only decides whether classify gets a chance to run.
+       */
+      var _looksLikeQuestion = /\?\s*$|^\s*(what|who|when|why|how|which|where|is|does|did|was|were|are|will|can|could|should|and what|and who|and how|what about|how about|about|and)\b/i.test(_lu.trim());
+      var _followUpBudget = window._searchFollowUpBudget || 0;
+      var _followUpEligible = (_followUpBudget > 0) && _looksLikeQuestion && !_keywordHit;
+
+      /* Track turns since the last successful search — lets follow-ups reach
+       * back to the ORIGINAL search message for context, not just the last 4. */
+      window._searchAnchorTurns = (typeof window._searchAnchorTurns === 'number') ? window._searchAnchorTurns + 1 : 0;
+
+      if (_keywordHit || _followUpEligible) {
+        /* Normal (fresh keyword) trigger: small, cheap window like before.
+         * Follow-up trigger: widen the window back toward the message where the
+         * live search actually happened, so classify can see the original topic
+         * and rewrite a vague follow-up ("what about the celtics") into a real query. */
+        var _ctxSize = 4;
+        if (_followUpEligible) {
+          var _turnsBack = window._searchAnchorTurns;
+          _ctxSize = Math.min(msgs.length, (_turnsBack + 1) * 2 + 2);
+        }
+        var _recentCtx = msgs.slice(-_ctxSize).filter(function(m){ return m.role==='user'||m.role==='assistant'; }).map(function(m){ return (m.role==='user'?'User: ':'AI: ')+String(m.content||'').slice(0,80); }).join('\n');
+        /* Fail-CLOSED default on classify timeout when we only got here via the follow-up
+         * path (no keyword hit) — we have no strong prior signal, so don't guess-search.
+         * Keyword-path default stays BASIC (unchanged existing behavior). */
+        var _clAnswer = _keywordHit ? 'BASIC' : 'NO';
         var _searchQuery = _lu;
         var _clJson = null;
         try {
@@ -12942,23 +12970,42 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
               .catch(function(){ clearTimeout(_clTimeout); resolve(null); });
           });
           _clJson = await _clPromise;
+          console.log('[SEARCH DEBUG] /classify raw response:', _clJson);
           if (_clJson && _clJson.decision) {
-            _clAnswer = _clJson.decision.trim().toUpperCase().replace(/[^A-Z]/g,'') || 'BASIC';
+            _clAnswer = _clJson.decision.trim().toUpperCase().replace(/[^A-Z]/g,'') || _clAnswer;
             if (_clJson.query) _searchQuery = _clJson.query;
+          } else {
+            console.warn('[SEARCH DEBUG] classify returned null/no decision — either it timed out at 1500ms, the fetch failed (CORS/network), or the server errored. Falling back to default decision:', _clAnswer);
           }
-        } catch(e) {}
-        /* Classify said NO despite keywords — trust it and skip Tavily */
+        } catch(e) { console.error('[SEARCH DEBUG] classify threw an exception:', e); }
+        console.log('[SEARCH DEBUG] final decision:', _clAnswer, '| search query:', _searchQuery);
+        /* Classify said NO (or follow-up path timed out) — trust it, skip Tavily,
+         * and disarm the follow-up budget since the topic has drifted. */
         if (_clAnswer === 'NO') {
-          /* skip search */
+          window._searchFollowUpBudget = 0;
+          console.log('[SEARCH DEBUG] decision was NO — Tavily will NOT be called.');
         } else if (_clAnswer === 'BASIC' || _clAnswer === 'ADVANCED') {
           try {
             var _tvCtrl = new AbortController();
-            var _tvTimeout = setTimeout(function(){ _tvCtrl.abort(); }, 3500);
+            var _tvTimeout = setTimeout(function(){ _tvCtrl.abort(); console.warn('[SEARCH DEBUG] tavily-search aborted after 3500ms timeout'); }, 3500);
             var _tv = await fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:_searchQuery, search_depth: _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'}),signal:_tvCtrl.signal});
             clearTimeout(_tvTimeout);
-            if (_tv.ok) { var _tvj = await _tv.json(); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } }
-          } catch(e) {}
+            console.log('[SEARCH DEBUG] /tavily-search HTTP status:', _tv.status, _tv.ok);
+            if (_tv.ok) { var _tvj = await _tv.json(); console.log('[SEARCH DEBUG] tavily-search response body:', _tvj); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } else { console.warn('[SEARCH DEBUG] tavily-search succeeded but returned no context — nothing gets added to the prompt.'); }
+              /* Search succeeded — (re)arm the follow-up window for a few more messages,
+               * capped so a long rambling chat can't keep classify running forever. */
+              window._searchFollowUpBudget = 3;
+              window._searchAnchorTurns = 0; /* this message IS the new anchor */
+            } else {
+              console.error('[SEARCH DEBUG] tavily-search failed with non-OK status:', _tv.status, await _tv.text().catch(function(){return '(could not read body)';}));
+            }
+          } catch(e) { console.error('[SEARCH DEBUG] tavily-search threw an exception (network error, CORS, or abort):', e); }
         }
+      } else if (_followUpBudget > 0) {
+        /* Armed, but this message didn't look like a question (e.g. a reaction/comment) —
+         * no classify call, no cost. Decay the budget so the armed window naturally expires
+         * even if classify never explicitly says NO. */
+        window._searchFollowUpBudget = _followUpBudget - 1;
       }
     }
     // Step 2: call Groq or HF depending on mode
@@ -18108,6 +18155,13 @@ function finishOb(){
   try {
     if(typeof window.dismissSynapsesTour==='function') window.dismissSynapsesTour();
   } catch(eD){}
+  /* First-ever launch: auto turn Pulse on once the demo finishes (skip or complete). Never overrides a later user choice. */
+  try {
+    if(localStorage.getItem('synapses_pulse_open_v1') === null){
+      localStorage.setItem('synapses_pulse_open_v1', '1');
+      setTimeout(function(){ if(typeof window.openSynPulse==='function') window.openSynPulse(); }, 500);
+    }
+  } catch(eP){}
 }
 
 
@@ -18603,6 +18657,7 @@ function goNotes() {
   var CACHE_KEY = 'synapses_pulse_meetup_cache_v6'; /* v6: real Tavily news + jobs */
   var FILTER_KEY = 'synapses_pulse_filter_v2'; /* all | meetups | news | jobs */
   var CHROME_KEY = 'synapses_pulse_chrome_on'; /* '1' show labels, '0' tiles-only */
+  var OPEN_KEY = 'synapses_pulse_open_v1'; /* '1' Pulse was on, '0' Pulse was off — restored across app restarts */
   var AUTO_MS = 5200; /* gentle auto-peek like original */
   var PEEK = 3;
   var _open = false;
@@ -19410,6 +19465,7 @@ function goNotes() {
     }
     _setCatsOpen(_readChromeOn(), false); /* restore last hamburger state */
     _open = true;
+    try { localStorage.setItem(OPEN_KEY, '1'); } catch(ePO){}
     panel.setAttribute('aria-hidden', 'false');
     if(btn) btn.classList.add('active');
     /* Full stack ready before fade — all 3 tiles visible together (no 1-then-2 pop) */
@@ -19437,6 +19493,7 @@ function goNotes() {
     _drag = null;
     _busy = false;
     _open = false;
+    try { localStorage.setItem(OPEN_KEY, '0'); } catch(ePC){}
     _setPulseLift(false); /* ask-me settles as sheet slides down */
     if(panel){
       panel.classList.remove('open');
@@ -19499,6 +19556,12 @@ function goNotes() {
     setTimeout(function(){
       if(!_allEvents.length) _fetchMeetups(false);
     }, 4000);
+    /* Remember whether Pulse was toggled on and restore that state across app restarts */
+    try {
+      if(localStorage.getItem(OPEN_KEY) === '1'){
+        setTimeout(function(){ if(!_open) openPulse(); }, 600);
+      }
+    } catch(ePB){}
     document.addEventListener('keydown', function(e){
       if(!_open) return;
       if(e.key === 'Escape') closePulse();
@@ -29956,6 +30019,11 @@ function _scheduleChunk(arrayBuf) {
     _drivePcmWaveform();
 
     src.onended = function () {
+      // Guard: if _actx is already gone (voice session ended/reset while this
+      // chunk was still scheduled to play), there's nothing left to finalize —
+      // whatever ended/started the new session already handled its own cleanup.
+      // Bail out instead of crashing on _actx.currentTime.
+      if (!_actx) return;
       if (_playbackTime <= _actx.currentTime + 0.15) {
         _ttsProcessing = false;
         // Hume can still have more audio chunks in flight for this same sentence
@@ -30328,8 +30396,41 @@ function speakVoiceReply(text) {
   }
 
   // ── Watchdog: auto-reset if _busy gets stuck for >8s with no audio ──────
+  // Also detects a dead mic track (browser can silently end/mute it after the
+  // tab is backgrounded a long time, device sleep, OS-level permission
+  // changes, etc). Previously nothing checked for this: record() would keep
+  // being retried against a dead _stream forever — MediaRecorder never fires
+  // dataavailable, so nothing is ever transcribed, but the existing stuck-busy
+  // check didn't reliably catch it either since a new "recording" cycle kept
+  // starting. From the outside this looked exactly like "stopped working,
+  // need to reload the whole app" since only a full reload created a fresh
+  // getUserMedia stream. Re-request the mic automatically instead.
+  function _micTrackDead() {
+    if (!_stream) return false;
+    var tracks = _stream.getAudioTracks ? _stream.getAudioTracks() : [];
+    if (!tracks.length) return true;
+    return tracks.every(function(t) { return t.readyState === 'ended' || !t.enabled; });
+  }
+  var _reacquiringMic = false;
+  function _reacquireMic() {
+    if (_reacquiringMic) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    _reacquiringMic = true;
+    console.warn('[Watchdog] mic track dead — reacquiring stream');
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+      _stream = s;
+      _reacquiringMic = false;
+      _busy = false; _busySince = 0;
+      if (_on) setTimeout(record, 300);
+    }).catch(function(e) {
+      _reacquiringMic = false;
+      console.error('[Watchdog] mic reacquire failed:', e && e.message);
+    });
+  }
   setInterval(function() {
-    if (!_on || !_busy) { _busySince = 0; return; }
+    if (!_on) { _busySince = 0; return; }
+    if (_micTrackDead()) { _reacquireMic(); return; }
+    if (!_busy) { _busySince = 0; return; }
     var now = Date.now();
     if (_busySince === 0) { _busySince = now; return; }
     var stuckMs = now - _busySince;
@@ -31549,18 +31650,48 @@ function speakVoiceReply(text) {
     var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
-    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me about|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of)\b/i;
+    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|schedule|available|in stock|sale on|discount)\b/i;
+    /* Explicit "I want live/current info" phrasing — same override used in text chat's
+     * explicitLiveHint. Forces a search regardless of topic, since the user directly
+     * signaled recency (this was the actual gap causing "best restaurants ... right now"
+     * to miss in voice mode). */
+    var _voiceExplicitLiveHint = /\b(right now|as of (now|today|this (year|month|week)|20\d\d)|at the moment|currently|nowadays|these days|so far this year|up[- ]?to[- ]?date|still (out|available|open|running|airing|around|going on)|not yet|has(?:n'?t| not) (?:happened|released|come out))\b/i;
     var _directedAtHer = /\b(your|you|yours|yourself|u r|ur|you're|you are|you were|you have|you've|do you|are you|were you|have you|would you|could you|will you|why do you|why are you|why is your|what is your|what's your|whats your|tell me about you|about yourself)\b/i;
     var _voicePersonalSignals = /\b(i feel|i'm feeling|i felt|i miss you|i love you|i'm stressed|i'm anxious|i'm sad|i'm lonely|i'm scared)\b/i;
     var _hasYear = /20[0-9]{2}|twenty.?twenty.?(one|two|three|four|five|six|seven|eight|nine|ten)|twenty.?(one|two|three|four|five|six|seven|eight|nine|ten)/i.test(text);
     var _yearContextWords = /\b(war|conflict|election|president|economy|situation|happening|still|going on|country|team|game|movie|show|album|dropped|released|announced|topic|fighting|peace|deal|crisis|attack|troops|winning|losing|alive|dead|ruling|leading|car|drive|phone|best|popular|trending|biggest|major|top|new|latest|using|wearing|watching|listening|playing|buying|worth|cost|price|available|exist|out|around|like|recommend|suggest|think|would|should|could)\b/i;
-    var _voiceNeedsSearch = (_voiceSearchKeywords.test(text) || _hasYear) && !_voicePersonalSignals.test(text) && !_directedAtHer.test(text);
+    // Fix: a real content keyword (e.g. "bar", "best", "restaurant") should win over the
+    // your/you blocker — "why didn't you mention Fanny's Oyster Bar" has a real topic in it,
+    // the blocker was only meant to catch messages that are PURELY about the assistant
+    // itself ("how are you", "what's your favorite color") with no other content.
+    var _hasContentKeyword = _voiceSearchKeywords.test(text);
+    var _voiceNeedsSearch = (_hasContentKeyword || _voiceExplicitLiveHint.test(text) || _hasYear)
+      && !_voicePersonalSignals.test(text)
+      && !(_directedAtHer.test(text) && !_hasContentKeyword);
 
-    // Build the query to send to Tavily
-    var _tavilyQuery = text;
+    // Follow-up context: mirrors text chat's _searchFollowUpBudget. After a successful
+    // search, keep a short window open so natural follow-ups ("why didn't you mention X")
+    // that don't hit the keyword regex on their own still search, using the previous
+    // search topic + the new message as the query. Without this, voice mode had zero
+    // memory of what was just searched, unlike text chat.
+    var _voiceFollowUpBudget = window._voiceSearchFollowUpBudget || 0;
+    var _looksLikeVoiceQuestion = /\?\s*$|^\s*(what|who|when|why|how|which|where|is|does|did|was|were|are|will|can|could|should|why don'?t|why didn'?t|why not|what about|how about)\b/i.test(text.trim());
+    var _voiceFollowUpEligible = (_voiceFollowUpBudget > 0) && _looksLikeVoiceQuestion && !_voiceNeedsSearch && !_voicePersonalSignals.test(text) && !_directedAtHer.test(text);
+    if (_voiceFollowUpEligible) _voiceNeedsSearch = true;
+    if (!_voiceNeedsSearch && _voiceFollowUpBudget > 0) {
+      // No search this turn and not eligible either — let the follow-up window decay.
+      window._voiceSearchFollowUpBudget = _voiceFollowUpBudget - 1;
+    }
+
+    // Build the query to send to Tavily — for a follow-up, combine the last search topic
+    // with the new message so Tavily has enough context (e.g. "best oyster bars Vancouver"
+    // + "why didn't you mention Fanny's Oyster Bar" together).
+    var _tavilyQuery = (_voiceFollowUpEligible && window._voiceLastSearchQuery)
+      ? (window._voiceLastSearchQuery + ' — ' + text)
+      : text;
 
     console.log('[VoiceSearch] text:', text);
-    console.log('[VoiceSearch] hasYear:', _hasYear, '| needsSearch:', _voiceNeedsSearch, '| personalBlock:', _voicePersonalSignals.test(text));
+    console.log('[VoiceSearch] hasYear:', _hasYear, '| needsSearch:', _voiceNeedsSearch, '| followUpEligible:', _voiceFollowUpEligible, '| personalBlock:', _voicePersonalSignals.test(text));
 
     var _voiceSearchCtx = '';
     if (_voiceNeedsSearch) {
@@ -31575,7 +31706,7 @@ function speakVoiceReply(text) {
             _tavilyTimedOut = true;
             console.log('[VoiceSearch] Tavily TIMEOUT — proceeding without search context');
             if (_tavilyCtrl) try { _tavilyCtrl.abort(); } catch(e){}
-          }, 2000); // hard 2s — voice must not wait on cold Tavily
+          }, 5000); // was 2000ms originally, then 3300ms — raised to 5000ms so slow Tavily calls have a real chance to finish. Only affects messages that actually trigger a search; normal conversation is untouched.
           return fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -31586,6 +31717,11 @@ function speakVoiceReply(text) {
             if (_tavilyTimedOut) return;
             _voiceSearchCtx = d.context || '';
             window._voiceUsedSearch = !!_voiceSearchCtx;
+            // Search succeeded — (re)arm the follow-up window and remember what we searched for.
+            if (_voiceSearchCtx) {
+              window._voiceSearchFollowUpBudget = 3;
+              window._voiceLastSearchQuery = _tavilyQuery;
+            }
             console.log('[VoiceSearch] Tavily returned:', _voiceSearchCtx ? _voiceSearchCtx.slice(0, 100) + '...' : 'EMPTY');
           }).catch(function(e){
             clearTimeout(_tavilyTimer);
