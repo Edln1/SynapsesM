@@ -28833,12 +28833,16 @@ function _buildVoicePicker() {
 // ── Hume REST call with automatic key rotation ───────────────────────────────
 // Retries with the next key in _humeKeys when the current one comes back
 // unauthorized / out-of-credits / rate-limited, up to one attempt per key.
-function _humeFetchFile(body, attemptsLeft) {
+function _humeFetchFile(body, attemptsLeft, extCtrl) {
+  var _huCtrl = extCtrl || ((typeof AbortController !== 'undefined') ? new AbortController() : null);
+  var _huTimer = setTimeout(function(){ if (_huCtrl) try { _huCtrl.abort(); } catch(e){} }, 7000); // was unbounded — hung silently until the 9s watchdog reset everything
   return fetch('https://api.hume.ai/v0/tts/file', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Hume-Api-Key': _humeGetKey() },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal: _huCtrl ? _huCtrl.signal : undefined
   }).then(function(r){
+    clearTimeout(_huTimer);
     if (!r.ok) {
       // Hume returns a JSON body describing what's wrong (bad voice name,
       // bad key, out of credits, etc.) — read and log it instead of just
@@ -28848,12 +28852,15 @@ function _humeFetchFile(body, attemptsLeft) {
         // 401 = bad key, 402/403 = out of credits/forbidden, 429 = rate limited
         if ((r.status === 401 || r.status === 402 || r.status === 403 || r.status === 429) && attemptsLeft > 1) {
           _humeRotateKey();
-          return _humeFetchFile(body, attemptsLeft - 1);
+          return _humeFetchFile(body, attemptsLeft - 1, extCtrl);
         }
         throw new Error('Hume HTTP '+r.status+': '+t.slice(0,200));
       });
     }
     return r.blob();
+  }).catch(function(e){
+    clearTimeout(_huTimer);
+    throw (e && e.name === 'AbortError') ? new Error('Hume TTS timed out after 7s') : e;
   });
 }
 
@@ -28861,36 +28868,47 @@ function _humeFetchFile(body, attemptsLeft) {
 // never exposed to the client (same pattern as Deepgram/Mem0/Anam/LiveAvatar).
 // See /elevenlabs-tts in server.js — key lives only in the Render env var
 // ELEVENLABS_API_KEY.
-function _elevenFetchFile(text) {
+function _elevenFetchFile(text, extCtrl) {
   var v = _elevenGetVoice();
+  var _ctrl = extCtrl || ((typeof AbortController !== 'undefined') ? new AbortController() : null);
+  var _timer = setTimeout(function(){ if (_ctrl) try { _ctrl.abort(); } catch(e){} }, 7000); // was unbounded — hung silently until the 9s watchdog reset everything
   return fetch(_AVA_BACKEND_URL + '/elevenlabs-tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: text, voiceId: v.voiceId })
+    body: JSON.stringify({ text: text, voiceId: v.voiceId }),
+    signal: _ctrl ? _ctrl.signal : undefined
   }).then(function(r) {
+    clearTimeout(_timer);
     if (!r.ok) return r.text().then(function(t){ throw new Error('ElevenLabs HTTP ' + r.status + ': ' + t.slice(0,200)); });
     return r.blob();
+  }).catch(function(e){
+    clearTimeout(_timer);
+    throw (e && e.name === 'AbortError') ? new Error('ElevenLabs TTS timed out after 7s') : e;
   });
 }
 
 // ── Shared REST TTS fetch — returns a Promise<Blob>, branches by active provider ──
 // Used by the speaker button and any WS-unavailable fallback paths.
-function _ttsRestFetch(text) {
+function _ttsRestFetch(text, extCtrl) {
   if (window._elevenSelected) {
-    return _elevenFetchFile(text);
+    return _elevenFetchFile(text, extCtrl);
   }
   if (window._ttsProvider === 'hume') {
     var humeBody = { utterances: [{ text: text }] };
     if (window._humeVoice) humeBody.utterances[0].voice = { name: window._humeVoice, provider: 'HUME_AI' };
-    return _humeFetchFile(humeBody, _humeKeys.length);
+    return _humeFetchFile(humeBody, _humeKeys.length, extCtrl);
   }
   var voice = window._dgVoice || 'aura-2-delia-en';
   var key   = window._dgKey   || '';
+  var _dgCtrl = extCtrl || ((typeof AbortController !== 'undefined') ? new AbortController() : null);
+  var _dgTimer = setTimeout(function(){ if (_dgCtrl) try { _dgCtrl.abort(); } catch(e){} }, 7000); // was unbounded — hung silently until the 9s watchdog reset everything
   return fetch('https://api.deepgram.com/v1/speak?model='+voice+'&encoding=mp3',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Token '+key},
-    body:JSON.stringify({text:text})
-  }).then(function(r){ if(!r.ok) throw new Error('DG HTTP '+r.status); return r.blob(); });
+    body:JSON.stringify({text:text}),
+    signal: _dgCtrl ? _dgCtrl.signal : undefined
+  }).then(function(r){ clearTimeout(_dgTimer); if(!r.ok) throw new Error('DG HTTP '+r.status); return r.blob(); })
+    .catch(function(e){ clearTimeout(_dgTimer); throw (e && e.name === 'AbortError') ? new Error('Deepgram TTS timed out after 7s') : e; });
 }
 
 // ── Reusable speaker button ──────────────────────────────────────────────────
@@ -29558,9 +29576,14 @@ function _ttsClean(txt) {
 }
 
 // ── Stop everything ────────────────────────────────────────────────────────────
-function _ttsStopAll() {
-  // Don't interrupt Ava's speech-to-speech when it's active
-  if (window._topNavVoiceActive) return;
+function _ttsStopAll(force) {
+  // Don't interrupt Ava's speech-to-speech when it's active — UNLESS force=true.
+  // The watchdog passes force=true: it calls this specifically to recover from a
+  // stall, and voice mode being "active" at that moment doesn't mean anything is
+  // healthy — that's exactly when a real cleanup is needed most. Without force,
+  // this guard was silently turning the watchdog's own recovery attempt into a
+  // no-op, leaving the WS/audio pipeline broken after every watchdog reset.
+  if (window._topNavVoiceActive && !force) return;
   if (typeof _avaInterruptLipsync === 'function') _avaInterruptLipsync();
   _vmGenId++;
   _ttsQueue = []; _ttsProcessing = false; _vmSpeaking = false;
@@ -30372,6 +30395,23 @@ function speakVoiceReply(text) {
   // checks its captured turn id against the live one and bails if stale.
   var _voiceTurnId = 0;
 
+  // Registry of AbortControllers for whatever network calls the CURRENT turn
+  // has in flight (search, LLM answer, TTS). Previously, turning voice off
+  // only bumped _voiceTurnId so stale results got ignored when they arrived —
+  // the actual requests kept running and could occupy a connection slot to
+  // the same server, delaying the very next turn's requests behind them.
+  // Now stopAll() actively aborts everything registered here.
+  var _turnAbortControllers = [];
+  function _registerTurnAbort(ctrl) {
+    if (!ctrl) return ctrl;
+    _turnAbortControllers.push(ctrl);
+    return ctrl;
+  }
+  function _abortAllTurnRequests() {
+    _turnAbortControllers.forEach(function(c){ try { c.abort(); } catch(e){} });
+    _turnAbortControllers = [];
+  }
+
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
   // and — if the top bar icons are already collapsed when this changes —
   // kicks off the same delayed glide-to-center the mic button uses in
@@ -30450,7 +30490,10 @@ function speakVoiceReply(text) {
       console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting');
       _busy = false; _busySince = 0;
       _voiceTurnId++; // abandon whatever turn was in flight — late speak()/record() calls from it get ignored
-      try { if (typeof _ttsStopAll === 'function') _ttsStopAll(); } catch(e) {}
+      _abortAllTurnRequests(); // cancel whatever search/LLM/TTS request actually caused the stall
+      try { if (_recorder && _recorder.state === 'recording') _recorder.stop(); } catch(e) {}
+      _recorder = null; // record() below always creates a fresh one; don't leave a stale one referenced
+      try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {} // force=true — see _ttsStopAll comment; without this the watchdog's own cleanup was a no-op while voice mode was active
       if (_on) setTimeout(record, 300);
     }
   }, 1500);
@@ -31298,10 +31341,18 @@ function speakVoiceReply(text) {
       var _fired = false;
 
       function _wireFlushResolver() {
+        // Was 12000ms — LONGER than the global blunt watchdog's 8000ms threshold,
+        // meaning this dedicated safety net could never actually fire first; the
+        // blunt watchdog always won the race, so every WS TTS stall showed up as
+        // a generic "_busy stuck" reset with zero info about what actually failed
+        // in the WS/audio pipeline. Now fires at 6500ms — comfortably before the
+        // watchdog's 8000ms — so this path gets to log the real reason and clean
+        // up properly instead of being pre-empted.
         var _safetyTimer = setTimeout(function () {
+          console.warn('[VoiceTTS] WS speak safety timer fired after 6.5s — no flush resolver ran (WS/audio pipeline stalled, not a plain LLM/search hang)');
           _busy = false; _busySince = 0;
           if (_on) setTimeout(record, 180);
-        }, 12000);
+        }, 6500);
         while (_wsResolvers.length > 0) {
           var _stale = _wsResolvers.shift();
           if (_stale) { try { _stale(null); } catch (e) {} }
@@ -31362,7 +31413,9 @@ function speakVoiceReply(text) {
   }
 
   function _elevenSpeakOnce(clean) {
-    _elevenFetchFile(clean).then(function(blob) {
+    var _elCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    _registerTurnAbort(_elCtrl);
+    _elevenFetchFile(clean, _elCtrl).then(function(blob) {
       var bu = URL.createObjectURL(blob);
       var a = new Audio(bu);
       _playAudio(a, function() { _busy = false; _busySince = 0; toastHide(); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); });
@@ -31374,10 +31427,12 @@ function speakVoiceReply(text) {
 
   // Fallback: original REST-based TTS for when WS is blocked/unavailable
   function _speakREST(clean) {
+    var _speakCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    _registerTurnAbort(_speakCtrl);
     if (_ttsProvider === 'hume') {
       // Hume's file endpoint returns a complete audio file rather than a
       // chunked stream we can pump into MediaSource — simple blob playback.
-      _ttsRestFetch(clean).then(function(blob) {
+      _ttsRestFetch(clean, _speakCtrl).then(function(blob) {
         var bu = URL.createObjectURL(blob);
         var a = new Audio(bu);
         _playAudio(a, function() { _busy = false; _busySince = 0; toastHide(); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); });
@@ -31385,11 +31440,14 @@ function speakVoiceReply(text) {
       return;
     }
     var voice = (typeof _dgVoice !== 'undefined') ? _dgVoice : 'aura-2-thalia-en';
+    var _dgTimer2 = setTimeout(function(){ try { _speakCtrl.abort(); } catch(e){} }, 7000); // was unbounded — separate code path from _ttsRestFetch, missed by the earlier TTS timeout fix
     fetch('https://api.deepgram.com/v1/speak?model=' + voice + '&encoding=mp3', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Token ' + _dgKey },
-      body: JSON.stringify({ text: clean })
+      body: JSON.stringify({ text: clean }),
+      signal: _speakCtrl ? _speakCtrl.signal : undefined
     }).then(function(r) {
+      clearTimeout(_dgTimer2);
       if (!r.ok) throw new Error('DG ' + r.status);
       var ms = new MediaSource();
       var burl = URL.createObjectURL(ms);
@@ -31430,6 +31488,7 @@ function speakVoiceReply(text) {
       var p = a.play();
       if (p && p.catch) p.catch(function(){});
     }).catch(function(e) {
+      clearTimeout(_dgTimer2);
       _busy = false; _busySince = 0;
       if (_on) setTimeout(record, 1000);
     });
@@ -31809,6 +31868,7 @@ function speakVoiceReply(text) {
       if (!_voiceNeedsSearch) return;
 
       var _tavilyCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      _registerTurnAbort(_tavilyCtrl);
       var _tavilyTimedOut = false;
       var _tavilyTimer = setTimeout(function(){
         _tavilyTimedOut = true;
@@ -31885,17 +31945,15 @@ function speakVoiceReply(text) {
       var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
       if (sys.length > 6000) sys = sys.slice(0, 6000) + '\n[context trimmed for speed]';
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : 320);
+    var _groqCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    _registerTurnAbort(_groqCtrl);
+    if (_groqCtrl) setTimeout(function(){ try { _groqCtrl.abort(); } catch(e){} }, 6000);
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       /* No userId on hot path — unused by /groq-chat for mem0, just extra body */
       body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
-      signal: (function(){
-        if (typeof AbortController === 'undefined') return undefined;
-        var ctrl = new AbortController();
-        setTimeout(function(){ try { ctrl.abort(); } catch(e){} }, 6000);
-        return ctrl.signal;
-      })()
+      signal: _groqCtrl ? _groqCtrl.signal : undefined
     }).then(function(r) {
       if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
       if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
@@ -32145,6 +32203,8 @@ function speakVoiceReply(text) {
   function stopAll() {
     _on = false;
     _setTopNavVoiceActive(false);
+    _voiceTurnId++; // abandon whatever turn was in flight — closing mid-reply must not let a late LLM/TTS completion revive itself after you reopen and start a new turn
+    _abortAllTurnRequests(); // actually cancel the in-flight search/LLM/TTS network calls — previously only their results were ignored, the requests kept running and could occupy a connection slot ahead of the very next turn's requests
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
