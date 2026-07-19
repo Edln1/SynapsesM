@@ -31687,7 +31687,12 @@ function speakVoiceReply(text) {
     // search topic + the new message as the query. Without this, voice mode had zero
     // memory of what was just searched, unlike text chat.
     var _voiceFollowUpBudget = window._voiceSearchFollowUpBudget || 0;
-    var _looksLikeVoiceQuestion = /\?\s*$|^\s*(what|who|when|why|how|which|where|is|does|did|was|were|are|will|can|could|should|why don'?t|why didn'?t|why not|what about|how about)\b/i.test(text.trim());
+    // Narrow continuation signal — a real follow-up refers BACK to what was just
+    // said/searched ("why didn't you mention X", "what about the other one").
+    // The old check matched a bare "?" or any what/who/when/why/how/is/does/
+    // did/was/were/are/will/can/could/should opener, which is most spoken
+    // questions — that's why the window never closed once a search fired.
+    var _looksLikeVoiceQuestion = /\b(why (didn'?t|don'?t|wasn'?t|aren'?t|isn'?t|couldn'?t) you|what about|how about|what else|any other|anything else|and (what|where|when|who|how)|but what|tell me more|did you check|is there another|what'?s the other one|and the other)\b/i.test(text.trim());
     var _voiceFollowUpEligible = (_voiceFollowUpBudget > 0) && _looksLikeVoiceQuestion && !_voiceNeedsSearch && !_voicePersonalSignals.test(text) && !_directedAtHer.test(text);
     if (_voiceFollowUpEligible) _voiceNeedsSearch = true;
     if (!_voiceNeedsSearch && _voiceFollowUpBudget > 0) {
@@ -31729,9 +31734,16 @@ function speakVoiceReply(text) {
             if (_tavilyTimedOut) return;
             _voiceSearchCtx = d.context || '';
             window._voiceUsedSearch = !!_voiceSearchCtx;
-            // Search succeeded — (re)arm the follow-up window and remember what we searched for.
+            // Search succeeded — remember what we searched for either way. Only a
+            // FRESH topic search (keyword/live-hint/year, not one that only fired
+            // because the follow-up window let it through) re-arms the window
+            // back to 3. If a follow-up-triggered search also reset it to 3,
+            // a chain of "what about X" style questions kept the window open
+            // indefinitely and voice mode never left search mode.
             if (_voiceSearchCtx) {
-              window._voiceSearchFollowUpBudget = 3;
+              window._voiceSearchFollowUpBudget = _voiceFollowUpEligible
+                ? Math.max(0, _voiceFollowUpBudget - 1)
+                : 3;
               window._voiceLastSearchQuery = _tavilyQuery;
             }
             console.log('[VoiceSearch] Tavily returned:', _voiceSearchCtx ? _voiceSearchCtx.slice(0, 100) + '...' : 'EMPTY');
