@@ -1653,6 +1653,22 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .room-input{flex:1;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:12px 18px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13.5px;outline:none;resize:none;min-height:46px;max-height:120px;transition:border-color .2s,box-shadow .2s;line-height:1.5;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .room-input::placeholder{color:var(--muted);}
 .room-input:focus{border-color:rgba(124,106,247,0.6);box-shadow:0 0 0 3px rgba(124,106,247,0.12),0 4px 32px rgba(124,106,247,0.08);}
+#chatAttachPreview{display:none;flex-wrap:wrap;gap:6px;padding:0 6px 8px;max-width:800px;margin:0 auto;box-sizing:border-box;}
+#chatAttachPreview.show{display:flex;}
+.chat-attach-chip{position:relative;display:flex;align-items:center;gap:6px;background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.25);border-radius:9px;padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text);max-width:180px;}
+#sec-chat .input-area{position:relative;transition:background .15s ease;}
+#sec-chat .input-area.chat-drop-active{background:rgba(124,106,247,0.08);border-radius:14px;}
+#sec-chat .input-area.chat-drop-active::after{content:'Drop to attach';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;border:2px dashed rgba(124,106,247,0.6);border-radius:14px;background:rgba(10,10,14,0.55);color:rgba(255,255,255,0.85);font-size:13px;font-weight:500;z-index:5;}
+.chat-attach-chip img{width:22px;height:22px;object-fit:cover;border-radius:5px;flex-shrink:0;}
+.chat-attach-chip .cac-icon{width:22px;height:22px;border-radius:5px;background:rgba(124,106,247,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;}
+.chat-attach-chip .cac-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.chat-attach-chip .cac-remove{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;padding:0;line-height:1;}
+.chat-attach-chip .cac-remove:hover{background:rgba(255,80,80,0.35);color:#fff;}
+.msg-attach-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.msg-attach-thumb{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:4px 8px 4px 4px;font-size:11px;color:var(--muted);max-width:200px;}
+.msg-attach-thumb img{width:34px;height:34px;object-fit:cover;border-radius:5px;flex-shrink:0;}
+.msg-attach-thumb .mat-icon{width:34px;height:34px;border-radius:5px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.msg-attach-thumb .mat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .room-send{width:40px;height:40px;background:rgba(99,102,241,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.3);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.88);flex-shrink:0;transition:all .2s;}
 .room-send:hover{background:rgba(99,102,241,0.26);border-color:rgba(99,102,241,0.55);box-shadow:0 0 18px rgba(99,102,241,0.25);transform:scale(1.05);}
 .jobs-inner{max-width:100%;margin:0;padding:28px 32px 32px;width:100%;}
@@ -5223,8 +5239,11 @@ window.getWebAudioNode = getWebAudioNode;
 
     <div class="chat-messages" id="chatContainer"></div>
     <div class="input-area">
+      <div id="chatAttachPreview" style="display:none;"></div>
       <div class="input-wrapper">
         <textarea class="input-box" id="inputBox" placeholder="Ask me anything…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)" style="height:52px;"></textarea>
+        <input type="file" id="chatFileInput" accept="image/*,.pdf,.txt,.md,.csv,.json,.mp3,audio/mpeg" multiple style="display:none;" onchange="handleChatFileSelect(event)">
+        <button id="chatAttachBtn" onclick="document.getElementById('chatFileInput').click()" title="Attach file" style="position:absolute;right:116px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.08)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-8.49 8.49a1 1 0 0 1-1.41-1.41l7.78-7.78"/></svg></button>
         <button id="chatHistoryBtn" onclick="toggleChatHistoryDropdown()" title="Chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
         <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:opacity .3s,border-color .3s,background .3s,box-shadow .3s;padding:0;opacity:0.6;z-index:10;box-sizing:border-box;transform:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
         <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
@@ -6989,7 +7008,114 @@ var SEED_USERS=[{name:'nova_ai',color:'#6366f1',initial:'N',email:'nova@synapses
 var CAT_META={collab:{label:'🤝 Collaborator',color:'#7c6af7',bg:'rgba(124,106,247,0.12)'},hiring:{label:'💼 Hiring',color:'#00d9a8',bg:'rgba(0,217,168,0.1)'},launch:{label:'🚀 Launch',color:'#f7a66a',bg:'rgba(247,166,106,0.12)'},feedback:{label:'💬 Feedback',color:'#6af7f7',bg:'rgba(106,247,247,0.1)'},skill:{label:'⚡ Skill',color:'#e85d96',bg:'rgba(232,93,150,0.1)'}};
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmtMDstream(t){
+/* LLMs frequently drop the ordinal off the FIRST item of a list (e.g. a bare
+ * "Jesus" line sitting directly above "1. Muhammad", "2. Napoleon...") while
+ * numbering every item after it correctly. If left alone, that orphan line
+ * breaks _renumberOrderedList's run-detection and forces a bogus reset.
+ * Detect an unnumbered line sitting directly (no blank line) above a real
+ * numbered line, and tag it with a placeholder ordinal so it's absorbed into
+ * the same run. Skips anything that's already a header/bullet/numbered line,
+ * or ends in ':' (a real section label, not a dropped list item). */
+function _reclaimOrphanListLeads(text){
+  return text.replace(/^[ \t]*(?!\d+\.)(?!#)(?!- )(?!<div)([^\n]*[^\n:\s])[ \t]*\n(\d+\.[ \t]*.+)$/gm, function(full, orphan, numbered){
+    return '1. ' + orphan + '\n' + numbered;
+  });
+}
+/* The model occasionally drops the period after a list ordinal — "5 Toyota
+ * RAV4," instead of "5. Toyota RAV4," — usually inside a run-on comma-separated
+ * list. That line then fails the \d+\. list-item pattern entirely: it falls
+ * through to plain unstyled text AND silently disappears from the item count,
+ * which throws off both the display and the count-enforcement logic downstream.
+ * Only fires when the line sits directly next to a real numbered line, so it
+ * can't misfire on an ordinary number in prose ("I waited 5 hours..."). */
+function _fixMissingListPeriod(text){
+  return text.replace(/^([ \t]*)(\d{1,2})[ \t]+([A-Z][^\n]*)$/gm, function(full, indent, num, rest, offset, str){
+    var before = str.slice(0, offset);
+    var after = str.slice(offset + full.length);
+    var prevLine = (before.split('\n').filter(function(l){return l.trim();}).pop()) || '';
+    var nextLine = (after.split('\n').filter(function(l){return l.trim();})[0]) || '';
+    var looksListy = /^\d+\.[ \t]/.test(prevLine.trim()) || /^\d+\.[ \t]/.test(nextLine.trim());
+    return looksListy ? indent + num + '. ' + rest : full;
+  });
+}
+/* Ordered lists from the LLM are often malformed — numbers skip (1,2,4,5),
+ * restart mid-list, or duplicate across sections. Rather than trust the
+ * literal digit the model typed, renumber every ordered-list line 1,2,3...
+ * based on position. Only resets to 1 when something else (a header, a
+ * bullet list, a paragraph — anything already converted to a <div> or
+ * containing real text) breaks the run of list lines; blank lines alone
+ * don't reset it, since MD paragraph spacing between items is normal. */
+function _renumberOrderedList(text, startCount){
+  var re = /^(\d+)\.[ \t]*(.+)$/gm;
+  var counter = startCount||0;
+  var lastIndex = 0;
+  var out = '';
+  var m;
+  // NOTE: this used to reset `counter` to 0 whenever real (non-div) text sat
+  // between two numbered lines, meant to detect "this is a separate,
+  // unrelated numbered list." In practice that fired constantly on ordinary
+  // transition sentences the model writes mid-answer (e.g. "However, here
+  // are a few more:") splitting one logical top-10 list into 1-2-3 then
+  // 1-2-3-4-5-6-7 again. Each new AI message already gets its own fresh
+  // counter at the call site (_storyListCounter = 0 per message), so a reset
+  // here was never needed to separate genuinely different lists across
+  // messages — it only ever broke continuations within a single response.
+  // Removed: numbering now just increments straight through one response.
+  while((m = re.exec(text)) !== null){
+    var between = text.slice(lastIndex, m.index);
+    counter++;
+    out += between;
+    out += '<div style="display:flex;gap:8px;margin:7px 0"><span style="color:#6366f1;flex-shrink:0;font-weight:600;min-width:20px">'+counter+'.</span><span>'+m[2]+'</span></div>';
+    lastIndex = re.lastIndex;
+  }
+  out += text.slice(lastIndex);
+  _renumberOrderedList.lastCount = counter;
+  return out;
+}
+/* Splits story/calm-mode streaming text into "sentences" on ./!/? boundaries,
+ * then merges fragments back together where the split was bogus: a bare list
+ * ordinal ("4." alone), a name initial ("J." "R." "K."), or a decimal number
+ * split mid-way ("1." + "42 billion" from "1.42 billion"). Also re-homes a
+ * stray trailing list-ordinal (left over from a period-split) onto the front
+ * of the next sentence so numbering + content never separate.
+ * Shared by the live per-chunk streaming reveal AND the end-of-stream flush
+ * below, so both always agree on where sentences start/end. Previously each
+ * spot had its own copy — and the live-reveal counter separately assumed a
+ * fixed chunk size had been shown even when it hadn't, silently dropping
+ * sentences from the DISPLAY while TTS (a fully independent counter) still
+ * spoke them, and any leftover tail that hadn't filled a full chunk when
+ * streaming ended was never shown at all. */
+function _storySplitSentences(text){
+  var _raw = text.match(/[^.!?]+[.!?]+/g) || [];
+  var sentences = [];
+  for(var _ri=0; _ri<_raw.length; _ri++){
+    var _frag = _raw[_ri];
+    var _keepMerging = true;
+    while(_keepMerging && _ri+1<_raw.length){
+      _keepMerging = false;
+      if(/^\s*\d+\.\s*$/.test(_frag)){
+        _frag += ' '+_raw[++_ri];
+        _keepMerging = true;
+      } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
+        _frag += ' '+_raw[++_ri];
+        _keepMerging = true;
+      } else if(/\d\.$/.test(_frag) && /^\d/.test(_raw[_ri+1])){
+        _frag += _raw[++_ri];
+        _keepMerging = true;
+      }
+    }
+    sentences.push(_frag);
+  }
+  for(var _si=0; _si<sentences.length-1; _si++){
+    var _mTrail = sentences[_si].match(/\n\s*(\d+\.)\s*$/);
+    if(_mTrail){
+      sentences[_si] = sentences[_si].slice(0, _mTrail.index);
+      sentences[_si+1] = '\n\n' + _mTrail[1] + ' ' + sentences[_si+1].replace(/^\s+/, '');
+    }
+  }
+  return sentences;
+}
+function fmtMDstream(t, startListCount){
   // Safe partial renderer: hides orphaned number-only lines (number streamed before content)
   t=t.split('\n').map(function(l){return l.replace(/^[ \t]+/,'');}).join('\n');
   // Collapse "N.\ncontent" onto one line
@@ -6998,14 +7124,34 @@ function fmtMDstream(t){
   t=t.replace(/^\d+\.[ \t]*$/gm,'');
   // Clean up excess blank lines
   t=t.replace(/\n{3,}/g,'\n\n');
+  t=_reclaimOrphanListLeads(t);
+  t=_fixMissingListPeriod(t);
   t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   t=t.replace(/\*(.+?)\*/g,'<em>$1</em>');
   t=t.replace(/^#{1,3} (.+)$/gm,'<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;margin:14px 0 4px;color:var(--text)">$1</div>');
-  t=t.replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:2px 0"><span style="color:#6366f1;flex-shrink:0;margin-top:2px">▸</span><span>$1</span></div>');
-  t=t.replace(/^(\d+)\.[ \t]*(.+)$/gm,'<div style="display:flex;gap:8px;margin:2px 0"><span style="color:#6366f1;flex-shrink:0;font-weight:600;min-width:20px">$1.</span><span>$2</span></div>');
-  t=t.replace(/(<\/div>)\n\n(<div)/g,'$1\n$2');
+  t=t.replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:7px 0"><span style="color:#6366f1;flex-shrink:0;margin-top:2px">▸</span><span>$1</span></div>');
+  t=_renumberOrderedList(t, startListCount);
+  // Divs (numbered items, bullets, headers) already carry their own margin
+  // for spacing. The raw text between them can have 0, 1, or 2 newlines
+  // depending on how the model happened to format that particular line —
+  // and any newline that survives to the next two replaces becomes a <br>,
+  // stacking an extra line-break on top of the div's margin. That's what
+  // produced visibly inconsistent gaps (some list rows tight, some far
+  // apart) purely based on the model's incidental raw formatting. Strip ALL
+  // newline runs touching a div boundary — spacing is controlled by CSS
+  // margin only, never by leftover text newlines.
+  t=t.replace(/\n+(?=<div)/g,'');
+  t=t.replace(/(<\/div>)\n+/g,'$1');
   t=t.replace(/\n\n/g,'<br>');
   t=t.replace(/\n/g,'<br>');
+  // Chunk-boundary cleanup: a chunk's trailing blank line (the gap before the
+  // NEXT chunk's list item, which isn't part of this chunk) has no following
+  // <div> to collapse against, so it survives as a stray <br> at the very end
+  // (or start) of this chunk's HTML. Stacked on .story-chunk's own
+  // margin-bottom, that produced a visibly larger gap between chunks than
+  // within them. Strip leading/trailing <br> runs since they're boundary
+  // artifacts, not real content breaks.
+  t=t.replace(/^(<br>)+/,'').replace(/(<br>)+$/,'');
   return t;
 }
 function fmtMD(t){
@@ -7015,19 +7161,26 @@ function fmtMD(t){
   t=t.replace(/^(\d+)\.[ \t]*\n+[ \t]*/gm,'$1. ');
   // 3. Collapse 3+ blank lines to 2
   t=t.replace(/\n{3,}/g,'\n\n');
+  // 3b. Reclaim list-item leads that lost their ordinal
+  t=_reclaimOrphanListLeads(t);
+  t=_fixMissingListPeriod(t);
   // 6. Inline bold / italic
   t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   t=t.replace(/\*(.+?)\*/g,'<em>$1</em>');
   // 7. Headers
   t=t.replace(/^#{1,3} (.+)$/gm,'<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:800;margin:14px 0 4px;color:var(--text)">$1</div>');
   // 8. Bullet list items
-  t=t.replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:2px 0"><span style="color:#6366f1;flex-shrink:0;margin-top:2px">▸</span><span>$1</span></div>');
+  t=t.replace(/^- (.+)$/gm,'<div style="display:flex;gap:8px;margin:7px 0"><span style="color:#6366f1;flex-shrink:0;margin-top:2px">▸</span><span>$1</span></div>');
   // 9. Numbered list items
-  t=t.replace(/^(\d+)\.[ \t]*(.+)$/gm,'<div style="display:flex;gap:8px;margin:2px 0"><span style="color:#6366f1;flex-shrink:0;font-weight:600;min-width:20px">$1.</span><span>$2</span></div>');
+  t=_renumberOrderedList(t);
   // 10. HR
   t=t.replace(/^---$/gm,'<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">');
-  // 11. Suppress paragraph gap between consecutive list/header divs
-  t=t.replace(/(<\/div>)\n\n(<div)/g,'$1\n$2');
+  // 11. Suppress paragraph gap between consecutive list/header divs — strip
+  // ALL newlines touching a div boundary (not just double-newline runs),
+  // since a leftover single newline still becomes a <br> below and stacks
+  // an inconsistent extra gap on top of the div's own margin.
+  t=t.replace(/\n+(?=<div)/g,'');
+  t=t.replace(/(<\/div>)\n+/g,'$1');
   // 12. Double newlines = compact break
   t=t.replace(/\n\n/g,'<br>');
   // 13. Single newlines
@@ -12052,6 +12205,16 @@ function _matrixGetInjection(){
   return lines.join('\n');
 }
 
+function _parseRequestedListCount(t){
+  if(!t) return null;
+  var m = t.match(/\btop\s+(\d{1,2})\b/i) ||
+          t.match(/\b(\d{1,2})\s+(?:things|tips|reasons|ways|ideas|examples|items|books|movies|cars|songs|places|steps|facts|options|recommendations|apps|tools)\b/i) ||
+          t.match(/\bgive me\s+(\d{1,2})\b/i) ||
+          t.match(/\blist\s+(\d{1,2})\b/i);
+  if(!m) return null;
+  var n = parseInt(m[1],10);
+  return (n>=3 && n<=30) ? n : null;
+}
 function buildSmartSysPrompt(mode, userText) {
   var intent = detectIntent(userText, mode);
   var appContext = 'SYNAPSES APP CONTEXT:\n' +
@@ -12880,7 +13043,7 @@ function syncPlanFromSupabase(){
 })();
 // ═══════════════════════════════════════════════════════════════════════
 
-async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
+async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, imageAttachments) {
   // Always reset unconditionally before any code path
   window._lastCallUsedTavily = false;
   window._lastTavilyDepth = null;
@@ -12924,7 +13087,13 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
       // restaurants" etc. count as BASIC) never gets a chance to run. Widened to match:
       // recommendation/ranking questions (best/top/worst X), "where's", and common
       // recency phrasing, so those messages actually reach the classifier now.
-      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|wheres|where's|where is|when is|when are|when's|tell me|show me|find me|figure out|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet)\b/i.test(_lu);
+      // Added: opinion-framed questions ("what do you think about X", "your thoughts
+      // on X") had ZERO trigger words unless X itself happened to contain one (e.g.
+      // "current") — meaning "what's your thoughts about bitcoin" never even reached
+      // /classify, regardless of how time-sensitive the topic actually was. This gate
+      // doesn't try to guess whether the topic needs a search — it just ensures these
+      // messages reach the classifier, which decides based on the actual topic.
+      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|whats|wheres|where's|where is|when is|when are|when's|tell me|show me|find me|figure out|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet|what do you think about|what do you think of|your thoughts on|thoughts on|thoughts about|opinion on|your take on|what's your take)\b/i.test(_lu);
 
       /* FOLLOW-UP DETECTION:
        * A live search just happened → window._searchFollowUpBudget is armed (>0).
@@ -12991,7 +13160,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
             var _tv = await fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:_searchQuery, search_depth: _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'}),signal:_tvCtrl.signal});
             clearTimeout(_tvTimeout);
             console.log('[SEARCH DEBUG] /tavily-search HTTP status:', _tv.status, _tv.ok);
-            if (_tv.ok) { var _tvj = await _tv.json(); console.log('[SEARCH DEBUG] tavily-search response body:', _tvj); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } else { console.warn('[SEARCH DEBUG] tavily-search succeeded but returned no context — nothing gets added to the prompt.'); }
+            if (_tv.ok) { var _tvj = await _tv.json(); console.log('[SEARCH DEBUG] tavily-search response body:', _tvj); window._lastCallUsedTavily = true; window._lastTavilyDepth = _clAnswer === 'ADVANCED' ? 'advanced' : 'basic'; if (_tvj.context) { var _si=messages.findIndex(function(m){return m.role==='system';}); var _ctx='\n\n⚠️ LIVE WEB SEARCH RESULTS — MANDATORY RULES:\n1. You HAVE real-time web access. These results ARE your current knowledge.\n2. NEVER say \"I don\'t have real-time data\", \"my knowledge cutoff\", \"I cannot access\", \"as of my training\", or any similar phrase. You have live data RIGHT NOW.\n3. Answer directly and confidently using the search results below as fact.\n4. Do NOT hedge, caveat, or suggest the user check elsewhere — you already searched for them.\n5. If the user asked for more items than the search results explicitly list (e.g. a top 10 but the results only detail 3), do NOT truncate your answer or say the rest is unavailable. Use the search results for what they cover, then complete the rest of the list yourself using your own general knowledge, seamlessly, as one confident answer — never call out which parts came from search vs. not.\n\nSearch results:\n'+_tvj.context; if(_si>=0) messages[_si]={role:'system',content:messages[_si].content+_ctx}; else messages.unshift({role:'system',content:_ctx}); } else { console.warn('[SEARCH DEBUG] tavily-search succeeded but returned no context — nothing gets added to the prompt.'); }
               /* Search succeeded — (re)arm the follow-up window for a few more messages,
                * capped so a long rambling chat can't keep classify running forever. */
               window._searchFollowUpBudget = 3;
@@ -13010,7 +13179,57 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
     }
     // Step 2: call Groq or HF depending on mode
     var res;
-    if (_aiMode === 'uncensored') {
+    var _hasImagesThisTurn = imageAttachments && imageAttachments.length > 0;
+    if (_aiMode === 'uncensored' && _hasImagesThisTurn) {
+      /* Uncensored mode + image: Venice never sees the raw image (it can't be
+       * embedded the way Groq's format expects, and it'd cost real credits
+       * per image token if it could). Instead: ask Groq's free vision model
+       * to describe the image first, then hand that description to Venice
+       * as plain text alongside the user's original message, so Venice can
+       * riff on what's actually in the picture. */
+      var _lastMsgForVision = messages[messages.length - 1];
+      var _visionContentParts = [{type:'text', text: (typeof _lastMsgForVision.content === 'string' ? _lastMsgForVision.content : 'Describe this image in detail.')}];
+      imageAttachments.slice(0, 5).forEach(function(a){
+        _visionContentParts.push({type:'image_url', image_url:{url:a.dataUrl}});
+      });
+      var _imageDescription = '';
+      try {
+        var _visionRes = await fetch(GROQ_PROXY + '/groq-chat', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            model: 'qwen/qwen3.6-27b',
+            messages: [{role:'user', content:_visionContentParts}],
+            max_tokens: 800,
+            stream: false,
+            reasoning_effort: 'none',
+            reasoning_format: 'hidden'
+          }),
+          signal: signal || null
+        });
+        if (_visionRes.ok) {
+          var _visionData = await _visionRes.json();
+          _imageDescription = (_visionData && _visionData.choices && _visionData.choices[0] && _visionData.choices[0].message && _visionData.choices[0].message.content) || '';
+        } else {
+          console.error('[VISION->VENICE] Groq vision pre-call failed with status', _visionRes.status);
+        }
+      } catch(_ve) { console.error('[VISION->VENICE] Groq vision pre-call threw:', _ve); }
+
+      var _originalText = (typeof _lastMsgForVision.content === 'string' ? _lastMsgForVision.content : '');
+      _lastMsgForVision.content = _originalText + (_imageDescription
+        ? '\n\n[Image attached — vision description: ' + _imageDescription + ']'
+        : '\n\n[Image attached but could not be analyzed.]');
+
+      res = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+VENICE_KEY
+        },
+        body: JSON.stringify({model: VENICE_MODEL, messages:messages, max_tokens:maxTok||2400, stream:true}),
+        signal: signal || null
+      });
+    } else if (_aiMode === 'uncensored') {
       res = await fetch('https://api.venice.ai/api/v1/chat/completions', {
         method:'POST',
         headers:{
@@ -13021,10 +13240,51 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
         signal: signal || null
       });
     } else {
+      /* If images were attached this turn, switch to Groq's current vision
+       * model and embed the images directly inside the last user message's
+       * content array (Groq/OpenAI multimodal format: {type:'image_url', ...}).
+       * This is the format Groq's API actually expects — a top-level "images"
+       * field is not part of the spec and won't be seen by the model. Because
+       * the images live inside `messages` itself, this works even if the
+       * /groq-chat backend just forwards messages through unchanged. */
+      var _hasImages = imageAttachments && imageAttachments.length > 0;
+      if (_hasImages && messages.length) {
+        var _lastMsg = messages[messages.length - 1];
+        var _contentParts = [{type:'text', text: (typeof _lastMsg.content === 'string' ? _lastMsg.content : '')}];
+        imageAttachments.slice(0, 5).forEach(function(a){
+          _contentParts.push({type:'image_url', image_url:{url:a.dataUrl}});
+        });
+        _lastMsg.content = _contentParts;
+      }
+      var _reqBody = {
+        // NOTE: was llama-3.1-8b-instant. That model could not reliably hold an
+        // exact item count (e.g. "top 10") through a full streamed answer,
+        // especially combined with the search-results blending instruction —
+        // it would lose count, restart numbering, or drop into a stray "."
+        // line partway through. No amount of downstream regex/renumbering can
+        // fix a model that miscounts at generation time. Swapped to the 70B
+        // model already proven on this same Groq endpoint/streaming format
+        // (used by SYN-BOT elsewhere in this file) for far more reliable
+        // instruction-following, at a modest latency cost.
+        model: _hasImages ? 'qwen/qwen3.6-27b' : 'llama-3.3-70b-versatile',
+        messages: messages,
+        max_tokens: maxTok||2400,
+        stream: true,
+        userId: (currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null
+      };
+      if (_hasImages) {
+        /* Qwen 3.6 27B is a reasoning model — without this it writes out its whole
+         * internal chain-of-thought before the real answer. reasoning_effort:'none'
+         * turns thinking mode off outright (fine for a simple "who/what is this"
+         * lookup); reasoning_format:'hidden' is a backup in case it still reasons
+         * a little, so only the final answer text ever reaches the chat. */
+        _reqBody.reasoning_effort = 'none';
+        _reqBody.reasoning_format = 'hidden';
+      }
       res = await fetch(GROQ_PROXY + '/groq-chat', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({model:'llama-3.1-8b-instant', messages:messages, max_tokens:maxTok||2400, stream:true, userId:(currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null}),
+        body: JSON.stringify(_reqBody),
         signal: signal || null
       });
     }
@@ -13037,7 +13297,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth) {
         return {error:{message: err.message || 'Free daily limit reached.'}};
       }
       var msg = (err && err.error && (err.error.message || err.error.code)) ? (err.error.message || err.error.code) : ('Request failed with status '+res.status);
-      if(_aiMode !== 'uncensored' && err.error&&(err.error.code==='rate_limit_exceeded'||res.status===429)){ nextGroqKey(); return callClaude(sys, msgs, maxTok, onChunk, signal, (_retryDepth||0)+1); }
+      if(_aiMode !== 'uncensored' && err.error&&(err.error.code==='rate_limit_exceeded'||res.status===429)){ nextGroqKey(); return callClaude(sys, msgs, maxTok, onChunk, signal, (_retryDepth||0)+1, imageAttachments); }
       return {error:{message:msg}};
     }
     var reader = res.body.getReader();
@@ -13320,10 +13580,251 @@ function toggleChatHistoryDropdown(){
   }, 10);
 }
 
+/* ================= Chat file/image attachments ================= */
+var pendingAttachments = [];
+var _attachIdSeq = 0;
+
+function handleChatAttachClick(){ var el=document.getElementById('chatFileInput'); if(el) el.click(); }
+
+async function handleChatFileSelect(event){
+  var files = Array.prototype.slice.call((event && event.target && event.target.files) || []);
+  if(event && event.target) event.target.value = '';
+  await handleChatFiles(files);
+}
+
+/* Shared by the paperclip picker AND drag-and-drop onto the input bar */
+async function handleChatFiles(files){
+  files = Array.prototype.slice.call(files || []);
+  for (var i=0;i<files.length;i++){
+    try { await addChatAttachment(files[i]); } catch(e){ console.error('[attach] failed for', files[i] && files[i].name, e); }
+  }
+  renderChatAttachPreview();
+}
+
+/* Wires drag-and-drop of files (images/pdf/text) directly onto the "Ask me anything" bar,
+ * same as dropping a photo into ChatGPT/Grok/Claude's input box. */
+(function initChatDragDrop(){
+  /* Safety net: block Chrome's default "navigate to / open the dropped file" behavior
+   * ANYWHERE on the page. Without this, dropping even slightly outside the exact zone
+   * boundary makes Chrome open the image directly instead of handing it to our code. */
+  window.addEventListener('dragover', function(e){ e.preventDefault(); }, false);
+  window.addEventListener('drop', function(e){ e.preventDefault(); }, false);
+
+  function wire(){
+    var zone = document.querySelector('#sec-chat .input-area');
+    if (!zone) { setTimeout(wire, 300); return; }
+    if (zone._dragDropWired) return;
+    zone._dragDropWired = true;
+    var dragDepth = 0;
+    zone.addEventListener('dragenter', function(e){
+      e.preventDefault(); e.stopPropagation();
+      dragDepth++;
+      zone.classList.add('chat-drop-active');
+    });
+    zone.addEventListener('dragover', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    });
+    zone.addEventListener('dragleave', function(e){
+      e.preventDefault(); e.stopPropagation();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) zone.classList.remove('chat-drop-active');
+    });
+    zone.addEventListener('drop', function(e){
+      e.preventDefault(); e.stopPropagation();
+      dragDepth = 0;
+      zone.classList.remove('chat-drop-active');
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) handleChatFiles(files);
+    });
+  }
+  wire();
+})();
+
+/* Sends the raw audio file to the backend's /groq-transcribe route (Whisper,
+ * free on Groq's tier) and returns the transcript text. Backend forwards the
+ * multipart body straight through to Groq — see server.js /groq-transcribe. */
+function transcribeAudio(file){
+  var form = new FormData();
+  form.append('file', file, file.name);
+  form.append('model', 'whisper-large-v3');
+  return fetch(GROQ_PROXY + '/groq-transcribe', { method:'POST', body: form })
+    .then(function(res){
+      if(!res.ok) return res.text().then(function(t){ throw new Error('transcribe failed: '+res.status+' '+t); });
+      return res.json();
+    })
+    .then(function(data){ return (data && data.text) || ''; });
+}
+
+function addChatAttachment(file){
+  return new Promise(function(resolve){
+    var id = 'att_' + (++_attachIdSeq);
+    var maxBytes = 8 * 1024 * 1024; // 8MB guard — base64 inflates ~33%, keep payloads sane
+    if (file.size > maxBytes) {
+      if (typeof showToast === 'function') showToast('File too large (max 8MB): ' + file.name);
+      resolve(); return;
+    }
+    var isImage = /^image\//.test(file.type);
+    var isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    var isText = !isImage && !isPdf && (/^text\//.test(file.type) || /\.(txt|md|csv|json)$/i.test(file.name));
+    var isAudio = !isImage && !isPdf && !isText && (/^audio\//.test(file.type) || /\.mp3$/i.test(file.name));
+
+    if (isImage) {
+      var reader = new FileReader();
+      reader.onload = function(){
+        pendingAttachments.push({id:id, kind:'image', name:file.name, mime:file.type||'image/png', dataUrl:reader.result});
+        renderChatAttachPreview();
+        resolve();
+      };
+      reader.onerror = function(){ if (typeof showToast==='function') showToast('Could not read image: '+file.name); resolve(); };
+      reader.readAsDataURL(file);
+    } else if (isPdf) {
+      extractPdfText(file).then(function(text){
+        pendingAttachments.push({id:id, kind:'text', name:file.name, mime:file.type||'application/pdf', text: text || '(no extractable text found in this PDF — it may be a scanned image)'});
+        renderChatAttachPreview();
+        resolve();
+      }).catch(function(err){
+        console.error('[attach] pdf extract failed', err);
+        pendingAttachments.push({id:id, kind:'text', name:file.name, mime:file.type||'application/pdf', text:'(could not extract text from this PDF)'});
+        renderChatAttachPreview();
+        resolve();
+      });
+    } else if (isText) {
+      var r2 = new FileReader();
+      r2.onload = function(){
+        var txt = String(r2.result || '');
+        if (txt.length > 12000) txt = txt.slice(0,12000) + '\n\u2026[truncated]';
+        pendingAttachments.push({id:id, kind:'text', name:file.name, mime:file.type||'text/plain', text:txt});
+        renderChatAttachPreview();
+        resolve();
+      };
+      r2.onerror = function(){ if (typeof showToast==='function') showToast('Could not read file: '+file.name); resolve(); };
+      r2.readAsText(file);
+    } else if (isAudio) {
+      pendingAttachments.push({id:id, kind:'text', name:file.name, mime:file.type||'audio/mpeg', text:'', isAudio:true, pending:true});
+      renderChatAttachPreview();
+      transcribeAudio(file).then(function(transcript){
+        var att = pendingAttachments.filter(function(x){ return x.id===id; })[0];
+        if (!att) { resolve(); return; } // removed while transcribing — nothing to update
+        att.pending = false;
+        att.text = transcript || '(could not transcribe this audio file)';
+        renderChatAttachPreview();
+        resolve();
+      }).catch(function(err){
+        console.error('[attach] audio transcribe failed', err);
+        var att = pendingAttachments.filter(function(x){ return x.id===id; })[0];
+        if (!att) { resolve(); return; }
+        att.pending = false;
+        att.text = '(could not transcribe this audio file)';
+        renderChatAttachPreview();
+        resolve();
+      });
+    } else {
+      if (typeof showToast === 'function') showToast('Unsupported file type: ' + file.name);
+      resolve();
+    }
+  });
+}
+
+/* Lazy-load pdf.js only when a PDF is actually attached, so it never touches load time otherwise */
+var _pdfJsLoadPromise = null;
+function ensurePdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (_pdfJsLoadPromise) return _pdfJsLoadPromise;
+  _pdfJsLoadPromise = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = function(){
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      } catch(e) { reject(e); }
+    };
+    s.onerror = function(e){ reject(e); };
+    document.head.appendChild(s);
+  });
+  return _pdfJsLoadPromise;
+}
+
+async function extractPdfText(file){
+  var pdfjsLib = await ensurePdfJs();
+  var buf = await file.arrayBuffer();
+  var pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  var out = [];
+  var maxPages = Math.min(pdf.numPages, 25);
+  for (var p=1; p<=maxPages; p++){
+    var page = await pdf.getPage(p);
+    var tc = await page.getTextContent();
+    var strs = tc.items.map(function(it){ return it.str; });
+    out.push(strs.join(' '));
+  }
+  var text = out.join('\n\n').trim();
+  if (pdf.numPages > maxPages) text += '\n\u2026[document truncated after '+maxPages+' pages]';
+  if (text.length > 12000) text = text.slice(0,12000) + '\n\u2026[truncated]';
+  return text;
+}
+
+function removeChatAttachment(id){
+  pendingAttachments = pendingAttachments.filter(function(a){ return a.id !== id; });
+  renderChatAttachPreview();
+}
+
+function renderChatAttachPreview(){
+  var box = document.getElementById('chatAttachPreview');
+  if (!box) return;
+  if (!pendingAttachments.length){ box.classList.remove('show'); box.style.display='none'; box.innerHTML=''; return; }
+  box.classList.add('show'); box.style.display='flex';
+  box.innerHTML = pendingAttachments.map(function(a){
+    var thumb = a.kind==='image'
+      ? '<img src="'+a.dataUrl+'" alt="">'
+      : a.pending
+        ? '<div class="cac-icon"><svg width="14" height="14" viewBox="0 0 24 24" style="animation:cacSpin 0.8s linear infinite;"><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(124,106,247,0.25)" stroke-width="3"/><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="rgba(124,106,247,0.9)" stroke-width="3" stroke-linecap="round"/></svg></div>'
+        : '<div class="cac-icon">\ud83d\udcc4</div>';
+    var safeName = String(a.name||'file').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    var removeBtn = a.pending
+      ? '<span class="cac-remove" style="opacity:0.3;" title="Transcribing…">\u2026</span>'
+      : '<button class="cac-remove" onclick="removeChatAttachment(\''+a.id+'\')" title="Remove">\u2715</button>';
+    return '<div class="chat-attach-chip">'+thumb+
+      '<span class="cac-name" title="'+safeName+'">'+safeName+'</span>'+
+      removeBtn+'</div>';
+  }).join('');
+  if (!document.getElementById('cacSpinKeyframes')) {
+    var _st = document.createElement('style');
+    _st.id = 'cacSpinKeyframes';
+    _st.textContent = '@keyframes cacSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}';
+    document.head.appendChild(_st);
+  }
+}
+
+/* Renders small thumbnails inside a sent message bubble so the user can see what they attached */
+function renderMsgAttachments(groupEl, attachments){
+  if (!groupEl || !attachments || !attachments.length) return;
+  var body = groupEl.querySelector('.message-body');
+  if (!body) return;
+  var row = document.createElement('div');
+  row.className = 'msg-attach-row';
+  row.innerHTML = attachments.map(function(a){
+    var thumb = a.kind==='image'
+      ? '<img src="'+a.dataUrl+'" alt="">'
+      : '<div class="mat-icon">\ud83d\udcc4</div>';
+    var safeName = String(a.name||'file').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    return '<div class="msg-attach-thumb">'+thumb+'<span class="mat-name">'+safeName+'</span></div>';
+  }).join('');
+  body.appendChild(row);
+}
+/* ================= end chat attachments ================= */
+
 async function sendMessage(){
   var inp=document.getElementById('inputBox'),text=inp.value.trim();
-  if(!text||isSending)return;
-  try{if(typeof synTrack==='function')synTrack('chat_send',{mode:'text',len:text.length});}catch(_te){}
+  if((!text && !pendingAttachments.length)||isSending)return;
+  if(pendingAttachments.some(function(a){ return a.pending; })){
+    if(typeof showToast === 'function') showToast('Still transcribing audio — one sec');
+    return;
+  }
+  var sendAttachments = pendingAttachments.slice();
+  pendingAttachments = [];
+  renderChatAttachPreview();
+  try{if(typeof synTrack==='function')synTrack('chat_send',{mode:'text',len:text.length,attachments:sendAttachments.length});}catch(_te){}
   // Abort any in-flight LLM stream and stop TTS
   if(_chatAbortCtrl){ try{ _chatAbortCtrl.abort(); }catch(e){} }
   _chatAbortCtrl = new AbortController();
@@ -13332,7 +13833,7 @@ async function sendMessage(){
 
   // ── Quick note from LLM chat ──
   var isNoteIntent = /\b(save|note|jot|write|capture|remember|log|record)\b.{0,30}\b(notes?|down|this|that|it|them|list|as a note|to notes?)\b|\b(make|add|create|quick)\b.{0,15}\bnotes?\b/i.test(text);
-  if(isNoteIntent && chatHistory.length > 0){
+  if(isNoteIntent && chatHistory.length > 0 && !sendAttachments.length){
     inp.value=''; inp.style.height='52px';
     addMsg('chatContainer','user',text,false,'chat');
     var typingEl = addMsg('chatContainer','ai','extracting from our chat...',false,'chat');
@@ -13398,14 +13899,24 @@ async function sendMessage(){
   if(isFirst) activeSession='session_'+Date.now();
   if(isFirst){var _tt3=document.getElementById('topTitle');_tt3.style.transition='none';_tt3.style.opacity='0';_tt3.innerHTML='Synapses';_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';requestAnimationFrame(function(){_tt3.style.opacity='1';});}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   setView('sec-chat');
-  addMsg('chatContainer','user',text,false,'chat');
-  chatHistory.push({role:'user',content:text});
+  // Fold any text-extracted attachments (pdf/txt/md/csv/json) into what the AI receives.
+  var _textAttachBlock = '';
+  sendAttachments.forEach(function(a){
+    if(a.kind==='text' && a.isAudio) _textAttachBlock += '\n\n--- Transcript of attached audio file: '+a.name+' ---\n'+a.text;
+    else if(a.kind==='text') _textAttachBlock += '\n\n--- Attached file: '+a.name+' ---\n'+a.text;
+  });
+  var _imageAttachments = sendAttachments.filter(function(a){ return a.kind==='image'; });
+  var displayText = text || ('📎 ' + sendAttachments.map(function(a){return a.name;}).join(', '));
+  var outgoingText = (text || 'Please review the attached file(s).') + _textAttachBlock;
+  var _userMsgGroup = addMsg('chatContainer','user',displayText,false,'chat');
+  if(sendAttachments.length) renderMsgAttachments(_userMsgGroup, sendAttachments);
+  chatHistory.push({role:'user',content:outgoingText});
   if(!chatSessions[activeSession]) chatSessions[activeSession]={history:[],hasNotes:false};
   chatSessions[activeSession].history = chatHistory.slice();
   var typing=addMsg('chatContainer','ai','',true,'chat');
   if(isFirst){
     if(!recentChats.find(function(c){return c.key===activeSession;})){
-      recentChats.unshift({label:text.slice(0,36)+(text.length>36?'…':''),key:activeSession});
+      recentChats.unshift({label:displayText.slice(0,36)+(displayText.length>36?'…':''),key:activeSession});
       if(recentChats.length>20)recentChats.pop();
     }
     persistChats();
@@ -13454,7 +13965,7 @@ async function sendMessage(){
     var _streamSkip = false;
     var _streamDone = false;
     var _storyRevealDone = false;
-    document.getElementById('btnStopStream').onclick = function(){ _streamStopped = true; _ctrlDiv.remove(); if(streamAvatar) streamAvatar.classList.remove('speaking'); };
+    document.getElementById('btnStopStream').onclick = function(){ _streamStopped = true; _ctrlDiv.remove(); if(streamAvatar) streamAvatar.classList.remove('speaking'); if(typeof _ttsStopAll==='function') _ttsStopAll(true); };
     document.getElementById('btnSkipStream').onclick = function(){
       _streamSkip = true;
       _skipDelay = true;
@@ -13467,6 +13978,9 @@ async function sendMessage(){
     var _storyChunksRendered = 0;
     var _storyStreamStart = 0;
     var _lastRenderedText = '';
+    // Ordered-list numbering carries over across story/calm chunks so a list
+    // spanning multiple chunks counts 1,2,3... instead of resetting each chunk
+    var _storyListCounter = 0;
 
     // Smart auto-scroll
     var _userScrolledUp = false;
@@ -13503,8 +14017,12 @@ async function sendMessage(){
     _storyChunksScheduled = 0;
     _storyChunksRendered = 0;
     _storyStreamStart = 0;
-    /* Lean history + tokens for fast TTFT (was 30/4000) */
-    var data=await callClaude(sys,chatHistory.slice(-12),1400,function(partial){
+    /* Lean history + tokens for fast TTFT (was 30/4000).
+     * NOTE: this was 1400 — too low for requests like "top 10" lists with any
+     * real per-item detail, which silently got cut off mid-list (e.g. only
+     * 6-7 items rendered) with no error shown. Bumped to give headroom for a
+     * full 10+ item list while still being well short of the model's real cap. */
+    var data=await callClaude(sys,chatHistory.slice(-12),4096,function(partial){
       // Stream TTS: speak each new complete sentence as soon as it arrives
       if(_vmActive){
         // Fire TTS on sentence OR clause boundaries (comma/colon/semicolon) for minimum latency
@@ -13536,36 +14054,42 @@ async function sendMessage(){
           _lastShownSentences = sentences.length;
         }
       } else if(_avaGlowMode===2){
-        var _rawSentences = partial.match(/[^.!?]+[.!?]+/g) || [];
-        var sentences = [];
-        for(var _ri=0;_ri<_rawSentences.length;_ri++){
-          if(/^\s*\d+\.\s*$/.test(_rawSentences[_ri]) && _ri+1<_rawSentences.length){
-            sentences.push(_rawSentences[_ri]+' '+_rawSentences[++_ri]);
-          } else {
-            sentences.push(_rawSentences[_ri]);
-          }
-        }
+        var sentences = _storySplitSentences(partial);
         var chunkSize = 3;
-        // First chunk fires after just 1 sentence so text appears immediately
-        var _effectiveSize = (_lastShownSentences === 0 && sentences.length >= 1) ? 1 : chunkSize;
-        var chunksNow = Math.floor(sentences.length / _effectiveSize);
-        var _lastShownChunks = Math.floor(_lastShownSentences / chunkSize);
-        if(chunksNow > _lastShownChunks){
-          for(var _ci=_lastShownChunks; _ci<chunksNow; _ci++){
-            (function(_idx){
-              var _chunk = sentences.slice(_idx*chunkSize, _idx*chunkSize+chunkSize).join(' ');
-              setTimeout(function(){
-                if(!streamP) return;
-                var _cp = document.createElement('span');
-                _cp.className = 'story-chunk';
-                _cp.innerHTML = fmtMDstream(_chunk);
-                streamP.appendChild(_cp);
-                _scheduleScroll();
-              }, (_idx - _lastShownChunks) * 1200);
-            })(_ci);
-          }
-          _lastShownSentences = chunksNow * chunkSize;
+        // Reveal in groups of `chunkSize` sentences, tracking _lastShownSentences
+        // as the EXACT count of sentences actually appended to the DOM so far —
+        // not a value inferred by multiplying a chunk-count by chunkSize. That
+        // inference used to assume a full chunkSize-worth was shown on the very
+        // first reveal (which intentionally shows just 1 sentence for instant
+        // first-text), silently marking sentences 2 and 3 as "already shown"
+        // when they'd never actually been rendered — so they were skipped
+        // forever, while TTS (a separate, correctly-counted queue) still spoke
+        // them. This left the text bubble looking empty/truncated on short
+        // replies even though the voice read the full answer.
+        var _cursor = _lastShownSentences;
+        var _burst = 0;
+        while(_cursor < sentences.length){
+          var _take = (_cursor === 0) ? 1 : chunkSize;
+          if(_cursor + _take > sentences.length) break; // wait for the rest of this group to stream in
+          (function(_start, _len, _delay){
+            // Compute HTML synchronously (in order) so list numbering stays sequential
+            // across chunks even though the DOM append itself is deferred below
+            var _chunk = sentences.slice(_start, _start+_len).join(' ');
+            var _chunkHtml = fmtMDstream(_chunk, _storyListCounter);
+            _storyListCounter = _renumberOrderedList.lastCount || _storyListCounter;
+            setTimeout(function(){
+              if(!streamP) return;
+              var _cp = document.createElement('span');
+              _cp.className = 'story-chunk';
+              _cp.innerHTML = _chunkHtml;
+              streamP.appendChild(_cp);
+              _scheduleScroll();
+            }, _delay);
+          })(_cursor, _take, _burst * 1200);
+          _cursor += _take;
+          _burst++;
         }
+        _lastShownSentences = _cursor;
       } else {
         // Append-only: only add the new text since last render — never rewrite innerHTML
         var delta = partial.slice(_lastRenderedText.length);
@@ -13576,7 +14100,7 @@ async function sendMessage(){
         }
       }
       _scheduleScroll();
-    }, _chatAbortCtrl ? _chatAbortCtrl.signal : null);
+    }, _chatAbortCtrl ? _chatAbortCtrl.signal : null, undefined, _imageAttachments);
     _ctrlDiv.remove();
     // Mark streaming as done FIRST — stops any queued _scheduleScroll from firing mid-rewrite
     _streamDone = true;
@@ -13596,12 +14120,90 @@ async function sendMessage(){
       if(streamP) streamP.innerHTML=reply;
     } else {
       reply=data.content.map(function(b){return b.text||'';}).join('');
+      // Normalize "5 Toyota RAV4," → "5. Toyota RAV4," BEFORE counting — a
+      // missing period on one ordinal used to make that line invisible to
+      // both the item counter below and the numbered-list renderer, which
+      // desynced the count and triggered a needless (and confusing) continuation.
+      reply=_fixMissingListPeriod(reply);
+      // The user asked for an exact count ("top 10", "5 tips", ...) and the
+      // model may have lost count or stopped early (a generation-time gap,
+      // not a rendering bug — the numbering/spacing fixes above can't touch
+      // this). Detect a short list and ask the model to finish it with one
+      // targeted continuation call before we render/finalize anything.
+      try{
+        var _reqCount = _parseRequestedListCount(text);
+        if(_reqCount){
+          var _gotCount = (reply.match(/^\s*\d+\.\s+\S/gm)||[]).length;
+          // Loop instead of a single attempt: the continuation call itself can
+          // come up short (only returns 1 of 2 remaining items) or fail outright
+          // (rate limit on the second call, network blip). Re-check the gap
+          // after each attempt and keep going until it's closed or we've tried
+          // twice — capped so a persistently broken connection can't loop forever.
+          var _contAttempts = 0;
+          while(_gotCount>0 && _gotCount<_reqCount && _contAttempts<2){
+            _contAttempts++;
+            var _contSys = sys + '\n\nCONTINUATION TASK: You already gave items 1 through '+_gotCount+' of a '+_reqCount+'-item list. Continue the SAME list starting at item '+(_gotCount+1)+' and go through item '+_reqCount+'. Output ONLY the remaining numbered items — no repeats of earlier items, no preamble, no closing remarks, no commentary about the list itself.';
+            var _contHistory = chatHistory.slice(-12).concat([
+              {role:'assistant', content: reply},
+              {role:'user', content:'Continue the list — give me items '+(_gotCount+1)+' through '+_reqCount+', numbered, nothing else.'}
+            ]);
+            var _contData = await callClaude(_contSys, _contHistory, 1500);
+            if(_contData.error){
+              console.warn('[LIST CONTINUATION] attempt '+_contAttempts+' failed, gap stayed at '+(_reqCount-_gotCount)+':', _contData.error.message);
+              continue; // let the loop retry (once) rather than give up on the first hiccup
+            }
+            var _contRaw = _fixMissingListPeriod(_contData.content.map(function(b){return b.text||'';}).join('').trim());
+            // Only splice in lines that actually look like numbered list items —
+            // a continuation call can go conversational instead of complying
+            // ("It seems there was a mistake..."), and appending that verbatim
+            // leaks the model's confused meta-commentary straight into the chat.
+            var _contLines = _contRaw.split('\n').filter(function(l){ return /^[ \t]*\d+\.[ \t]+\S/.test(l); });
+            if(_contLines.length){
+              reply = reply.replace(/\s+$/,'') + '\n' + _contLines.join('\n');
+              _gotCount = (reply.match(/^\s*\d+\.\s+\S/gm)||[]).length;
+            }
+          }
+          // Opposite failure mode: the model just keeps going past the asked-for
+          // count (common on topics it knows exhaustively, e.g. "top 10 Pixar
+          // movies" turning into all 18 Pixar films). The continuation call
+          // above can also overshoot the same way if it ignores its own end
+          // bound. Rather than trust either generation to self-stop, hard-cap
+          // the numbered items in the FINAL text to exactly _reqCount here —
+          // this runs whether or not a continuation call happened above.
+          var _itemsSeen = 0;
+          reply = reply.replace(/^[ \t]*\d+\.[ \t]+.+$/gm, function(line){
+            _itemsSeen++;
+            return _itemsSeen<=_reqCount ? line : '';
+          });
+          reply = reply.replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'');
+        }
+      }catch(_contErr){ console.error('[LIST CONTINUATION] failed:', _contErr); }
       // Story/calm: chunks already rendered with spacing — don't rewrite or it collapses them
       // Rapid mode only: rewrite needed to apply full markdown
       if(streamP && _avaGlowMode===0){
         var _pinned = _cc_stream ? _cc_stream.scrollTop : 0;
         streamP.innerHTML=fmtMD(reply); var _mt=streamP.closest(".message-text"); if(_mt) _mt.scrollTop=_mt.scrollHeight;
         if(_cc_stream) _cc_stream.scrollTop = _pinned;
+      }
+      // Story mode intentionally withholds the tail end of a reply until it
+      // fills a full 3-sentence chunk (see the reveal loop above). If the
+      // reply's last sentence(s) never reached that boundary before streaming
+      // finished, they were being left out of the DOM permanently — even
+      // though TTS (independent counter, always fully flushed) had already
+      // spoken them. Flush whatever's left now that we have the final text.
+      if(streamP && _avaGlowMode===2){
+        var _finalSentences = _storySplitSentences(reply);
+        if(_finalSentences.length > _lastShownSentences){
+          var _leftover = _finalSentences.slice(_lastShownSentences).join(' ');
+          var _leftoverHtml = fmtMDstream(_leftover, _storyListCounter);
+          _storyListCounter = _renumberOrderedList.lastCount || _storyListCounter;
+          var _lp = document.createElement('span');
+          _lp.className = 'story-chunk';
+          _lp.innerHTML = _leftoverHtml;
+          streamP.appendChild(_lp);
+          _lastShownSentences = _finalSentences.length;
+          _scheduleScroll();
+        }
       }
     }
     // Auto-speak: streaming TTS already started mid-stream; finalize any leftover tail.
@@ -13610,7 +14212,7 @@ async function sendMessage(){
     // final streaming chunk ended mid-sentence and streamTTSFinalize over-laps.
     // Error/limit messages (e.g. "API error: Free daily limit reached...") are never
     // spoken aloud — they're for the chat bubble only, not something Ava should "say".
-    if(reply && _vmActive && !data.error){
+    if(reply && _vmActive && !data.error && !_streamStopped){
       var _cleanReply = _ttsClean(reply);
       var _unsent = _cleanReply.slice(_ttsSpokenUpTo).trim();
       if(_unsent.length > 4) streamTTSQueue(_unsent);
@@ -27220,11 +27822,24 @@ function synBotSend(text){
           var _rawSentences = partial.match(/[^.!?]+[.!?]+/g) || [];
           var sentences = [];
           for(var _ri=0;_ri<_rawSentences.length;_ri++){
-            if(/^\s*\d+\.\s*$/.test(_rawSentences[_ri]) && _ri+1<_rawSentences.length){
-              sentences.push(_rawSentences[_ri]+' '+_rawSentences[++_ri]);
-            } else {
-              sentences.push(_rawSentences[_ri]);
+            var _frag = _rawSentences[_ri];
+            // Merge bare ordinals, name initials, and split decimal numbers forward
+            // instead of treating them as sentence ends.
+            var _keepMerging = true;
+            while(_keepMerging && _ri+1<_rawSentences.length){
+              _keepMerging = false;
+              if(/^\s*\d+\.\s*$/.test(_frag)){
+                _frag += ' '+_rawSentences[++_ri];
+                _keepMerging = true;
+              } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
+                _frag += ' '+_rawSentences[++_ri];
+                _keepMerging = true;
+              } else if(/\d\.$/.test(_frag) && /^\d/.test(_rawSentences[_ri+1])){
+                _frag += _rawSentences[++_ri];
+                _keepMerging = true;
+              }
             }
+            sentences.push(_frag);
           }
           var chunkSize = 1;
           var chunksNow = Math.floor(sentences.length / chunkSize);
@@ -28363,6 +28978,16 @@ document.getElementById('higherSelfModal').addEventListener('click',function(e){
 var _vmActive = true;
 var _vmSpeaking = false;
 var _vmGenId = 0;
+// Which generation the WS is currently streaming audio FOR. Set right before
+// every 'Speak'/Flush send; checked when chunks/control-messages arrive.
+// _vmGenId bumps on every _ttsStopAll() (voice-mode watchdog reset, stopAll,
+// provider switch, etc) but nothing previously compared it against the
+// stream actually in flight — a stale turn's audio chunks (or a late
+// 'Flushed'/is_last_chunk for a sentence we already gave up on) would still
+// get scheduled/resolved whenever they happened to arrive, sometimes long
+// after the watchdog reset. That's the "stalls, then unclogs and says the
+// old message anyway" bug.
+var _wsCurrentGenId = 0;
 
 // Aura-2 voices — verified from developers.deepgram.com/docs/tts-models
 var _dgVoices = [
@@ -29650,6 +30275,7 @@ function _wsOpen() {
             console.error('[Hume TTS] error from server:', msg);
           }
           if (msg.audio && typeof msg.audio === 'string') {
+            if (_vmGenId !== _wsCurrentGenId) return; // stale generation — drop, don't schedule/decode
             // DEBUG: log what we actually received the first few times so we can
             // confirm format_type=pcm took effect (remove once audio is confirmed working).
             if (!window._humeDebugCount) window._humeDebugCount = 0;
@@ -29694,14 +30320,15 @@ function _wsOpen() {
             window._humeLastChunkTimer = setTimeout(function() {
               window._humeLastChunkTimer = null;
               if (_wsResolvers.length > 0) {
+                if (_vmGenId !== _wsCurrentGenId) { _wsResolvers.shift(); return; } // stale — drop, don't fire
                 var resH = _wsResolvers.shift();
                 if (resH) resH(null);
               }
             }, 2000);
           }
         } else if (msg.type === 'Flushed' && _wsResolvers.length > 0) {
-          var res = _wsResolvers.shift();
-          if (res) res(null); // signal end-of-audio for this sentence
+          if (_vmGenId !== _wsCurrentGenId) { _wsResolvers.shift(); /* drop stale, don't fire */ }
+          else { var res = _wsResolvers.shift(); if (res) res(null); } // signal end-of-audio for this sentence
         }
       } catch(e) {}
       return;
@@ -29709,6 +30336,7 @@ function _wsOpen() {
     // Binary PCM chunk — decode and schedule for playback immediately
     // Hume streams at 48kHz; Deepgram at 24kHz — _scheduleChunk downsamples
     // Hume's audio so the rest of the pipeline (Web Audio, lip-sync) is untouched.
+    if (_vmGenId !== _wsCurrentGenId) return; // stale generation — _ttsStopAll ran since this was sent, drop it
     if (_ttsProvider === 'hume') {
       // With no_binary=true Hume shouldn't send binary frames at all — audio
       // arrives as base64 in the JSON branch above. If this fires, our
@@ -30113,6 +30741,7 @@ function _wsSend(text) {
   return new Promise(function (resolve) {
     if (!_wsReady) { resolve('fallback'); return; }
     _wsResolvers.push(resolve);
+    _wsCurrentGenId = _vmGenId;
     if (_ttsProvider === 'hume') {
       var humeMsg = { text: text, flush: true };
       if (_humeVoice) humeMsg.voice = { name: _humeVoice, provider: 'HUME_AI' };
@@ -30444,7 +31073,7 @@ function speakVoiceReply(text) {
     return typeof _avaAvatarConnected !== 'undefined' && !!_avaAvatarConnected;
   }
 
-  // ── Watchdog: auto-reset if _busy gets stuck for >8s with no audio ──────
+  // ── Watchdog: auto-reset if _busy gets stuck for >13s with no audio ─────
   // Also detects a dead mic track (browser can silently end/mute it after the
   // tab is backgrounded a long time, device sleep, OS-level permission
   // changes, etc). Previously nothing checked for this: record() would keep
@@ -30486,7 +31115,12 @@ function speakVoiceReply(text) {
     var stuckMs = now - _busySince;
     // Check if audio is actually playing
     var audioPlaying = (typeof _actx !== 'undefined' && _actx && typeof _playbackTime !== 'undefined' && _playbackTime > _actx.currentTime + 0.1);
-    if (stuckMs > 8000 && !audioPlaying) {
+    // Threshold must exceed the worst-case chained latency ahead of the LLM call:
+    // classify-confirm (900ms) + Tavily (5000ms) + Groq stream abort (6000ms) = 11900ms.
+    // Was 8000ms — shorter than that chain, so the watchdog was killing legit
+    // in-flight turns (search still running) and this false-positive "reset"
+    // masqueraded as a real stall. Raised with buffer above the real worst case.
+    if (stuckMs > 13000 && !audioPlaying) {
       console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting');
       _busy = false; _busySince = 0;
       _voiceTurnId++; // abandon whatever turn was in flight — late speak()/record() calls from it get ignored
@@ -31328,6 +31962,17 @@ function speakVoiceReply(text) {
       .replace(/\([^)]*\)/g, '')
       .replace(/\[[^\]]*\]/g, '')
       .replace(/[#*`~>_]/g, '')
+      // Typographic chars from search-sourced text (Tavily summaries etc.) —
+      // smart quotes/dashes/ellipsis were passing straight through to the WS
+      // TTS request. These are the prime suspect for the "long search reply
+      // → WS never flushes, 6.5s safety timer fires" stall: short hand-written
+      // replies never contain them, only search-augmented ones do, which
+      // matches exactly which replies were getting stuck.
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/[^\x00-\x7F]/g, '')
       .replace(/\s+/g, ' ').trim().slice(0, 2500);
 
     if (window._elevenSelected) {
@@ -31381,6 +32026,7 @@ function speakVoiceReply(text) {
         _ensureAudioCtx();
         /* Same frame: bubble + TTS request */
         _showToastWithSpeech();
+        _wsCurrentGenId = _vmGenId;
         if (_ttsProvider === 'hume') {
           var _humeMsg2 = { text: clean, flush: true };
           if (_humeVoice) _humeMsg2.voice = { name: _humeVoice, provider: 'HUME_AI' };
@@ -32146,6 +32792,15 @@ function speakVoiceReply(text) {
     var _speechDetected = false, _peakRms = 0, _silenceStart = null, _maxTimer = null;
     try {
       _vadCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Unlike _actx (TTS playback), this context is created fresh on every
+      // record() call, often well outside the original click's gesture window
+      // (e.g. right after the intro finishes speaking). Some browsers hand it
+      // back 'suspended' in that case — getByteTimeDomainData still returns
+      // flat/silent samples with no error, so VAD silently never detects
+      // speech. _actx already resumes itself (_ensureAudioCtx); this one
+      // never did. Resume immediately, and re-check once on the first VAD
+      // tick in case resume() hadn't settled yet.
+      if (_vadCtx.state === 'suspended') _vadCtx.resume();
       _vadSrc = _vadCtx.createMediaStreamSource(_stream);
       _vadAnalyser = _vadCtx.createAnalyser();
       _vadAnalyser.fftSize = 256;
@@ -32154,6 +32809,7 @@ function speakVoiceReply(text) {
       // Use setInterval instead of requestAnimationFrame so VAD keeps running when tab is hidden
       _vadRaf = setInterval(function() {
         if (!_vadAnalyser) return;
+        if (_vadCtx && _vadCtx.state === 'suspended') { _vadCtx.resume(); return; }
         _vadAnalyser.getByteTimeDomainData(_vadBuf);
         var sum = 0;
         for (var i = 0; i < _vadBuf.length; i++) { var v = (_vadBuf[i] - 128) / 128; sum += v * v; }
