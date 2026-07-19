@@ -31687,74 +31687,164 @@ function speakVoiceReply(text) {
     // search topic + the new message as the query. Without this, voice mode had zero
     // memory of what was just searched, unlike text chat.
     var _voiceFollowUpBudget = window._voiceSearchFollowUpBudget || 0;
-    // Narrow continuation signal — a real follow-up refers BACK to what was just
-    // said/searched ("why didn't you mention X", "what about the other one").
-    // The old check matched a bare "?" or any what/who/when/why/how/is/does/
-    // did/was/were/are/will/can/could/should opener, which is most spoken
-    // questions — that's why the window never closed once a search fired.
-    var _looksLikeVoiceQuestion = /\b(why (didn'?t|don'?t|wasn'?t|aren'?t|isn'?t|couldn'?t) you|what about|how about|what else|any other|anything else|and (what|where|when|who|how)|but what|tell me more|did you check|is there another|what'?s the other one|and the other)\b/i.test(text.trim());
-    var _voiceFollowUpEligible = (_voiceFollowUpBudget > 0) && _looksLikeVoiceQuestion && !_voiceNeedsSearch && !_voicePersonalSignals.test(text) && !_directedAtHer.test(text);
-    if (_voiceFollowUpEligible) _voiceNeedsSearch = true;
-    if (!_voiceNeedsSearch && _voiceFollowUpBudget > 0) {
-      // No search this turn and not eligible either — let the follow-up window decay.
-      window._voiceSearchFollowUpBudget = _voiceFollowUpBudget - 1;
-    }
 
-    // Build the query to send to Tavily — for a follow-up, combine the last search topic
-    // with the new message so Tavily has enough context (e.g. "best oyster bars Vancouver"
-    // + "why didn't you mention Fanny's Oyster Bar" together).
-    var _tavilyQuery = (_voiceFollowUpEligible && window._voiceLastSearchQuery)
-      ? (window._voiceLastSearchQuery + ' — ' + text)
-      : text;
+    // ── Tier A (free, high-confidence): narrow backward-reference phrase —
+    // a real follow-up refers BACK to what was just said/searched ("why didn't
+    // you mention X", "what about the other one"). No network call needed.
+    var _looksLikeVoiceQuestion = /\b(why (didn'?t|don'?t|wasn'?t|aren'?t|isn'?t|couldn'?t) you|what about|how about|what else|any other|anything else|and (what|where|when|who|how)|but what|tell me more|did you check|is there another|what'?s the other one|and the other)\b/i.test(text.trim());
+
+    // ── Tier B (free, high-confidence): named-entity cross-reference — catches
+    // follow-ups that don't use any fixed phrase (e.g. "is Fanny's any good")
+    // but clearly name something that came from the last search/reply. Only
+    // extracts CAPITALIZED terms (proper nouns) on purpose: generic overlap
+    // ("conflict" in both "Ukraine Russia war" and "is Iran the main conflict")
+    // would false-positive constantly since broad-topic words repeat across
+    // unrelated subjects. Named things are a much more reliable signal.
+    function _extractEntityTerms(str) {
+      if (!str) return [];
+      var stop = /^(I|You|We|They|He|She|It|The|A|An|But|And|Or|So|Well|Actually|That|This|These|Those|There|Here|Yes|No|Okay|Ok|Ava)$/i;
+      var matches = str.match(/\b[A-Z][a-zA-Z']{2,}\b/g) || [];
+      var out = [];
+      for (var i = 0; i < matches.length; i++) {
+        var w = matches[i];
+        if (stop.test(w)) continue;
+        var lw = w.toLowerCase();
+        if (out.indexOf(lw) === -1) out.push(lw);
+      }
+      return out;
+    }
+    function _escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    var _crossRefEntities = _extractEntityTerms((window._voiceLastSearchQuery || '') + ' ' + (window._avaLastReply || ''));
+    var _voiceCrossRefMatch = _crossRefEntities.some(function(term) {
+      return new RegExp('\\b' + _escapeRegex(term) + '\\b', 'i').test(text);
+    });
+
+    // ── Tier C (cheap pre-filter only, NOT a verdict on its own): broad question
+    // shape — any "?" or a what/who/when/why/how/is/does/did/was/were/are/will/
+    // can/could/should opener. This is the OLD broad regex, restored on purpose:
+    // Tiers A/B are narrow enough that vague follow-ups with no fixed phrase and
+    // no named entity ("is that place any good") never got a chance to even be
+    // considered. Tier C catches those — but a bare question shape alone is too
+    // weak a signal to trust (it also matches a brand-new unrelated question),
+    // so it only earns a shot at the /classify confirmation call below, not an
+    // automatic search.
+    var _voiceBroadQuestionShape = /\?\s*$|^\s*(what|who|when|why|how|which|where|is|does|did|was|were|are|will|can|could|should)\b/i.test(text.trim());
+
+    var _voiceHighConfidenceFollowUp = _looksLikeVoiceQuestion || _voiceCrossRefMatch;
+    // _directedAtHer normally blocks "would you"/"do you"/"are you" style phrasing,
+    // since that's usually about Ava herself, not something to search for. But if a
+    // strong follow-up signal (a named thing or backward-reference phrase from the
+    // actual last topic) already fired, that's real independent proof this message
+    // IS about the topic, not about Ava — same override the main _voiceNeedsSearch
+    // check already gives real content keywords a few lines above. Without this,
+    // "would you consider India to be one?" (a real follow-up after a countries
+    // search) got silently blocked even though Tier B had already matched "India".
+    var _voiceFollowUpCandidate = (_voiceFollowUpBudget > 0) && !_voiceNeedsSearch
+      && !_voicePersonalSignals.test(text)
+      && !(_directedAtHer.test(text) && !_voiceHighConfidenceFollowUp)
+      && (_voiceHighConfidenceFollowUp || _voiceBroadQuestionShape);
 
     console.log('[VoiceSearch] text:', text);
-    console.log('[VoiceSearch] hasYear:', _hasYear, '| needsSearch:', _voiceNeedsSearch, '| followUpEligible:', _voiceFollowUpEligible, '| personalBlock:', _voicePersonalSignals.test(text));
+    console.log('[VoiceSearch] hasYear:', _hasYear, '| needsSearch(pre):', _voiceNeedsSearch, '| highConfidence:', _voiceHighConfidenceFollowUp, '| broadShapeOnly:', _voiceBroadQuestionShape && !_voiceHighConfidenceFollowUp, '| budget:', _voiceFollowUpBudget);
+
+    // Resolve whether this counts as a follow-up. High-confidence tiers (A/B)
+    // skip the network entirely — zero added latency. The broad-shape-only
+    // case is genuinely ambiguous, so it gets confirmed by the same /classify
+    // endpoint text chat uses, with skipRewrite so the server does ONE Groq
+    // call instead of two, and a tight client-side timeout since voice has no
+    // typing indicator to hide the wait behind. Fails CLOSED (not a follow-up)
+    // on timeout/error — this tier had the weakest signal to begin with, so
+    // when in doubt it's safer to skip the search than to guess-search.
+    var _voiceFollowUpDecisionPromise;
+    if (!_voiceFollowUpCandidate) {
+      _voiceFollowUpDecisionPromise = Promise.resolve(false);
+    } else if (_voiceHighConfidenceFollowUp) {
+      _voiceFollowUpDecisionPromise = Promise.resolve(true);
+    } else {
+      var _voiceRecentCtx = 'AI: ' + String(window._avaLastReply || '').slice(0, 200) +
+        (window._voiceLastSearchQuery ? '\nPrevious search topic: ' + window._voiceLastSearchQuery : '');
+      _voiceFollowUpDecisionPromise = new Promise(function(resolve) {
+        var _vcCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var _vcTimer = setTimeout(function() {
+          console.log('[VoiceSearch] classify confirm TIMED OUT — defaulting to NOT a follow-up');
+          if (_vcCtrl) try { _vcCtrl.abort(); } catch(e) {}
+          resolve(false);
+        }, 900);
+        fetch('https://synbot-whatsapp-2.onrender.com/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, context: _voiceRecentCtx, skipRewrite: true }),
+          signal: _vcCtrl ? _vcCtrl.signal : undefined
+        }).then(function(r) { return r.json(); }).then(function(j) {
+          clearTimeout(_vcTimer);
+          var d = j && j.decision ? String(j.decision).trim().toUpperCase() : 'NO';
+          console.log('[VoiceSearch] classify confirm result:', d);
+          resolve(d === 'BASIC' || d === 'ADVANCED');
+        }).catch(function(e) {
+          clearTimeout(_vcTimer);
+          console.log('[VoiceSearch] classify confirm FAILED:', e && e.message ? e.message : 'unknown error');
+          resolve(false);
+        });
+      });
+    }
 
     var _voiceSearchCtx = '';
-    if (_voiceNeedsSearch) {
-      // Show searching indicator on the voice button
+    var _voiceSearchPromise = _voiceFollowUpDecisionPromise.then(function(_followUpConfirmed) {
+      var _voiceFollowUpEligible = _voiceFollowUpCandidate && _followUpConfirmed;
+      if (_voiceFollowUpEligible) _voiceNeedsSearch = true;
+      if (!_voiceNeedsSearch && _voiceFollowUpBudget > 0) {
+        // No search this turn and not eligible either — let the follow-up window decay.
+        window._voiceSearchFollowUpBudget = _voiceFollowUpBudget - 1;
+      }
 
-    }
-    var _voiceSearchPromise = _voiceNeedsSearch
-      ? (function(){
-          var _tavilyCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-          var _tavilyTimedOut = false;
-          var _tavilyTimer = setTimeout(function(){
-            _tavilyTimedOut = true;
-            console.log('[VoiceSearch] Tavily TIMEOUT — proceeding without search context');
-            if (_tavilyCtrl) try { _tavilyCtrl.abort(); } catch(e){}
-          }, 5000); // was 2000ms originally, then 3300ms — raised to 5000ms so slow Tavily calls have a real chance to finish. Only affects messages that actually trigger a search; normal conversation is untouched.
-          return fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: _tavilyQuery }),
-            signal: _tavilyCtrl ? _tavilyCtrl.signal : undefined
-          }).then(function(r){ return r.json(); }).then(function(d){
-            clearTimeout(_tavilyTimer);
-            if (_tavilyTimedOut) return;
-            _voiceSearchCtx = d.context || '';
-            window._voiceUsedSearch = !!_voiceSearchCtx;
-            // Search succeeded — remember what we searched for either way. Only a
-            // FRESH topic search (keyword/live-hint/year, not one that only fired
-            // because the follow-up window let it through) re-arms the window
-            // back to 3. If a follow-up-triggered search also reset it to 3,
-            // a chain of "what about X" style questions kept the window open
-            // indefinitely and voice mode never left search mode.
-            if (_voiceSearchCtx) {
-              window._voiceSearchFollowUpBudget = _voiceFollowUpEligible
-                ? Math.max(0, _voiceFollowUpBudget - 1)
-                : 3;
-              window._voiceLastSearchQuery = _tavilyQuery;
-            }
-            console.log('[VoiceSearch] Tavily returned:', _voiceSearchCtx ? _voiceSearchCtx.slice(0, 100) + '...' : 'EMPTY');
-          }).catch(function(e){
-            clearTimeout(_tavilyTimer);
-            _voiceSearchCtx = '';
-            window._voiceUsedSearch = false;
-            console.log('[VoiceSearch] Tavily FAILED:', e && e.message ? e.message : 'unknown error');
-          });
-        })()
-      : Promise.resolve();
+      // Build the query to send to Tavily — for a follow-up, combine the last search topic
+      // with the new message so Tavily has enough context (e.g. "best oyster bars Vancouver"
+      // + "why didn't you mention Fanny's Oyster Bar" together).
+      var _tavilyQuery = (_voiceFollowUpEligible && window._voiceLastSearchQuery)
+        ? (window._voiceLastSearchQuery + ' — ' + text)
+        : text;
+
+      console.log('[VoiceSearch] final needsSearch:', _voiceNeedsSearch, '| followUpEligible:', _voiceFollowUpEligible);
+
+      if (!_voiceNeedsSearch) return;
+
+      var _tavilyCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var _tavilyTimedOut = false;
+      var _tavilyTimer = setTimeout(function(){
+        _tavilyTimedOut = true;
+        console.log('[VoiceSearch] Tavily TIMEOUT — proceeding without search context');
+        if (_tavilyCtrl) try { _tavilyCtrl.abort(); } catch(e){}
+      }, 5000); // was 2000ms originally, then 3300ms — raised to 5000ms so slow Tavily calls have a real chance to finish. Only affects messages that actually trigger a search; normal conversation is untouched.
+      return fetch('https://synbot-whatsapp-2.onrender.com/tavily-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: _tavilyQuery }),
+        signal: _tavilyCtrl ? _tavilyCtrl.signal : undefined
+      }).then(function(r){ return r.json(); }).then(function(d){
+        clearTimeout(_tavilyTimer);
+        if (_tavilyTimedOut) return;
+        _voiceSearchCtx = d.context || '';
+        window._voiceUsedSearch = !!_voiceSearchCtx;
+        // Search succeeded — remember what we searched for either way. Only a
+        // FRESH topic search (keyword/live-hint/year, not one that only fired
+        // because the follow-up window let it through) re-arms the window
+        // back to 3. If a follow-up-triggered search also reset it to 3,
+        // a chain of "what about X" style questions kept the window open
+        // indefinitely and voice mode never left search mode.
+        if (_voiceSearchCtx) {
+          window._voiceSearchFollowUpBudget = _voiceFollowUpEligible
+            ? Math.max(0, _voiceFollowUpBudget - 1)
+            : 3;
+          window._voiceLastSearchQuery = _tavilyQuery;
+        }
+        console.log('[VoiceSearch] Tavily returned:', _voiceSearchCtx ? _voiceSearchCtx.slice(0, 100) + '...' : 'EMPTY');
+      }).catch(function(e){
+        clearTimeout(_tavilyTimer);
+        _voiceSearchCtx = '';
+        window._voiceUsedSearch = false;
+        console.log('[VoiceSearch] Tavily FAILED:', e && e.message ? e.message : 'unknown error');
+      });
+    });
 
     var _t0 = Date.now();
 
