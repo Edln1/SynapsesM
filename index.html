@@ -30362,6 +30362,15 @@ function speakVoiceReply(text) {
   var _on = false;
   var _busy = false;
   var _busySince = 0;
+  // Incremented every time a new voice turn starts (ask()) or the watchdog
+  // decides a turn is abandoned. A slow search+LLM turn (Tavily timeout +
+  // Groq call can add up to well over 8s) can still be in flight when the
+  // watchdog below fires and lets the mic start a fresh turn. Without this,
+  // the stale turn's speak()/record() calls land on top of the new turn
+  // whenever they finally resolve — that's the "delayed or doesn't play"
+  // bug after a search-triggered reply. Any async completion inside ask()
+  // checks its captured turn id against the live one and bails if stale.
+  var _voiceTurnId = 0;
 
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
   // and — if the top bar icons are already collapsed when this changes —
@@ -30421,6 +30430,7 @@ function speakVoiceReply(text) {
       _stream = s;
       _reacquiringMic = false;
       _busy = false; _busySince = 0;
+      _voiceTurnId++; // abandon whatever turn was in flight
       if (_on) setTimeout(record, 300);
     }).catch(function(e) {
       _reacquiringMic = false;
@@ -30439,6 +30449,7 @@ function speakVoiceReply(text) {
     if (stuckMs > 8000 && !audioPlaying) {
       console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting');
       _busy = false; _busySince = 0;
+      _voiceTurnId++; // abandon whatever turn was in flight — late speak()/record() calls from it get ignored
       try { if (typeof _ttsStopAll === 'function') _ttsStopAll(); } catch(e) {}
       if (_on) setTimeout(record, 300);
     }
@@ -31426,6 +31437,7 @@ function speakVoiceReply(text) {
 
   function ask(text) {
     if (!text || text.trim().length < 2) { if (_on) record(); return; }
+    var _myTurn = ++_voiceTurnId; // this turn's id — async completions below check this is still current
     // ── Voice App Commands ────────────────────────────────────────────────────
     var _vcHandled = false;
     var _t = text.trim();
@@ -31735,6 +31747,7 @@ function speakVoiceReply(text) {
     var _t0 = Date.now();
 
     _voiceSearchPromise.then(function() {
+      if (_myTurn !== _voiceTurnId) { console.log('[Voice] Turn ' + _myTurn + ' abandoned before LLM call — skipping'); return; }
       var searchLayer = _voiceSearchCtx
         ? '\n\nAnswer in 3-4 sentences using the facts below. Be specific and conversational, not an essay.\n\nSearch results:\n' + _voiceSearchCtx
         : '';
@@ -31782,6 +31795,7 @@ function speakVoiceReply(text) {
         return ctrl.signal;
       })()
     }).then(function(r) {
+      if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
       if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
@@ -31817,6 +31831,7 @@ function speakVoiceReply(text) {
       }
       function _tryEarlySpeakOnMeta() {
         if (_spokeEarly) return;
+        if (_myTurn !== _voiceTurnId) return; // a newer turn is already live — drop this stale one
         var idx = _findMetaOpen(full);
         if (idx === -1) return; /* no meta this turn — speak full reply on stream end (avoids cutting mid-answer) */
         var reply = full.slice(0, idx).trim();
@@ -31830,6 +31845,7 @@ function speakVoiceReply(text) {
 
       function readChunk() {
         reader.read().then(function(res) {
+          if (_myTurn !== _voiceTurnId) return; // this turn was abandoned (watchdog/new turn) — drop it silently
           if (res.done) {
             var _rawFull = full.trim();
             var _metaOpenIdx = _findMetaOpen(_rawFull);
@@ -31890,10 +31906,10 @@ function speakVoiceReply(text) {
             } catch (e) {}
           });
           readChunk();
-        }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
       }
       readChunk();
-    }).catch(function(e) { _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
     }); // end _voiceSearchPromise.then
   }
 
