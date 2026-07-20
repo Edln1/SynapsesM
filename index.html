@@ -32164,6 +32164,40 @@ function speakVoiceReply(text) {
       return;
     }
 
+    // ── Delegated call requests ("call Alex and tell him ___") — route through
+    // the SAME backend logic SynBot's text chat uses (/chat -> handleMessage),
+    // instead of falling through to the plain /groq-chat completion below,
+    // which has no idea how to place a phone call. window._voiceAwaitingCallNumber
+    // stays true for exactly one follow-up turn after Ava asks "what's their
+    // number?", so a bare "604 555 1234" reply still gets routed correctly.
+    var _looksLikeCallCmd = /\bcall\b/i.test(_t) &&
+      !/^call me\b/i.test(_t.toLowerCase()) &&
+      /\b(and|to)\b.*\b(tell|ask|let|talk|say|discuss|see if|find out|check if|remind)\b/i.test(_t);
+
+    if (_looksLikeCallCmd || window._voiceAwaitingCallNumber) {
+      _vcHandled = true;
+      var _voiceUser = 'web_' + ((typeof currentUser !== 'undefined' && currentUser && currentUser.email) || (localStorage.getItem('synapses_anon_id') || 'anon'));
+      fetch('https://synbot-whatsapp-2.onrender.com/chat', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ message: _t, phone: _voiceUser })
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if (_myTurn !== _voiceTurnId) return; // a newer turn started meanwhile — drop this one
+          var reply = (data && data.reply) || "Sorry, something went wrong placing that call.";
+          window._voiceAwaitingCallNumber = /what's .*number\?|what is .*number\?/i.test(reply);
+          speak(reply);
+          _busy = false; _busySince = 0;
+          if (_on) setTimeout(record, 800);
+        })
+        .catch(function(){
+          speak("Sorry, I couldn't place that call right now.");
+          _busy = false; _busySince = 0;
+          if (_on) setTimeout(record, 800);
+        });
+      return;
+    }
+
     var _navCmds = [
       [/\b(go\s+home|home\s+page|take\s+me\s+home|open\s+home)\b/i,          function(){ if(typeof goHome==='function') goHome(); },           'Home'],
       [/\b(open\s+chat|new\s+chat|start\s+a?\s*chat|go\s+to\s+chat)\b/i,     function(){ if(typeof newChat==='function') newChat(); },          'Chat'],
@@ -41227,4 +41261,111 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
 </script>
 <!-- SYNAPSES_FIRST_TOUR_END -->
+
+<!-- ── Call Success popup — polls for completed delegated (Ava-placed) phone
+     calls and shows the transcript + an AI summary of what the contact said.
+     Self-contained: own styles/ids, doesn't touch any existing app code. ── -->
+<style>
+#callSuccessOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;}
+#callSuccessOverlay.show{display:flex;}
+.cs-card{width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;}
+.cs-head{padding:20px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.cs-badge{display:inline-flex;align-items:center;gap:6px;color:#00d9a8;font-weight:700;font-size:13px;letter-spacing:.02em;}
+.cs-badge.failed{color:#e85d5d;}
+.cs-transcript.empty{color:#7a7a8a;font-style:italic;}
+.cs-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:#f2f2f5;margin:6px 0 2px;}
+.cs-sub{color:#7a7a8a;font-size:13px;}
+.cs-body{padding:16px 22px;overflow-y:auto;flex:1;}
+.cs-section-lbl{color:#7a7a8a;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px;}
+.cs-section-lbl:first-child{margin-top:0;}
+.cs-reply{color:#f2f2f5;font-size:14px;line-height:1.55;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:10px;padding:12px 14px;}
+.cs-transcript{color:#c8c8d4;font-size:13px;line-height:1.6;white-space:pre-wrap;background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;max-height:220px;overflow-y:auto;}
+.cs-foot{padding:14px 22px 20px;display:flex;gap:10px;}
+.cs-btn{flex:1;padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#f2f2f5;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+.cs-btn:hover{background:rgba(255,255,255,0.08);}
+.cs-btn.primary{background:#7c6af7;border-color:#7c6af7;}
+.cs-btn.primary:hover{background:#6c5ae6;}
+</style>
+<div id="callSuccessOverlay">
+  <div class="cs-card">
+    <div class="cs-head">
+      <div class="cs-badge" id="csBadge">✅ Call Success!</div>
+      <div class="cs-title" id="csTitle">Called Alex</div>
+      <div class="cs-sub" id="csSub">just now</div>
+    </div>
+    <div class="cs-body">
+      <div class="cs-section-lbl" id="csReplyLbl">What they said</div>
+      <div class="cs-reply" id="csReply">—</div>
+      <div class="cs-section-lbl" id="csTranscriptLbl">Full transcript</div>
+      <div class="cs-transcript" id="csTranscript">—</div>
+    </div>
+    <div class="cs-foot">
+      <button class="cs-btn primary" id="csCloseBtn">Got it</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var CS_BACKEND = 'https://synbot-whatsapp-2.onrender.com';
+  var csQueue = [];
+  var csShowing = false;
+
+  function csIdentifier(){
+    try{
+      if (typeof currentUser !== 'undefined' && currentUser && currentUser.email) return 'web_' + currentUser.email;
+    }catch(e){}
+    return null;
+  }
+
+  function csShowNext(){
+    if (csShowing || !csQueue.length) return;
+    csShowing = true;
+    var log = csQueue.shift();
+    var failed = log.success === false;
+    var badge = document.getElementById('csBadge');
+    badge.textContent = failed ? '❌ Call Failed' : '✅ Call Success!';
+    badge.className = 'cs-badge' + (failed ? ' failed' : '');
+    document.getElementById('csTitle').textContent = (failed ? "Couldn't reach " : 'Called ') + (log.contact_name || 'them');
+    document.getElementById('csSub').textContent = log.objective ? ('About: ' + log.objective) : '';
+    document.getElementById('csReplyLbl').textContent = failed ? 'What went wrong' : 'What they said';
+    document.getElementById('csReply').textContent = log.reply_summary || log.summary || (failed ? 'The call never connected.' : 'No summary available.');
+    document.getElementById('csTranscriptLbl').style.display = failed ? 'none' : '';
+    var tEl = document.getElementById('csTranscript');
+    tEl.style.display = failed ? 'none' : '';
+    tEl.textContent = log.transcript || 'No transcript saved for this call.';
+    document.getElementById('callSuccessOverlay').classList.add('show');
+
+    document.getElementById('csCloseBtn').onclick = function(){
+      document.getElementById('callSuccessOverlay').classList.remove('show');
+      csShowing = false;
+      fetch(CS_BACKEND + '/call-logs/ack', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ id: log.id })
+      }).catch(function(){});
+      setTimeout(csShowNext, 300);
+    };
+  }
+
+  function csPoll(){
+    var user = csIdentifier();
+    if (!user) return;
+    fetch(CS_BACKEND + '/call-logs/pending?user=' + encodeURIComponent(user))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var calls = (data && data.calls) || [];
+        if (calls.length){
+          calls.forEach(function(c){
+            if (!csQueue.some(function(q){ return q.id === c.id; })) csQueue.push(c);
+          });
+          csShowNext();
+        }
+      })
+      .catch(function(){});
+  }
+
+  setInterval(csPoll, 8000);
+  setTimeout(csPoll, 3000);
+})();
+</script>
+
 </body>
