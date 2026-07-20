@@ -918,6 +918,10 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #bnavPulseBtn.active svg{stroke:rgba(0,217,168,0.9);filter:none;}
 #bnavPulseBtn .pulse-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px rgba(0,217,168,0.55);display:none;}
 #bnavPulseBtn.has-unread .pulse-dot{display:block;animation:pulseDotBlink 1.8s ease-in-out infinite;}
+#bnavCallBtn{display:none;position:fixed;bottom:0;left:88px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;}
+body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
+#bnavCallBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
+#bnavCallBtn .call-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#7c6af7;box-shadow:0 0 6px rgba(124,106,247,0.6);animation:pulseDotBlink 1.8s ease-in-out infinite;}
 @keyframes pulseDotBlink{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.55;transform:scale(0.85);}}
 /* Pulse — floating stack only (no tray behind cards). Desktop: bottom-left like before. Mobile center/lift only in media query. */
 /* Wider stack so side-swipes stay on-screen longer; overflow visible so cards don't clip mid-drag */
@@ -4194,6 +4198,12 @@ window.getWebAudioNode = getWebAudioNode;
     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
   </svg>
   <span class="pulse-dot" aria-hidden="true"></span>
+</button>
+<button type="button" id="bnavCallBtn" title="Recent call result" aria-label="Recent call result">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+  <span class="call-dot" aria-hidden="true"></span>
 </button>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
@@ -41266,30 +41276,53 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
      calls and shows the transcript + an AI summary of what the contact said.
      Self-contained: own styles/ids, doesn't touch any existing app code. ── -->
 <style>
-#callSuccessOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;}
-#callSuccessOverlay.show{display:flex;}
-.cs-card{width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;}
-.cs-head{padding:20px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.cs-badge{display:inline-flex;align-items:center;gap:6px;color:#00d9a8;font-weight:700;font-size:13px;letter-spacing:.02em;}
-.cs-badge.failed{color:#e85d5d;}
-.cs-transcript.empty{color:#7a7a8a;font-style:italic;}
-.cs-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:#f2f2f5;margin:6px 0 2px;}
-.cs-sub{color:#7a7a8a;font-size:13px;}
+#callSuccessOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:flex-end;justify-content:flex-end;padding:0 14px calc(70px + env(safe-area-inset-bottom,0px)) 0;background:transparent;pointer-events:none;font-family:'DM Sans',sans-serif;}
+#callSuccessOverlay.show{display:flex;animation:csFadeIn .3s cubic-bezier(0.22,1,0.36,1);}
+#callSuccessOverlay .cs-card{pointer-events:auto;}
+@keyframes csFadeIn{from{opacity:0;}to{opacity:1;}}
+.cs-card{width:min(340px,calc(100vw - 28px));max-height:80vh;display:flex;flex-direction:column;position:relative;isolation:isolate;overflow:hidden;
+  border-radius:20px;
+  background:transparent;
+  -webkit-backdrop-filter:blur(10px) saturate(1) brightness(1);
+  backdrop-filter:blur(10px) saturate(1) brightness(1);
+  border:1px solid rgba(255,255,255,0.06);
+  box-shadow:0 4px 18px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.04);
+  animation:csCardIn .45s cubic-bezier(0.22,1,0.36,1);}
+@keyframes csCardIn{from{transform:translateX(24px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.cs-card::before{content:"";position:absolute;top:0;left:14%;right:14%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);pointer-events:none;z-index:2;}
+.cs-card > *{position:relative;z-index:1;}
+.cs-head{padding:20px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.06);position:relative;}
+.cs-x{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:rgba(235,236,245,0.55);font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background .15s ease,color .15s ease;}
+.cs-x:hover{background:rgba(255,255,255,0.09);color:rgba(250,250,252,0.9);}
+.cs-badge{display:inline-flex;align-items:center;gap:6px;color:rgba(0,217,168,0.9);font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,0.35);}
+.cs-badge.failed{color:rgba(232,93,93,0.9);}
+.cs-badge-dot{width:5px;height:5px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px rgba(0,217,168,0.55);flex-shrink:0;animation:pulseDotBlink 2.4s ease-in-out infinite;}
+.cs-badge.failed .cs-badge-dot{background:#e85d5d;box-shadow:0 0 6px rgba(232,93,93,0.55);}
+.cs-transcript.empty{color:rgba(235,236,245,0.4);font-style:italic;}
+.cs-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;color:rgba(250,250,252,0.98);margin:7px 0 2px;letter-spacing:-0.02em;text-shadow:0 1px 10px rgba(0,0,0,0.4);}
+.cs-sub{color:rgba(220,222,235,0.5);font-size:12.5px;text-shadow:0 1px 6px rgba(0,0,0,0.3);}
 .cs-body{padding:16px 22px;overflow-y:auto;flex:1;}
-.cs-section-lbl{color:#7a7a8a;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px;}
+.cs-section-lbl{color:rgba(255,255,255,0.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px;}
 .cs-section-lbl:first-child{margin-top:0;}
-.cs-reply{color:#f2f2f5;font-size:14px;line-height:1.55;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:10px;padding:12px 14px;}
-.cs-transcript{color:#c8c8d4;font-size:13px;line-height:1.6;white-space:pre-wrap;background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;max-height:220px;overflow-y:auto;}
+.cs-reply{color:rgba(250,250,252,0.95);font-size:14px;line-height:1.55;text-shadow:0 1px 8px rgba(0,0,0,0.4);}
+.cs-transcript{color:rgba(235,236,245,0.78);font-size:13px;line-height:1.6;white-space:pre-wrap;text-shadow:0 1px 6px rgba(0,0,0,0.35);max-height:220px;overflow-y:auto;}
 .cs-foot{padding:14px 22px 20px;display:flex;gap:10px;}
-.cs-btn{flex:1;padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#f2f2f5;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;}
+.cs-compose{padding:0 22px 20px;display:flex;flex-direction:column;gap:10px;}
+.cs-compose-input{width:100%;min-height:72px;resize:vertical;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 12px;color:rgba(250,250,252,0.95);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.5;outline:none;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-sizing:border-box;}
+.cs-compose-input::placeholder{color:rgba(220,222,235,0.4);}
+.cs-compose-input:focus{border-color:rgba(99,102,241,0.4);}
+.cs-compose-actions{display:flex;gap:10px;}
+.cs-btn{flex:1;padding:11px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(250,250,252,0.9);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s ease,border-color .2s ease;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);}
 .cs-btn:hover{background:rgba(255,255,255,0.08);}
-.cs-btn.primary{background:#7c6af7;border-color:#7c6af7;}
-.cs-btn.primary:hover{background:#6c5ae6;}
+.cs-btn.primary{background:rgba(99,102,241,0.18);border-color:rgba(99,102,241,0.4);color:rgba(255,255,255,0.95);}
+.cs-btn.primary:hover{background:rgba(99,102,241,0.28);}
 </style>
 <div id="callSuccessOverlay">
   <div class="cs-card">
     <div class="cs-head">
-      <div class="cs-badge" id="csBadge">✅ Call Success!</div>
+      <button class="cs-x" id="csMinBtn" aria-label="Minimize">&times;</button>
+      <div class="cs-badge" id="csBadge"><span class="cs-badge-dot"></span><span id="csBadgeText">Call Success</span></div>
       <div class="cs-title" id="csTitle">Called Alex</div>
       <div class="cs-sub" id="csSub">just now</div>
     </div>
@@ -41299,16 +41332,27 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       <div class="cs-section-lbl" id="csTranscriptLbl">Full transcript</div>
       <div class="cs-transcript" id="csTranscript">—</div>
     </div>
-    <div class="cs-foot">
-      <button class="cs-btn primary" id="csCloseBtn">Got it</button>
+    <div class="cs-foot" id="csFoot">
+      <button class="cs-btn primary" id="csCloseBtn">Have Ava follow up</button>
+      <button class="cs-btn" id="csFollowCallBtn" style="display:none;">Call again</button>
+      <button class="cs-btn primary" id="csFollowMsgBtn" style="display:none;">Message</button>
+    </div>
+    <div class="cs-compose" id="csCompose" style="display:none;">
+      <textarea class="cs-compose-input" id="csComposeInput" placeholder="What should Ava say?"></textarea>
+      <div class="cs-compose-actions">
+        <button class="cs-btn" id="csComposeCancelBtn">Cancel</button>
+        <button class="cs-btn primary" id="csComposeSendBtn">Send</button>
+      </div>
     </div>
   </div>
 </div>
+<button id="csTestBtn" style="position:fixed;top:14px;right:14px;z-index:99998;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);">Test popup</button>
 <script>
 (function(){
   var CS_BACKEND = 'https://synbot-whatsapp-2.onrender.com';
   var csQueue = [];
   var csShowing = false;
+  var csCurrent = null; /* the log actively shown or minimized-but-unacked */
 
   function csIdentifier(){
     try{
@@ -41317,13 +41361,18 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     return null;
   }
 
-  function csShowNext(){
-    if (csShowing || !csQueue.length) return;
-    csShowing = true;
-    var log = csQueue.shift();
+  function csUpdateBadge(){
+    var btn = document.getElementById('bnavCallBtn');
+    if (!btn) return;
+    if (csQueue.length || csCurrent) btn.classList.add('has-call');
+    else btn.classList.remove('has-call');
+  }
+
+  function csRenderCard(log){
+    csResetFoot();
     var failed = log.success === false;
     var badge = document.getElementById('csBadge');
-    badge.textContent = failed ? '❌ Call Failed' : '✅ Call Success!';
+    document.getElementById('csBadgeText').textContent = failed ? 'Call Failed' : 'Call Success';
     badge.className = 'cs-badge' + (failed ? ' failed' : '');
     document.getElementById('csTitle').textContent = (failed ? "Couldn't reach " : 'Called ') + (log.contact_name || 'them');
     document.getElementById('csSub').textContent = log.objective ? ('About: ' + log.objective) : '';
@@ -41333,18 +41382,97 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var tEl = document.getElementById('csTranscript');
     tEl.style.display = failed ? 'none' : '';
     tEl.textContent = log.transcript || 'No transcript saved for this call.';
-    document.getElementById('callSuccessOverlay').classList.add('show');
+  }
 
-    document.getElementById('csCloseBtn').onclick = function(){
-      document.getElementById('callSuccessOverlay').classList.remove('show');
-      csShowing = false;
+  function csShowNext(){
+    if (csShowing) return;
+    if (!csCurrent){
+      if (!csQueue.length) return;
+      csCurrent = csQueue.shift();
+    }
+    csShowing = true;
+    try { if (typeof window.closeSynPulse === 'function') window.closeSynPulse(); } catch(eClose){}
+    csRenderCard(csCurrent);
+    csUpdateBadge();
+    document.getElementById('callSuccessOverlay').classList.add('show');
+  }
+
+  /* X — minimizes back to the nav icon, doesn't ack, can be reopened */
+  function csMinimize(){
+    document.getElementById('callSuccessOverlay').classList.remove('show');
+    csShowing = false;
+    csUpdateBadge();
+  }
+
+  /* Fully clears the current result — acks it on the backend, then advances the queue */
+  function csDismiss(){
+    document.getElementById('callSuccessOverlay').classList.remove('show');
+    csShowing = false;
+    if (csCurrent){
       fetch(CS_BACKEND + '/call-logs/ack', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ id: log.id })
+        body: JSON.stringify({ id: csCurrent.id })
       }).catch(function(){});
-      setTimeout(csShowNext, 300);
-    };
+    }
+    csCurrent = null;
+    csUpdateBadge();
+    setTimeout(csShowNext, 300);
   }
+
+  /* Purple button — expands into two follow-up options. TODO: wire csFollowUp's
+     two branches to the real endpoints once available; currently just dismisses. */
+  var csComposeType = null;
+
+  function csResetFoot(){
+    document.getElementById('csCloseBtn').style.display = '';
+    document.getElementById('csFollowCallBtn').style.display = 'none';
+    document.getElementById('csFollowMsgBtn').style.display = 'none';
+    document.getElementById('csFoot').style.display = 'flex';
+    document.getElementById('csCompose').style.display = 'none';
+    document.getElementById('csComposeInput').value = '';
+    csComposeType = null;
+  }
+  function csShowFollowUpChoice(){
+    document.getElementById('csCloseBtn').style.display = 'none';
+    document.getElementById('csFollowCallBtn').style.display = '';
+    document.getElementById('csFollowMsgBtn').style.display = '';
+  }
+  function csShowCompose(type){
+    csComposeType = type;
+    var input = document.getElementById('csComposeInput');
+    input.placeholder = type === 'call' ? "What should Ava say on the follow-up call?" : 'What should Ava say?';
+    document.getElementById('csComposeSendBtn').textContent = type === 'call' ? 'Start call' : 'Send';
+    document.getElementById('csFoot').style.display = 'none';
+    document.getElementById('csCompose').style.display = 'flex';
+    input.focus();
+  }
+  function csFollowUp(type, message){
+    if (!csCurrent) return;
+    var url, body;
+    if (type === 'call') {
+      url = CS_BACKEND + '/call-logs/follow-up-call';
+      body = { requestingUser: csIdentifier(), contactPhone: csCurrent.contact_phone, contactName: csCurrent.contact_name, objective: message };
+    } else {
+      url = CS_BACKEND + '/call-logs/follow-up-message';
+      body = { contactPhone: csCurrent.contact_phone, message: message };
+    }
+    fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(data){ if (!data || data.error) console.error('[call-popup] follow-up failed:', data && data.error); })
+      .catch(function(e){ console.error('[call-popup] follow-up error:', e); });
+    csDismiss();
+  }
+
+  document.getElementById('csMinBtn').onclick = csMinimize;
+  document.getElementById('csCloseBtn').onclick = csShowFollowUpChoice;
+  document.getElementById('csFollowCallBtn').onclick = function(){ csShowCompose('call'); };
+  document.getElementById('csFollowMsgBtn').onclick = function(){ csShowCompose('message'); };
+  document.getElementById('csComposeCancelBtn').onclick = csResetFoot;
+  document.getElementById('csComposeSendBtn').onclick = function(){
+    var msg = document.getElementById('csComposeInput').value.trim();
+    if (!msg) return;
+    csFollowUp(csComposeType, msg);
+  };
 
   function csPoll(){
     var user = csIdentifier();
@@ -41355,8 +41483,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         var calls = (data && data.calls) || [];
         if (calls.length){
           calls.forEach(function(c){
-            if (!csQueue.some(function(q){ return q.id === c.id; })) csQueue.push(c);
+            if (!csQueue.some(function(q){ return q.id === c.id; }) && (!csCurrent || csCurrent.id !== c.id)) csQueue.push(c);
           });
+          csUpdateBadge();
           csShowNext();
         }
       })
@@ -41365,6 +41494,37 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   setInterval(csPoll, 8000);
   setTimeout(csPoll, 3000);
+
+  /* Wrap Pulse's open so it minimizes the call popup — the two never sit on top of each other. */
+  try {
+    var _origOpenPulse = window.openSynPulse;
+    window.openSynPulse = function(){
+      if (csShowing) csMinimize();
+      if (typeof _origOpenPulse === 'function') _origOpenPulse();
+    };
+  } catch(eWrap){}
+
+  var callBtn = document.getElementById('bnavCallBtn');
+  if (callBtn) callBtn.onclick = function(){
+    if (csShowing){ csMinimize(); return; }
+    csShowNext();
+  };
+
+  function csTestFire(fail){
+    csQueue.push({
+      id: 'test-' + Date.now(),
+      contact_name: 'Alex',
+      objective: 'tell him to call me back',
+      success: !fail,
+      reply_summary: fail ? null : "Alex said he'll call back after 5pm.",
+      transcript: fail ? null : "Ava: Hey, it's Ava calling on behalf of...\nAlex: Sure, tell them I'll call back after 5."
+    });
+    csUpdateBadge();
+    csShowNext();
+  }
+  window.testCallPopup = csTestFire;
+  var testBtn = document.getElementById('csTestBtn');
+  if (testBtn) testBtn.onclick = function(){ csTestFire(false); };
 })();
 </script>
 
