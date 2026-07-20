@@ -14,8 +14,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 :root{--bg:#000000;--sidebar:#000000;--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7a7a8a;--radius:14px;}
 /* ── Themes ── */
-html[data-theme="purple"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7a7a8a;}
-html[data-theme="easyview"]{--bg:#0d0c15;--sidebar:rgba(19,18,34,0.36);--surface:#18172a;--surface2:#1f1e34;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#d8d8e8;--muted:#7070a0;}
+html[data-theme="purple"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#d8d8e8;--muted:#7a7a8a;}
+html[data-theme="easyview"]{--bg:#0d0c15;--sidebar:rgba(19,18,34,0.36);--surface:#18172a;--surface2:#1f1e34;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7070a0;}
 html[data-theme="slate"]{--bg:#0b0d12;--sidebar:#101318;--surface:#161a22;--surface2:#1d222d;--border:rgba(255,255,255,0.07);--accent:#94a3b8;--accent2:#f97316;--accent3:#38bdf8;--text:#e2e8f0;--muted:#64748b;}
 html[data-theme="mj"]{--bg:#0e0e0e;--sidebar:#141414;--surface:#1a1a1a;--surface2:#222222;--border:rgba(255,255,255,0.06);--accent:#e8e8e8;--accent2:#a0a0a0;--accent3:#c8c8c8;--text:#f0f0f0;--muted:#666666;}
 html[data-theme="deepsea"]{--bg:#050e12;--sidebar:rgba(5,18,28,0.55);--surface:#071520;--surface2:#0a1e2c;--border:rgba(0,180,220,0.12);--accent:#00b4dc;--accent2:#00d9a8;--accent3:#38bdf8;--text:#d0f0f8;--muted:#4a7a8a;}
@@ -13104,6 +13104,56 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         messages[_mi] = { role: messages[_mi].role, content: messages[_mi].content.slice(0, 3500) + '…' };
       }
     }
+
+    // ── Ava self-code-inspection routing ──────────────────────────────────
+    // If the user is asking about Ava's own code/behavior, route to the
+    // /ava-self-chat endpoint instead of the normal streaming /groq-chat path.
+    // That endpoint runs a server-side tool loop (grep/read the real files)
+    // and only returns once it has a finished plain-text reply, so this isn't
+    // token-streamed — we fake a single "chunk" with the whole reply so the
+    // existing typing-indicator/onChunk UI still works unchanged.
+    var _lastUserMsg = '';
+    for (var _lui = messages.length - 1; _lui >= 0; _lui--) {
+      if (messages[_lui].role === 'user') {
+        _lastUserMsg = typeof messages[_lui].content === 'string' ? messages[_lui].content : '';
+        break;
+      }
+    }
+    function _avaSelfTriggered(text) {
+      if (!text) return false;
+      var t = String(text).toLowerCase();
+      if (/\bserver\.js\b|\bindex\.html\b|\bgrep\b|\bread[- ]?file\b|\byour (own )?particle\b/.test(t)) return true;
+      if (/\b(your|you)(self)?\b/.test(t) && /\b(code|source|logic|bug|behavior|behaviour)\b/.test(t)) return true;
+      if (/\blook (through|at) your\b|\bcheck your (own )?code\b|\bfix (yourself|your)\b/.test(t)) return true;
+      if (/\bimprove\b/.test(t) && /\b(you|yourself|ava|her)\b/.test(t)) return true;
+      if (/\bfeature|\bcapabilit/.test(t) && /\b(add|build|new|what|your)\b/.test(t)) return true;
+      if (/\bmake (you|her|ava) better\b/.test(t)) return true;
+      if (/\bwhat can.{0,4}t you\b|\bwhat can you not\b/.test(t)) return true;
+      if (/\bwe (add|build)\b/.test(t) && /\b(you|your|ava|her)\b/.test(t)) return true;
+      return false;
+    }
+    if (_aiMode !== 'uncensored' && !(imageAttachments && imageAttachments.length) && _avaSelfTriggered(_lastUserMsg)) {
+      try {
+        var _selfRes = await fetch(GROQ_PROXY + '/ava-self-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: messages }),
+          signal: signal || null
+        });
+        var _selfJson = await _selfRes.json();
+        if (!_selfRes.ok) return { error: { message: (_selfJson && _selfJson.error) ? (_selfJson.error.message || _selfJson.error) : ('Request failed with status ' + _selfRes.status) } };
+        var _selfText = _selfJson.reply || '';
+        if (_selfJson.proposedEdits && _selfJson.proposedEdits.length) {
+          _selfText += '\n\n_(' + _selfJson.proposedEdits.length + ' change' + (_selfJson.proposedEdits.length > 1 ? 's' : '') + ' proposed — review at /ava-pending-edits)_';
+        }
+        if (onChunk) onChunk(_selfText);
+        return { content: [{ type: 'text', text: _selfText }] };
+      } catch (e) {
+        if (e.name === 'AbortError') return { error: { message: 'aborted' } };
+        return { error: { message: e.message } };
+      }
+    }
+    // ── End Ava self-code-inspection routing ──────────────────────────────
 
     /*
      * SPEED: do NOT await classify on every message (that was +1–5s TTFT even for "hi").
