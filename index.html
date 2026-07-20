@@ -1166,11 +1166,15 @@ body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #chpSidebar.open,#chpSidebar.fade-open{border-right-color:rgba(255,255,255,0.06);}
 /* Panel keeps one consistent translucent glass look in all states — the force-field blur applied directly to the content elements (see below) is what hides message text/canvas behind it now, not a solid-black background swap. */
 /* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
-/* Force-field blur on sidebar open. will-change:filter kept off by default (battery). */
-#sec-chat #chatFlowCanvas{filter:blur(0px);transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatEmptyState{filter:blur(0px);transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
-#sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+/* Force-field blur on sidebar open. will-change:filter kept ON permanently for these
+   few elements (small, deliberate battery trade-off) — without it, the FIRST time the
+   browser ever applies a filter to an element it has to promote a new GPU compositing
+   layer, and that promotion itself is what was showing up as a slow blur "ramp-in" on
+   mobile, independent of any transition setting. Pre-promoting removes the cold start. */
+#sec-chat #chatFlowCanvas{filter:blur(0px);will-change:filter;transition:opacity 1.4s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatEmptyState{filter:blur(0px);will-change:filter;transition:opacity .5s ease,filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer{filter:blur(0px);will-change:filter;transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
+#sec-chat .input-area{filter:blur(0px);will-change:filter;transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area,
 #sec-chat.cs-blur-active #chatFlowCanvas,#sec-chat.cs-blur-active #chatBeamsWrap,#sec-chat.cs-blur-active #avaAvatarBox,#sec-chat.cs-blur-active #chatEmptyState,#sec-chat.cs-blur-active #chatContainer,#sec-chat.cs-blur-active .input-area{filter:blur(16px);}
 #sec-chat.cs-blur-active .input-area .send-btn,#sec-chat.cs-blur-active .input-area #voiceModeBtn{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
