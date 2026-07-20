@@ -41397,23 +41397,36 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   }
 
   /* Blurs whatever is behind the call-success card (the ask-me-anything bar and
-     the rest of the chat surface). Applied with transitions forced off on
-     activation so the blur is there the instant the card appears — no lag —
-     but still animates smoothly back to sharp when the card goes away. */
+     the rest of the chat surface). Sets filter directly on each element via
+     inline style (always wins over stylesheet rules, no specificity/paint-
+     batching quirks to fight) with the transition force-killed and a real
+     layout flush in between, so the blur is fully there the instant the card
+     appears with zero ramp-in — but still animates smoothly back to sharp
+     when the card goes away. */
+  var CS_BLUR_IDS = ['chatFlowCanvas','chatBeamsWrap','avaAvatarBox','chatEmptyState','chatContainer'];
+  function csBlurTargets(){
+    var els = CS_BLUR_IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean);
+    var inputArea = document.querySelector('#sec-chat .input-area');
+    if (inputArea) els.push(inputArea);
+    return els;
+  }
   function csSetBackdropBlur(on){
-    var target = document.getElementById('sec-chat');
-    if (!target) return;
+    var secChat = document.getElementById('sec-chat');
+    var targets = csBlurTargets();
+    if (!targets.length) return;
     document.body.classList.toggle('cs-blur-open', on);
     if (on){
-      target.classList.add('cs-blur-active-instant');
-      /* force reflow so the "no transition" rule is applied before we add the blur */
-      void target.offsetWidth;
-      target.classList.add('cs-blur-active');
+      targets.forEach(function(el){ el.style.transition = 'none'; });
+      targets.forEach(function(el){ void el.offsetWidth; }); /* flush: transition:none is now actually in effect */
+      targets.forEach(function(el){ el.style.filter = 'blur(16px)'; });
+      targets.forEach(function(el){ void el.offsetWidth; }); /* flush: blur is now painted with no transition */
       requestAnimationFrame(function(){
-        requestAnimationFrame(function(){ target.classList.remove('cs-blur-active-instant'); });
+        requestAnimationFrame(function(){ targets.forEach(function(el){ el.style.transition = ''; }); });
       });
+      if (secChat) secChat.classList.add('cs-blur-active');
     } else {
-      target.classList.remove('cs-blur-active');
+      targets.forEach(function(el){ el.style.transition = ''; el.style.filter = ''; });
+      if (secChat) secChat.classList.remove('cs-blur-active');
     }
   }
 
