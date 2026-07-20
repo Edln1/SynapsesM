@@ -693,7 +693,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
 
   /* ── Home input: desktop-style rectangle on mobile ── */
-  .input-box{background:rgba(0,0,0,0.35)!important;border:1px solid rgba(255,255,255,0.1)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;}
+  .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
   input,textarea,select{font-size:16px!important;}
   /* ── Chat/coach inputs: pill style ── */
@@ -1180,6 +1180,16 @@ body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #sec-chat.cs-blur-active .input-area .send-btn,#sec-chat.cs-blur-active .input-area #voiceModeBtn{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 #sec-chat.chp-blur-active-instant #chatFlowCanvas,#sec-chat.chp-blur-active-instant #chatBeamsWrap,#sec-chat.chp-blur-active-instant #avaAvatarBox,#sec-chat.chp-blur-active-instant #chatEmptyState,#sec-chat.chp-blur-active-instant #chatContainer,#sec-chat.chp-blur-active-instant .input-area,
 #sec-chat.cs-blur-active-instant #chatFlowCanvas,#sec-chat.cs-blur-active-instant #chatBeamsWrap,#sec-chat.cs-blur-active-instant #avaAvatarBox,#sec-chat.cs-blur-active-instant #chatEmptyState,#sec-chat.cs-blur-active-instant #chatContainer,#sec-chat.cs-blur-active-instant .input-area{transition:none!important;}
+/* Call popup is up: the backdrop filter itself is a static, non-animating value
+   the instant it's applied, BUT glow box-shadow keyframes running on elements
+   underneath (mic breathing animation, Ava's glow ring) keep growing/shrinking
+   independently of that filter. A growing box-shadow, blurred, visually reads
+   as "the blur getting thicker" over the ~1-2s of its cycle even though the
+   blur radius never changed. Freeze those animations too while the card is up. */
+body.cs-blur-open #avaAvatarBox,body.cs-blur-open #avaAvatarBox *,
+body.cs-blur-open #sec-chat .input-area,body.cs-blur-open #sec-chat .input-area *,
+body.cs-blur-open #chatEmptyState,body.cs-blur-open #chatEmptyState *,
+body.cs-blur-open #chatContainer,body.cs-blur-open #chatContainer *{animation-play-state:paused!important;}
 /* When app backgrounded: freeze CSS animations site-wide (huge mobile battery win) */
 body.syn-bg .syn-ring,body.syn-bg .syn-node,body.syn-bg .syn-orb-core,
 body.syn-bg .syn-glyph,body.syn-bg .bnav-orb,body.syn-bg .bnav-orb-wrap,
@@ -1489,7 +1499,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 }
 /* Wrapper height = bar height so absolute icons center correctly */
 .input-wrapper{max-width:800px;margin:0 auto;position:relative;min-height:52px;}
-.input-box{width:100%;background:rgba(12,12,22,0.28);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:14px;padding:16px 52px 16px 52px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;box-sizing:border-box;}
+.input-box{width:100%;background:rgba(14,13,24,0.62);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 52px 16px 52px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:none;min-height:52px;max-height:160px;transition:border-color .2s;line-height:20px;caret-color:var(--accent);display:block;overflow:hidden;box-sizing:border-box;}
 .input-box::placeholder{color:var(--muted);line-height:20px;vertical-align:middle;}
 /* Chat ask-bar: text vertically centered with clock (left 14 + 26 + gap → pad-left 52) */
 #sec-chat .input-box,#sec-coach .input-box{
@@ -1580,7 +1590,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .syn-node::after{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--col,#7c6af7);box-shadow:0 0 8px var(--col,#7c6af7);animation:synapseNodePulse var(--pdur,2s) ease-in-out infinite;}
 #sec-chat .input-box:focus,#sec-coach .input-box:focus{animation:none;border-color:rgba(124,106,247,0.7);box-shadow:0 0 0 3px rgba(124,106,247,0.15),0 8px 40px rgba(124,106,247,0.15),inset 0 1px 0 rgba(255,255,255,0.07);}
 .input-box:focus{border-color:var(--accent);}
-.send-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(99,102,241,0.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.35);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);transition:all .2s;}
+.send-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(99,102,241,0.32);border:1px solid rgba(99,102,241,0.35);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);transition:all .2s;}
 
 .send-btn:hover{background:rgba(99,102,241,0.3);border-color:rgba(99,102,241,0.6);box-shadow:0 0 20px rgba(99,102,241,0.3);transform:translateY(-50%) scale(1.06);}
 .send-btn.coach-send{background:rgba(0,217,168,0.15);border-color:rgba(0,217,168,0.35);}
@@ -2281,7 +2291,7 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .syn-glyph{position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.18);user-select:none;pointer-events:none;animation:glyphFlicker var(--gd,6s) ease-in-out infinite;white-space:nowrap;}
 #sec-chat .input-box:focus,#sec-coach .input-box:focus{animation:none;border-color:rgba(124,106,247,0.7);box-shadow:0 0 0 3px rgba(124,106,247,0.15),0 8px 40px rgba(124,106,247,0.15),inset 0 1px 0 rgba(255,255,255,0.07);}
 .input-box:focus{border-color:var(--accent);}
-.send-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(99,102,241,0.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.35);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);transition:all .2s;}
+.send-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(99,102,241,0.32);border:1px solid rgba(99,102,241,0.35);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);transition:all .2s;}
 
 .send-btn:hover{background:rgba(99,102,241,0.3);border-color:rgba(99,102,241,0.6);box-shadow:0 0 20px rgba(99,102,241,0.3);transform:translateY(-50%) scale(1.06);}
 .send-btn.coach-send{background:rgba(0,217,168,0.15);border-color:rgba(0,217,168,0.35);}
