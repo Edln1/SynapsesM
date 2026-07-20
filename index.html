@@ -424,6 +424,7 @@ body.bottom-nav .sidebar{display:none!important;}
 body.bottom-nav #bottomNavBar{display:flex!important;}
 body.bottom-nav #bnavNotesBtn{display:flex!important;}
 body.bottom-nav #bnavPulseBtn{display:flex!important;}
+body.bottom-nav #bnavCallBtn{display:flex!important;}
 /* pill: floats over content, main takes full height */
 body.bottom-nav .main{height:100vh;max-height:100vh;overflow:hidden;}
 /* fullwidth: flush to bottom, shrink main */
@@ -1170,6 +1171,7 @@ body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #sec-chat #chatBeamsWrap,#sec-chat #avaAvatarBox,#sec-chat #chatContainer{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat .input-area{filter:blur(0px);transition:filter .35s cubic-bezier(0.22,1,0.36,1);}
 #sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area{filter:blur(16px);}
+#sec-chat.chp-blur-active-instant #chatFlowCanvas,#sec-chat.chp-blur-active-instant #chatBeamsWrap,#sec-chat.chp-blur-active-instant #avaAvatarBox,#sec-chat.chp-blur-active-instant #chatEmptyState,#sec-chat.chp-blur-active-instant #chatContainer,#sec-chat.chp-blur-active-instant .input-area{transition:none!important;}
 /* When app backgrounded: freeze CSS animations site-wide (huge mobile battery win) */
 body.syn-bg .syn-ring,body.syn-bg .syn-node,body.syn-bg .syn-orb-core,
 body.syn-bg .syn-glyph,body.syn-bg .bnav-orb,body.syn-bg .bnav-orb-wrap,
@@ -1389,6 +1391,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
+#sec-chat #chatEmptyState:not(.hidden) ~ .input-area #chatAttachBtn{display:none!important;}
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
   /* Ask-bar lifts with Pulse via top/margin — NOT transform.
@@ -20061,6 +20064,7 @@ function goNotes() {
     if(stage) stage.classList.remove('wheel-spin');
   }
   function openPulse(){
+    try { if (typeof window._csMinimizeForPulse === 'function') window._csMinimizeForPulse(); } catch(eCS){}
     var panel = document.getElementById('synPulsePanel');
     var btn = document.getElementById('bnavPulseBtn');
     if(!panel) return;
@@ -28364,6 +28368,9 @@ if(document.readyState==='complete'||document.readyState==='interactive') setTim
   }
   function _synBotRecover(reason){
     try {
+      /* Toggle is off — never force the bot visible, no matter the reason
+         (window focus after a native file picker, popup interaction, etc.) */
+      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
       /* Live tour UI: leave purple guide alone */
       if (_tourIsLive()) return;
       try {
@@ -41346,7 +41353,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     </div>
   </div>
 </div>
-<button id="csTestBtn" style="position:fixed;top:14px;right:14px;z-index:99998;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.8);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);">Test popup</button>
 <script>
 (function(){
   var CS_BACKEND = 'https://synbot-whatsapp-2.onrender.com';
@@ -41384,6 +41390,26 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     tEl.textContent = log.transcript || 'No transcript saved for this call.';
   }
 
+  /* Blurs whatever is behind the call-success card (the ask-me-anything bar and
+     the rest of the chat surface). Applied with transitions forced off on
+     activation so the blur is there the instant the card appears — no lag —
+     but still animates smoothly back to sharp when the card goes away. */
+  function csSetBackdropBlur(on){
+    var target = document.getElementById('sec-chat');
+    if (!target) return;
+    if (on){
+      target.classList.add('chp-blur-active-instant');
+      /* force reflow so the "no transition" rule is applied before we add the blur */
+      void target.offsetWidth;
+      target.classList.add('chp-blur-active');
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){ target.classList.remove('chp-blur-active-instant'); });
+      });
+    } else {
+      target.classList.remove('chp-blur-active');
+    }
+  }
+
   function csShowNext(){
     if (csShowing) return;
     if (!csCurrent){
@@ -41394,6 +41420,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     try { if (typeof window.closeSynPulse === 'function') window.closeSynPulse(); } catch(eClose){}
     csRenderCard(csCurrent);
     csUpdateBadge();
+    csSetBackdropBlur(true);
     document.getElementById('callSuccessOverlay').classList.add('show');
   }
 
@@ -41401,6 +41428,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function csMinimize(){
     document.getElementById('callSuccessOverlay').classList.remove('show');
     csShowing = false;
+    csSetBackdropBlur(false);
     csUpdateBadge();
   }
 
@@ -41408,6 +41436,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function csDismiss(){
     document.getElementById('callSuccessOverlay').classList.remove('show');
     csShowing = false;
+    csSetBackdropBlur(false);
     if (csCurrent){
       fetch(CS_BACKEND + '/call-logs/ack', {
         method: 'POST', headers: {'Content-Type':'application/json'},
@@ -41495,19 +41524,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   setInterval(csPoll, 8000);
   setTimeout(csPoll, 3000);
 
-  /* Wrap Pulse's open so it minimizes the call popup — the two never sit on top of each other. */
-  try {
-    var _origOpenPulse = window.openSynPulse;
-    window.openSynPulse = function(){
-      if (csShowing) csMinimize();
-      if (typeof _origOpenPulse === 'function') _origOpenPulse();
-    };
-  } catch(eWrap){}
+  /* Real hook openPulse() calls directly on every invocation (button tap,
+     toggleSynPulse, window.openSynPulse) — minimizes the call popup so
+     Pulse never renders on top of it. */
+  window._csMinimizeForPulse = function(){
+    if (csShowing) csMinimize();
+  };
 
   var callBtn = document.getElementById('bnavCallBtn');
   if (callBtn) callBtn.onclick = function(){
     if (csShowing){ csMinimize(); return; }
-    csShowNext();
+    if (csQueue.length || csCurrent){ csShowNext(); return; }
+    /* TEMP: no real call logic wired up yet — fire the test popup so the
+       icon is clickable/testable. Remove this fallback once real calls
+       populate csQueue on their own. */
+    csTestFire(false);
   };
 
   function csTestFire(fail){
@@ -41523,8 +41554,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     csShowNext();
   }
   window.testCallPopup = csTestFire;
-  var testBtn = document.getElementById('csTestBtn');
-  if (testBtn) testBtn.onclick = function(){ csTestFire(false); };
 })();
 </script>
 
