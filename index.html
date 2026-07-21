@@ -7443,7 +7443,9 @@ function getRoles(u){return u?u.roles||['seeker']:[];}
 function canSeek(u){return getRoles(u).includes('seeker');}
 function canRecruit(u){return getRoles(u).includes('recruiter');}
 function getRoleLabel(u){var r=getRoles(u);return r.includes('seeker')&&r.includes('recruiter')?'🔍 Seeker & 🏢 Recruiter':r.includes('recruiter')?'🏢 Recruiter':'🔍 Job Seeker';}
-function onLogin(){window._loginDone=true;if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if(currentUser&&currentUser.email&&!currentUser.isGuest){setTimeout(function(){syncWhatsAppNotes(currentUser.email);startWhatsAppNotePolling(currentUser.email);},1500);}if(typeof window._hideSplash==='function')window._hideSplash();try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){} nlSave(); chatHistory=[];activeSession=null;document.getElementById('sbName').textContent=currentUser.name;document.getElementById('sbRole').textContent=getRoleLabel(currentUser);// Avatar already populated from DB in doLogin; cache it locally for preload
+function onLogin(){window._loginDone=true;
+try{ if(typeof median!=='undefined' && median.storage) median.storage.app.set({key:'syn_user_email', value:(currentUser&&currentUser.email)||''}); }catch(eMedian){}
+if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if(currentUser&&currentUser.email&&!currentUser.isGuest){setTimeout(function(){syncWhatsAppNotes(currentUser.email);startWhatsAppNotePolling(currentUser.email);},1500);}if(typeof window._hideSplash==='function')window._hideSplash();try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){} nlSave(); chatHistory=[];activeSession=null;document.getElementById('sbName').textContent=currentUser.name;document.getElementById('sbRole').textContent=getRoleLabel(currentUser);// Avatar already populated from DB in doLogin; cache it locally for preload
 if(currentUser.avatar)try{localStorage.setItem('synapses_avatar_'+currentUser.email,currentUser.avatar);}catch(e){}
 // Avatar is already loaded from Supabase in doLogin — apply it immediately
 applyAvatar(currentUser.avatar||null);
@@ -41644,6 +41646,40 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   setInterval(csPoll, 8000);
   setTimeout(csPoll, 3000);
+
+  /* ── Generic async message poller ──────────────────────────────────────
+     Delivers anything the backend sent via sendUpdate() to a web user —
+     Gmail triage progress, DoorDash status, briefings, reminders, Polymarket/
+     Seedance pipeline output — as chat bubbles in the SynBot panel, since
+     those background jobs have no synchronous /chat response to piggyback
+     on. Only acks a message once it's actually been appended to the DOM, so
+     if the chat panel isn't open yet the message just waits for the next
+     poll instead of being silently dropped. */
+  function sbMsgPoll(){
+    var user = csIdentifier();
+    if (!user) return;
+    var msgs = document.getElementById('synBotMsgs');
+    if (!msgs) return; // panel not open/rendered yet — try again next tick
+    fetch(CS_BACKEND + '/messages/pending?user=' + encodeURIComponent(user))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var items = (data && data.messages) || [];
+        items.forEach(function(m){
+          var el = document.createElement('div');
+          el.style.cssText = 'background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.2);border-radius:12px 12px 12px 3px;padding:9px 12px;font-size:12px;color:rgba(255,255,255,0.85);line-height:1.6;max-width:90%;white-space:pre-wrap;word-break:break-word;';
+          el.textContent = m.message;
+          msgs.appendChild(el);
+          if (typeof _sbAutoScroll === 'function') _sbAutoScroll(msgs);
+          fetch(CS_BACKEND + '/messages/ack', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ id: m.id })
+          }).catch(function(){});
+        });
+      })
+      .catch(function(){});
+  }
+  setInterval(sbMsgPoll, 8000);
+  setTimeout(sbMsgPoll, 3000);
 
   /* Real hook openPulse() calls directly on every invocation (button tap,
      toggleSynPulse, window.openSynPulse) — minimizes the call popup so
