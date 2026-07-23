@@ -6979,23 +6979,111 @@ function parseNoteCat(body) {
   return m ? m[1] : 'General';
 }
 
-// Tell Android notes widget to re-fetch Supabase (Median WebView intercepts mediannotes://)
+/**
+ * Delete a note from Supabase reliably.
+ * Returns a Promise<{ok, removed, error}>.
+ * Always uses .select() so we know if 0 rows matched (silent no-op).
+ */
+function deleteNoteFromCloud(note, email) {
+  email = (email || (currentUser && currentUser.email) || '').toLowerCase();
+  if (!note || !window._supabase || !email) {
+    return Promise.resolve({ ok: false, removed: 0, error: 'not signed in or no note' });
+  }
+  var title = (note.title || 'Untitled').trim() || 'Untitled';
+  var body = stripNoteCatMarker(note.body || '').trim();
+  var cat = note._category || parseNoteCat(note.body || '') || 'General';
+  var bodyEncoded = (cat && cat !== 'General') ? ('[[cat:' + cat + ']]\n' + body) : body;
+
+  function delQuery(builder) {
+    return builder.select('id,title');
+  }
+
+  // 1) by primary key
+  var step1 = note._supabaseId
+    ? delQuery(window._supabase.from('notes').delete().eq('id', note._supabaseId))
+    : Promise.resolve({ data: [], error: null });
+
+  return step1.then(function (r1) {
+    if (r1.error) return { ok: false, removed: 0, error: r1.error };
+    if (r1.data && r1.data.length) return { ok: true, removed: r1.data.length, error: null };
+
+    // 2) by email + title (most HTML/widget notes)
+    return delQuery(
+      window._supabase.from('notes').delete()
+        .eq('user_email', email)
+        .eq('title', title)
+    ).then(function (r2) {
+      if (r2.error) return { ok: false, removed: 0, error: r2.error };
+      if (r2.data && r2.data.length) return { ok: true, removed: r2.data.length, error: null };
+
+      // 3) by email + body (plain or widget-encoded)
+      if (!body) return { ok: false, removed: 0, error: 'no matching cloud row' };
+      return delQuery(
+        window._supabase.from('notes').delete()
+          .eq('user_email', email)
+          .eq('body', body)
+      ).then(function (r3) {
+        if (r3.error) return { ok: false, removed: 0, error: r3.error };
+        if (r3.data && r3.data.length) return { ok: true, removed: r3.data.length, error: null };
+        if (bodyEncoded === body) return { ok: false, removed: 0, error: 'no matching cloud row' };
+        return delQuery(
+          window._supabase.from('notes').delete()
+            .eq('user_email', email)
+            .eq('body', bodyEncoded)
+        ).then(function (r4) {
+          if (r4.error) return { ok: false, removed: 0, error: r4.error };
+          return {
+            ok: !!(r4.data && r4.data.length),
+            removed: (r4.data && r4.data.length) || 0,
+            error: (r4.data && r4.data.length) ? null : 'no matching cloud row'
+          };
+        });
+      });
+    });
+  });
+}
+
+// Only the real Android WebView app — never fire custom schemes in browser/desktop
+// (iframes to mediannotes:// were causing endless “app not installed” toasts)
+function isMedianAndroidApp() {
+  try {
+    if (typeof median !== 'undefined') return true;
+    if (typeof JSBridge !== 'undefined') return true;
+    if (typeof median_status_checker !== 'undefined') return true;
+    var ua = (navigator.userAgent || '') + ' ' + (navigator.vendor || '');
+    if (/GoNative|gonative|Median|medianios|medianandroid/i.test(ua)) return true;
+  } catch (e) {}
+  return false;
+}
+
+var _lastNotesWidgetNotifyAt = 0;
+// Tell Android notes widget to re-fetch Supabase (throttled; app-only)
 function notifyNotesWidget(email) {
   try {
+    if (!isMedianAndroidApp()) return;
+    var now = Date.now();
+    if (now - _lastNotesWidgetNotifyAt < 10000) return; // max once / 10s
+    _lastNotesWidgetNotifyAt = now;
+
     if (email) {
-      try { if (typeof median !== 'undefined' && median.storage) median.storage.app.set({ key: 'syn_user_email', value: String(email).toLowerCase() }); } catch (e0) {}
-    }
-    function ping(url) {
       try {
-        var i = document.createElement('iframe');
-        i.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute';
-        i.src = url;
-        document.documentElement.appendChild(i);
-        setTimeout(function () { try { i.remove(); } catch (e1) {} }, 800);
-      } catch (e2) {}
+        if (typeof median !== 'undefined' && median.storage) {
+          median.storage.app.set({ key: 'syn_user_email', value: String(email).toLowerCase() });
+        }
+      } catch (e0) {}
     }
-    if (email) ping('mediannotes://email?e=' + encodeURIComponent(String(email).toLowerCase()));
-    ping('mediannotes://refresh');
+
+    // JS bridge only — never mediannotes:// iframes/location (those spam “app not installed”)
+    try {
+      if (typeof JSBridge !== 'undefined' && typeof JSBridge.postMessage === 'function') {
+        JSBridge.postMessage(JSON.stringify({
+          type: 'notes_widget',
+          action: 'refresh',
+          email: email ? String(email).toLowerCase() : ''
+        }));
+      }
+      // If no JSBridge, widget still refreshes on its own ~1 min poll / app open
+    } catch (e1) {}
   } catch (e) {}
 }
 
@@ -7030,11 +7118,11 @@ function syncWhatsAppNotes(email, silent) {
     if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') {
       try { _nbLoad(); _nbRenderAll(); } catch (eNb) {}
     }
-    notifyNotesWidget(email);
+    // Do NOT notify widget on every sync/poll — that spammed custom-scheme intents
   });
 }
 
-// Realtime: any INSERT / UPDATE / DELETE on notes → full re-sync + widget refresh
+// Realtime: any INSERT / UPDATE / DELETE on notes → re-sync HTML list (widget has its own poll)
 function startWhatsAppNotePolling(email) {
   if (window._waNotesChannel) { window._waNotesChannel.unsubscribe(); window._waNotesChannel = null; }
   if (!window._supabase || !email) return;
@@ -7046,12 +7134,12 @@ function startWhatsAppNotePolling(email) {
       table: 'notes',
       filter: 'user_email=eq.' + email.toLowerCase()
     }, function(payload) {
-      // Full pull keeps HTML + widget aligned (handles delete/update from any client)
       syncWhatsAppNotes(email, true);
+      // One throttled poke so widget picks up cloud changes (app-only)
       notifyNotesWidget(email);
     })
     .subscribe();
-  // Keep a lightweight poll as backup if realtime is off
+  // Lightweight poll for HTML list only — no widget notify (avoids toast loops)
   if (window._notesPollTimer) clearInterval(window._notesPollTimer);
   window._notesPollTimer = setInterval(function() {
     if (currentUser && currentUser.email && !currentUser.isGuest) {
@@ -10993,13 +11081,10 @@ function renderStickyNotes(laserOnNew){
     del.addEventListener('click', function(e){
       e.stopPropagation(); e.preventDefault();
       var _delNote = userNotes[i];
-      if(_delNote && window._supabase && currentUser && currentUser.email ){
+      if(_delNote && currentUser && currentUser.email){
         var _em = currentUser.email.toLowerCase();
-        var _dq = window._supabase.from('notes').delete().eq('user_email', _em);
-        if(_delNote._supabaseId) _dq = _dq.eq('id', _delNote._supabaseId);
-        else _dq = _dq.eq('title', (_delNote.title||'').trim());
-        _dq.then(function(r){
-          console.log('supabase delete result:', r);
+        deleteNoteFromCloud(_delNote, _em).then(function(res){
+          console.log('sticky cloud delete:', res);
           syncWhatsAppNotes(_em, true);
           notifyNotesWidget(_em);
         });
@@ -17195,29 +17280,23 @@ function deleteNote(idx, isAva){
   if(isAva){ AVA_NOTES.splice(idx,1); renderNotes(); return; }
   var note = userNotes[idx];
   var email = currentUser && currentUser.email ? currentUser.email.toLowerCase() : '';
-  function afterCloudDelete(){
-    if(email){ syncWhatsAppNotes(email, true); notifyNotesWidget(email); }
-  }
-  if(note && window._supabase && email){
-    var _dq = window._supabase.from('notes').delete().eq('user_email', email);
-    if(note._supabaseId) {
-      _dq = _dq.eq('id', note._supabaseId);
-    } else {
-      // Prefer title match (widget + HTML both set title)
-      _dq = _dq.eq('title', (note.title||'').trim() || 'Untitled');
-    }
-    _dq.then(function(r){
-      if(r.error) console.error('delete error:', r.error);
-      afterCloudDelete();
-    });
-  } else {
-    afterCloudDelete();
-  }
+  // Remove from UI immediately
   userNotes.splice(idx,1);
   try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));nlSave(true);}catch(e){}
   renderNotes();
   if(typeof renderStickyNotes==='function') setTimeout(function(){ renderStickyNotes(true); }, 100);
-  notifyNotesWidget(email);
+  // Then remove from Supabase (source of truth)
+  deleteNoteFromCloud(note, email).then(function(res){
+    if(res.error && res.removed === 0){
+      console.warn('cloud delete:', res.error, note);
+      if(email && !note._supabaseId){
+        showToast('Removed locally — not found in cloud (may never have synced)');
+      }
+    } else if(res.removed > 0){
+      console.log('cloud deleted', res.removed, 'row(s)');
+    }
+    if(email){ syncWhatsAppNotes(email, true); notifyNotesWidget(email); }
+  });
 }
 function renderNotes(){
   var el=document.getElementById('notesList');
@@ -19226,11 +19305,12 @@ function nbDeletePage() {
     var freshNotes = [];
     try { freshNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); } catch(e) {}
     var _delNote = freshNotes[_nb.activePg];
-    if(_delNote && (_delNote._supabaseId || _delNote._fromWhatsApp) && window._supabase && currentUser && currentUser.email){
-      var _dq = window._supabase.from('notes').delete().eq('user_email', currentUser.email.toLowerCase());
-      if(_delNote._supabaseId) _dq = _dq.eq('id', _delNote._supabaseId);
-      else _dq = _dq.eq('title', (_delNote.title||'').trim());
-      _dq.then(function(r){ console.log('nbDeletePage supabase result:', r); if(currentUser&&currentUser.email){syncWhatsAppNotes(currentUser.email,true);notifyNotesWidget(currentUser.email);} });
+    if(_delNote && currentUser && currentUser.email){
+      deleteNoteFromCloud(_delNote, currentUser.email).then(function(res){
+        console.log('nbDeletePage cloud delete:', res);
+        syncWhatsAppNotes(currentUser.email, true);
+        notifyNotesWidget(currentUser.email);
+      });
     }
     freshNotes.splice(_nb.activePg, 1);
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
