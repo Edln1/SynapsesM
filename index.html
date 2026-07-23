@@ -6970,69 +6970,94 @@ var coachHubHistory=[],coachHubMode='career',coachHubInited=false;
 var avaHistory=[],isAvaSending=false;
 var userNotes=[];try{userNotes=JSON.parse(localStorage.getItem('synapses_notes')||'[]');}catch(e){userNotes=[];}
 
-// Sync WhatsApp notes from Supabase into the app
+// Strip widget category marker [[cat:Work]] so HTML display stays clean
+function stripNoteCatMarker(body) {
+  return String(body||'').replace(/^\[\[cat:[^\]]+\]\]\r?\n?/, '');
+}
+function parseNoteCat(body) {
+  var m = String(body||'').match(/^\[\[cat:([^\]]+)\]\]/);
+  return m ? m[1] : 'General';
+}
+
+// Tell Android notes widget to re-fetch Supabase (Median WebView intercepts mediannotes://)
+function notifyNotesWidget(email) {
+  try {
+    if (email) {
+      try { if (typeof median !== 'undefined' && median.storage) median.storage.app.set({ key: 'syn_user_email', value: String(email).toLowerCase() }); } catch (e0) {}
+    }
+    function ping(url) {
+      try {
+        var i = document.createElement('iframe');
+        i.style.cssText = 'display:none;width:0;height:0;border:0;position:absolute';
+        i.src = url;
+        document.documentElement.appendChild(i);
+        setTimeout(function () { try { i.remove(); } catch (e1) {} }, 800);
+      } catch (e2) {}
+    }
+    if (email) ping('mediannotes://email?e=' + encodeURIComponent(String(email).toLowerCase()));
+    ping('mediannotes://refresh');
+  } catch (e) {}
+}
+
+// Supabase is source of truth — rebuild local list from remote (picks up widget adds + deletes)
 function syncWhatsAppNotes(email, silent) {
   if (!email || !window._supabase) return;
   window._supabase.from('notes').select('*').eq('user_email', email.toLowerCase()).order('created_at', {ascending: false}).then(function(res) {
     if (res.error) { console.error('sync error', res.error); return; }
     if (!res.data) return;
     var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    // Remove all existing synced notes, keep local-only ones
-    userNotes = userNotes.filter(function(n){ return !n._supabaseId; });
-    // Add all notes from Supabase
+    // Full replace with remote so deleted rows disappear everywhere
     var remoteNotes = res.data.map(function(n) {
       var d = new Date(n.created_at);
+      var rawBody = (n.body||'');
+      var cat = parseNoteCat(rawBody);
+      var body = stripNoteCatMarker(rawBody).trim();
       return {
-        title: (n.title||'').trim() || (n.body||'').substring(0,40) || 'Untitled',
-        body: (n.body||'').trim(),
-        tags: n.tags || [],
+        title: (n.title||'').trim() || body.substring(0,40) || 'Untitled',
+        body: body,
+        tags: n.tags || (cat && cat !== 'General' ? [cat] : []),
         date: mon[d.getMonth()] + ' ' + d.getDate(),
         colorIdx: n.colorIdx || 4,
         _supabaseId: n.id,
-        _fromWhatsApp: true
+        _category: cat,
+        _fromCloud: true
       };
     });
-    userNotes = remoteNotes.concat(userNotes);
+    userNotes = remoteNotes;
     try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
     if (typeof renderNotes === 'function') renderNotes();
     if (typeof renderStickyNotes === 'function') setTimeout(function(){ renderStickyNotes(true); }, 200);
+    if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') {
+      try { _nbLoad(); _nbRenderAll(); } catch (eNb) {}
+    }
+    notifyNotesWidget(email);
   });
 }
 
-// Listen for new WhatsApp notes via Supabase Realtime (zero polling)
+// Realtime: any INSERT / UPDATE / DELETE on notes → full re-sync + widget refresh
 function startWhatsAppNotePolling(email) {
   if (window._waNotesChannel) { window._waNotesChannel.unsubscribe(); window._waNotesChannel = null; }
   if (!window._supabase || !email) return;
   window._waNotesChannel = window._supabase
-    .channel('whatsapp-notes-' + email.replace(/[^a-z0-9]/gi,'_'))
+    .channel('notes-sync-' + email.replace(/[^a-z0-9]/gi,'_'))
     .on('postgres_changes', {
-      event: 'INSERT',
+      event: '*',
       schema: 'public',
       table: 'notes',
       filter: 'user_email=eq.' + email.toLowerCase()
     }, function(payload) {
-      var n = payload.new;
-      if (!n || !n.body) return;
-      var body = n.body.trim();
-      var existing = userNotes.map(function(x){ return (x.body||'').trim().toLowerCase(); });
-      if (existing.indexOf(body.toLowerCase()) !== -1) return;
-      var d = new Date(n.created_at);
-      var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      var title = body.length > 40 ? body.substring(0, 40) + '…' : body;
-      userNotes.unshift({
-        title: title,
-        body: body,
-        tags: ['whatsapp'],
-        date: mon[d.getMonth()] + ' ' + d.getDate(),
-        colorIdx: 4,
-        _fromWhatsApp: true
-      });
-      try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
-      if (typeof renderNotes === 'function') renderNotes();
-      if (typeof renderStickyNotes === 'function') setTimeout(function(){ renderStickyNotes(true); }, 200);
-      showToast('📱 WhatsApp note synced!');
+      // Full pull keeps HTML + widget aligned (handles delete/update from any client)
+      syncWhatsAppNotes(email, true);
+      notifyNotesWidget(email);
     })
     .subscribe();
+  // Keep a lightweight poll as backup if realtime is off
+  if (window._notesPollTimer) clearInterval(window._notesPollTimer);
+  window._notesPollTimer = setInterval(function() {
+    if (currentUser && currentUser.email && !currentUser.isGuest) {
+      syncWhatsAppNotes(currentUser.email, true);
+    }
+  }, 45000);
 }
 var SEED_USERS=[{name:'nova_ai',color:'#6366f1',initial:'N',email:'nova@synapses.dev',skills:['LLMs','React','Python'],project:'AI writing assistant'},{name:'flux_dev',color:'#4f46e5',initial:'F',email:'flux@synapses.dev',skills:['Rust','WebAssembly','Backend'],project:'Edge compute framework'},{name:'suno_fan',color:'#818cf8',initial:'S',email:'suno@synapses.dev',skills:['Music Production','Suno','MIDI'],project:'AI music label'},{name:'runway_pro',color:'#e85d96',initial:'R',email:'runway@synapses.dev',skills:['Video Editing','Runway','After Effects'],project:'Short film series'},{name:'cursor_hq',color:'#00d9a8',initial:'C',email:'cursor@synapses.dev',skills:['Full Stack','Cursor','TypeScript'],project:'Dev productivity tool'}];
 var CAT_META={collab:{label:'🤝 Collaborator',color:'#7c6af7',bg:'rgba(124,106,247,0.12)'},hiring:{label:'💼 Hiring',color:'#00d9a8',bg:'rgba(0,217,168,0.1)'},launch:{label:'🚀 Launch',color:'#f7a66a',bg:'rgba(247,166,106,0.12)'},feedback:{label:'💬 Feedback',color:'#6af7f7',bg:'rgba(106,247,247,0.1)'},skill:{label:'⚡ Skill',color:'#e85d96',bg:'rgba(232,93,150,0.1)'}};
@@ -7445,7 +7470,8 @@ function canRecruit(u){return getRoles(u).includes('recruiter');}
 function getRoleLabel(u){var r=getRoles(u);return r.includes('seeker')&&r.includes('recruiter')?'🔍 Seeker & 🏢 Recruiter':r.includes('recruiter')?'🏢 Recruiter':'🔍 Job Seeker';}
 function onLogin(){window._loginDone=true;
 try{ if(typeof median!=='undefined' && median.storage) median.storage.app.set({key:'syn_user_email', value:(currentUser&&currentUser.email)||''}); }catch(eMedian){}
-if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if(currentUser&&currentUser.email&&!currentUser.isGuest){setTimeout(function(){syncWhatsAppNotes(currentUser.email);startWhatsAppNotePolling(currentUser.email);},1500);}if(typeof window._hideSplash==='function')window._hideSplash();try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){} nlSave(); chatHistory=[];activeSession=null;document.getElementById('sbName').textContent=currentUser.name;document.getElementById('sbRole').textContent=getRoleLabel(currentUser);// Avatar already populated from DB in doLogin; cache it locally for preload
+if(currentUser&&currentUser.email){ try{ notifyNotesWidget(currentUser.email); }catch(eNw){} }
+if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if(currentUser&&currentUser.email&&!currentUser.isGuest){setTimeout(function(){syncWhatsAppNotes(currentUser.email);startWhatsAppNotePolling(currentUser.email);notifyNotesWidget(currentUser.email);},800);}if(typeof window._hideSplash==='function')window._hideSplash();try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){} nlSave(); chatHistory=[];activeSession=null;document.getElementById('sbName').textContent=currentUser.name;document.getElementById('sbRole').textContent=getRoleLabel(currentUser);// Avatar already populated from DB in doLogin; cache it locally for preload
 if(currentUser.avatar)try{localStorage.setItem('synapses_avatar_'+currentUser.email,currentUser.avatar);}catch(e){}
 // Avatar is already loaded from Supabase in doLogin — apply it immediately
 applyAvatar(currentUser.avatar||null);
@@ -8656,7 +8682,7 @@ function _toolSaveNote(){
     window._supabase.from('notes').insert(_row).select().then(function(res){
       if(res.error){ showToast('⚠️ Cloud save failed: '+res.error.message); }
       else if(res.data && res.data[0]){
-        newNote._supabaseId = res.data[0].id;
+        newNote._supabaseId = res.data[0].id; try{notifyNotesWidget(currentUser.email);}catch(eN){}
         try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); }catch(e){}
       }
     });
@@ -10968,13 +10994,19 @@ function renderStickyNotes(laserOnNew){
       e.stopPropagation(); e.preventDefault();
       var _delNote = userNotes[i];
       if(_delNote && window._supabase && currentUser && currentUser.email ){
-        window._supabase.from('notes').delete()
-          .eq('user_email', currentUser.email.toLowerCase())
-          .eq('title', (_delNote.title||'').trim())
-          .then(function(r){ console.log('supabase delete result:', r); });
+        var _em = currentUser.email.toLowerCase();
+        var _dq = window._supabase.from('notes').delete().eq('user_email', _em);
+        if(_delNote._supabaseId) _dq = _dq.eq('id', _delNote._supabaseId);
+        else _dq = _dq.eq('title', (_delNote.title||'').trim());
+        _dq.then(function(r){
+          console.log('supabase delete result:', r);
+          syncWhatsAppNotes(_em, true);
+          notifyNotesWidget(_em);
+        });
       }
       userNotes.splice(i, 1);
       try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); nlSave(true); }catch(err){}
+      if(currentUser&&currentUser.email) notifyNotesWidget(currentUser.email);
       wrapper.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
       wrapper.style.transform = 'rotate('+slot.rotate+') scale(0.7) translateY(-12px)';
       wrapper.style.opacity = '0';
@@ -17158,20 +17190,34 @@ var AVA_NOTES=[{title:'Morning clarity ritual',body:'Start each day with 5 mins 
 var TAG_COLORS={'mindset':'rgba(124,106,247,0.15)','routine':'rgba(0,217,168,0.12)','goals':'rgba(247,166,106,0.15)','work':'rgba(232,93,150,0.12)','reflection':'rgba(124,106,247,0.12)','wellbeing':'rgba(0,217,168,0.12)'};
 var TAG_TEXT={'mindset':'#a78bfa','routine':'#00d9a8','goals':'#f7a66a','work':'#e85d96','reflection':'#7c6af7','wellbeing':'#00d9a8'};
 function tagStyle(t){var bg=TAG_COLORS[t]||'rgba(124,106,247,0.1)',col=TAG_TEXT[t]||'#a78bfa';return'background:'+bg+';color:'+col+';padding:2px 9px;border-radius:100px;font-size:10.5px;font-weight:600;display:inline-block;margin:2px 3px 0 0;';}
-function saveNote(){var title=document.getElementById('noteTitle').value.trim(),body=document.getElementById('noteBody').value.trim(),tagsRaw=document.getElementById('noteTags').value;if(!title&&!body){showToast('⚠️ Add a title or insight.');return;}var tags=tagsRaw.split(',').map(function(t){return t.replace(/tags?:/i,'').trim().toLowerCase();}).filter(Boolean);var d=new Date(),mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];var _newNote={title:title||'Untitled',body:body,tags:tags,date:mon[d.getMonth()]+' '+d.getDate(),colorIdx:_selectedNoteColor};userNotes.unshift(_newNote);try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));}catch(e){} nlSave(true);if(typeof activeSession!=='undefined'&&activeSession){if(!chatSessions[activeSession])chatSessions[activeSession]={history:[],html:''};chatSessions[activeSession].hasNotes=true;var _rcnm=recentChats.find(function(c){return c.key===activeSession;});if(_rcnm)_rcnm.hasNotes=true;var _scnm=savedChats.find(function(c){return c.key===activeSession;});if(_scnm)_scnm.hasNotes=true;persistChats();}document.getElementById('noteTitle').value='';document.getElementById('noteBody').value='';document.getElementById('noteTags').value='';renderNotes();setTimeout(function(){renderStickyNotes(true);},100);showToast('📝 Note saved!');if(window._supabase&&currentUser&&currentUser.email&&!currentUser.isGuest){window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_newNote.title,body:_newNote.body}).select().then(function(r){if(r.error){console.error('saveNote supabase error:',r.error);}else if(r.data&&r.data[0]){_newNote._supabaseId=r.data[0].id;try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));}catch(e){}}});}}
+function saveNote(){var title=document.getElementById('noteTitle').value.trim(),body=document.getElementById('noteBody').value.trim(),tagsRaw=document.getElementById('noteTags').value;if(!title&&!body){showToast('⚠️ Add a title or insight.');return;}var tags=tagsRaw.split(',').map(function(t){return t.replace(/tags?:/i,'').trim().toLowerCase();}).filter(Boolean);var d=new Date(),mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];var _newNote={title:title||'Untitled',body:body,tags:tags,date:mon[d.getMonth()]+' '+d.getDate(),colorIdx:_selectedNoteColor};userNotes.unshift(_newNote);try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));}catch(e){} nlSave(true);if(typeof activeSession!=='undefined'&&activeSession){if(!chatSessions[activeSession])chatSessions[activeSession]={history:[],html:''};chatSessions[activeSession].hasNotes=true;var _rcnm=recentChats.find(function(c){return c.key===activeSession;});if(_rcnm)_rcnm.hasNotes=true;var _scnm=savedChats.find(function(c){return c.key===activeSession;});if(_scnm)_scnm.hasNotes=true;persistChats();}document.getElementById('noteTitle').value='';document.getElementById('noteBody').value='';document.getElementById('noteTags').value='';renderNotes();setTimeout(function(){renderStickyNotes(true);},100);showToast('📝 Note saved!');if(window._supabase&&currentUser&&currentUser.email&&!currentUser.isGuest){window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_newNote.title,body:_newNote.body}).select().then(function(r){if(r.error){console.error('saveNote supabase error:',r.error);}else if(r.data&&r.data[0]){_newNote._supabaseId=r.data[0].id;try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));}catch(e){}}notifyNotesWidget(currentUser.email);});}}
 function deleteNote(idx, isAva){
   if(isAva){ AVA_NOTES.splice(idx,1); renderNotes(); return; }
   var note = userNotes[idx];
-  if(note && window._supabase && currentUser && currentUser.email){
-    var _dq = window._supabase.from('notes').delete().eq('user_email', currentUser.email.toLowerCase());
-    if(note._supabaseId) _dq = _dq.eq('id', note._supabaseId);
-    else if(note.body) _dq = _dq.eq('body', (note.body||'').trim());
-    else _dq = _dq.eq('title', (note.title||'').trim());
-    _dq.then(function(r){ if(r.error) console.error('delete error:', r.error); });
+  var email = currentUser && currentUser.email ? currentUser.email.toLowerCase() : '';
+  function afterCloudDelete(){
+    if(email){ syncWhatsAppNotes(email, true); notifyNotesWidget(email); }
+  }
+  if(note && window._supabase && email){
+    var _dq = window._supabase.from('notes').delete().eq('user_email', email);
+    if(note._supabaseId) {
+      _dq = _dq.eq('id', note._supabaseId);
+    } else {
+      // Prefer title match (widget + HTML both set title)
+      _dq = _dq.eq('title', (note.title||'').trim() || 'Untitled');
+    }
+    _dq.then(function(r){
+      if(r.error) console.error('delete error:', r.error);
+      afterCloudDelete();
+    });
+  } else {
+    afterCloudDelete();
   }
   userNotes.splice(idx,1);
   try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));nlSave(true);}catch(e){}
   renderNotes();
+  if(typeof renderStickyNotes==='function') setTimeout(function(){ renderStickyNotes(true); }, 100);
+  notifyNotesWidget(email);
 }
 function renderNotes(){
   var el=document.getElementById('notesList');
@@ -19184,7 +19230,7 @@ function nbDeletePage() {
       var _dq = window._supabase.from('notes').delete().eq('user_email', currentUser.email.toLowerCase());
       if(_delNote._supabaseId) _dq = _dq.eq('id', _delNote._supabaseId);
       else _dq = _dq.eq('title', (_delNote.title||'').trim());
-      _dq.then(function(r){ console.log('nbDeletePage supabase result:', r); });
+      _dq.then(function(r){ console.log('nbDeletePage supabase result:', r); if(currentUser&&currentUser.email){syncWhatsAppNotes(currentUser.email,true);notifyNotesWidget(currentUser.email);} });
     }
     freshNotes.splice(_nb.activePg, 1);
     try { localStorage.setItem('synapses_notes', JSON.stringify(freshNotes)); userNotes = freshNotes; } catch(e) {}
