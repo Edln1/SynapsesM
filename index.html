@@ -8007,7 +8007,7 @@ if(_isVidMode){
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goNotes();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goHome();}};
     var fn=secMap[_lastSec];
     if(fn){fn();}else if(typeof newChat==='function'){newChat();}
   }
@@ -20238,13 +20238,6 @@ function finishOb(){
   try {
     if(typeof window.dismissSynapsesTour==='function') window.dismissSynapsesTour();
   } catch(eD){}
-  /* First-ever launch: auto turn Pulse on once the demo finishes (skip or complete). Never overrides a later user choice. */
-  try {
-    if(localStorage.getItem('synapses_pulse_open_v1') === null){
-      localStorage.setItem('synapses_pulse_open_v1', '1');
-      setTimeout(function(){ if(typeof window.openSynPulse==='function') window.openSynPulse(); }, 500);
-    }
-  } catch(eP){}
 }
 
 
@@ -29022,9 +29015,9 @@ function _neuInjectDownloadInterceptor(frame){
       if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
       if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
       var v = localStorage.getItem('synapses_synbot_enabled');
-      if (v === null) return true;
+      if (v === null) return false;
       return v === '1';
-    } catch (e) { return true; }
+    } catch (e) { return false; }
   }
   /** Bot must be visibly expanded before corner taps open chat */
   function _synBotIsExpanded(){
