@@ -12033,8 +12033,17 @@ function _fpSyncTapModeUi(){
   var needHold = _fpRequiresHoldScan();
   window._fpTapMode = !needHold;
   if(wrap) wrap.classList.toggle('fp-tap-mode', !needHold);
-  if(wrap) wrap.title = needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech';
-  if(pad) pad.setAttribute('aria-label', needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech');
+  var voiceOn = !!window._topNavVoiceActive;
+  if(wrap){
+    wrap.title = needHold
+      ? 'Hold fingerprint to unlock voice'
+      : (voiceOn ? 'Tap to end speech-to-speech' : 'Tap for speech-to-speech');
+  }
+  if(pad){
+    pad.setAttribute('aria-label', needHold
+      ? 'Hold fingerprint to unlock voice'
+      : (voiceOn ? 'Tap to end speech-to-speech' : 'Tap for speech-to-speech'));
+  }
 }
 function _postNativeBiometric(){
   var payload = JSON.stringify({
