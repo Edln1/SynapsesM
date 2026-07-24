@@ -2406,26 +2406,38 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 #chatEmptyState.hidden .syn-fp{display:none!important;}
 .syn-fp-pad{
   width:64px;height:64px;border-radius:50%;position:relative;cursor:pointer;border:none;padding:0;
-  background:radial-gradient(circle at 50% 45%,rgba(28,24,48,.35),rgba(10,8,18,.15));
-  box-shadow:0 0 0 1px rgba(124,106,247,.18);
-  display:flex!important;align-items:center;justify-content:center;transition:transform .15s,filter .25s,box-shadow .25s;
+  background:transparent; /* idle: icon only — no deliberate ring */
+  box-shadow:none;
+  display:flex!important;align-items:center;justify-content:center;transition:transform .2s,filter .3s,box-shadow .35s,background .3s;
   -webkit-tap-highlight-color:transparent;outline:none;
 }
 .syn-fp-pad:hover{filter:brightness(1.08);}
+/* Ring / glow only while actively scanning */
+.syn-fp.holding .syn-fp-pad,
+.syn-fp.scanning .syn-fp-pad,
+.syn-fp.ok .syn-fp-pad{
+  background:radial-gradient(circle at 50% 45%,rgba(28,24,48,.28),rgba(10,8,18,.08));
+}
 .syn-fp.holding .syn-fp-pad{
   transform:scale(.94);
-  box-shadow:0 0 0 1px rgba(0,217,168,.45),0 0 22px rgba(124,106,247,.35);
-  animation:fpPulseRing 1.1s ease-out infinite;
+  box-shadow:0 0 0 1px rgba(0,217,168,.28),0 0 18px rgba(124,106,247,.22);
+  animation:fpPulseRing 1.2s ease-out infinite;
+}
+.syn-fp.scanning .syn-fp-pad{
+  box-shadow:0 0 0 1px rgba(0,217,168,.32),0 0 20px rgba(0,217,168,.18);
+}
+.syn-fp.ok .syn-fp-pad{
+  box-shadow:0 0 0 1px rgba(0,217,168,.4),0 0 16px rgba(0,217,168,.28);
 }
 .syn-fp-ring{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0;
-  background:conic-gradient(from -90deg,rgba(0,217,168,.95) var(--fp-p,0%),transparent 0);
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px));
-  opacity:0;transition:opacity .15s;
+  background:conic-gradient(from -90deg,rgba(0,217,168,.75) var(--fp-p,0%),transparent 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
+  opacity:0;transition:opacity .25s ease;
 }
 .syn-fp.holding .syn-fp-ring,.syn-fp.scanning .syn-fp-ring{opacity:1;}
-.syn-fp-icon{width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;transition:filter .25s,opacity .25s,transform .2s;filter:drop-shadow(0 0 6px rgba(124,106,247,.35));}
+.syn-fp-icon{width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;transition:filter .25s,opacity .25s,transform .2s;filter:drop-shadow(0 0 5px rgba(124,106,247,.28));}
 .syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.65)) brightness(1.12);transform:scale(.96);}
 .syn-fp-scan{
   position:absolute;left:20%;right:20%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
@@ -12183,10 +12195,10 @@ function setAskBarVisible(on){
     if(btn) btn.classList.add('active');
     var areaChat = sec.querySelector('.input-area');
     if(areaChat){
-      areaChat.style.top = '';
-      areaChat.style.left = '';
-      areaChat.style.right = '';
-      areaChat.style.bottom = '';
+      areaChat.style.removeProperty('top');
+      areaChat.style.removeProperty('left');
+      areaChat.style.removeProperty('right');
+      areaChat.style.removeProperty('bottom');
     }
     return;
   }
@@ -12223,7 +12235,7 @@ function setAskBarVisible(on){
     if(btn) btn.classList.remove('active');
     var area = sec.querySelector('.input-area');
     if(area){
-      area.style.top = '';
+      area.style.removeProperty('top');
     }
     try {
       var ib2 = document.getElementById('inputBox');
