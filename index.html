@@ -5593,8 +5593,8 @@ window.getWebAudioNode = getWebAudioNode;
         <div class="syn-node" style="--r:89px;--dur:10s;--col:#6366f1;--pdur:2.8s;animation-delay:-6s;"></div>
         <div class="syn-orb-core"></div>
       </div>
-      <!-- Greeting -->
-      <div class="syn-greeting">What's on your mind?</div>
+      <!-- Greeting — always replaced by refreshHomeGreeting() -->
+      <div class="syn-greeting" id="synHomeGreeting">What are you chasing today?</div>
       <div class="syn-sub">Synapses · Neural Interface</div>
       <!-- Fingerprint pad — hold-to-scan → speech-to-speech (mic centers mid-header) -->
       <div class="syn-fp" id="synFingerprint" title="Hold to start speech-to-speech">
@@ -7955,6 +7955,7 @@ var _currentViewId=null;function setView(id){
   if(id === 'sec-chat'){
     var _ntb = _ensureNotesToggleBtn();
     if(_ntb) _ntb.style.display = 'flex';
+    try{ if(typeof window.refreshHomeGreeting === 'function') setTimeout(function(){ window.refreshHomeGreeting({ animate: true }); }, 40); }catch(eHg){}
   } else {
     var _ntb = document.getElementById('notesToggleBtn');
     if(_ntb) _ntb.style.display = 'none';
@@ -11969,13 +11970,15 @@ function runHeroBarLaser(bar, onDone) {
 }
 // ── END HERO BAR LASER ────────────────────────────────────────────────────
 
-// ── Dynamic home greeting (day / time / climate of the moment) ─────────────
-// Local pools always work offline; optional light news spice when network allows.
+// ── Dynamic home greeting (day / time / light news climate) ───────────────
+// Always replaces the static HTML default. Never keeps "What's on your mind?"
 (function(){
   var _lastGreeting = '';
   var _newsSpice = '';
   var _newsFetchedDay = '';
+  var BANNED = /what'?s on your mind/i;
 
+  function _pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
   function _hourBucket(h){
     if(h < 5) return 'late';
     if(h < 12) return 'morning';
@@ -11993,14 +11996,9 @@ function runHeroBarLaser(bar, onDone) {
     var d = new Date();
     return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
   }
-  function _pick(arr, salt){
+  function _pick(arr){
     if(!arr || !arr.length) return '';
-    var seed = (_daySeed() * 9301 + (salt||0) * 49297 + Date.now() % 9973) % 233280;
-    var r = Math.abs(Math.sin(seed) * 10000) % 1;
-    /* mix day-stable + visit-random so same day still feels fresh */
-    var i = Math.floor(((seed % arr.length) + Math.floor(Math.random() * arr.length)) / 2) % arr.length;
-    if(Math.random() > 0.45) i = Math.floor(Math.random() * arr.length);
-    return arr[i];
+    return arr[Math.floor(Math.random() * arr.length)];
   }
 
   var POOLS = {
@@ -12009,43 +12007,46 @@ function runHeroBarLaser(bar, onDone) {
       "Fresh day. What's first?",
       "Morning signal — what are you building?",
       "Coffee in, ideas out — what's on deck?",
-      "The day is wide open. Where do we start?"
+      "The day is wide open. Where do we start?",
+      "Sunrise mode. What gets the first hour?"
     ],
     afternoon: [
-      "What's on your mind?",
       "Midday pulse — what's moving?",
       "Still time to make something real. What's next?",
       "What needs a clear next step?",
-      "Where's the energy going this afternoon?"
+      "Where's the energy going this afternoon?",
+      "Halfway through — what still matters?",
+      "What deserves a hard look right now?"
     ],
     evening: [
       "What's still open tonight?",
       "Evening quiet — what's worth finishing?",
       "What did the day leave unfinished?",
       "One more idea before the lights dim?",
-      "What's on your mind as the day slows?"
+      "How do you want the night to end?",
+      "What would make this evening count?"
     ],
     night: [
       "Late hours. What's still sparking?",
       "Night mode — what are you thinking?",
       "The world is quieter. What's loud for you?",
       "What's keeping the signal open?",
-      "Deep hours. What's on your mind?"
+      "Deep hours. What are you turning over?",
+      "No rush. What wants attention?"
     ],
     late: [
       "3 a.m. thoughts? I'm here.",
       "Couldn't sleep — what's circling?",
-      "Quiet hours. What's on your mind?"
+      "Quiet hours. What won't let go?"
     ],
-    mon: ["New week energy — what's the move?", "Monday reset. What matters most?"],
-    fri: ["Friday stretch — what's worth shipping?", "Weekend almost here. What's last on the list?"],
-    weekend: ["Weekend freedom — what are you exploring?", "No clock. What's calling you?"],
+    mon: ["New week energy — what's the move?", "Monday reset. What matters most?", "Week one, step one — what is it?"],
+    fri: ["Friday stretch — what's worth shipping?", "Weekend almost here. What's last on the list?", "Close the loop — what still needs you?"],
+    weekend: ["Weekend freedom — what are you exploring?", "No clock. What's calling you?", "Open day. What would feel good to try?"],
     winter: ["Cold air, hot ideas — what's brewing?", "Winter focus mode. What's the target?"],
     spring: ["Season of starts — what are you planting?", "Spring light — what's emerging?"],
     summer: ["Long days, bigger aims — what's yours?", "Summer heat — what's cooking?"],
     autumn: ["Harvest mode — what are you locking in?", "Fall clarity — what's the real priority?"],
     general: [
-      "What's on your mind?",
       "What are you chasing today?",
       "Spark something. What is it?",
       "What deserves your focus right now?",
@@ -12059,7 +12060,11 @@ function runHeroBarLaser(bar, onDone) {
       "What needs clarity more than effort?",
       "Build, explore, or unload — which is it?",
       "What story are you writing today?",
-      "What's the interesting problem?"
+      "What's the interesting problem?",
+      "If this hour was a bet — what are you betting on?",
+      "What would Future-you thank you for starting?",
+      "What's the one thing you're avoiding?",
+      "Ready when you are — what are we doing?"
     ],
     newsy: [
       "The feed is loud today — what actually matters to you?",
@@ -12071,111 +12076,132 @@ function runHeroBarLaser(bar, onDone) {
   };
 
   function _pickLocalHomeGreeting(){
-    var d = new Date();
-    var h = d.getHours();
-    var dow = d.getDay(); /* 0 Sun */
-    var bucket = _hourBucket(h);
-    var season = _season(d.getMonth());
-    var pool = POOLS.general.slice();
-    if(POOLS[bucket]) pool = pool.concat(POOLS[bucket]);
-    if(POOLS[season]) pool = pool.concat(POOLS[season]);
-    if(dow === 1 && POOLS.mon) pool = pool.concat(POOLS.mon);
-    if(dow === 5 && POOLS.fri) pool = pool.concat(POOLS.fri);
-    if(dow === 0 || dow === 6) pool = pool.concat(POOLS.weekend);
-    if(_newsSpice) pool = pool.concat(POOLS.newsy);
-    /* avoid immediate repeat */
-    var line = _pick(pool, h + dow * 7);
-    var guard = 0;
-    while(line === _lastGreeting && guard++ < 6){
-      line = _pick(pool, h + guard * 13);
+    try {
+      var d = new Date();
+      var h = d.getHours();
+      var dow = d.getDay();
+      var bucket = _hourBucket(h);
+      var season = _season(d.getMonth());
+      var pool = POOLS.general.slice();
+      if(POOLS[bucket]) pool = pool.concat(POOLS[bucket]);
+      if(POOLS[season]) pool = pool.concat(POOLS[season]);
+      if(dow === 1) pool = pool.concat(POOLS.mon);
+      if(dow === 5) pool = pool.concat(POOLS.fri);
+      if(dow === 0 || dow === 6) pool = pool.concat(POOLS.weekend);
+      if(_newsSpice) pool = pool.concat(POOLS.newsy);
+      /* never keep the old static default */
+      pool = pool.filter(function(s){ return s && !BANNED.test(s); });
+      var line = _pick(pool);
+      var guard = 0;
+      while((!line || line === _lastGreeting || BANNED.test(line)) && guard++ < 12){
+        line = _pick(pool);
+      }
+      _lastGreeting = line;
+      return line || "What are you chasing today?";
+    } catch(e){
+      return "What are you chasing today?";
     }
-    _lastGreeting = line;
-    return line || "What's on your mind?";
+  }
+
+  function _greetingEl(){
+    return document.getElementById('synHomeGreeting')
+      || document.querySelector('#chatEmptyState .syn-greeting')
+      || document.querySelector('.syn-greeting');
   }
 
   function _setGreetingText(text, animate){
-    var el = document.querySelector('#chatEmptyState .syn-greeting');
-    if(!el || !text) return;
-    if(el.textContent === text) return;
+    var el = _greetingEl();
+    if(!el || !text) return false;
+    if(el.textContent === text) return true;
     if(animate){
       el.style.transition = 'opacity .28s ease';
       el.style.opacity = '0';
       setTimeout(function(){
         el.textContent = text;
         el.style.opacity = '1';
-      }, 200);
+      }, 180);
     } else {
       el.textContent = text;
+      el.style.opacity = '1';
     }
+    return true;
   }
 
-  /** Soft news climate: Wikipedia featured feed (free, CORS-friendly) */
   function _fetchNewsSpice(cb){
-    var dayKey = String(_daySeed());
-    if(_newsFetchedDay === dayKey && _newsSpice){ if(cb) cb(_newsSpice); return; }
-    var d = new Date();
-    var y = d.getUTCFullYear();
-    var m = String(d.getUTCMonth()+1).padStart(2,'0');
-    var day = String(d.getUTCDate()).padStart(2,'0');
-    var url = 'https://api.wikimedia.org/feed/v1/wikipedia/en/featured/' + y + '/' + m + '/' + day;
-    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 3500);
-    fetch(url, {
-      signal: ctrl ? ctrl.signal : undefined,
-      headers: { 'Accept': 'application/json', 'Api-User-Agent': 'SynapsesHomeGreeting/1.0' }
-    }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
-      clearTimeout(t);
-      if(!data) return;
-      var title = '';
-      try {
-        if(data.news && data.news[0] && data.news[0].story && data.news[0].story.titles){
-          title = data.news[0].story.titles.normalized || data.news[0].story.titles.display || '';
+    try {
+      var dayKey = String(_daySeed());
+      if(_newsFetchedDay === dayKey && _newsSpice){ if(cb) cb(_newsSpice); return; }
+      var d = new Date();
+      var y = d.getUTCFullYear();
+      var m = _pad2(d.getUTCMonth()+1);
+      var day = _pad2(d.getUTCDate());
+      var url = 'https://api.wikimedia.org/feed/v1/wikipedia/en/featured/' + y + '/' + m + '/' + day;
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 3500);
+      fetch(url, {
+        signal: ctrl ? ctrl.signal : undefined,
+        headers: { 'Accept': 'application/json', 'Api-User-Agent': 'SynapsesHomeGreeting/1.0' }
+      }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+        clearTimeout(t);
+        if(!data) return;
+        var title = '';
+        try {
+          if(data.news && data.news[0] && data.news[0].story && data.news[0].story.titles){
+            title = data.news[0].story.titles.normalized || data.news[0].story.titles.display || '';
+          }
+          if(!title && data.mostread && data.mostread.articles && data.mostread.articles[0]){
+            var a0 = data.mostread.articles[0];
+            title = a0.titles ? (a0.titles.normalized || a0.titles.display) : (a0.title || '');
+          }
+          if(!title && data.onthisday && data.onthisday[0] && data.onthisday[0].text){
+            title = String(data.onthisday[0].text).split(/[.!?]/)[0];
+          }
+        } catch(e2){}
+        title = String(title || '').replace(/_/g, ' ').trim();
+        if(title.length > 48) title = title.slice(0, 45).replace(/\s+\S*$/, '') + '\u2026';
+        if(title.length > 4){
+          _newsSpice = title;
+          _newsFetchedDay = dayKey;
+          if(cb) cb(title);
         }
-        if(!title && data.mostread && data.mostread.articles && data.mostread.articles[0]){
-          title = data.mostread.articles[0].titles
-            ? (data.mostread.articles[0].titles.normalized || data.mostread.articles[0].titles.display)
-            : (data.mostread.articles[0].title || '');
-        }
-        if(!title && data.onthisday && data.onthisday[0] && data.onthisday[0].text){
-          title = String(data.onthisday[0].text).split(/[.!?]/)[0];
-        }
-      } catch(e){}
-      title = String(title || '').replace(/_/g, ' ').trim();
-      if(title.length > 48) title = title.slice(0, 45).replace(/\s+\S*$/, '') + '…';
-      if(title.length > 4){
-        _newsSpice = title;
-        _newsFetchedDay = dayKey;
-        if(cb) cb(title);
-      }
-    }).catch(function(){ clearTimeout(t); });
+      }).catch(function(){ clearTimeout(t); });
+    } catch(e3){}
   }
 
   function _newsAwareLine(title){
     var templates = [
-      'While the world talks ' + title + ' — what\'s on yours?',
+      'While the world talks ' + title + ' \u2014 what\'s on yours?',
       'Trending: ' + title + '. What\'s your angle?',
       'Big story: ' + title + '. What are you thinking?',
-      title + ' is in the air — what\'s yours?',
-      'Beyond the headlines — what matters to you?'
+      title + ' is in the air \u2014 what\'s yours?',
+      'Beyond the headlines \u2014 what matters to you?'
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
   function refreshHomeGreeting(opts){
     opts = opts || {};
-    var el = document.querySelector('#chatEmptyState .syn-greeting');
-    if(!el) return;
-    var local = _pickLocalHomeGreeting();
-    _setGreetingText(local, !!opts.animate);
-    /* Once per day, try a light news climate line (non-blocking) */
-    if(opts.skipNews) return;
-    _fetchNewsSpice(function(title){
-      /* ~35% chance to swap in a news-aware line so it stays surprising */
-      if(Math.random() > 0.35) return;
-      var line = _newsAwareLine(title);
-      _lastGreeting = line;
-      _setGreetingText(line, true);
-    });
+    try {
+      var local = _pickLocalHomeGreeting();
+      var ok = _setGreetingText(local, !!opts.animate);
+      if(!ok){
+        /* element not ready — retry shortly */
+        setTimeout(function(){ refreshHomeGreeting(opts); }, 120);
+        return local;
+      }
+      if(opts.skipNews) return local;
+      _fetchNewsSpice(function(title){
+        if(Math.random() > 0.4) return;
+        var line = _newsAwareLine(title);
+        if(BANNED.test(line)) return;
+        _lastGreeting = line;
+        _setGreetingText(line, true);
+      });
+      return local;
+    } catch(e){
+      _setGreetingText('What are you chasing today?', false);
+      return 'What are you chasing today?';
+    }
   }
 
   window.refreshHomeGreeting = refreshHomeGreeting;
@@ -12185,6 +12211,13 @@ function runHeroBarLaser(bar, onDone) {
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+  /* WebView / late layout: force a few more attempts so default never sticks */
+  setTimeout(boot, 50);
+  setTimeout(boot, 300);
+  setTimeout(function(){ refreshHomeGreeting({ animate: false, skipNews: false }); }, 800);
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) refreshHomeGreeting({ animate: true });
+  });
 })();
 
 /** Bottom-left tray: toggle Ask me anything bar with fade (empty home) */
@@ -18795,7 +18828,10 @@ async function confirmWorldApproach(){
     wrap.classList.toggle('hidden',hasMessages);
     if(emptyState) emptyState.classList.toggle('hidden',hasMessages);
     // If the empty state just became visible, restart its entrance animations
-    if(wasHidden && !hasMessages) restartEmptyStateAnims();
+    if(wasHidden && !hasMessages){
+      restartEmptyStateAnims();
+      try{ if(typeof window.refreshHomeGreeting === 'function') window.refreshHomeGreeting({ animate: true }); }catch(eG){}
+    }
     // Sync notes toggle visibility with empty state
     if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility();
     // Heavy-glass override removed — panel keeps its translucent look always now that the force-field blur handles hiding content behind it.
