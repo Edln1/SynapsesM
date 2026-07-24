@@ -11969,6 +11969,224 @@ function runHeroBarLaser(bar, onDone) {
 }
 // ── END HERO BAR LASER ────────────────────────────────────────────────────
 
+// ── Dynamic home greeting (day / time / climate of the moment) ─────────────
+// Local pools always work offline; optional light news spice when network allows.
+(function(){
+  var _lastGreeting = '';
+  var _newsSpice = '';
+  var _newsFetchedDay = '';
+
+  function _hourBucket(h){
+    if(h < 5) return 'late';
+    if(h < 12) return 'morning';
+    if(h < 17) return 'afternoon';
+    if(h < 21) return 'evening';
+    return 'night';
+  }
+  function _season(m){
+    if(m === 11 || m <= 1) return 'winter';
+    if(m <= 4) return 'spring';
+    if(m <= 7) return 'summer';
+    return 'autumn';
+  }
+  function _daySeed(){
+    var d = new Date();
+    return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+  }
+  function _pick(arr, salt){
+    if(!arr || !arr.length) return '';
+    var seed = (_daySeed() * 9301 + (salt||0) * 49297 + Date.now() % 9973) % 233280;
+    var r = Math.abs(Math.sin(seed) * 10000) % 1;
+    /* mix day-stable + visit-random so same day still feels fresh */
+    var i = Math.floor(((seed % arr.length) + Math.floor(Math.random() * arr.length)) / 2) % arr.length;
+    if(Math.random() > 0.45) i = Math.floor(Math.random() * arr.length);
+    return arr[i];
+  }
+
+  var POOLS = {
+    morning: [
+      "What's waking up with you?",
+      "Fresh day. What's first?",
+      "Morning signal — what are you building?",
+      "Coffee in, ideas out — what's on deck?",
+      "The day is wide open. Where do we start?"
+    ],
+    afternoon: [
+      "What's on your mind?",
+      "Midday pulse — what's moving?",
+      "Still time to make something real. What's next?",
+      "What needs a clear next step?",
+      "Where's the energy going this afternoon?"
+    ],
+    evening: [
+      "What's still open tonight?",
+      "Evening quiet — what's worth finishing?",
+      "What did the day leave unfinished?",
+      "One more idea before the lights dim?",
+      "What's on your mind as the day slows?"
+    ],
+    night: [
+      "Late hours. What's still sparking?",
+      "Night mode — what are you thinking?",
+      "The world is quieter. What's loud for you?",
+      "What's keeping the signal open?",
+      "Deep hours. What's on your mind?"
+    ],
+    late: [
+      "3 a.m. thoughts? I'm here.",
+      "Couldn't sleep — what's circling?",
+      "Quiet hours. What's on your mind?"
+    ],
+    mon: ["New week energy — what's the move?", "Monday reset. What matters most?"],
+    fri: ["Friday stretch — what's worth shipping?", "Weekend almost here. What's last on the list?"],
+    weekend: ["Weekend freedom — what are you exploring?", "No clock. What's calling you?"],
+    winter: ["Cold air, hot ideas — what's brewing?", "Winter focus mode. What's the target?"],
+    spring: ["Season of starts — what are you planting?", "Spring light — what's emerging?"],
+    summer: ["Long days, bigger aims — what's yours?", "Summer heat — what's cooking?"],
+    autumn: ["Harvest mode — what are you locking in?", "Fall clarity — what's the real priority?"],
+    general: [
+      "What's on your mind?",
+      "What are you chasing today?",
+      "Spark something. What is it?",
+      "What deserves your focus right now?",
+      "Name it — what's the thread?",
+      "What would make today count?",
+      "Where should we aim the signal?",
+      "Curious about what? I'm ready.",
+      "What's the real question underneath?",
+      "What would you try if it had to work?",
+      "One thought. One step. What's first?",
+      "What needs clarity more than effort?",
+      "Build, explore, or unload — which is it?",
+      "What story are you writing today?",
+      "What's the interesting problem?"
+    ],
+    newsy: [
+      "The feed is loud today — what actually matters to you?",
+      "World's spinning fast. What's your focus?",
+      "Headlines are noise. What's your signal?",
+      "While the news scrolls — what are you making?",
+      "Big day out there. What about your day?"
+    ]
+  };
+
+  function _pickLocalHomeGreeting(){
+    var d = new Date();
+    var h = d.getHours();
+    var dow = d.getDay(); /* 0 Sun */
+    var bucket = _hourBucket(h);
+    var season = _season(d.getMonth());
+    var pool = POOLS.general.slice();
+    if(POOLS[bucket]) pool = pool.concat(POOLS[bucket]);
+    if(POOLS[season]) pool = pool.concat(POOLS[season]);
+    if(dow === 1 && POOLS.mon) pool = pool.concat(POOLS.mon);
+    if(dow === 5 && POOLS.fri) pool = pool.concat(POOLS.fri);
+    if(dow === 0 || dow === 6) pool = pool.concat(POOLS.weekend);
+    if(_newsSpice) pool = pool.concat(POOLS.newsy);
+    /* avoid immediate repeat */
+    var line = _pick(pool, h + dow * 7);
+    var guard = 0;
+    while(line === _lastGreeting && guard++ < 6){
+      line = _pick(pool, h + guard * 13);
+    }
+    _lastGreeting = line;
+    return line || "What's on your mind?";
+  }
+
+  function _setGreetingText(text, animate){
+    var el = document.querySelector('#chatEmptyState .syn-greeting');
+    if(!el || !text) return;
+    if(el.textContent === text) return;
+    if(animate){
+      el.style.transition = 'opacity .28s ease';
+      el.style.opacity = '0';
+      setTimeout(function(){
+        el.textContent = text;
+        el.style.opacity = '1';
+      }, 200);
+    } else {
+      el.textContent = text;
+    }
+  }
+
+  /** Soft news climate: Wikipedia featured feed (free, CORS-friendly) */
+  function _fetchNewsSpice(cb){
+    var dayKey = String(_daySeed());
+    if(_newsFetchedDay === dayKey && _newsSpice){ if(cb) cb(_newsSpice); return; }
+    var d = new Date();
+    var y = d.getUTCFullYear();
+    var m = String(d.getUTCMonth()+1).padStart(2,'0');
+    var day = String(d.getUTCDate()).padStart(2,'0');
+    var url = 'https://api.wikimedia.org/feed/v1/wikipedia/en/featured/' + y + '/' + m + '/' + day;
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 3500);
+    fetch(url, {
+      signal: ctrl ? ctrl.signal : undefined,
+      headers: { 'Accept': 'application/json', 'Api-User-Agent': 'SynapsesHomeGreeting/1.0' }
+    }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+      clearTimeout(t);
+      if(!data) return;
+      var title = '';
+      try {
+        if(data.news && data.news[0] && data.news[0].story && data.news[0].story.titles){
+          title = data.news[0].story.titles.normalized || data.news[0].story.titles.display || '';
+        }
+        if(!title && data.mostread && data.mostread.articles && data.mostread.articles[0]){
+          title = data.mostread.articles[0].titles
+            ? (data.mostread.articles[0].titles.normalized || data.mostread.articles[0].titles.display)
+            : (data.mostread.articles[0].title || '');
+        }
+        if(!title && data.onthisday && data.onthisday[0] && data.onthisday[0].text){
+          title = String(data.onthisday[0].text).split(/[.!?]/)[0];
+        }
+      } catch(e){}
+      title = String(title || '').replace(/_/g, ' ').trim();
+      if(title.length > 48) title = title.slice(0, 45).replace(/\s+\S*$/, '') + '…';
+      if(title.length > 4){
+        _newsSpice = title;
+        _newsFetchedDay = dayKey;
+        if(cb) cb(title);
+      }
+    }).catch(function(){ clearTimeout(t); });
+  }
+
+  function _newsAwareLine(title){
+    var templates = [
+      'While the world talks ' + title + ' — what\'s on yours?',
+      'Trending: ' + title + '. What\'s your angle?',
+      'Big story: ' + title + '. What are you thinking?',
+      title + ' is in the air — what\'s yours?',
+      'Beyond the headlines — what matters to you?'
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  function refreshHomeGreeting(opts){
+    opts = opts || {};
+    var el = document.querySelector('#chatEmptyState .syn-greeting');
+    if(!el) return;
+    var local = _pickLocalHomeGreeting();
+    _setGreetingText(local, !!opts.animate);
+    /* Once per day, try a light news climate line (non-blocking) */
+    if(opts.skipNews) return;
+    _fetchNewsSpice(function(title){
+      /* ~35% chance to swap in a news-aware line so it stays surprising */
+      if(Math.random() > 0.35) return;
+      var line = _newsAwareLine(title);
+      _lastGreeting = line;
+      _setGreetingText(line, true);
+    });
+  }
+
+  window.refreshHomeGreeting = refreshHomeGreeting;
+
+  function boot(){
+    refreshHomeGreeting({ animate: false });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
 /** Bottom-left tray: toggle Ask me anything bar with fade (empty home) */
 window._askBarOpen = false;
 window._fpBusy = false;
