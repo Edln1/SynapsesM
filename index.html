@@ -940,13 +940,24 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
 /* Ask bar fade show/hide (empty home only — active chats always keep the bar) */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-  transition:opacity .38s cubic-bezier(0.22,1,0.36,1),visibility .38s ease;
+  transition:opacity .38s cubic-bezier(0.22,1,0.36,1),visibility .38s ease,top .35s cubic-bezier(0.22,1,0.36,1);
 }
 #sec-chat.askbar-off #chatEmptyState:not(.hidden) ~ .input-area{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
 }
 #sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area{
   opacity:1!important;visibility:visible!important;pointer-events:auto!important;
+}
+/* When Ask is open on home: fingerprint is replaced (hidden), ask bar sits in its place */
+#sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+  height:0!important;margin:0!important;min-height:0!important;overflow:hidden!important;
+  transform:scale(.92);transition:opacity .28s ease,transform .28s ease,height .28s ease,margin .28s ease;
+}
+#sec-chat.askbar-off #chatEmptyState:not(.hidden) .syn-fp{
+  opacity:1!important;visibility:visible!important;pointer-events:auto!important;
+  height:auto!important;overflow:visible!important;
+  transition:opacity .32s ease .08s,transform .32s ease .08s;
 }
 /* Pulse — right of Notes */
 #bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:none;padding:0;}
@@ -2393,7 +2404,6 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   touch-action:none;
 }
 #chatEmptyState.hidden .syn-fp{display:none!important;}
-#sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{opacity:.55!important;transition:opacity .35s;}
 .syn-fp-pad{
   width:64px;height:64px;border-radius:50%;position:relative;cursor:pointer;border:none;padding:0;
   background:radial-gradient(circle at 50% 45%,rgba(28,24,48,.35),rgba(10,8,18,.15));
@@ -5510,9 +5520,9 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Greeting -->
       <div class="syn-greeting">What's on your mind?</div>
       <div class="syn-sub">Synapses · Neural Interface</div>
-      <!-- Fingerprint unlock — hold finger on pad to scan (not instant) -->
-      <div class="syn-fp" id="synFingerprint" title="Hold fingerprint to unlock">
-        <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint to unlock ask">
+      <!-- Fingerprint pad — hold-to-scan (separate feature; does NOT open Ask) -->
+      <div class="syn-fp" id="synFingerprint" title="Hold fingerprint">
+        <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint">
           <span class="syn-fp-ring" id="synFpRing" aria-hidden="true"></span>
           <span class="syn-fp-scan" aria-hidden="true"></span>
           <img class="syn-fp-icon" src="fingeprint.png" alt="" width="44" height="44" draggable="false">
@@ -11937,6 +11947,7 @@ function _postNativeBiometric(){
   } catch(e2){}
   return false;
 }
+/** Fingerprint scan complete — does NOT open Ask (reserved for a new feature later) */
 function _fpSuccess(){
   window._fpBusy = false;
   window._fpHoldActive = false;
@@ -11946,7 +11957,10 @@ function _fpSuccess(){
   _fpSetState('ok');
   _fpStatus('Verified');
   try { if(typeof _haptic === 'function') _haptic(14); } catch(e){}
-  if(typeof setAskBarVisible === 'function') setAskBarVisible(true);
+  /* Future feature hook — keep locked from Ask on purpose */
+  try {
+    if(typeof window.onFingerprintVerified === 'function') window.onFingerprintVerified();
+  } catch(e2){}
   setTimeout(function(){
     _fpSetState('');
     _fpStatus('');
@@ -11964,10 +11978,10 @@ function _fpFail(msg){
     setTimeout(function(){ _fpSetState(''); _fpStatus(''); }, 650);
     return;
   }
-  /* Soft fail (no enroll / sensor quirk) still unlocks after a full hold */
+  /* Soft fail still counts as verified sensor path for future feature */
   _fpSuccess();
 }
-/** After full hold on PC / no JSBridge — brief verify animation then open */
+/** After full hold on PC / no JSBridge — brief verify animation (no Ask open) */
 function _fpOpenWithoutSensor(){
   _fpSetState('scanning');
   _fpStatus('Recognized');
@@ -11975,17 +11989,9 @@ function _fpOpenWithoutSensor(){
   try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
   setTimeout(function(){ _fpSuccess(); }, 480);
 }
-/** Called only after user held finger long enough */
+/** Called only after user held finger long enough — biometrics only, never Ask */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
-  if(window._askBarOpen && window._fpUnlocked){
-    if(typeof setAskBarVisible === 'function') setAskBarVisible(false);
-    window._fpUnlocked = false;
-    _fpSetState('');
-    _fpStatus('');
-    _fpSetProgress(0);
-    return;
-  }
   window._fpBusy = true;
   _fpSetState('scanning');
   _fpStatus('Authenticating…');
@@ -12032,11 +12038,8 @@ function _fpCancelHold(early){
 }
 function _fpBeginHold(e){
   if(e){ e.preventDefault(); e.stopPropagation(); }
-  /* Already unlocked → single tap can lock/hide ask bar */
-  if(window._askBarOpen && window._fpUnlocked){
-    startFingerprintUnlock();
-    return;
-  }
+  /* Ask bar open replaces fingerprint — ignore holds */
+  if(window._askBarOpen && _isChatEmptyHome()) return;
   if(window._fpBusy || window._fpHoldActive) return;
   window._fpHoldActive = true;
   window._fpHoldDone = false;
@@ -12075,6 +12078,56 @@ function _fpEndHold(e){
   window._fpHoldActive = false;
   _fpCancelHold(early);
 }
+
+/** Place Ask bar where the fingerprint pad sits (replace, not stack under) */
+function _positionAskBarAtFingerprint(){
+  var sec = document.getElementById('sec-chat');
+  var area = sec ? sec.querySelector('.input-area') : null;
+  var es = document.getElementById('chatEmptyState');
+  if(!sec || !area || !es) return;
+  function clearTop(){
+    area.style.removeProperty('top');
+    area.style.removeProperty('left');
+    area.style.removeProperty('right');
+    area.style.removeProperty('bottom');
+  }
+  if(!_isChatEmptyHome()){
+    clearTop();
+    return;
+  }
+  if(!window._askBarOpen){
+    area.style.removeProperty('top');
+    return;
+  }
+  /* Measure fingerprint slot before CSS collapses it, or fall back to subtitle */
+  var fp = document.getElementById('synFingerprint');
+  var anchor = document.querySelector('#chatEmptyState .syn-sub') || document.querySelector('#chatEmptyState .syn-greeting');
+  var secRect = sec.getBoundingClientRect();
+  var topPx = null;
+  if(fp){
+    var fr = fp.getBoundingClientRect();
+    if(fr.height > 8){
+      topPx = fr.top - secRect.top;
+      window._fpSlotTop = topPx;
+    } else if(typeof window._fpSlotTop === 'number'){
+      topPx = window._fpSlotTop;
+    }
+  }
+  if(topPx == null && anchor){
+    var ar = anchor.getBoundingClientRect();
+    topPx = ar.bottom - secRect.top + 12;
+    window._fpSlotTop = topPx;
+  }
+  if(topPx == null) topPx = 360;
+  /* Override CSS top:360px!important rules */
+  area.style.setProperty('top', Math.max(80, Math.round(topPx)) + 'px', 'important');
+  area.style.setProperty('bottom', 'auto', 'important');
+  area.style.setProperty('left', '16px', 'important');
+  area.style.setProperty('right', '16px', 'important');
+  area.style.setProperty('margin', '0', 'important');
+  area.style.setProperty('z-index', '6', 'important');
+}
+window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
 
 (function bootFingerprintPad(){
   function wire(){
@@ -12122,20 +12175,45 @@ function setAskBarVisible(on){
   var sec = document.getElementById('sec-chat');
   var btn = document.getElementById('bnavAskBtn');
   if(!sec) return;
-  /* Active conversation: bar always on */
+  /* Active conversation: bar always on (bottom layout, no fingerprint swap) */
   if(!_isChatEmptyHome()){
     window._askBarOpen = true;
     sec.classList.remove('askbar-off');
     sec.classList.add('askbar-on');
     if(btn) btn.classList.add('active');
+    var areaChat = sec.querySelector('.input-area');
+    if(areaChat){
+      areaChat.style.top = '';
+      areaChat.style.left = '';
+      areaChat.style.right = '';
+      areaChat.style.bottom = '';
+    }
     return;
+  }
+  /* Cache fingerprint Y before hide so Ask can replace that slot */
+  if(on){
+    try {
+      var fp0 = document.getElementById('synFingerprint');
+      var secR = sec.getBoundingClientRect();
+      if(fp0){
+        var fr0 = fp0.getBoundingClientRect();
+        if(fr0.height > 8) window._fpSlotTop = fr0.top - secR.top;
+      }
+    } catch(eM){}
   }
   window._askBarOpen = !!on;
   if(on){
     sec.classList.remove('askbar-off');
     sec.classList.add('askbar-on');
     if(btn) btn.classList.add('active');
+    requestAnimationFrame(function(){
+      if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+      requestAnimationFrame(function(){
+        if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+      });
+    });
     setTimeout(function(){
+      if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
       var ib = document.getElementById('inputBox');
       if(ib){ try { ib.focus(); } catch(e){} }
     }, 120);
@@ -12143,12 +12221,28 @@ function setAskBarVisible(on){
     sec.classList.remove('askbar-on');
     sec.classList.add('askbar-off');
     if(btn) btn.classList.remove('active');
+    var area = sec.querySelector('.input-area');
+    if(area){
+      area.style.top = '';
+    }
     try {
       var ib2 = document.getElementById('inputBox');
       if(ib2) ib2.blur();
     } catch(eB){}
   }
 }
+/* Keep Ask bar aligned to fingerprint slot on rotate / resize */
+(function(){
+  var t;
+  function onResize(){
+    clearTimeout(t);
+    t = setTimeout(function(){
+      if(window._askBarOpen && typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+    }, 80);
+  }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+})();
 function activateAskMe(){
   try {
     if(typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
