@@ -12206,8 +12206,9 @@ function _fpDeactivateSpeechToSpeech(){
     else if(typeof _tnvGlideHome === 'function') _tnvGlideHome();
   } catch(eAway){}
   try {
+    /* skipAway: we already called _tnvSendAway above */
     if(typeof window.stopTopNavVoice === 'function'){
-      window.stopTopNavVoice();
+      window.stopTopNavVoice({ skipAway: true });
     } else if(typeof window.toggleTopNavVoice === 'function' && window._topNavVoiceActive){
       window.toggleTopNavVoice();
     }
@@ -30776,6 +30777,9 @@ var _actx = null;
 var _actxWarm = false; // false right after a (re)created/suspended ctx — first chunk needs a lead-in so hardware isn't still waking up and clipping the start of speech
 var _actxGain = null; // master output gain — muted when avatar uses Anam's own native voice
 var _playbackTime = 0; // when to schedule next buffer (in AudioContext time)
+// Live BufferSources still scheduled/playing — must stop() on session end or
+// cancelled speech leaves a glitch when the next STS session starts.
+var _ttsActiveSources = [];
 
 // ── Text queue ─────────────────────────────────────────────────────────────────
 var _ttsQueue = [];
