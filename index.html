@@ -419,7 +419,12 @@ html[data-theme="easyview"] #sidebarResize,html[data-theme="purple"] #sidebarRes
 .cat-nav::-webkit-scrollbar{width:3px;}
 .cat-nav::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:10px;}
 /* ── Bottom-nav mode ─────────────────────────────── */
-body.bottom-nav #bnavLogoMark{display:flex!important;}
+body.bottom-nav #bnavLogoMark{
+  display:flex!important;
+  transform:translateY(-2px);
+  margin-left:12px!important;
+  margin-right:10px!important;
+}
 body.bottom-nav #bnavLogoMark ~ span, body.bottom-nav #bnavLogoMark + span{ padding-left:0!important; }
 body.bottom-nav .top-bar > div:first-child{ padding-left:6px!important; }
 body.bottom-nav .sidebar{display:none!important;}
