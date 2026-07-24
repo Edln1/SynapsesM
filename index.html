@@ -2427,7 +2427,21 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .ncmd-modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:400;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 .ncmd-modal-box{background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:100%;max-width:400px;margin:16px;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:fadeUp .22s ease both;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
-.syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;}
+.syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
+.syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:0;line-height:1.25;}
+/* Barely-visible news climate trigger — next to greeting */
+.syn-greet-news-btn{
+  flex-shrink:0;width:18px;height:18px;padding:0;margin:0;border:none;background:transparent;cursor:pointer;
+  color:rgba(255,255,255,0.09);font-size:9px;line-height:1;opacity:0.28;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:opacity .25s ease,color .25s ease,transform .2s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.syn-greet-news-btn:hover,.syn-greet-news-btn:focus-visible{
+  opacity:0.55;color:rgba(200,195,255,0.4);outline:none;
+}
+.syn-greet-news-btn:active{transform:scale(0.9);opacity:0.7;}
+.syn-greet-news-btn.busy{opacity:0.4;animation:fpIdleBreath 1.2s ease-in-out infinite;}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
@@ -5593,8 +5607,11 @@ window.getWebAudioNode = getWebAudioNode;
         <div class="syn-node" style="--r:89px;--dur:10s;--col:#6366f1;--pdur:2.8s;animation-delay:-6s;"></div>
         <div class="syn-orb-core"></div>
       </div>
-      <!-- Greeting — always replaced by refreshHomeGreeting() -->
-      <div class="syn-greeting" id="synHomeGreeting">What are you chasing today?</div>
+      <!-- Greeting: rotates classic / Claude-style time+name; subtle news btn -->
+      <div class="syn-greeting-row">
+        <div class="syn-greeting" id="synHomeGreeting">What's on your mind?</div>
+        <button type="button" class="syn-greet-news-btn" id="synGreetNewsBtn" title="Pulse the climate" aria-label="Show a news-influenced line">·</button>
+      </div>
       <div class="syn-sub">Synapses · Neural Interface</div>
       <!-- Fingerprint pad — hold-to-scan → speech-to-speech (mic centers mid-header) -->
       <div class="syn-fp" id="synFingerprint" title="Hold to start speech-to-speech">
@@ -11970,137 +11987,75 @@ function runHeroBarLaser(bar, onDone) {
 }
 // ── END HERO BAR LASER ────────────────────────────────────────────────────
 
-// ── Dynamic home greeting (day / time / light news climate) ───────────────
-// Always replaces the static HTML default. Never keeps "What's on your mind?"
+// ── Home greeting: rotate classic + Claude-style time-of-day (+ optional news) ─
+// Claude.ai pattern: Good morning/afternoon/evening[, Name] by local hour.
+// We rotate that with the classic "What's on your mind?"
+// News climate is ONLY via the subtle · button — never forced on load.
 (function(){
   var _lastGreeting = '';
+  var _modeFlip = 0; /* alternate classic <-> claude */
   var _newsSpice = '';
   var _newsFetchedDay = '';
-  var BANNED = /what'?s on your mind/i;
 
   function _pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
-  function _hourBucket(h){
-    if(h < 5) return 'late';
-    if(h < 12) return 'morning';
-    if(h < 17) return 'afternoon';
-    if(h < 21) return 'evening';
-    return 'night';
-  }
-  function _season(m){
-    if(m === 11 || m <= 1) return 'winter';
-    if(m <= 4) return 'spring';
-    if(m <= 7) return 'summer';
-    return 'autumn';
+  function _pick(arr){
+    if(!arr || !arr.length) return '';
+    return arr[Math.floor(Math.random() * arr.length)];
   }
   function _daySeed(){
     var d = new Date();
     return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
   }
-  function _pick(arr){
-    if(!arr || !arr.length) return '';
-    return arr[Math.floor(Math.random() * arr.length)];
+
+  /** First name from logged-in user; null for guest / missing */
+  function _userFirstName(){
+    try {
+      var u = (typeof window.currentUser !== 'undefined' && window.currentUser) ? window.currentUser
+            : (typeof currentUser !== 'undefined' ? currentUser : null);
+      if(!u || u.isGuest) return null;
+      var n = u.name || u.displayName || u.full_name || '';
+      if(!n && u.email) n = String(u.email).split('@')[0];
+      n = String(n || '').trim().replace(/[._-]+/g, ' ').split(/\s+/)[0];
+      if(!n || n.length < 2) return null;
+      if(n.length > 18) n = n.slice(0, 16);
+      return n.charAt(0).toUpperCase() + n.slice(1);
+    } catch(e){ return null; }
   }
 
-  var POOLS = {
-    morning: [
-      "What's waking up with you?",
-      "Fresh day. What's first?",
-      "Morning signal — what are you building?",
-      "Coffee in, ideas out — what's on deck?",
-      "The day is wide open. Where do we start?",
-      "Sunrise mode. What gets the first hour?"
-    ],
-    afternoon: [
-      "Midday pulse — what's moving?",
-      "Still time to make something real. What's next?",
-      "What needs a clear next step?",
-      "Where's the energy going this afternoon?",
-      "Halfway through — what still matters?",
-      "What deserves a hard look right now?"
-    ],
-    evening: [
-      "What's still open tonight?",
-      "Evening quiet — what's worth finishing?",
-      "What did the day leave unfinished?",
-      "One more idea before the lights dim?",
-      "How do you want the night to end?",
-      "What would make this evening count?"
-    ],
-    night: [
-      "Late hours. What's still sparking?",
-      "Night mode — what are you thinking?",
-      "The world is quieter. What's loud for you?",
-      "What's keeping the signal open?",
-      "Deep hours. What are you turning over?",
-      "No rush. What wants attention?"
-    ],
-    late: [
-      "3 a.m. thoughts? I'm here.",
-      "Couldn't sleep — what's circling?",
-      "Quiet hours. What won't let go?"
-    ],
-    mon: ["New week energy — what's the move?", "Monday reset. What matters most?", "Week one, step one — what is it?"],
-    fri: ["Friday stretch — what's worth shipping?", "Weekend almost here. What's last on the list?", "Close the loop — what still needs you?"],
-    weekend: ["Weekend freedom — what are you exploring?", "No clock. What's calling you?", "Open day. What would feel good to try?"],
-    winter: ["Cold air, hot ideas — what's brewing?", "Winter focus mode. What's the target?"],
-    spring: ["Season of starts — what are you planting?", "Spring light — what's emerging?"],
-    summer: ["Long days, bigger aims — what's yours?", "Summer heat — what's cooking?"],
-    autumn: ["Harvest mode — what are you locking in?", "Fall clarity — what's the real priority?"],
-    general: [
-      "What are you chasing today?",
-      "Spark something. What is it?",
-      "What deserves your focus right now?",
-      "Name it — what's the thread?",
-      "What would make today count?",
-      "Where should we aim the signal?",
-      "Curious about what? I'm ready.",
-      "What's the real question underneath?",
-      "What would you try if it had to work?",
-      "One thought. One step. What's first?",
-      "What needs clarity more than effort?",
-      "Build, explore, or unload — which is it?",
-      "What story are you writing today?",
-      "What's the interesting problem?",
-      "If this hour was a bet — what are you betting on?",
-      "What would Future-you thank you for starting?",
-      "What's the one thing you're avoiding?",
-      "Ready when you are — what are we doing?"
-    ],
-    newsy: [
-      "The feed is loud today — what actually matters to you?",
-      "World's spinning fast. What's your focus?",
-      "Headlines are noise. What's your signal?",
-      "While the news scrolls — what are you making?",
-      "Big day out there. What about your day?"
-    ]
-  };
-
-  function _pickLocalHomeGreeting(){
-    try {
-      var d = new Date();
-      var h = d.getHours();
-      var dow = d.getDay();
-      var bucket = _hourBucket(h);
-      var season = _season(d.getMonth());
-      var pool = POOLS.general.slice();
-      if(POOLS[bucket]) pool = pool.concat(POOLS[bucket]);
-      if(POOLS[season]) pool = pool.concat(POOLS[season]);
-      if(dow === 1) pool = pool.concat(POOLS.mon);
-      if(dow === 5) pool = pool.concat(POOLS.fri);
-      if(dow === 0 || dow === 6) pool = pool.concat(POOLS.weekend);
-      if(_newsSpice) pool = pool.concat(POOLS.newsy);
-      /* never keep the old static default */
-      pool = pool.filter(function(s){ return s && !BANNED.test(s); });
-      var line = _pick(pool);
-      var guard = 0;
-      while((!line || line === _lastGreeting || BANNED.test(line)) && guard++ < 12){
-        line = _pick(pool);
-      }
-      _lastGreeting = line;
-      return line || "What are you chasing today?";
-    } catch(e){
-      return "What are you chasing today?";
+  /**
+   * Claude-style time salutation:
+   * morning ~5–12, afternoon ~12–17, evening ~17–22, late night playful.
+   */
+  function _claudeStyleGreeting(){
+    var h = new Date().getHours();
+    var name = _userFirstName();
+    var sal = 'Good evening';
+    if(h >= 5 && h < 12) sal = 'Good morning';
+    else if(h >= 12 && h < 17) sal = 'Good afternoon';
+    else if(h >= 17 && h < 22) sal = 'Good evening';
+    else {
+      /* late night — Claude-like night owl vibe */
+      if(name) return _pick([
+        'Good evening, ' + name,
+        'Still up, ' + name + '?',
+        name + ' — late hours.'
+      ]);
+      return _pick([
+        'Good evening, night owl',
+        'Still awake?',
+        'Late hours. Welcome back.'
+      ]);
     }
+    if(name) return sal + ', ' + name;
+    /* Guest / not logged in — soft descriptor instead of a name */
+    var guest = _pick(['explorer', 'builder', 'creator', 'traveler', 'friend']);
+    /* Sometimes plain like Claude without a tag */
+    if(Math.random() > 0.45) return sal;
+    return sal + ', ' + guest;
+  }
+
+  function _classicGreeting(){
+    return "What's on your mind?";
   }
 
   function _greetingEl(){
@@ -12137,13 +12092,13 @@ function runHeroBarLaser(bar, onDone) {
       var day = _pad2(d.getUTCDate());
       var url = 'https://api.wikimedia.org/feed/v1/wikipedia/en/featured/' + y + '/' + m + '/' + day;
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-      var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 3500);
+      var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 4000);
       fetch(url, {
         signal: ctrl ? ctrl.signal : undefined,
         headers: { 'Accept': 'application/json', 'Api-User-Agent': 'SynapsesHomeGreeting/1.0' }
       }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
         clearTimeout(t);
-        if(!data) return;
+        if(!data){ if(cb) cb(null); return; }
         var title = '';
         try {
           if(data.news && data.news[0] && data.news[0].story && data.news[0].story.titles){
@@ -12158,14 +12113,14 @@ function runHeroBarLaser(bar, onDone) {
           }
         } catch(e2){}
         title = String(title || '').replace(/_/g, ' ').trim();
-        if(title.length > 48) title = title.slice(0, 45).replace(/\s+\S*$/, '') + '\u2026';
+        if(title.length > 42) title = title.slice(0, 40).replace(/\s+\S*$/, '') + '\u2026';
         if(title.length > 4){
           _newsSpice = title;
           _newsFetchedDay = dayKey;
           if(cb) cb(title);
-        }
-      }).catch(function(){ clearTimeout(t); });
-    } catch(e3){}
+        } else if(cb) cb(null);
+      }).catch(function(){ clearTimeout(t); if(cb) cb(null); });
+    } catch(e3){ if(cb) cb(null); }
   }
 
   function _newsAwareLine(title){
@@ -12173,48 +12128,87 @@ function runHeroBarLaser(bar, onDone) {
       'While the world talks ' + title + ' \u2014 what\'s on yours?',
       'Trending: ' + title + '. What\'s your angle?',
       'Big story: ' + title + '. What are you thinking?',
-      title + ' is in the air \u2014 what\'s yours?',
-      'Beyond the headlines \u2014 what matters to you?'
+      title + ' is in the air \u2014 what about you?',
+      'Beyond ' + title + ' \u2014 what matters to you?'
     ];
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
+  /** Rotate: classic "What's on your mind?" <-> Claude-style Good X, Name */
   function refreshHomeGreeting(opts){
     opts = opts || {};
     try {
-      var local = _pickLocalHomeGreeting();
-      var ok = _setGreetingText(local, !!opts.animate);
-      if(!ok){
-        /* element not ready — retry shortly */
-        setTimeout(function(){ refreshHomeGreeting(opts); }, 120);
-        return local;
+      _modeFlip = (_modeFlip + 1) % 2;
+      var line;
+      if(opts.forceClaude) line = _claudeStyleGreeting();
+      else if(opts.forceClassic) line = _classicGreeting();
+      else if(_modeFlip === 0) line = _classicGreeting();
+      else line = _claudeStyleGreeting();
+
+      /* avoid same line twice when possible */
+      if(line === _lastGreeting && !opts.forceClassic && !opts.forceClaude){
+        line = (_modeFlip === 0) ? _claudeStyleGreeting() : _classicGreeting();
       }
-      if(opts.skipNews) return local;
-      _fetchNewsSpice(function(title){
-        if(Math.random() > 0.4) return;
-        var line = _newsAwareLine(title);
-        if(BANNED.test(line)) return;
-        _lastGreeting = line;
-        _setGreetingText(line, true);
-      });
-      return local;
+      _lastGreeting = line;
+      var ok = _setGreetingText(line, !!opts.animate);
+      if(!ok){
+        setTimeout(function(){ refreshHomeGreeting(opts); }, 120);
+        return line;
+      }
+      return line;
     } catch(e){
-      _setGreetingText('What are you chasing today?', false);
-      return 'What are you chasing today?';
+      _setGreetingText("What's on your mind?", false);
+      return "What's on your mind?";
     }
   }
 
+  /** User taps subtle · button → news-influenced line */
+  function showNewsClimateGreeting(){
+    var btn = document.getElementById('synGreetNewsBtn');
+    if(btn) btn.classList.add('busy');
+    function done(line){
+      if(btn) btn.classList.remove('busy');
+      if(line){
+        _lastGreeting = line;
+        _setGreetingText(line, true);
+      }
+    }
+    if(_newsSpice){
+      done(_newsAwareLine(_newsSpice));
+      return;
+    }
+    _fetchNewsSpice(function(title){
+      if(title) done(_newsAwareLine(title));
+      else done(_pick([
+        'The feed is loud today \u2014 what actually matters to you?',
+        'Headlines are noise. What\'s your signal?',
+        'World\'s spinning fast. What\'s your focus?'
+      ]));
+    });
+  }
+
   window.refreshHomeGreeting = refreshHomeGreeting;
+  window.showNewsClimateGreeting = showNewsClimateGreeting;
+
+  function wireNewsBtn(){
+    var btn = document.getElementById('synGreetNewsBtn');
+    if(!btn || btn._wired) return;
+    btn._wired = true;
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      showNewsClimateGreeting();
+    });
+  }
 
   function boot(){
+    wireNewsBtn();
     refreshHomeGreeting({ animate: false });
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
-  /* WebView / late layout: force a few more attempts so default never sticks */
-  setTimeout(boot, 50);
-  setTimeout(boot, 300);
-  setTimeout(function(){ refreshHomeGreeting({ animate: false, skipNews: false }); }, 800);
+  setTimeout(boot, 80);
+  setTimeout(boot, 400);
   document.addEventListener('visibilitychange', function(){
     if(!document.hidden) refreshHomeGreeting({ animate: true });
   });
