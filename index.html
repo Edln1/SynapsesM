@@ -2458,26 +2458,26 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   -webkit-tap-highlight-color:transparent;outline:none;
 }
 .syn-fp-pad:hover{filter:brightness(1.08);}
-/* Ring / glow only while actively scanning */
+/* Ring / glow only while active — purple only (never green) */
 .syn-fp.holding .syn-fp-pad,
 .syn-fp.scanning .syn-fp-pad,
 .syn-fp.ok .syn-fp-pad{
-  background:radial-gradient(circle at 50% 45%,rgba(28,24,48,.28),rgba(10,8,18,.08));
+  background:radial-gradient(circle at 50% 45%,rgba(40,32,72,.32),rgba(10,8,18,.08));
 }
 .syn-fp.holding .syn-fp-pad{
   transform:scale(.94);
-  box-shadow:0 0 0 1px rgba(0,217,168,.28),0 0 18px rgba(124,106,247,.22);
+  box-shadow:0 0 0 1px rgba(124,106,247,.4),0 0 18px rgba(124,106,247,.28);
   animation:fpPulseRing 1.2s ease-out infinite;
 }
 .syn-fp.scanning .syn-fp-pad{
-  box-shadow:0 0 0 1px rgba(0,217,168,.32),0 0 20px rgba(0,217,168,.18);
+  box-shadow:0 0 0 1px rgba(167,139,250,.42),0 0 20px rgba(124,106,247,.26);
 }
 .syn-fp.ok .syn-fp-pad{
-  box-shadow:0 0 0 1px rgba(0,217,168,.4),0 0 16px rgba(0,217,168,.28);
+  box-shadow:0 0 0 1px rgba(167,139,250,.5),0 0 18px rgba(124,106,247,.35);
 }
 .syn-fp-ring{
   position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0;
-  background:conic-gradient(from -90deg,rgba(0,217,168,.75) var(--fp-p,0%),transparent 0);
+  background:conic-gradient(from -90deg,rgba(167,139,250,.9) var(--fp-p,0%),transparent 0);
   -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
   mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
   opacity:0;transition:opacity .25s ease;
@@ -2496,16 +2496,16 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .syn-fp.fail .syn-fp-icon{
   animation:none!important;
 }
-.syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.65)) brightness(1.12);transform:scale(.96);}
+.syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(167,139,250,.7)) brightness(1.1);transform:scale(.96);}
 .syn-fp-scan{
   position:absolute;left:20%;right:20%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(0,217,168,.95),rgba(167,139,250,.9),transparent);
-  box-shadow:0 0 12px rgba(0,217,168,.75);
+  background:linear-gradient(90deg,transparent,rgba(167,139,250,.95),rgba(124,106,247,.9),transparent);
+  box-shadow:0 0 12px rgba(124,106,247,.65);
 }
 .syn-fp.holding .syn-fp-scan,.syn-fp.scanning .syn-fp-scan{opacity:1;animation:fpScan .85s linear infinite;}
-.syn-fp.scanning .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.75)) brightness(1.18);}
-.syn-fp.ok .syn-fp-icon{filter:drop-shadow(0 0 14px rgba(0,217,168,.85)) brightness(1.25);}
-.syn-fp.ok .syn-fp-ring{--fp-p:100%;opacity:1;background:conic-gradient(from -90deg,#00d9a8 100%,transparent 0);}
+.syn-fp.scanning .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(167,139,250,.75)) brightness(1.14);}
+.syn-fp.ok .syn-fp-icon{filter:drop-shadow(0 0 14px rgba(167,139,250,.85)) brightness(1.18);}
+.syn-fp.ok .syn-fp-ring{--fp-p:100%;opacity:1;background:conic-gradient(from -90deg,rgba(167,139,250,.95) 100%,transparent 0);}
 .syn-fp.fail{animation:fpShake .4s ease;}
 .syn-fp.fail .syn-fp-icon{filter:drop-shadow(0 0 8px rgba(255,107,138,.7)) hue-rotate(-20deg);}
 .syn-fp-status{
@@ -2515,10 +2515,12 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 }
 .syn-fp.holding .syn-fp-status,.syn-fp.scanning .syn-fp-status,.syn-fp.ok .syn-fp-status,.syn-fp.fail .syn-fp-status,
 .syn-fp.show-hint .syn-fp-status{opacity:1;animation:fpStatusIn .25s ease both;}
-.syn-fp.holding .syn-fp-status{color:rgba(167,139,250,.9);}
-.syn-fp.scanning .syn-fp-status{color:rgba(0,217,168,.9);}
-.syn-fp.ok .syn-fp-status{color:#00d9a8;}
+.syn-fp.holding .syn-fp-status{color:rgba(196,181,253,.95);}
+.syn-fp.scanning .syn-fp-status{color:rgba(167,139,250,.95);}
+.syn-fp.ok .syn-fp-status{color:rgba(196,181,253,1);}
 .syn-fp.fail .syn-fp-status{color:#ff8fa3;}
+/* Trusted / tap mode: still feels tappable, no hold ring pressure */
+.syn-fp.fp-tap-mode .syn-fp-pad{cursor:pointer;}
 .syn-fp-label{display:none!important;}
 .syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation:chatEmptyIn .6s ease-out .4s both;}
 .syn-prompt{padding:11px 14px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:10px;text-align:left;}
@@ -11975,8 +11977,13 @@ window._fpHoldActive = false;
 window._fpHoldDone = false;
 window._fpHoldRaf = 0;
 window._fpHoldStart = 0;
-/** Must keep finger down this long before biometrics / unlock fire */
+window._fpTapMode = false; /* true = quick tap activates STS; false = full hold scan required */
+/** Full hold only on first use / long absence */
 var FP_HOLD_MS = 1250;
+/** Re-require hold if last success was longer ago than this (7 days) */
+var FP_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+var FP_TRUST_KEY = 'synapses_fp_trusted';
+var FP_LAST_OK_KEY = 'synapses_fp_last_ok';
 
 function _fpEl(){ return document.getElementById('synFingerprint'); }
 function _fpStatus(text){
@@ -11996,12 +12003,40 @@ function _fpSetState(state){
   wrap.classList.remove('holding','scanning','ok','fail','show-hint');
   if(state) wrap.classList.add(state);
 }
+/** First open OR last unlock older than FP_STALE_MS → full hold scan required */
+function _fpRequiresHoldScan(){
+  try {
+    var trusted = localStorage.getItem(FP_TRUST_KEY) === '1';
+    if(!trusted) return true;
+    var last = parseInt(localStorage.getItem(FP_LAST_OK_KEY) || '0', 10) || 0;
+    if(!last) return true;
+    if((Date.now() - last) > FP_STALE_MS) return true;
+    return false;
+  } catch(e){ return true; }
+}
+function _fpMarkTrusted(){
+  try {
+    localStorage.setItem(FP_TRUST_KEY, '1');
+    localStorage.setItem(FP_LAST_OK_KEY, String(Date.now()));
+  } catch(e){}
+  window._fpTapMode = true;
+  _fpSyncTapModeUi();
+}
+function _fpSyncTapModeUi(){
+  var wrap = _fpEl();
+  var pad = document.getElementById('synFpPad');
+  var needHold = _fpRequiresHoldScan();
+  window._fpTapMode = !needHold;
+  if(wrap) wrap.classList.toggle('fp-tap-mode', !needHold);
+  if(wrap) wrap.title = needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech';
+  if(pad) pad.setAttribute('aria-label', needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech');
+}
 function _postNativeBiometric(){
   var payload = JSON.stringify({
     type: 'biometric',
     action: 'authenticate',
-    title: 'Unlock Ask',
-    subtitle: 'Use fingerprint or face to open Ask me anything'
+    title: 'Unlock voice',
+    subtitle: 'Confirm it\u2019s you to start speech-to-speech'
   });
   try {
     if(typeof JSBridge !== 'undefined' && JSBridge && typeof JSBridge.postMessage === 'function'){
@@ -12020,31 +12055,26 @@ function _postNativeBiometric(){
 /** Start speech-to-speech and park the mic in its middle-of-header (centered) state */
 function _fpActivateSpeechToSpeech(){
   try {
-    /* Be on chat so voice UI is meaningful */
     if(typeof setView === 'function'){
       var sec = document.getElementById('sec-chat');
       if(!sec || !sec.classList.contains('active')) setView('sec-chat');
     }
   } catch(e0){}
   try {
-    /* Collapse top icons so the mic can float center (middle-of-row state) */
     if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN && typeof toggleTopBar === 'function'){
       toggleTopBar();
     }
   } catch(e1){}
   try {
-    /* Turn on STS if not already live */
     if(!window._topNavVoiceActive && typeof window.toggleTopNavVoice === 'function'){
       window.toggleTopNavVoice();
     }
   } catch(e2){}
-  /* After a beat, force the mic into centered middle-of-row state */
   function parkMicCenter(){
     try {
       if(typeof _tnvClearGlideTimer === 'function') _tnvClearGlideTimer();
       if(typeof _tnvCentered !== 'undefined' && _tnvCentered) return;
       if(typeof _tnvGlideToCenter === 'function'){
-        /* Glide requires top bar hidden + voice live — both set above */
         _tnvGlideToCenter();
         return;
       }
@@ -12058,12 +12088,13 @@ function _fpActivateSpeechToSpeech(){
   setTimeout(parkMicCenter, 850);
 }
 
-/** Fingerprint scan complete → speech-to-speech (mic mid-header) */
+/** Success → purple ack + STS (never green) */
 function _fpSuccess(){
   window._fpBusy = false;
   window._fpHoldActive = false;
   window._fpHoldDone = false;
   window._fpUnlocked = true;
+  _fpMarkTrusted();
   _fpSetProgress(1);
   _fpSetState('ok');
   _fpStatus('Voice on');
@@ -12078,9 +12109,8 @@ function _fpSuccess(){
     _fpSetState('');
     _fpStatus('');
     _fpSetProgress(0);
-  }, 900);
+  }, 750);
 }
-/* Default hook: activate speech-to-speech + center mic */
 window.onFingerprintVerified = function(){
   _fpActivateSpeechToSpeech();
 };
@@ -12095,23 +12125,22 @@ function _fpFail(msg){
     setTimeout(function(){ _fpSetState(''); _fpStatus(''); }, 650);
     return;
   }
-  /* Soft fail still counts as verified sensor path for future feature */
   _fpSuccess();
 }
-/** After full hold on PC / no JSBridge — brief verify animation (no Ask open) */
+/** Full hold path after sensor / PC */
 function _fpOpenWithoutSensor(){
   _fpSetState('scanning');
   _fpStatus('Recognized');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
-  setTimeout(function(){ _fpSuccess(); }, 480);
+  setTimeout(function(){ _fpSuccess(); }, 420);
 }
-/** Called only after user held finger long enough — biometrics only, never Ask */
+/** Full unlock after hold (native biometric when available) */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
   window._fpBusy = true;
   _fpSetState('scanning');
-  _fpStatus('Authenticating…');
+  _fpStatus('Authenticating\u2026');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
 
@@ -12131,10 +12160,22 @@ window.__onBiometricResult = function(ok, message){
   else _fpFail(message || 'failed');
 };
 
+/** Trusted user: quick purple flash then STS — no hold, no green */
+function _fpQuickTapActivate(){
+  if(window._fpBusy) return;
+  if(window._askBarOpen && _isChatEmptyHome()) return;
+  window._fpBusy = true;
+  _fpSetState('scanning');
+  _fpStatus('Voice\u2026');
+  _fpSetProgress(1);
+  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
+  setTimeout(function(){ _fpSuccess(); }, 260);
+}
+
 function _fpCancelHold(early){
   if(window._fpHoldRaf){ cancelAnimationFrame(window._fpHoldRaf); window._fpHoldRaf = 0; }
   window._fpHoldActive = false;
-  if(window._fpBusy) return; /* already in auth phase — don't stomp */
+  if(window._fpBusy) return;
   if(early && window._fpHoldDone === false){
     _fpSetState('fail');
     _fpStatus('Hold longer');
@@ -12155,14 +12196,18 @@ function _fpCancelHold(early){
 }
 function _fpBeginHold(e){
   if(e){ e.preventDefault(); e.stopPropagation(); }
-  /* Ask bar open replaces fingerprint — ignore holds */
   if(window._askBarOpen && _isChatEmptyHome()) return;
   if(window._fpBusy || window._fpHoldActive) return;
+  /* Trusted → tap-to-activate (no hold) */
+  if(!_fpRequiresHoldScan()){
+    _fpQuickTapActivate();
+    return;
+  }
   window._fpHoldActive = true;
   window._fpHoldDone = false;
   window._fpHoldStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   _fpSetState('holding');
-  _fpStatus('Scanning…');
+  _fpStatus('Scanning\u2026');
   _fpSetProgress(0);
   try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
 
@@ -12172,9 +12217,9 @@ function _fpBeginHold(e){
     var elapsed = now - t0;
     var p = Math.min(1, elapsed / FP_HOLD_MS);
     _fpSetProgress(p);
-    if(p < 0.35) _fpStatus('Keep holding…');
-    else if(p < 0.75) _fpStatus('Scanning…');
-    else _fpStatus('Almost…');
+    if(p < 0.35) _fpStatus('Keep holding\u2026');
+    else if(p < 0.75) _fpStatus('Scanning\u2026');
+    else _fpStatus('Almost\u2026');
     if(elapsed >= FP_HOLD_MS){
       window._fpHoldDone = true;
       window._fpHoldActive = false;
@@ -12190,6 +12235,8 @@ function _fpBeginHold(e){
 }
 function _fpEndHold(e){
   if(e){ e.preventDefault(); e.stopPropagation(); }
+  /* Tap mode never starts a hold */
+  if(!_fpRequiresHoldScan() && !window._fpHoldActive) return;
   if(!window._fpHoldActive) return;
   var early = !window._fpHoldDone;
   window._fpHoldActive = false;
@@ -12251,15 +12298,21 @@ window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
     var pad = document.getElementById('synFpPad');
     if(!pad || pad._fpWired) return;
     pad._fpWired = true;
+    try { _fpSyncTapModeUi(); } catch(e0){}
 
-    /* Hold-to-scan only — no instant click unlock */
+    /* First use / long absence: hold-to-scan. Trusted: tap activates STS. */
     pad.addEventListener('pointerdown', function(e){
       if(e.button != null && e.button !== 0) return;
       try { pad.setPointerCapture(e.pointerId); } catch(err){}
       _fpBeginHold(e);
     });
-    pad.addEventListener('pointerup', _fpEndHold);
-    pad.addEventListener('pointercancel', _fpEndHold);
+    pad.addEventListener('pointerup', function(e){
+      /* Only cancel an in-progress hold (tap mode never holds) */
+      if(window._fpHoldActive) _fpEndHold(e);
+    });
+    pad.addEventListener('pointercancel', function(e){
+      if(window._fpHoldActive) _fpEndHold(e);
+    });
     pad.addEventListener('pointerleave', function(e){
       /* Only cancel if pointer actually left while holding (mouse) */
       if(window._fpHoldActive && e.pointerType === 'mouse') _fpEndHold(e);
