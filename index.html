@@ -421,12 +421,22 @@ html[data-theme="easyview"] #sidebarResize,html[data-theme="purple"] #sidebarRes
 /* ── Bottom-nav mode ─────────────────────────────── */
 body.bottom-nav #bnavLogoMark{
   display:flex!important;
-  transform:translateY(-2px);
+  transform:translateY(0);
   margin-left:12px!important;
-  margin-right:10px!important;
+  margin-right:2px!important; /* pull title words tight against icon */
+  padding:0!important;
 }
-body.bottom-nav #bnavLogoMark ~ span, body.bottom-nav #bnavLogoMark + span{ padding-left:0!important; }
-body.bottom-nav .top-bar > div:first-child{ padding-left:6px!important; }
+body.bottom-nav #bnavLogoMark ~ span,
+body.bottom-nav #bnavLogoMark + span,
+body.bottom-nav .top-title{
+  padding-left:0!important;
+  margin-left:0!important;
+}
+body.bottom-nav .top-bar > div:first-child{
+  padding-left:6px!important;
+  gap:0!important;
+  column-gap:0!important;
+}
 body.bottom-nav .sidebar{display:none!important;}
 
 body.bottom-nav #bottomNavBar{display:flex!important;}
