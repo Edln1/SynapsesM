@@ -4223,10 +4223,8 @@ window.getWebAudioNode = getWebAudioNode;
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
-        <!-- Soft ambient field -->
-        <circle cx="40" cy="40" r="30" fill="url(#synHaloSB)"/>
-        <!-- Thin constellation ring -->
-        <circle cx="40" cy="40" r="29.5" stroke="rgba(165,180,252,0.14)" stroke-width="0.7"/>
+        <!-- Soft ambient field (no outer ring) -->
+        <circle cx="40" cy="40" r="22" fill="url(#synHaloSB)"/>
         <!-- Connection spokes (same light/dim timings as before) -->
         <g stroke="url(#synSpokeSB)" stroke-width="1.15" stroke-linecap="round">
           <line x1="40" y1="35" x2="40" y2="10"><animate attributeName="opacity" values="0.75;0.75;0.18;0.75;0.75" dur="7s" repeatCount="indefinite"/></line>
@@ -5291,8 +5289,7 @@ window.getWebAudioNode = getWebAudioNode;
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
-        <circle cx="40" cy="40" r="30" fill="url(#synHaloTB)"/>
-        <circle cx="40" cy="40" r="29.5" stroke="rgba(165,180,252,0.14)" stroke-width="0.7"/>
+        <circle cx="40" cy="40" r="22" fill="url(#synHaloTB)"/>
         <g stroke="url(#synSpokeTB)" stroke-width="1.15" stroke-linecap="round">
           <line x1="40" y1="35" x2="40" y2="10"><animate attributeName="opacity" values="0.75;0.75;0.18;0.75;0.75" dur="7s" repeatCount="indefinite"/></line>
           <line x1="40" y1="45" x2="40" y2="70"><animate attributeName="opacity" values="0.75;0.75;0.75;0.12;0.75" dur="9s" repeatCount="indefinite"/></line>
