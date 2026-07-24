@@ -2458,38 +2458,30 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   -webkit-tap-highlight-color:transparent;outline:none;
 }
 .syn-fp-pad:hover{filter:brightness(1.08);}
-/* Ring / glow only while active — purple only (never green) */
+/* Soft grey fog on activate — breath-like, no glaring circle */
+@keyframes fpFogSoft{
+  0%{filter:drop-shadow(0 0 3px rgba(190,192,200,.1));opacity:.88;transform:scale(1)}
+  45%{filter:drop-shadow(0 0 9px rgba(210,212,220,.32)) brightness(1.06);opacity:1;transform:scale(1.025)}
+  100%{filter:drop-shadow(0 0 4px rgba(195,197,205,.14));opacity:.92;transform:scale(1.01)}
+}
 .syn-fp.holding .syn-fp-pad,
 .syn-fp.scanning .syn-fp-pad,
 .syn-fp.ok .syn-fp-pad{
-  background:radial-gradient(circle at 50% 45%,rgba(40,32,72,.32),rgba(10,8,18,.08));
+  background:transparent;
+  box-shadow:none;
+  animation:none;
+  transform:none;
 }
-.syn-fp.holding .syn-fp-pad{
-  transform:scale(.94);
-  box-shadow:0 0 0 1px rgba(124,106,247,.4),0 0 18px rgba(124,106,247,.28);
-  animation:fpPulseRing 1.2s ease-out infinite;
-}
-.syn-fp.scanning .syn-fp-pad{
-  box-shadow:0 0 0 1px rgba(167,139,250,.42),0 0 20px rgba(124,106,247,.26);
-}
-.syn-fp.ok .syn-fp-pad{
-  box-shadow:0 0 0 1px rgba(167,139,250,.5),0 0 18px rgba(124,106,247,.35);
-}
-.syn-fp-ring{
-  position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0;
-  background:conic-gradient(from -90deg,rgba(167,139,250,.9) var(--fp-p,0%),transparent 0);
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
-  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));
-  opacity:0;transition:opacity .25s ease;
-}
-.syn-fp.holding .syn-fp-ring,.syn-fp.scanning .syn-fp-ring{opacity:1;}
+/* Hide progress ring + scan line — too loud */
+.syn-fp-ring{display:none!important;opacity:0!important;}
+.syn-fp-scan{display:none!important;opacity:0!important;}
 .syn-fp-icon{
   width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;
   filter:drop-shadow(0 0 4px rgba(124,106,247,.18));
   /* Slow sleep-breath only while speech-to-speech is OFF */
   animation:fpIdleBreath 10.5s ease-in-out infinite;
 }
-/* Pause idle life when STS is live, or pad is actively scanning */
+/* Pause idle breath when STS live or during soft fog activate */
 body.voice-live .syn-fp-icon,
 .syn-fp.holding .syn-fp-icon,
 .syn-fp.scanning .syn-fp-icon,
@@ -2501,30 +2493,23 @@ body.voice-live .syn-fp-icon{
   opacity:.78;
   filter:drop-shadow(0 0 3px rgba(124,106,247,.12));
 }
-.syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(167,139,250,.7)) brightness(1.1);transform:scale(.96);}
-.syn-fp-scan{
-  position:absolute;left:20%;right:20%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(167,139,250,.95),rgba(124,106,247,.9),transparent);
-  box-shadow:0 0 12px rgba(124,106,247,.65);
+/* Low-key grey fog during hold / tap activate / success */
+.syn-fp.holding .syn-fp-icon,
+.syn-fp.scanning .syn-fp-icon{
+  animation:fpFogSoft .9s ease-in-out infinite!important;
 }
-.syn-fp.holding .syn-fp-scan,.syn-fp.scanning .syn-fp-scan{opacity:1;animation:fpScan .85s linear infinite;}
-.syn-fp.scanning .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(167,139,250,.75)) brightness(1.14);}
-.syn-fp.ok .syn-fp-icon{filter:drop-shadow(0 0 14px rgba(167,139,250,.85)) brightness(1.18);}
-.syn-fp.ok .syn-fp-ring{--fp-p:100%;opacity:1;background:conic-gradient(from -90deg,rgba(167,139,250,.95) 100%,transparent 0);}
+.syn-fp.ok .syn-fp-icon{
+  animation:fpFogSoft .55s ease-out 1!important;
+  filter:drop-shadow(0 0 7px rgba(205,207,215,.28)) brightness(1.05);
+  opacity:.96;
+}
 .syn-fp.fail{animation:fpShake .4s ease;}
-.syn-fp.fail .syn-fp-icon{filter:drop-shadow(0 0 8px rgba(255,107,138,.7)) hue-rotate(-20deg);}
+.syn-fp.fail .syn-fp-icon{filter:drop-shadow(0 0 6px rgba(255,107,138,.45));}
+/* No status labels for voice on/off — keep quiet */
 .syn-fp-status{
-  min-height:16px;margin-top:8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;
-  letter-spacing:.12em;text-transform:uppercase;color:rgba(180,185,220,.55);
-  opacity:0;transition:opacity .2s,color .2s;pointer-events:none;text-align:center;
+  display:none!important;
+  min-height:0!important;margin:0!important;opacity:0!important;pointer-events:none!important;
 }
-.syn-fp.holding .syn-fp-status,.syn-fp.scanning .syn-fp-status,.syn-fp.ok .syn-fp-status,.syn-fp.fail .syn-fp-status,
-.syn-fp.show-hint .syn-fp-status{opacity:1;animation:fpStatusIn .25s ease both;}
-.syn-fp.holding .syn-fp-status{color:rgba(196,181,253,.95);}
-.syn-fp.scanning .syn-fp-status{color:rgba(167,139,250,.95);}
-.syn-fp.ok .syn-fp-status{color:rgba(196,181,253,1);}
-.syn-fp.fail .syn-fp-status{color:#ff8fa3;}
-/* Trusted / tap mode: still feels tappable, no hold ring pressure */
 .syn-fp.fp-tap-mode .syn-fp-pad{cursor:pointer;}
 .syn-fp-label{display:none!important;}
 .syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation:chatEmptyIn .6s ease-out .4s both;}
@@ -2852,15 +2837,30 @@ body.voice-live .syn-fp-icon{
               if(typeof renderBottomNav==='function') renderBottomNav();
               if(typeof renderIconRail==='function') renderIconRail();
               if(typeof renderTopBarBtns==='function') renderTopBarBtns();
-              // Apply top bar hidden state after storage loads
+              // Apply top bar hidden state after storage loads (first launch default: hidden)
               (function(){
                 var _tbh = localStorage.getItem('synapses_topbar_hidden');
-                var _hidden = (_tbh === '1'); // default visible
+                var _hidden = (_tbh === null || _tbh === undefined) ? true : (_tbh === '1');
+                if(_tbh === null || _tbh === undefined){
+                  try{ localStorage.setItem('synapses_topbar_hidden','1'); }catch(eTb){}
+                }
                 TOP_BAR_HIDDEN = _hidden;
                 var bar = document.querySelector('.top-bar');
                 var btn = document.getElementById('topBarToggle');
-                var _htb=document.querySelector('.hub-tab-bar');if(_hidden){ if(bar) bar.classList.add('hidden'); document.body.classList.add('topbar-hidden'); if(btn){ btn.innerHTML='▼'; btn.title='Show top icons'; } if(_htb) _htb.style.display='none'; var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='none'; }
-                else { if(bar) bar.classList.remove('hidden'); document.body.classList.remove('topbar-hidden'); if(btn){ btn.innerHTML='▲'; btn.title='Hide top icons'; } if(_htb) _htb.style.display=''; var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display=''; }
+                var _htb=document.querySelector('.hub-tab-bar');
+                if(_hidden){
+                  if(bar) bar.classList.add('hidden');
+                  document.body.classList.add('topbar-hidden');
+                  if(btn){ btn.innerHTML='▼'; btn.title='Show top icons'; }
+                  if(_htb) _htb.style.display='none';
+                  var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='none';
+                } else {
+                  if(bar) bar.classList.remove('hidden');
+                  document.body.classList.remove('topbar-hidden');
+                  if(btn){ btn.innerHTML='▲'; btn.title='Hide top icons'; }
+                  if(_htb) _htb.style.display='';
+                  var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='';
+                }
               })();
               if(typeof _restoreSidebarChoices==='function') _restoreSidebarChoices();
               // Re-apply sidebar collapsed state now that storage is loaded
@@ -6761,12 +6761,8 @@ function loadNavConfig(){
         initBnavDrag();
         var btn=document.getElementById('bnavExpandBtn');
         if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-        // Ensure top bar is visible
-        TOP_BAR_HIDDEN=false;
-        var topBar=document.querySelector('.top-bar');
-        var topBtn=document.getElementById('topBarToggle');
-        if(topBar) topBar.classList.remove('hidden');
-        if(topBtn){topBtn.innerHTML='▲';topBtn.title='Hide top bar';}
+        // Keep first-launch / user preference for top-right icons (do not force visible)
+        try{ if(typeof _applyTopBarHiddenState === 'function') _applyTopBarHiddenState(); }catch(eTb2){}
       },150);
     }
   }catch(e){}
@@ -29831,8 +29827,17 @@ function synBotRefreshQuick(){
   _synBotQuickPage = (_synBotQuickPage + 1) % globalSets.length;
 }
 
-/* Default OFF on first launch (no saved pref). User can turn on via toggle. */
-var _synBotEnabled = (function(){ try{ var v = localStorage.getItem('synapses_synbot_enabled'); return v===null ? false : v==='1'; }catch(e){ return false; } })();
+/* Default OFF on first launch (no saved pref). Persist '0' so later loads stay off until user toggles. */
+var _synBotEnabled = (function(){
+  try{
+    var v = localStorage.getItem('synapses_synbot_enabled');
+    if(v === null || v === undefined){
+      try{ localStorage.setItem('synapses_synbot_enabled','0'); }catch(e0){}
+      return false;
+    }
+    return v === '1';
+  }catch(e){ return false; }
+})();
 window._synBotEnabled = _synBotEnabled;
 var _iconON  = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#7c6af7"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>';
 var _iconOFF = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/><line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#555"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>';
