@@ -735,8 +735,12 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .qc-title{font-size:12px!important;}
   .qc-desc{font-size:11px!important;}
 
-  /* ── Chat empty state - centered properly ── */
-  #chatEmptyState{justify-content:center!important;padding-top:0!important;padding-bottom:0!important;align-items:center!important;padding-left:0!important;}
+  /* ── Chat empty state — keep fingerprint on screen ── */
+  #chatEmptyState{justify-content:flex-start!important;padding:max(36px,6vh) 16px 20px!important;align-items:center!important;overflow-y:auto!important;}
+  #chatEmptyState .syn-orb-wrap{width:110px!important;height:110px!important;margin-bottom:8px!important;}
+  #chatEmptyState .syn-greeting{font-size:18px!important;}
+  #chatEmptyState .syn-fp{display:flex!important;opacity:1!important;margin:6px 0 10px!important;}
+  #chatEmptyState .syn-fp-pad{width:72px!important;height:72px!important;}
   #chatEmptyState h2{font-size:1.6rem!important;text-align:center!important;padding:0 20px!important;}
   #chatEmptyState p{font-size:12px!important;padding:0!important;opacity:0.5!important;margin-top:6px!important;text-align:center!important;}
   body.bottom-nav .chat-messages{padding:12px 0 8px!important;}
@@ -1478,7 +1482,8 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .input-area{padding:16px 24px 20px;border-top:1px solid var(--border);background:var(--sidebar);flex-shrink:0;}
 #sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
-#sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
+/* Sit under fingerprint — not mid-screen ghost position */
+#sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:20px!important;right:20px!important;top:auto!important;bottom:88px!important;margin:0!important;z-index:6;}
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area #chatAttachBtn{display:none!important;}
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
@@ -1507,12 +1512,12 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   }
   /* Empty-state bar is position:absolute with top:360px — lift by reducing top */
   body.pulse-open #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-    top:304px!important; /* 360 - 56 */
+    top:auto!important;
+    bottom:96px!important;
     transform:none!important;
   }
-  /* Slightly more side room so focus ring isn’t flush to the screen edge */
   #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-    left:16px!important;right:16px!important;
+    left:16px!important;right:16px!important;top:auto!important;bottom:88px!important;
   }
   /* Chat-active bar (chats page) stays put — Pulse should only shift the
      home/"What's on your mind?" empty-state bar (rule above), not this one. */
@@ -1653,14 +1658,18 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 @keyframes termCursor{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes ringRotate{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 @keyframes ringRotateCCW{0%{transform:rotate(0deg)}100%{transform:rotate(-360deg)}}
-.syn-orb-wrap{position:relative;width:180px;height:180px;flex-shrink:0;margin-bottom:28px;}
-.syn-orb-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,rgba(124,106,247,0.9) 0%,rgba(99,102,241,0.4) 50%,transparent 70%);box-shadow:0 0 30px rgba(124,106,247,0.5),0 0 60px rgba(124,106,247,0.2),inset 0 0 20px rgba(255,255,255,0.1);animation:synapseNodePulse 3s ease-in-out infinite;}
+.syn-orb-wrap{position:relative;width:140px;height:140px;flex-shrink:0;margin-bottom:12px;}
+.syn-orb-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,rgba(124,106,247,0.9) 0%,rgba(99,102,241,0.4) 50%,transparent 70%);box-shadow:0 0 30px rgba(124,106,247,0.5),0 0 60px rgba(124,106,247,0.2),inset 0 0 20px rgba(255,255,255,0.1);animation:synapseNodePulse 3s ease-in-out infinite;}
 .syn-ring{position:absolute;top:50%;left:50%;border-radius:50%;border:1px solid transparent;transform:translate(-50%,-50%);}
-.syn-ring-1{width:100px;height:100px;border-color:rgba(124,106,247,0.25);border-top-color:rgba(124,106,247,0.7);animation:ringRotate 4s linear infinite;}
-.syn-ring-2{width:140px;height:140px;border-color:rgba(0,217,168,0.12);border-right-color:rgba(0,217,168,0.5);animation:ringRotateCCW 6s linear infinite;}
-.syn-ring-3{width:178px;height:178px;border-color:rgba(99,102,241,0.08);border-bottom-color:rgba(99,102,241,0.35);animation:ringRotate 10s linear infinite;}
-.syn-node{position:absolute;width:6px;height:6px;border-radius:50%;top:50%;left:50%;margin:-3px 0 0 -3px;animation:synapseOrbit var(--dur,4s) linear infinite;}
-.syn-node::after{content:'';display:block;width:6px;height:6px;border-radius:50%;background:var(--col,#7c6af7);box-shadow:0 0 8px var(--col,#7c6af7);animation:synapseNodePulse var(--pdur,2s) ease-in-out infinite;}
+.syn-ring-1{width:80px;height:80px;border-color:rgba(124,106,247,0.25);border-top-color:rgba(124,106,247,0.7);animation:ringRotate 4s linear infinite;}
+.syn-ring-2{width:110px;height:110px;border-color:rgba(0,217,168,0.12);border-right-color:rgba(0,217,168,0.5);animation:ringRotateCCW 6s linear infinite;}
+.syn-ring-3{width:138px;height:138px;border-color:rgba(99,102,241,0.08);border-bottom-color:rgba(99,102,241,0.35);animation:ringRotate 10s linear infinite;}
+.syn-node{position:absolute;width:5px;height:5px;border-radius:50%;top:50%;left:50%;margin:-2.5px 0 0 -2.5px;animation:synapseOrbit var(--dur,4s) linear infinite;}
+.syn-node::after{content:'';display:block;width:5px;height:5px;border-radius:50%;background:var(--col,#7c6af7);box-shadow:0 0 8px var(--col,#7c6af7);animation:synapseNodePulse var(--pdur,2s) ease-in-out infinite;}
+/* Scale node orbit radius down with smaller orb */
+#chatEmptyState .syn-node[style*="--r:50px"]{--r:38px!important;}
+#chatEmptyState .syn-node[style*="--r:70px"]{--r:52px!important;}
+#chatEmptyState .syn-node[style*="--r:89px"]{--r:66px!important;}
 #sec-chat .input-box:focus,#sec-coach .input-box:focus{animation:none;border-color:rgba(124,106,247,0.7);box-shadow:0 0 0 3px rgba(124,106,247,0.15),0 8px 40px rgba(124,106,247,0.15),inset 0 1px 0 rgba(255,255,255,0.07);}
 .input-box:focus{border-color:var(--accent);}
 .send-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;background:rgba(99,102,241,0.32);border:1px solid rgba(99,102,241,0.35);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.9);transition:all .2s;}
@@ -1822,10 +1831,13 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #sec-chat,#sec-coach{overflow:hidden;}
 /* ── Beams Background ── */
 #chatBeamsWrap{display:none;}
-#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
+/* Tighter top padding so greeting + fingerprint stay on-screen (was 18vh+100px and clipped) */
+#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:72px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:max(48px,8vh) 24px 16px;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow-x:visible;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
 .syn-glyph{pointer-events:none;}
-.syn-orb-wrap{pointer-events:none;}
+.syn-orb-wrap{pointer-events:none;flex-shrink:0;margin-bottom:12px!important;width:140px!important;height:140px!important;}
+#chatEmptyState .syn-greeting{flex-shrink:0;margin-bottom:4px!important;}
+#chatEmptyState .syn-sub{flex-shrink:0;margin-bottom:10px!important;}
 #chatEmptyState h2{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:10px;text-shadow:0 2px 40px rgba(124,106,247,.6),0 0 80px rgba(99,102,241,.2);}
 #chatEmptyState p{font-size:13px;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase;font-size:10px;font-weight:500;}
 #sec-chat{position:relative;}
@@ -2355,7 +2367,59 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .ncmd-modal-box{background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:100%;max-width:400px;margin:16px;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:fadeUp .22s ease both;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;}
-.syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
+.syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:14px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
+/* ── Fingerprint unlock pad (under “What’s on your mind?”) ── */
+@keyframes fpRingPulse{0%,100%{transform:scale(1);opacity:.55}50%{transform:scale(1.08);opacity:1}}
+@keyframes fpScan{0%{top:12%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:88%;opacity:0}}
+@keyframes fpRipple{0%{transform:scale(.6);opacity:.6}100%{transform:scale(1.55);opacity:0}}
+@keyframes fpShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.syn-fp{
+  display:flex!important;flex-direction:column;align-items:center;gap:8px;margin:8px 0 12px;
+  opacity:1!important;visibility:visible!important;
+  animation:none!important;user-select:none;-webkit-user-select:none;
+  pointer-events:auto!important;z-index:30!important;position:relative;flex-shrink:0;
+}
+#chatEmptyState.hidden .syn-fp{display:none!important;}
+#sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{opacity:.55!important;transform:scale(.96);transition:opacity .35s,transform .35s;}
+.syn-fp-pad{
+  width:76px;height:76px;border-radius:50%;position:relative;cursor:pointer;border:none;padding:0;
+  background:radial-gradient(circle at 40% 35%,rgba(50,44,90,.98),rgba(14,12,28,.99));
+  box-shadow:0 0 0 1.5px rgba(124,106,247,.55),0 0 32px rgba(124,106,247,.35),inset 0 1px 0 rgba(255,255,255,.1);
+  display:flex!important;align-items:center;justify-content:center;transition:box-shadow .25s,transform .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.syn-fp-pad:hover{box-shadow:0 0 0 1px rgba(124,106,247,.55),0 0 36px rgba(124,106,247,.28),inset 0 1px 0 rgba(255,255,255,.1);}
+.syn-fp-pad:active{transform:scale(.96);}
+.syn-fp-pad::before,.syn-fp-pad::after{
+  content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(124,106,247,.35);
+  animation:fpRingPulse 2.4s ease-in-out infinite;pointer-events:none;
+}
+.syn-fp-pad::after{inset:-16px;border-color:rgba(0,217,168,.18);animation-delay:1.1s;}
+.syn-fp-icon{width:38px;height:38px;color:rgba(210,212,255,.92);transition:color .25s,filter .25s;position:relative;z-index:1;}
+.syn-fp-scan{
+  position:absolute;left:18%;right:18%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(0,217,168,.95),rgba(124,106,247,.9),transparent);
+  box-shadow:0 0 12px rgba(0,217,168,.8);
+}
+.syn-fp.scanning .syn-fp-scan{opacity:1;animation:fpScan 1.15s linear infinite;}
+.syn-fp.scanning .syn-fp-pad{
+  box-shadow:0 0 0 1px rgba(0,217,168,.5),0 0 40px rgba(0,217,168,.25),inset 0 0 20px rgba(124,106,247,.15);
+}
+.syn-fp.scanning .syn-fp-icon{color:rgba(180,255,230,.95);filter:drop-shadow(0 0 8px rgba(0,217,168,.6));}
+.syn-fp.ok .syn-fp-pad{
+  box-shadow:0 0 0 1.5px rgba(0,217,168,.7),0 0 36px rgba(0,217,168,.35);
+}
+.syn-fp.ok .syn-fp-icon{color:#00d9a8;filter:drop-shadow(0 0 10px rgba(0,217,168,.7));}
+.syn-fp.fail{animation:fpShake .4s ease;}
+.syn-fp.fail .syn-fp-pad{box-shadow:0 0 0 1.5px rgba(255,90,120,.7),0 0 28px rgba(255,80,100,.25);}
+.syn-fp.fail .syn-fp-icon{color:#ff6b8a;}
+.syn-fp-label{
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+  color:rgba(200,203,230,.75)!important;font-family:'DM Sans',sans-serif;transition:color .25s;
+}
+.syn-fp.scanning .syn-fp-label{color:rgba(0,217,168,.85);}
+.syn-fp.ok .syn-fp-label{color:rgba(0,217,168,.9);}
+.syn-fp.fail .syn-fp-label{color:rgba(255,120,140,.9);}
 .syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation:chatEmptyIn .6s ease-out .4s both;}
 .syn-prompt{padding:11px 14px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:10px;text-align:left;}
 .syn-prompt:hover{background:rgba(124,106,247,0.08);border-color:rgba(124,106,247,0.3);transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,106,247,0.1);}
@@ -5360,6 +5424,26 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Greeting -->
       <div class="syn-greeting">What's on your mind?</div>
       <div class="syn-sub">Synapses · Neural Interface</div>
+      <!-- Real fingerprint / face unlock → opens Ask bar -->
+      <div class="syn-fp" id="synFingerprint" title="Unlock with fingerprint" style="display:flex!important;opacity:1!important;visibility:visible!important;position:relative;z-index:40;margin:10px auto 14px;flex-direction:column;align-items:center;gap:8px;">
+        <button type="button" class="syn-fp-pad" id="synFpPad" onclick="window.startFingerprintUnlock&&window.startFingerprintUnlock()" aria-label="Scan fingerprint to unlock ask" style="display:flex!important;width:76px;height:76px;border-radius:50%;align-items:center;justify-content:center;cursor:pointer;border:none;background:radial-gradient(circle at 40% 35%,rgba(50,44,90,.98),rgba(14,12,28,.99));box-shadow:0 0 0 1.5px rgba(124,106,247,.55),0 0 32px rgba(124,106,247,.35);">
+          <span class="syn-fp-scan" aria-hidden="true"></span>
+          <svg class="syn-fp-icon" viewBox="0 0 24 24" fill="none" stroke="rgba(210,212,255,0.95)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:38px;height:38px;">
+            <path d="M12 11c0 2.5-1 4.5-1 7"/>
+            <path d="M12 11c0-1.5.5-3 2-4s2.5-1 2.5-3"/>
+            <path d="M12 11c0-2-1-3.5-2.5-4.5S7 5 7 3"/>
+            <path d="M9 14.5c-.5 1.5-1 3-1 4.5"/>
+            <path d="M15 13.5c.6 1.8 1 3.2 1 5"/>
+            <path d="M6.5 12.5c-.8 1.5-1.5 3-1.5 5"/>
+            <path d="M17.5 12c1 1.8 1.5 3.2 1.5 5.5"/>
+            <path d="M4.5 10.5C3.2 12.5 2.5 14.5 2.5 17"/>
+            <path d="M19.5 10c1.2 1.8 2 4 2 6.5"/>
+            <path d="M12 2.5c2.5 0 4.5 1.2 5.5 3"/>
+            <path d="M6.5 5.5C7.5 3.7 9.5 2.5 12 2.5"/>
+          </svg>
+        </button>
+        <div class="syn-fp-label" id="synFpLabel" style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:rgba(200,203,230,.8);">Touch to unlock</div>
+      </div>
       <!-- Sticky notes — inside chatEmptyState, same stacking context -->
       <div id="stickyNotesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10;overflow:visible;"></div>
     </div>
@@ -11730,6 +11814,144 @@ function runHeroBarLaser(bar, onDone) {
 
 /** Bottom-left tray: toggle Ask me anything bar with fade (empty home) */
 window._askBarOpen = false;
+window._fpBusy = false;
+window._fpUnlocked = false;
+
+function _fpEl(){ return document.getElementById('synFingerprint'); }
+function _fpLabel(t){
+  var el = document.getElementById('synFpLabel');
+  if(el) el.textContent = t || 'Touch to unlock';
+}
+function _fpSetState(state){
+  var wrap = _fpEl();
+  if(!wrap) return;
+  wrap.classList.remove('scanning','ok','fail');
+  if(state) wrap.classList.add(state);
+}
+function _postNativeBiometric(){
+  var payload = JSON.stringify({
+    type: 'biometric',
+    action: 'authenticate',
+    title: 'Unlock Ask',
+    subtitle: 'Use fingerprint or face to open Ask me anything'
+  });
+  try {
+    if(typeof JSBridge !== 'undefined' && JSBridge && typeof JSBridge.postMessage === 'function'){
+      JSBridge.postMessage(payload);
+      return true;
+    }
+  } catch(e){}
+  try {
+    if(window.JSBridge && typeof window.JSBridge.postMessage === 'function'){
+      window.JSBridge.postMessage(payload);
+      return true;
+    }
+  } catch(e2){}
+  return false;
+}
+function _fpSuccess(){
+  window._fpBusy = false;
+  window._fpUnlocked = true;
+  _fpSetState('ok');
+  _fpLabel('Unlocked');
+  try { if(typeof _haptic === 'function') _haptic(12); } catch(e){}
+  if(typeof setAskBarVisible === 'function') setAskBarVisible(true);
+  setTimeout(function(){
+    if(window._askBarOpen){ _fpLabel('Channel open'); }
+  }, 900);
+}
+function _fpFail(msg){
+  window._fpBusy = false;
+  _fpSetState('fail');
+  _fpLabel(msg && msg !== 'cancelled' ? 'Try again' : 'Cancelled');
+  try { if(typeof _haptic === 'function') _haptic(20); } catch(e){}
+  setTimeout(function(){
+    if(!window._fpUnlocked){
+      _fpSetState('');
+      _fpLabel('Touch to unlock');
+    } else {
+      _fpSetState('ok');
+      _fpLabel('Channel open');
+    }
+  }, 1200);
+}
+/** Browser / desktop demo when native biometrics unavailable */
+function _fpDemoScan(){
+  _fpSetState('scanning');
+  _fpLabel('Scanning…');
+  setTimeout(function(){
+    /* Simulate sensor success after scan sweep */
+    _fpSuccess();
+  }, 1400);
+}
+function startFingerprintUnlock(){
+  if(window._fpBusy) return;
+  if(window._askBarOpen && window._fpUnlocked){
+    /* Already open — optional re-lock */
+    if(typeof setAskBarVisible === 'function') setAskBarVisible(false);
+    window._fpUnlocked = false;
+    _fpSetState('');
+    _fpLabel('Touch to unlock');
+    return;
+  }
+  window._fpBusy = true;
+  _fpSetState('scanning');
+  _fpLabel('Scanning…');
+  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
+
+  window.__onBiometricResult = function(ok, message){
+    if(ok) _fpSuccess();
+    else _fpFail(message || 'failed');
+  };
+
+  var usedNative = false;
+  try {
+    /* Prefer Median JS bridge if present */
+    if(typeof window.median !== 'undefined' && window.median.run){
+      /* generic */
+    }
+  } catch(e0){}
+  usedNative = _postNativeBiometric();
+  if(!usedNative){
+    /* Desktop browser: animated demo unlock (no hardware) */
+    _fpDemoScan();
+  } else {
+    /* Native prompt is up — keep scanning UI until callback */
+    setTimeout(function(){
+      if(window._fpBusy && !_fpEl().classList.contains('ok')){
+        /* still waiting */
+      }
+    }, 100);
+  }
+}
+window.startFingerprintUnlock = startFingerprintUnlock;
+window.__onBiometricResult = function(ok, message){
+  if(ok) _fpSuccess();
+  else _fpFail(message || 'failed');
+};
+
+(function bootFingerprintPad(){
+  function wire(){
+    var pad = document.getElementById('synFpPad');
+    var wrap = document.getElementById('synFingerprint');
+    if(!pad) return;
+    pad.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      startFingerprintUnlock();
+    });
+    /* Long-press also works (feels like holding finger on sensor) */
+    var holdT = null;
+    pad.addEventListener('touchstart', function(){
+      holdT = setTimeout(function(){ startFingerprintUnlock(); }, 280);
+    }, {passive:true});
+    pad.addEventListener('touchend', function(){ if(holdT) clearTimeout(holdT); });
+    pad.addEventListener('touchcancel', function(){ if(holdT) clearTimeout(holdT); });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+  else wire();
+})();
+
 function _isChatEmptyHome(){
   var es = document.getElementById('chatEmptyState');
   var sec = document.getElementById('sec-chat');
@@ -27155,6 +27377,14 @@ function _neuInjectDownloadInterceptor(frame){
     }
     window._synBotEntranceReady = _synBotEntranceReady;
     window._tinyBotSync = function(){
+      /* User turned SynBot off — stay fully hidden (do not re-show on recover) */
+      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) {
+        shown = false;
+        canvas.style.opacity = '0';
+        canvas.style.visibility = 'hidden';
+        canvas.style.pointerEvents = 'none';
+        return;
+      }
       /* Never fight a LIVE tour/story — fullscreen purple bot is intentional only then */
       try {
         var rootLive = document.getElementById('synTourRoot');
@@ -27171,6 +27401,7 @@ function _neuInjectDownloadInterceptor(frame){
           shown = true;
           canvas.style.opacity = '0.55';
           canvas.style.visibility = 'visible';
+          canvas.style.pointerEvents = 'none';
           return;
         }
       } catch (eLive) {}
@@ -27401,7 +27632,12 @@ function _neuInjectDownloadInterceptor(frame){
         else return;
       }
     } catch (eEnt) { /* allow */ }
-    if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
+    try {
+      if (typeof window._synBotEnabled === 'boolean' && !window._synBotEnabled) return;
+      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
+      var _vOff = localStorage.getItem('synapses_synbot_enabled');
+      if (_vOff === '0') return;
+    } catch (eOff) {}
     if(document.getElementById('appSplash')) return;
     if(document.getElementById('cyberGreeting')) return;
     var am = document.getElementById('authModal');
@@ -27825,8 +28061,31 @@ function _neuInjectDownloadInterceptor(frame){
   var _nearRobot = false;
   var _overRobot = false;
 
+  /** Always prefer live localStorage so disable works even if var order is weird */
+  function _synBotIsOn(){
+    try {
+      if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
+      if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
+      var v = localStorage.getItem('synapses_synbot_enabled');
+      if (v === null) return true;
+      return v === '1';
+    } catch (e) { return true; }
+  }
+  /** Bot must be visibly expanded before corner taps open chat */
+  function _synBotIsExpanded(){
+    var tip = document.getElementById('robotTooltip');
+    return !!(tip && tip.classList.contains('rt-visible'));
+  }
+
   document.addEventListener('mousemove', function(e){
     _mouseX = e.clientX; _mouseY = e.clientY;
+
+    /* SynBot off — ignore bottom-right hover entirely */
+    if(!_synBotIsOn()){
+      _nearRobot = false;
+      _overRobot = false;
+      return;
+    }
 
     var tc = document.getElementById('tinyBotCanvas');
     if(!tc || !tc._getRobotScreenPos) return;
@@ -27883,16 +28142,27 @@ function _neuInjectDownloadInterceptor(frame){
     }
   });
 
-  // Click robot or zone toggles chat + triggers big robot
-  function toggleChat(){
+  // Click robot glyph toggles chat — NEVER open from empty bottom-right corner taps
+  function toggleChat(e){
+    if(e){ try{ e.stopPropagation(); e.preventDefault(); }catch(_e){} }
     if(!chat) return;
+    if(!_synBotIsOn()){
+      chat.style.display = 'none';
+      chat.style.pointerEvents = 'none';
+      if(tooltip){
+        tooltip.classList.add('rt-hidden');
+        tooltip.classList.remove('rt-visible');
+        tooltip.style.opacity = '0';
+        tooltip.style.visibility = 'hidden';
+      }
+      return;
+    }
     if(chat.style.display === 'flex'){
       chat.style.display = 'none';
+      chat.style.pointerEvents = 'none';
       if(tooltip){ tooltip.style.transition=''; tooltip.style.opacity=''; tooltip.style.visibility=''; }
     } else {
-      // Hide the robot bubble instantly so it doesn't show through the transparent panel
       if(tooltip){ tooltip.style.transition='none'; tooltip.style.opacity='0'; tooltip.style.visibility='hidden'; }
-      // Restore persisted position before showing
       try{
         var _s = JSON.parse(localStorage.getItem('synapses_synbot_size') || 'null');
         if(_s){
@@ -27900,8 +28170,15 @@ function _neuInjectDownloadInterceptor(frame){
           if(_s.bottom != null) chat.style.bottom = Math.max(0, _s.bottom) + 'px';
         }
       }catch(e){}
-      var _savedMH = null; try{ var _ss = JSON.parse(localStorage.getItem('synapses_synbot_size')||'null'); if(_ss && _ss.minHeight) _savedMH = _ss.minHeight; }catch(e){} chat.style.height = ''; chat.style.maxHeight = '66vh'; chat.style.minHeight = _savedMH ? _savedMH + 'px' : ''; chat.style.display = 'flex';
-      // Update quick buttons and greeting to match current page context
+      var _savedMH = null; try{ var _ss = JSON.parse(localStorage.getItem('synapses_synbot_size')||'null'); if(_ss && _ss.minHeight) _savedMH = _ss.minHeight; }catch(e){}
+      chat.style.height = '';
+      chat.style.maxHeight = '66vh';
+      chat.style.minHeight = _savedMH ? _savedMH + 'px' : '';
+      chat.style.display = 'flex';
+      chat.style.pointerEvents = 'auto';
+      chat.style.zIndex = '88900';
+      chat.style.opacity = '1';
+      chat.style.visibility = 'visible';
       if(typeof synBotRenderContextQuicks === 'function') synBotRenderContextQuicks();
       var msgs = document.getElementById('synBotMsgs');
       if(msgs && msgs.children.length === 0){
@@ -27911,50 +28188,55 @@ function _neuInjectDownloadInterceptor(frame){
         bubble.textContent = greeting;
         msgs.appendChild(bubble);
       }
-      // Note: intentionally not auto-focusing synBotInput here — it was forcing the
-      // mobile keyboard to pop open every time SYN-BOT opens. User taps in to type.
     }
   }
 
-  if(robot) robot.addEventListener('click', toggleChat);
-  if(tooltip) tooltip.addEventListener('click', toggleChat);
-  // Stop clicks inside the chat panel from bubbling to the document close handler
-  if(chat) chat.addEventListener('click', function(e){ e.stopPropagation(); });
-  // Click near tiny robot OR the big robot tooltip toggles chat
-  // Close chat when clicking outside it (but NOT inside the chat panel)
+  /* ONLY open chat by clicking the expanded robot SVG — never from document corner hit-tests */
+  if(robot){
+    robot.style.pointerEvents = 'auto';
+    robot.style.cursor = 'pointer';
+    robot.addEventListener('click', toggleChat);
+  }
+  if(tooltip){
+    tooltip.style.pointerEvents = 'none';
+    if(robot) robot.style.pointerEvents = 'auto';
+  }
+  if(chat){
+    chat.addEventListener('click', function(e){ e.stopPropagation(); });
+    /* Ensure inputs inside panel always work */
+    chat.style.pointerEvents = chat.style.display === 'flex' ? 'auto' : 'none';
+  }
+
+  /* Close only — never open — on document click */
   document.addEventListener('click', function(e){
-    if(!chat || chat.style.display === 'none') return;
+    if(!chat || chat.style.display === 'none' || chat.style.display === '') return;
     if(chat.contains(e.target)) return;
+    if(robot && (e.target === robot || robot.contains(e.target))) return;
     chat.style.display = 'none';
+    chat.style.pointerEvents = 'none';
     if(tooltip){ tooltip.style.transition=''; tooltip.style.opacity=''; tooltip.style.visibility=''; }
     hideRobot();
-  });
+  }, true);
 
+  /* Kill ghost opens: bottom-right taps must NEVER open the panel by coordinate hit-test */
   document.addEventListener('click', function(e){
-    // Check big robot tooltip first
-    var tooltipEl = document.getElementById('robotTooltip');
-    if(tooltipEl && tooltipEl.classList.contains('rt-visible')){
-      var tr = tooltipEl.getBoundingClientRect();
-      if(e.clientX >= tr.left - 10 && e.clientX <= tr.right  + 10 &&
-         e.clientY >= tr.top  - 10 && e.clientY <= tr.bottom + 10){
-        toggleChat(); return;
-      }
+    if(!_synBotIsOn()){
+      if(chat){ chat.style.display='none'; chat.style.pointerEvents='none'; }
+      return;
     }
-    // Check tiny robot position
-    var tc = document.getElementById('tinyBotCanvas');
-    if(!tc || !tc._getRobotScreenPos) return;
-    var pos = tc._getRobotScreenPos();
-    var dx = e.clientX - pos.x;
-    var dy = e.clientY - pos.y;
-    var dist = Math.sqrt(dx*dx + dy*dy);
-    var hitRadius = (pos.size || 10) * 3.5;
-    if(dist < hitRadius) {
-      var tooltipCheck = document.getElementById('robotTooltip');
-      if(tooltipCheck && tooltipCheck.classList.contains('rt-visible')) toggleChat();
+    /* Only bring mini-bot closer — do not open chat from corner */
+    var tcIdle = document.getElementById('tinyBotCanvas');
+    if(!tcIdle || !tcIdle._getRobotScreenPos) return;
+    if(chat && chat.contains(e.target)) return;
+    if(robot && (e.target === robot || robot.contains(e.target))) return;
+    var pIdle = tcIdle._getRobotScreenPos();
+    var dIdle = Math.hypot(e.clientX - pIdle.x, e.clientY - pIdle.y);
+    if(dIdle < (pIdle.size || 10) * 4){
+      if(tcIdle._bringIn) tcIdle._bringIn();
+      /* Do NOT call showRobot/toggleChat here — that caused ghost uninteractive panels */
     }
-  });
+  }, true);
 
-  // Hide robot when chat closes and mouse leaves
   if(chat){
     chat.addEventListener('mouseleave', function(e){
       // stay open — user must click elsewhere to close
@@ -28985,11 +29267,13 @@ function synBotRefreshQuick(){
 }
 
 var _synBotEnabled = (function(){ try{ var v = localStorage.getItem('synapses_synbot_enabled'); return v===null ? true : v==='1'; }catch(e){ return true; } })();
+window._synBotEnabled = _synBotEnabled;
 var _iconON  = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#7c6af7"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>';
 var _iconOFF = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/><line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#555"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>';
 function _applySynBotVisualState(){
   var btn  = document.getElementById('synBotToggleBtn');
   var icon = document.getElementById('synBotToggleIcon');
+  window._synBotEnabled = !!_synBotEnabled;
   if(_synBotEnabled){
     if(btn)  { btn.style.opacity='1'; btn.title='Hide nav tooltips'; }
     if(icon)   icon.innerHTML = _iconON;
@@ -29002,10 +29286,33 @@ function _applySynBotVisualState(){
   } else {
     if(btn)  { btn.style.opacity='0.35'; btn.title='Show nav tooltips'; }
     if(icon)   icon.innerHTML = _iconOFF;
+    /* Fully kill every SynBot surface so bottom-right taps do nothing */
     var tooltip = document.getElementById('robotTooltip');
-    if(tooltip){ tooltip.classList.add('rt-hidden'); tooltip.classList.remove('rt-visible'); }
+    if(tooltip){
+      tooltip.classList.add('rt-hidden');
+      tooltip.classList.remove('rt-visible');
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+      tooltip.style.pointerEvents = 'none';
+    }
     var tinyCanvas = document.getElementById('tinyBotCanvas');
-    if(tinyCanvas){ tinyCanvas.style.opacity='0'; if(tinyCanvas._pause) tinyCanvas._pause(); }
+    if(tinyCanvas){
+      tinyCanvas.style.opacity = '0';
+      tinyCanvas.style.visibility = 'hidden';
+      tinyCanvas.style.pointerEvents = 'none';
+      if(tinyCanvas._pause) tinyCanvas._pause();
+    }
+    var chat = document.getElementById('synBotChat');
+    if(chat){
+      chat.style.display = 'none';
+      chat.style.pointerEvents = 'none';
+    }
+    var zone = document.getElementById('synBotZone');
+    if(zone){
+      zone.style.width = '0px';
+      zone.style.height = '0px';
+      zone.style.pointerEvents = 'none';
+    }
   }
 }
 document.addEventListener('DOMContentLoaded', _applySynBotVisualState);
@@ -29030,7 +29337,15 @@ if(document.readyState==='complete'||document.readyState==='interactive') setTim
     try {
       /* Toggle is off — never force the bot visible, no matter the reason
          (window focus after a native file picker, popup interaction, etc.) */
-      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
+      if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) {
+        try {
+          var tcOff = document.getElementById('tinyBotCanvas');
+          if(tcOff){ tcOff.style.opacity='0'; tcOff.style.visibility='hidden'; }
+          var chOff = document.getElementById('synBotChat');
+          if(chOff) chOff.style.display='none';
+        } catch(eOff){}
+        return;
+      }
       /* Live tour UI: leave purple guide alone */
       if (_tourIsLive()) return;
       try {
@@ -29138,8 +29453,20 @@ function synBotOpenAccount(){
 }
 function toggleSynBot(){
   _synBotEnabled = !_synBotEnabled;
+  window._synBotEnabled = _synBotEnabled;
   try{ localStorage.setItem('synapses_synbot_enabled', _synBotEnabled ? '1' : '0'); }catch(e){}
   _applySynBotVisualState();
+  /* Re-enable pointer targets when turning back on */
+  if(_synBotEnabled){
+    var chat = document.getElementById('synBotChat');
+    if(chat) chat.style.pointerEvents = '';
+    var tiny = document.getElementById('tinyBotCanvas');
+    if(tiny){ tiny.style.visibility = ''; tiny.style.pointerEvents = 'none'; }
+    var tip = document.getElementById('robotTooltip');
+    if(tip){ tip.style.pointerEvents = 'none'; tip.style.visibility = ''; tip.style.opacity = ''; }
+    var rob = document.getElementById('rtRobot');
+    if(rob) rob.style.pointerEvents = 'auto';
+  }
 }
 
 function synBotReply(msg){
