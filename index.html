@@ -31828,36 +31828,55 @@ function _ttsClean(txt) {
 // ── Stop everything ────────────────────────────────────────────────────────────
 function _ttsStopAll(force) {
   // Don't interrupt Ava's speech-to-speech when it's active — UNLESS force=true.
-  // The watchdog passes force=true: it calls this specifically to recover from a
-  // stall, and voice mode being "active" at that moment doesn't mean anything is
-  // healthy — that's exactly when a real cleanup is needed most. Without force,
-  // this guard was silently turning the watchdog's own recovery attempt into a
-  // no-op, leaving the WS/audio pipeline broken after every watchdog reset.
+  // The watchdog / stopAll (closing chat) pass force=true so cancelled speech
+  // is fully killed and the next session starts clean (no residual glitch).
   if (window._topNavVoiceActive && !force) return;
   if (typeof _avaInterruptLipsync === 'function') _avaInterruptLipsync();
   _vmGenId++;
+  _wsCurrentGenId = _vmGenId; /* invalidate any in-flight WS chunk scheduling */
   _ttsQueue = []; _ttsProcessing = false; _vmSpeaking = false;
   _wsResolvers = [];
   _wsClose();
   if (window._vmSpeakingDrainPoller) { clearInterval(window._vmSpeakingDrainPoller); window._vmSpeakingDrainPoller = null; }
   if (window._humeLastChunkTimer) { clearTimeout(window._humeLastChunkTimer); window._humeLastChunkTimer = null; }
+
+  /* Hard-stop every scheduled/playing buffer — mute alone leaves a glitch tail */
+  try {
+    var _srcList = _ttsActiveSources.splice(0, _ttsActiveSources.length);
+    for (var si = 0; si < _srcList.length; si++) {
+      try { _srcList[si].onended = null; } catch(eO){}
+      try { _srcList[si].stop(0); } catch(eS){}
+      try { _srcList[si].disconnect(); } catch(eD){}
+    }
+  } catch(eSrc){}
+
   if (_actx && _actxGain) {
     try {
       var _stopNow = _actx.currentTime;
       _actxGain.gain.cancelScheduledValues(_stopNow);
-      _actxGain.gain.setValueAtTime(_actxGain.gain.value, _stopNow);
-      _actxGain.gain.linearRampToValueAtTime(0, _stopNow + 0.03);
+      /* Instant mute — don't leave a ramp that bleeds into the next session */
+      _actxGain.gain.setValueAtTime(0, _stopNow);
     } catch(e) {}
     var _actxToClose = _actx;
-    setTimeout(function(){ try { _actxToClose.close(); } catch(e){} }, 40);
     _actx = null; _actxGain = null;
+    try { _actxToClose.suspend(); } catch(eSus){}
+    setTimeout(function(){ try { _actxToClose.close(); } catch(e){} }, 20);
   } else if (_actx) {
+    try { _actx.suspend(); } catch(eSus2){}
     try { _actx.close(); } catch(e){}
     _actx = null; _actxGain = null;
   }
   _playbackTime = 0;
+  _actxWarm = false;
+  try { if (typeof _pcmWaveQueue !== 'undefined') _pcmWaveQueue = []; } catch(eQ){}
   _stopPcmWaveform ? _stopPcmWaveform() : null;
   try { window.speechSynthesis.cancel(); } catch(e) {}
+  /* Kill any HTMLAudio TTS leftovers */
+  try {
+    document.querySelectorAll('audio').forEach(function(a){
+      try { a.pause(); a.currentTime = 0; a.src = ''; a.removeAttribute('src'); a.load(); } catch(eA){}
+    });
+  } catch(eAud){}
   if (_vmActive) setBtnGreen();
 }
 
@@ -32262,6 +32281,7 @@ function _scheduleChunk(arrayBuf) {
     var src = _actx.createBufferSource();
     src.buffer = buf;
     src.connect(_actxGain || _actx.destination);
+    try { _ttsActiveSources.push(src); } catch(ePush){}
 
     // When the avatar is on, push the FIRST chunk of an utterance back so the
     // voice arrives roughly in sync with her video (which has its own network
@@ -32295,6 +32315,10 @@ function _scheduleChunk(arrayBuf) {
     _drivePcmWaveform();
 
     src.onended = function () {
+      try {
+        var ix = _ttsActiveSources.indexOf(src);
+        if (ix >= 0) _ttsActiveSources.splice(ix, 1);
+      } catch(eRm){}
       // Guard: if _actx is already gone (voice session ended/reset while this
       // chunk was still scheduled to play), there's nothing left to finalize —
       // whatever ended/started the new session already handled its own cleanup.
@@ -34528,15 +34552,25 @@ function speakVoiceReply(text) {
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
+    /* Drop mic tracks so no residual capture feeds the next session */
+    try {
+      if (_stream) {
+        _stream.getTracks().forEach(function(t){ try { t.stop(); } catch(eT){} });
+      }
+    } catch(eStr){}
+    _stream = null;
     _busy = false; _busySince = 0;
+    _chunks = [];
     btnState('off');
     if(window.avaTvSetState) window.avaTvSetState('idle');
     toastHide();
     _toastFull = ''; // clear stored text too, not just hide — otherwise the
                       // hover-peek feature below can resurrect this stale
                       // reply after the user reactivates voice mode.
-    if (typeof _ttsStopAll === 'function') _ttsStopAll();
+    /* force=true: fully kill TTS even mid-sentence so reopen is clean */
+    if (typeof _ttsStopAll === 'function') _ttsStopAll(true);
     if (typeof _wsClose === 'function') _wsClose();
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch(eSs){}
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
   }
