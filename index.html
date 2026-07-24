@@ -399,8 +399,9 @@ html[data-theme="easyview"] #sidebarResize,html[data-theme="purple"] #sidebarRes
 .sidebar-toggle:hover{background:var(--surface2);color:var(--text);}
 .logo{padding:11.8px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
 .logo > svg,.logo .syn-logo-mark{flex-shrink:0;display:block;}
-/* Refined synapse mark — soft glass core + constellation nodes */
-.syn-logo-mark{overflow:visible;}
+/* Refined synapse mark — soft glass core + constellation nodes; nudged slightly up */
+.syn-logo-mark{overflow:visible;transform:translateY(-2px);}
+#bnavLogoMark{transform:translateY(-3px);}
 .new-chat-btn{margin:12px;padding:10px 14px;background:rgba(99,102,241,0.06);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(99,102,241,0.14);border-radius:10px;color:rgba(255,255,255,0.75);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;letter-spacing:0.01em;cursor:pointer;display:flex;align-items:center;gap:8px;transition:border-color .25s ease,box-shadow .25s ease,color .2s ease,background .25s ease;position:relative;}
 .new-chat-btn:hover{color:rgba(255,255,255,0.95);background:rgba(99,102,241,0.09);border-color:rgba(99,102,241,0.4);box-shadow:0 0 0 3px rgba(99,102,241,0.1),0 0 0 1px rgba(99,102,241,0.25);}
 .new-chat-btn:active{transform:scale(0.98);transition:transform .1s ease;}
@@ -4225,31 +4226,31 @@ window.getWebAudioNode = getWebAudioNode;
         </defs>
         <!-- Soft ambient field (no outer ring) -->
         <circle cx="40" cy="40" r="18" fill="url(#synHaloSB)"/>
-        <!-- 6 spokes: outer node → center; occasional disconnect / reconnect -->
+        <!-- 6 spokes → center; ORIGINAL backup flicker intervals -->
         <g stroke="url(#synSpokeSB)" stroke-width="1.35" stroke-linecap="round">
-          <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.85;0.85;0.08;0.85;0.85" dur="7s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.85;0.85;0.85;0.05;0.85" dur="9s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.85;0.85;0.1;0.85;0.85" dur="11s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.85;0.05;0.85;0.85;0.85" dur="8s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.85;0.85;0.85;0.08;0.85" dur="6s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.85;0.85;0.12;0.85;0.85" dur="10s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
         </g>
-        <!-- Outer nodes — light up / dim (same cadence as original) -->
+        <!-- Outer nodes — ORIGINAL UAP on/off pattern from first icon -->
         <g filter="url(#synNodeGlowSB)">
-          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="8s" repeatCount="indefinite"/></circle>
-          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#67e8f9;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="11s" repeatCount="indefinite"/></circle>
-          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.08;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#67e8f9;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.08;1" dur="9.5s" repeatCount="indefinite"/></circle>
-          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="12s" repeatCount="indefinite"/></circle>
-          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#67e8f9;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.08;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
         </g>
         <!-- Center node — only slightly larger than outer nodes -->
         <circle cx="40" cy="40" r="3.2" fill="url(#synCoreSB)" filter="url(#synCoreGlowSB)">
-          <animate attributeName="opacity" values="0.92;1;0.88;1;0.92" dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
         <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
           <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.88;1;0.82;1;0.88" dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
         <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
       </svg>
@@ -5276,36 +5277,37 @@ window.getWebAudioNode = getWebAudioNode;
             <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/>
             <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
-          <filter id="synCoreGlowTB" x="-60%" y="-60%" width="220%" height="220%" color-interpolation-filters="sRGB">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
+          <filter id="synCoreGlowTB" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
         </defs>
         <circle cx="40" cy="40" r="18" fill="url(#synHaloTB)"/>
-        <!-- 6 spokes: outer node → center; occasional disconnect / reconnect -->
+        <!-- 6 spokes → center; ORIGINAL backup flicker intervals -->
         <g stroke="url(#synSpokeTB)" stroke-width="1.35" stroke-linecap="round">
-          <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.85;0.85;0.08;0.85;0.85" dur="7s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.85;0.85;0.85;0.05;0.85" dur="9s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.85;0.85;0.1;0.85;0.85" dur="11s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.85;0.05;0.85;0.85;0.85" dur="8s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.85;0.85;0.85;0.08;0.85" dur="6s" repeatCount="indefinite"/></line>
-          <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.85;0.85;0.12;0.85;0.85" dur="10s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
+          <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
         </g>
+        <!-- Outer nodes — ORIGINAL UAP on/off pattern from first icon -->
         <g filter="url(#synNodeGlowTB)">
-          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="8s" repeatCount="indefinite"/></circle>
-          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#67e8f9;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="11s" repeatCount="indefinite"/></circle>
-          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.08;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#67e8f9;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.08;1" dur="9.5s" repeatCount="indefinite"/></circle>
-          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.08;1;1" dur="12s" repeatCount="indefinite"/></circle>
-          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#67e8f9;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.08;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
         </g>
         <!-- Center node — only slightly larger than outer nodes -->
         <circle cx="40" cy="40" r="3.2" fill="url(#synCoreTB)" filter="url(#synCoreGlowTB)">
-          <animate attributeName="opacity" values="0.92;1;0.88;1;0.92" dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
         <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
           <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="0.88;1;0.82;1;0.88" dur="6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
         <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
       </svg>
