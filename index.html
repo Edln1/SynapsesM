@@ -12444,10 +12444,11 @@ function _fpSuccess(){
   var fromFullScan = !!(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning')));
   if(fromFullScan){
     _fpSetState('ok');
+    _fpStatus('Recognized');
   } else if(!wrap || !wrap.classList.contains('fog')){
     _fpPlayFogOnce();
+    _fpStatus('');
   }
-  _fpStatus('');
   try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
 
   function activate(){
@@ -12489,7 +12490,7 @@ function _fpFail(msg){
 }
 /** Full hold path after sensor / PC — let the teal 'scanning' state actually be visible */
 function _fpOpenWithoutSensor(){
-  _fpStatus('');
+  _fpStatus('Scanning…');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
   setTimeout(function(){ _fpSuccess(); }, 550);
@@ -12499,7 +12500,7 @@ function startFingerprintUnlock(){
   if(window._fpBusy) return;
   window._fpBusy = true;
   /* stay in holding/fog — don't re-trigger scanning pulse */
-  _fpStatus('');
+  _fpStatus('Scanning…');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
 
@@ -12633,22 +12634,28 @@ function _fpBeginHold(e){
   window._fpHoldStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   /* First-time / stale-trust verification: colored hold state, not the grey fog */
   _fpSetState('holding');
-  _fpStatus('');
+  _fpStatus('Keep holding');
   _fpSetProgress(0);
   try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
 
+  var _fpToldAlmost = false;
   function tick(now){
     if(!window._fpHoldActive) return;
     var t0 = window._fpHoldStart;
     var elapsed = now - t0;
     var p = Math.min(1, elapsed / FP_HOLD_MS);
     _fpSetProgress(p);
+    if(!_fpToldAlmost && p >= 0.7){
+      _fpToldAlmost = true;
+      _fpStatus('Almost…');
+    }
     if(elapsed >= FP_HOLD_MS){
       window._fpHoldDone = true;
       window._fpHoldActive = false;
       window._fpHoldRaf = 0;
       _fpSetProgress(1);
       _fpSetState('scanning');
+      _fpStatus('Scanning…');
       try { if(typeof _haptic === 'function') _haptic(8); } catch(err2){}
       startFingerprintUnlock();
       return;
