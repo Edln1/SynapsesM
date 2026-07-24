@@ -12000,8 +12000,17 @@ function _fpSetProgress(p){
 function _fpSetState(state){
   var wrap = _fpEl();
   if(!wrap) return;
-  wrap.classList.remove('holding','scanning','ok','fail','show-hint');
+  wrap.classList.remove('holding','scanning','ok','fog','fail','show-hint');
   if(state) wrap.classList.add(state);
+}
+/** One soft fog pulse (restarts cleanly if re-tapped) */
+function _fpPlayFogOnce(){
+  var wrap = _fpEl();
+  if(!wrap) return;
+  wrap.classList.remove('fog','holding','scanning','ok');
+  /* reflow so animation restarts */
+  void wrap.offsetWidth;
+  wrap.classList.add('fog');
 }
 /** First open OR last unlock older than FP_STALE_MS → full hold scan required */
 function _fpRequiresHoldScan(){
@@ -12097,7 +12106,7 @@ function _fpActivateSpeechToSpeech(){
   setTimeout(parkMicCenter, 850);
 }
 
-/** Success → quiet grey fog + STS (no "Voice on" label, no loud ring) */
+/** Success → one fog pulse + STS (no label, no double glow) */
 function _fpSuccess(){
   window._fpBusy = false;
   window._fpHoldActive = false;
@@ -12105,9 +12114,13 @@ function _fpSuccess(){
   window._fpUnlocked = true;
   _fpMarkTrusted();
   _fpSetProgress(1);
-  _fpSetState('ok');
-  _fpStatus(''); /* never show Voice on */
-  try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
+  /* If we already fogged on tap, don't fire a second pulse */
+  var wrap = _fpEl();
+  if(!wrap || !wrap.classList.contains('fog')){
+    _fpPlayFogOnce();
+  }
+  _fpStatus('');
+  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
   try {
     if(typeof window.onFingerprintVerified === 'function') window.onFingerprintVerified();
     else _fpActivateSpeechToSpeech();
@@ -12119,7 +12132,7 @@ function _fpSuccess(){
     _fpStatus('');
     _fpSetProgress(0);
     try { _fpSyncTapModeUi(); } catch(e4){}
-  }, 520);
+  }, 560);
 }
 window.onFingerprintVerified = function(){
   _fpActivateSpeechToSpeech();
@@ -12138,22 +12151,21 @@ function _fpFail(msg){
   }
   _fpSuccess();
 }
-/** Full hold path after sensor / PC */
+/** Full hold path after sensor / PC — keep same fog already started on hold */
 function _fpOpenWithoutSensor(){
-  _fpSetState('scanning');
   _fpStatus('');
   _fpSetProgress(1);
-  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
-  setTimeout(function(){ _fpSuccess(); }, 380);
+  try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
+  setTimeout(function(){ _fpSuccess(); }, 120);
 }
 /** Full unlock after hold (native biometric when available) */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
   window._fpBusy = true;
-  _fpSetState('scanning');
+  /* stay in holding/fog — don't re-trigger scanning pulse */
   _fpStatus('');
   _fpSetProgress(1);
-  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
+  try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
 
   window.__onBiometricResult = function(ok, message){
     if(ok) _fpSuccess();
@@ -12181,8 +12193,18 @@ function _fpIsSpeechLive(){
   return false;
 }
 
-/** Force speech-to-speech off (never toggles on — avoids _on desync) */
+/** Force speech-to-speech off — fog pulse + send mic away (reverse of appear) */
 function _fpDeactivateSpeechToSpeech(){
+  window._fpBusy = true;
+  window._fpHoldActive = false;
+  _fpPlayFogOnce();
+  try { if(typeof _haptic === 'function') _haptic(6); } catch(e2){}
+  /* Send mid-header mic home / away like reverse of glide-in */
+  try {
+    if(typeof window._tnvSendAway === 'function') window._tnvSendAway();
+    else if(typeof _tnvSendAway === 'function') _tnvSendAway();
+    else if(typeof _tnvGlideHome === 'function') _tnvGlideHome();
+  } catch(eAway){}
   try {
     if(typeof window.stopTopNavVoice === 'function'){
       window.stopTopNavVoice();
@@ -12191,29 +12213,27 @@ function _fpDeactivateSpeechToSpeech(){
     }
   } catch(e){}
   try {
-    /* Ensure flags clear even if toggle path failed */
     window._topNavVoiceActive = false;
     if(document.body) document.body.classList.remove('voice-live');
   } catch(e1){}
   window._fpUnlocked = false;
-  window._fpBusy = false;
-  window._fpHoldActive = false;
-  _fpSetState('');
-  _fpStatus(''); /* no Voice off label */
+  _fpStatus('');
   _fpSetProgress(0);
-  try { if(typeof _haptic === 'function') _haptic(6); } catch(e2){}
-  try { _fpSyncTapModeUi(); } catch(e3){}
+  setTimeout(function(){
+    window._fpBusy = false;
+    _fpSetState('');
+    try { _fpSyncTapModeUi(); } catch(e3){}
+  }, 560);
 }
 
-/** Trusted user: tap toggles STS — soft grey fog; on→off when live */
+/** Trusted user: one fog then on; if live, one fog then off */
 function _fpQuickTapActivate(){
   if(window._fpHoldActive) return;
   if(window._askBarOpen && _isChatEmptyHome()) return;
-  /* Only block mid-hold/scan — ok/idle are fine */
   var wrap = _fpEl();
-  if(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning'))) return;
+  if(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning') || wrap.classList.contains('fog'))) return;
 
-  /* Voice live → tap ends it (no re-scan) */
+  /* Voice live → same fog reaction, then off */
   if(_fpIsSpeechLive()){
     _fpDeactivateSpeechToSpeech();
     return;
@@ -12221,7 +12241,7 @@ function _fpQuickTapActivate(){
 
   if(window._fpBusy) return;
   window._fpBusy = true;
-  _fpSetState('scanning');
+  _fpPlayFogOnce(); /* single pulse only */
   _fpStatus('');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
@@ -12274,8 +12294,9 @@ function _fpBeginHold(e){
   window._fpHoldActive = true;
   window._fpHoldDone = false;
   window._fpHoldStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-  _fpSetState('holding');
-  _fpStatus(''); /* quiet — soft fog only */
+  /* One soft fog at press start (not looping while hold) */
+  _fpPlayFogOnce();
+  _fpStatus('');
   _fpSetProgress(0);
   try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
 
@@ -12290,7 +12311,7 @@ function _fpBeginHold(e){
       window._fpHoldActive = false;
       window._fpHoldRaf = 0;
       _fpSetProgress(1);
-      try { if(typeof _haptic === 'function') _haptic(10); } catch(err2){}
+      try { if(typeof _haptic === 'function') _haptic(8); } catch(err2){}
       startFingerprintUnlock();
       return;
     }
@@ -25336,6 +25357,38 @@ function _tnvGlideHome(){
   }, 500);
 }
 
+/** Reverse of glide-to-center: shrink + fade from mid-header, then tuck back into top-actions */
+function _tnvSendAway(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn) return;
+  _tnvClearGlideTimer();
+  if(!_tnvCentered && !btn.classList.contains('tnv-centered')){
+    try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e){}
+    return;
+  }
+  /* Mirror appear: center → scale(0.55) + opacity 0 */
+  btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
+  btn.style.transform = 'translate(-50%,-50%) scale(0.55)';
+  btn.style.opacity = '0';
+  _tnvTrackToastDuring(450);
+  setTimeout(function(){
+    btn.classList.remove('tnv-centered');
+    btn.style.transition = 'none';
+    btn.style.transform = '';
+    btn.style.opacity = '';
+    var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
+    if(home){
+      if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
+      else home.insertBefore(btn, home.firstChild);
+    }
+    _tnvCentered = false;
+    try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e2){}
+  }, 460);
+}
+window._tnvSendAway = _tnvSendAway;
+window._tnvGlideHome = _tnvGlideHome;
+window._tnvGlideToCenter = _tnvGlideToCenter;
+
 function toggleTopBar(){
   TOP_BAR_HIDDEN = !TOP_BAR_HIDDEN;
   var bar = document.querySelector('.top-bar');
@@ -34579,7 +34632,15 @@ function speakVoiceReply(text) {
   };
   window._clearCompanionMemory = function() { localStorage.removeItem(_memKey); _history = []; };
   /** Force-stop STS (used by fingerprint tap-to-off — never flips on) */
-  window.stopTopNavVoice = function() {
+  window.stopTopNavVoice = function(opt) {
+    var skipAway = opt && opt.skipAway;
+    /* Send centered mic away first (unless caller already did) */
+    if(!skipAway){
+      try {
+        if(typeof window._tnvSendAway === 'function') window._tnvSendAway();
+        else if(typeof _tnvSendAway === 'function') _tnvSendAway();
+      } catch(eA){}
+    }
     try { stopAll(); } catch(e){}
     _on = false;
     try { _setTopNavVoiceActive(false); } catch(e2){}
@@ -34638,9 +34699,12 @@ function speakVoiceReply(text) {
           toast(msg);
           _on = false;
           _setTopNavVoiceActive(false);
+          try{ if(typeof window._tnvSendAway === 'function') window._tnvSendAway(); }catch(eOff){}
         });
       }
     } else {
+      /* Turning off via mic: send icon away (reverse of center appear) */
+      try{ if(typeof window._tnvSendAway === 'function') window._tnvSendAway(); }catch(eOff2){}
       stopAll();
     }
   };
