@@ -12438,27 +12438,37 @@ function _fpSuccess(){
   window._fpUnlocked = true;
   _fpMarkTrusted();
   _fpSetProgress(1);
-  /* Came from a full hold-scan → finish on teal 'ok'; came from trusted tap → keep the fog pulse */
+  /* Came from a full hold-scan → finish on teal 'ok' and let it be seen before the mic
+     prompt interrupts; came from trusted tap → keep the instant fog pulse */
   var wrap = _fpEl();
-  if(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning'))){
+  var fromFullScan = !!(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning')));
+  if(fromFullScan){
     _fpSetState('ok');
   } else if(!wrap || !wrap.classList.contains('fog')){
     _fpPlayFogOnce();
   }
   _fpStatus('');
   try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
-  try {
-    if(typeof window.onFingerprintVerified === 'function') window.onFingerprintVerified();
-    else _fpActivateSpeechToSpeech();
-  } catch(e2){
-    try { _fpActivateSpeechToSpeech(); } catch(e3){}
+
+  function activate(){
+    try {
+      if(typeof window.onFingerprintVerified === 'function') window.onFingerprintVerified();
+      else _fpActivateSpeechToSpeech();
+    } catch(e2){
+      try { _fpActivateSpeechToSpeech(); } catch(e3){}
+    }
   }
+  /* Give the full purple → teal → teal-ok scan time to actually register before the
+     browser's mic permission dialog steals the page's paint. Trusted quick-tap stays instant. */
+  var activateDelay = fromFullScan ? 450 : 0;
+  setTimeout(activate, activateDelay);
+
   setTimeout(function(){
     _fpSetState('');
     _fpStatus('');
     _fpSetProgress(0);
     try { _fpSyncTapModeUi(); } catch(e4){}
-  }, 560);
+  }, activateDelay + 560);
 }
 window.onFingerprintVerified = function(){
   _fpActivateSpeechToSpeech();
@@ -12477,12 +12487,12 @@ function _fpFail(msg){
   }
   _fpSuccess();
 }
-/** Full hold path after sensor / PC — keep same fog already started on hold */
+/** Full hold path after sensor / PC — let the teal 'scanning' state actually be visible */
 function _fpOpenWithoutSensor(){
   _fpStatus('');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
-  setTimeout(function(){ _fpSuccess(); }, 120);
+  setTimeout(function(){ _fpSuccess(); }, 550);
 }
 /** Full unlock after hold (native biometric when available) */
 function startFingerprintUnlock(){
