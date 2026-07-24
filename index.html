@@ -2458,15 +2458,16 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   -webkit-tap-highlight-color:transparent;outline:none;
 }
 .syn-fp-pad:hover{filter:brightness(1.08);}
-/* Soft grey fog on activate — breath-like, no glaring circle */
-@keyframes fpFogSoft{
-  0%{filter:drop-shadow(0 0 3px rgba(190,192,200,.1));opacity:.88;transform:scale(1)}
-  45%{filter:drop-shadow(0 0 9px rgba(210,212,220,.32)) brightness(1.06);opacity:1;transform:scale(1.025)}
-  100%{filter:drop-shadow(0 0 4px rgba(195,197,205,.14));opacity:.92;transform:scale(1.01)}
+/* One smooth grey fog pulse (on or off) — not double, not looping */
+@keyframes fpFogOnce{
+  0%{filter:drop-shadow(0 0 3px rgba(190,192,200,.08));opacity:.9;transform:scale(1)}
+  40%{filter:drop-shadow(0 0 8px rgba(210,212,220,.28)) brightness(1.05);opacity:1;transform:scale(1.02)}
+  100%{filter:drop-shadow(0 0 3px rgba(190,192,200,.1));opacity:.9;transform:scale(1)}
 }
 .syn-fp.holding .syn-fp-pad,
 .syn-fp.scanning .syn-fp-pad,
-.syn-fp.ok .syn-fp-pad{
+.syn-fp.ok .syn-fp-pad,
+.syn-fp.fog .syn-fp-pad{
   background:transparent;
   box-shadow:none;
   animation:none;
@@ -2481,11 +2482,12 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   /* Slow sleep-breath only while speech-to-speech is OFF */
   animation:fpIdleBreath 10.5s ease-in-out infinite;
 }
-/* Pause idle breath when STS live or during soft fog activate */
+/* Pause idle breath when STS live or during soft fog */
 body.voice-live .syn-fp-icon,
 .syn-fp.holding .syn-fp-icon,
 .syn-fp.scanning .syn-fp-icon,
 .syn-fp.ok .syn-fp-icon,
+.syn-fp.fog .syn-fp-icon,
 .syn-fp.fail .syn-fp-icon{
   animation:none!important;
 }
@@ -2493,15 +2495,12 @@ body.voice-live .syn-fp-icon{
   opacity:.78;
   filter:drop-shadow(0 0 3px rgba(124,106,247,.12));
 }
-/* Low-key grey fog during hold / tap activate / success */
+/* Single fog pulse only — shared by hold, tap-on, tap-off */
 .syn-fp.holding .syn-fp-icon,
-.syn-fp.scanning .syn-fp-icon{
-  animation:fpFogSoft .9s ease-in-out infinite!important;
-}
-.syn-fp.ok .syn-fp-icon{
-  animation:fpFogSoft .55s ease-out 1!important;
-  filter:drop-shadow(0 0 7px rgba(205,207,215,.28)) brightness(1.05);
-  opacity:.96;
+.syn-fp.scanning .syn-fp-icon,
+.syn-fp.ok .syn-fp-icon,
+.syn-fp.fog .syn-fp-icon{
+  animation:fpFogOnce .55s ease-in-out 1 both!important;
 }
 .syn-fp.fail{animation:fpShake .4s ease;}
 .syn-fp.fail .syn-fp-icon{filter:drop-shadow(0 0 6px rgba(255,107,138,.45));}
@@ -12098,7 +12097,7 @@ function _fpActivateSpeechToSpeech(){
   setTimeout(parkMicCenter, 850);
 }
 
-/** Success → purple ack + STS (never green) */
+/** Success → quiet grey fog + STS (no "Voice on" label, no loud ring) */
 function _fpSuccess(){
   window._fpBusy = false;
   window._fpHoldActive = false;
@@ -12107,8 +12106,8 @@ function _fpSuccess(){
   _fpMarkTrusted();
   _fpSetProgress(1);
   _fpSetState('ok');
-  _fpStatus('Voice on');
-  try { if(typeof _haptic === 'function') _haptic(14); } catch(e){}
+  _fpStatus(''); /* never show Voice on */
+  try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
   try {
     if(typeof window.onFingerprintVerified === 'function') window.onFingerprintVerified();
     else _fpActivateSpeechToSpeech();
@@ -12120,7 +12119,7 @@ function _fpSuccess(){
     _fpStatus('');
     _fpSetProgress(0);
     try { _fpSyncTapModeUi(); } catch(e4){}
-  }, 750);
+  }, 520);
 }
 window.onFingerprintVerified = function(){
   _fpActivateSpeechToSpeech();
@@ -12142,17 +12141,17 @@ function _fpFail(msg){
 /** Full hold path after sensor / PC */
 function _fpOpenWithoutSensor(){
   _fpSetState('scanning');
-  _fpStatus('Recognized');
+  _fpStatus('');
   _fpSetProgress(1);
-  try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
-  setTimeout(function(){ _fpSuccess(); }, 420);
+  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
+  setTimeout(function(){ _fpSuccess(); }, 380);
 }
 /** Full unlock after hold (native biometric when available) */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
   window._fpBusy = true;
   _fpSetState('scanning');
-  _fpStatus('Authenticating\u2026');
+  _fpStatus('');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
 
@@ -12200,16 +12199,13 @@ function _fpDeactivateSpeechToSpeech(){
   window._fpBusy = false;
   window._fpHoldActive = false;
   _fpSetState('');
-  _fpStatus('Voice off');
+  _fpStatus(''); /* no Voice off label */
   _fpSetProgress(0);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e2){}
   try { _fpSyncTapModeUi(); } catch(e3){}
-  setTimeout(function(){
-    if(!window._fpBusy && !window._fpHoldActive) _fpStatus('');
-  }, 650);
 }
 
-/** Trusted user: tap toggles STS — off→on purple flash; on→off (not during hold/scan) */
+/** Trusted user: tap toggles STS — soft grey fog; on→off when live */
 function _fpQuickTapActivate(){
   if(window._fpHoldActive) return;
   if(window._askBarOpen && _isChatEmptyHome()) return;
@@ -12226,10 +12222,10 @@ function _fpQuickTapActivate(){
   if(window._fpBusy) return;
   window._fpBusy = true;
   _fpSetState('scanning');
-  _fpStatus('Voice\u2026');
+  _fpStatus('');
   _fpSetProgress(1);
-  try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
-  setTimeout(function(){ _fpSuccess(); }, 260);
+  try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
+  setTimeout(function(){ _fpSuccess(); }, 280);
 }
 
 function _fpCancelHold(early){
@@ -12279,7 +12275,7 @@ function _fpBeginHold(e){
   window._fpHoldDone = false;
   window._fpHoldStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   _fpSetState('holding');
-  _fpStatus('Scanning\u2026');
+  _fpStatus(''); /* quiet — soft fog only */
   _fpSetProgress(0);
   try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
 
@@ -12289,9 +12285,6 @@ function _fpBeginHold(e){
     var elapsed = now - t0;
     var p = Math.min(1, elapsed / FP_HOLD_MS);
     _fpSetProgress(p);
-    if(p < 0.35) _fpStatus('Keep holding\u2026');
-    else if(p < 0.75) _fpStatus('Scanning\u2026');
-    else _fpStatus('Almost\u2026');
     if(elapsed >= FP_HOLD_MS){
       window._fpHoldDone = true;
       window._fpHoldActive = false;
