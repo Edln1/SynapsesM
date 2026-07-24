@@ -2427,21 +2427,39 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .ncmd-modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:400;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 .ncmd-modal-box{background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:100%;max-width:400px;margin:16px;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:fadeUp .22s ease both;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
-.syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
+.syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:0;line-height:1.25;}
-/* Barely-visible news climate trigger — next to greeting */
+/* Subtle news climate trigger — soft grey dot to the right of greeting */
 .syn-greet-news-btn{
-  flex-shrink:0;width:18px;height:18px;padding:0;margin:0;border:none;background:transparent;cursor:pointer;
-  color:rgba(255,255,255,0.09);font-size:9px;line-height:1;opacity:0.28;border-radius:50%;
-  display:inline-flex;align-items:center;justify-content:center;
-  transition:opacity .25s ease,color .25s ease,transform .2s ease;
+  flex-shrink:0;position:relative;width:22px;height:22px;padding:0;margin:0 0 0 2px;border:none;
+  background:transparent;cursor:pointer;border-radius:50%;
+  display:inline-flex!important;align-items:center;justify-content:center;
+  opacity:0.55;visibility:visible!important;pointer-events:auto!important;z-index:5;
+  transition:opacity .25s ease,transform .2s ease;
   -webkit-tap-highlight-color:transparent;
 }
-.syn-greet-news-btn:hover,.syn-greet-news-btn:focus-visible{
-  opacity:0.55;color:rgba(200,195,255,0.4);outline:none;
+/* actual visible dot */
+.syn-greet-news-btn::before{
+  content:"";display:block;width:5px;height:5px;border-radius:50%;
+  background:rgba(200,202,214,0.55);
+  box-shadow:0 0 6px rgba(180,185,210,0.25);
+  transition:background .2s,box-shadow .2s,transform .2s;
 }
-.syn-greet-news-btn:active{transform:scale(0.9);opacity:0.7;}
-.syn-greet-news-btn.busy{opacity:0.4;animation:fpIdleBreath 1.2s ease-in-out infinite;}
+.syn-greet-news-btn:hover,.syn-greet-news-btn:focus-visible{
+  opacity:0.9;outline:none;
+}
+.syn-greet-news-btn:hover::before,.syn-greet-news-btn:focus-visible::before{
+  background:rgba(210,212,230,0.8);
+  box-shadow:0 0 8px rgba(167,139,250,0.35);
+  transform:scale(1.15);
+}
+.syn-greet-news-btn:active{transform:scale(0.92);opacity:1;}
+.syn-greet-news-btn.busy{opacity:0.85;}
+.syn-greet-news-btn.busy::before{
+  background:rgba(190,195,220,0.7);
+  box-shadow:0 0 10px rgba(167,139,250,0.4);
+  animation:fpIdleBreath 1.1s ease-in-out infinite;
+}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
