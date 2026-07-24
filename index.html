@@ -12033,16 +12033,16 @@ function _fpSyncTapModeUi(){
   var needHold = _fpRequiresHoldScan();
   window._fpTapMode = !needHold;
   if(wrap) wrap.classList.toggle('fp-tap-mode', !needHold);
-  var voiceOn = !!window._topNavVoiceActive;
+  var voiceOn = !!(window._topNavVoiceActive || (document.body && document.body.classList.contains('voice-live')) || window._fpUnlocked);
   if(wrap){
-    wrap.title = needHold
-      ? 'Hold fingerprint to unlock voice'
-      : (voiceOn ? 'Tap to end speech-to-speech' : 'Tap for speech-to-speech');
+    wrap.title = voiceOn
+      ? 'Tap to end speech-to-speech'
+      : (needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech');
   }
   if(pad){
-    pad.setAttribute('aria-label', needHold
-      ? 'Hold fingerprint to unlock voice'
-      : (voiceOn ? 'Tap to end speech-to-speech' : 'Tap for speech-to-speech'));
+    pad.setAttribute('aria-label', voiceOn
+      ? 'Tap to end speech-to-speech'
+      : (needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech'));
   }
 }
 function _postNativeBiometric(){
@@ -12123,10 +12123,12 @@ function _fpSuccess(){
     _fpSetState('');
     _fpStatus('');
     _fpSetProgress(0);
+    try { _fpSyncTapModeUi(); } catch(e4){}
   }, 750);
 }
 window.onFingerprintVerified = function(){
   _fpActivateSpeechToSpeech();
+  try { _fpSyncTapModeUi(); } catch(e){}
 };
 function _fpFail(msg){
   window._fpBusy = false;
@@ -12174,10 +12176,58 @@ window.__onBiometricResult = function(ok, message){
   else _fpFail(message || 'failed');
 };
 
-/** Trusted user: quick purple flash then STS — no hold, no green */
+/** True if speech-to-speech / companion voice is considered live */
+function _fpIsSpeechLive(){
+  try {
+    if(window._topNavVoiceActive) return true;
+    if(document.body && document.body.classList.contains('voice-live')) return true;
+    if(window._fpUnlocked) return true;
+  } catch(e){}
+  return false;
+}
+
+/** Force speech-to-speech off (never toggles on — avoids _on desync) */
+function _fpDeactivateSpeechToSpeech(){
+  try {
+    if(typeof window.stopTopNavVoice === 'function'){
+      window.stopTopNavVoice();
+    } else if(typeof window.toggleTopNavVoice === 'function' && window._topNavVoiceActive){
+      window.toggleTopNavVoice();
+    }
+  } catch(e){}
+  try {
+    /* Ensure flags clear even if toggle path failed */
+    window._topNavVoiceActive = false;
+    if(document.body) document.body.classList.remove('voice-live');
+  } catch(e1){}
+  window._fpUnlocked = false;
+  window._fpBusy = false;
+  window._fpHoldActive = false;
+  _fpSetState('');
+  _fpStatus('Voice off');
+  _fpSetProgress(0);
+  try { if(typeof _haptic === 'function') _haptic(6); } catch(e2){}
+  try { _fpSyncTapModeUi(); } catch(e3){}
+  setTimeout(function(){
+    if(!window._fpBusy && !window._fpHoldActive) _fpStatus('');
+  }, 650);
+}
+
+/** Trusted user: tap toggles STS — off→on purple flash; on→off (not during hold/scan) */
 function _fpQuickTapActivate(){
-  if(window._fpBusy) return;
+  if(window._fpHoldActive) return;
   if(window._askBarOpen && _isChatEmptyHome()) return;
+  /* Only block mid-hold/scan — ok/idle are fine */
+  var wrap = _fpEl();
+  if(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning'))) return;
+
+  /* Voice live → tap ends it (no re-scan) */
+  if(_fpIsSpeechLive()){
+    _fpDeactivateSpeechToSpeech();
+    return;
+  }
+
+  if(window._fpBusy) return;
   window._fpBusy = true;
   _fpSetState('scanning');
   _fpStatus('Voice\u2026');
@@ -12211,7 +12261,19 @@ function _fpCancelHold(early){
 function _fpBeginHold(e){
   if(e){ e.preventDefault(); e.stopPropagation(); }
   if(window._askBarOpen && _isChatEmptyHome()) return;
-  if(window._fpBusy || window._fpHoldActive) return;
+  if(window._fpHoldActive) return;
+  /* Don't start a new scan while already holding/scanning */
+  var wrap0 = _fpEl();
+  if(wrap0 && (wrap0.classList.contains('holding') || wrap0.classList.contains('scanning'))) return;
+
+  /* Voice already on + not scanning → press turns STS off */
+  if(_fpIsSpeechLive()){
+    _fpDeactivateSpeechToSpeech();
+    return;
+  }
+
+  if(window._fpBusy) return;
+
   /* Trusted → tap-to-activate (no hold) */
   if(!_fpRequiresHoldScan()){
     _fpQuickTapActivate();
@@ -12334,10 +12396,16 @@ window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
     pad.addEventListener('lostpointercapture', function(){
       if(window._fpHoldActive) _fpEndHold();
     });
-    /* Block synthetic click after press */
+    /* Click backup (some WebViews): if voice is live, always allow tap-to-off */
     pad.addEventListener('click', function(e){
       e.preventDefault();
       e.stopPropagation();
+      if(window._fpHoldActive) return;
+      var w = _fpEl();
+      if(w && (w.classList.contains('holding') || w.classList.contains('scanning'))) return;
+      if(_fpIsSpeechLive()){
+        _fpDeactivateSpeechToSpeech();
+      }
     });
     pad.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   }
@@ -32546,6 +32614,11 @@ function speakVoiceReply(text) {
     var was = !!window._topNavVoiceActive;
     window._topNavVoiceActive = v;
     document.body.classList.toggle('voice-live', !!v);
+    if(!v){
+      /* Keep fingerprint toggle in sync when voice ends from mic / stopAll */
+      try { window._fpUnlocked = false; } catch(eU){}
+      try { if(typeof _fpSyncTapModeUi === 'function') _fpSyncTapModeUi(); } catch(eS){}
+    }
     if(v && !was && typeof synTrack==='function'){
       try{synTrack('voice_start',{entry:'top_nav'});}catch(e){}
     }
@@ -34497,6 +34570,12 @@ function speakVoiceReply(text) {
     document.addEventListener('keydown', onKey);
   };
   window._clearCompanionMemory = function() { localStorage.removeItem(_memKey); _history = []; };
+  /** Force-stop STS (used by fingerprint tap-to-off — never flips on) */
+  window.stopTopNavVoice = function() {
+    try { stopAll(); } catch(e){}
+    _on = false;
+    try { _setTopNavVoiceActive(false); } catch(e2){}
+  };
   window.toggleTopNavVoice = function() {
     _on = !_on;
     _setTopNavVoiceActive(_on);
