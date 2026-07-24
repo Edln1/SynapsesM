@@ -12252,8 +12252,7 @@ function setAskBarVisible(on){
     });
     setTimeout(function(){
       if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
-      var ib = document.getElementById('inputBox');
-      if(ib){ try { ib.focus(); } catch(e){} }
+      /* Don't auto-focus — keyboard only opens when user taps the field */
     }, 120);
   } else {
     sec.classList.remove('askbar-on');
@@ -12368,7 +12367,7 @@ function blankNewChat(){
   if(_chatActive && _esAlready && !activeSession && (!chatHistory || !chatHistory.length)){
     var _sbEarly=document.getElementById('chpSidebar');
     if(_sbEarly&&_sbEarly.classList.contains('open')){ closeChatHistoryPanel(); }
-    setTimeout(function(){ var _ib=document.getElementById('inputBox'); if(_ib) _ib.focus(); },50);
+    /* no auto keyboard */
     return;
   }
   chatHistory=[];
@@ -12396,8 +12395,7 @@ function blankNewChat(){
 
   var keys=Object.keys(chatSessions);
   if(keys.length>10){ keys.slice(0,keys.length-10).forEach(function(k){delete chatSessions[k];}); }
-  // Focus the chat input so it gets its purple outline
-  setTimeout(function(){ var _ib=document.getElementById('inputBox'); if(_ib) _ib.focus(); },80);
+  /* Don't auto-focus input — user taps when ready (avoids keyboard jump) */
 }
 function goRoom(){return;clearRoomDot();mobileAutoCollapse();setView('sec-room');initRoom();renderOnlineUsers();updateRoomMobileUI();var _nb=document.getElementById('nav-room');_nb.classList.add('active');triggerNavGlow(_nb);document.getElementById('topTitle').textContent='Community Chatroom';document.getElementById('topTitle').style.opacity='1';document.getElementById('topTitle').style.color='';document.getElementById('topTitle').style.letterSpacing='';document.getElementById('topTitle').style.display='';var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';scrollRoom();}
 function goJobs(){return;mobileAutoCollapse();setView('sec-jobs');var _nb=document.getElementById('nav-jobs');_nb.classList.add('active');triggerNavGlow(_nb);document.getElementById('topTitle').textContent='Interlink Job Board';document.getElementById('topTitle').style.opacity='1';document.getElementById('topTitle').style.color='';document.getElementById('topTitle').style.letterSpacing='';document.getElementById('topTitle').style.display='';var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';jobFilter='all';document.querySelectorAll('.job-filter').forEach(function(b,i){b.classList.toggle('active',i===0);});renderJobs();switchJobsTab('posted');}
