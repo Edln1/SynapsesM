@@ -397,7 +397,10 @@ html[data-theme="easyview"] #sidebarResize,html[data-theme="purple"] #sidebarRes
 #sidebarResize{z-index:200!important;}
 .sidebar-toggle{position:absolute;right:-18px;top:50%;transform:translateY(-50%);z-index:100;width:18px;height:44px;background:var(--sidebar);border:1px solid var(--border);border-radius:0 8px 8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;transition:background .15s;user-select:none;-webkit-user-select:none;}
 .sidebar-toggle:hover{background:var(--surface2);color:var(--text);}
-.logo{padding:11.8px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.logo{padding:11.8px 14px;display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);}
+/* Hide top-left synapse glyph — keep "Synapses" / NETWORK text only, shifted left into the icon gap */
+.logo > svg{display:none!important;}
+#bnavLogoMark{display:none!important;}
 .new-chat-btn{margin:12px;padding:10px 14px;background:rgba(99,102,241,0.06);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(99,102,241,0.14);border-radius:10px;color:rgba(255,255,255,0.75);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;letter-spacing:0.01em;cursor:pointer;display:flex;align-items:center;gap:8px;transition:border-color .25s ease,box-shadow .25s ease,color .2s ease,background .25s ease;position:relative;}
 .new-chat-btn:hover{color:rgba(255,255,255,0.95);background:rgba(99,102,241,0.09);border-color:rgba(99,102,241,0.4);box-shadow:0 0 0 3px rgba(99,102,241,0.1),0 0 0 1px rgba(99,102,241,0.25);}
 .new-chat-btn:active{transform:scale(0.98);transition:transform .1s ease;}
@@ -416,9 +419,12 @@ html[data-theme="easyview"] #sidebarResize,html[data-theme="purple"] #sidebarRes
 .cat-nav::-webkit-scrollbar{width:3px;}
 .cat-nav::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:10px;}
 /* ── Bottom-nav mode ─────────────────────────────── */
-body.bottom-nav #bnavLogoMark{display:flex!important;}
-body.bottom-nav #bnavLogoMark ~ span, body.bottom-nav #bnavLogoMark + span{ padding-left:0!important; }
-body.bottom-nav .top-bar > div:first-child{ padding-left:6px!important; }
+/* Logo glyph stays hidden; title text shifts left into the freed space */
+body.bottom-nav #bnavLogoMark{display:none!important;}
+body.bottom-nav #bnavLogoMark ~ span, body.bottom-nav #bnavLogoMark + span{ padding-left:0!important; margin-left:0!important; }
+body.bottom-nav .top-bar > div:first-child{ padding-left:0!important; margin-left:0!important; gap:0!important; }
+body.bottom-nav .top-bar{padding-left:12px!important;}
+body.bottom-nav .top-title{margin-left:0!important;}
 body.bottom-nav .sidebar{display:none!important;}
 
 body.bottom-nav #bottomNavBar{display:flex!important;}
@@ -5214,9 +5220,9 @@ window.getWebAudioNode = getWebAudioNode;
 })();
 </script>
 <div class="top-bar">
-    <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:-24px;padding-left:24px;">
-    <!-- Synapse logo shown top-left only when nav is docked at bottom -->
-    <div id="bnavLogoMark" onclick="newChat()" title="Synapses" style="display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:8px;margin-right:10px;opacity:0.85;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
+    <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:0;padding-left:0;">
+    <!-- Logo glyph hidden — title words only (Synapses / page name) sit flush left -->
+    <div id="bnavLogoMark" onclick="newChat()" title="Synapses" style="display:none!important;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
       <svg width="28" height="28" viewBox="0 0 80 80" fill="none">
         <defs>
           <radialGradient id="sLG2" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#c7d2fe"/><stop offset="40%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/></radialGradient>
