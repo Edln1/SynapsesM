@@ -25184,7 +25184,17 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
-var TOP_BAR_HIDDEN=false;try{TOP_BAR_HIDDEN=(localStorage.getItem('synapses_topbar_hidden')==='1');}catch(e){} // default: visible
+/* First launch (no saved pref): top-right icons hidden. Saved toggle wins after that. */
+var TOP_BAR_HIDDEN=true;
+try{
+  var _tbPref = localStorage.getItem('synapses_topbar_hidden');
+  if(_tbPref === null || _tbPref === undefined){
+    TOP_BAR_HIDDEN = true;
+    try{ localStorage.setItem('synapses_topbar_hidden','1'); }catch(e0){}
+  } else {
+    TOP_BAR_HIDDEN = (_tbPref === '1');
+  }
+}catch(e){ TOP_BAR_HIDDEN = true; }
 function _applyTopBarHiddenState(){
   var bar = document.querySelector('.top-bar');
   var btn = document.getElementById('topBarToggle');
