@@ -938,26 +938,52 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 @media (hover:hover) and (pointer:fine){ #bnavNotesBtn:hover{background:rgba(124,106,247,0.07);} }
 #bnavNotesBtn.active{background:rgba(124,106,247,0.14)!important;}
 #bnavNotesBtn.active svg{stroke:rgba(200,197,255,0.95);}
-/* Ask bar fade show/hide (empty home only — active chats always keep the bar) */
+/* Ask bar — soft fade + lift (home empty only). ~0.45s: not snappy, not slow.
+   Transform only on .input-wrapper so mic/send positioning stays intact on iOS. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
-  transition:opacity .38s cubic-bezier(0.22,1,0.36,1),visibility .38s ease,top .35s cubic-bezier(0.22,1,0.36,1);
+  transition:opacity .42s cubic-bezier(0.22,1,0.36,1),visibility 0s linear .42s,top .35s cubic-bezier(0.22,1,0.36,1);
+}
+#sec-chat #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
+  transition:
+    opacity .45s cubic-bezier(0.22,1,0.36,1),
+    transform .48s cubic-bezier(0.22,1,0.36,1),
+    filter .42s cubic-bezier(0.33,1,0.68,1),
+    box-shadow .5s cubic-bezier(0.22,1,0.36,1);
+  will-change:opacity,transform,filter;
+  transform-origin:center center;
 }
 #sec-chat.askbar-off #chatEmptyState:not(.hidden) ~ .input-area{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+  transition:opacity .28s ease,visibility 0s linear .28s,top .35s cubic-bezier(0.22,1,0.36,1);
+}
+#sec-chat.askbar-off #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
+  opacity:0;
+  transform:translate3d(0,10px,0) scale(.975);
+  filter:blur(5px);
+  box-shadow:none;
 }
 #sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area{
   opacity:1!important;visibility:visible!important;pointer-events:auto!important;
+  transition:opacity .45s cubic-bezier(0.22,1,0.36,1),visibility 0s linear 0s,top .35s cubic-bezier(0.22,1,0.36,1);
 }
-/* When Ask is open on home: fingerprint is replaced (hidden), ask bar sits in its place */
+#sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  filter:blur(0);
+  box-shadow:0 8px 32px rgba(0,0,0,.22),0 0 0 1px rgba(124,106,247,.12),0 0 28px rgba(124,106,247,.1);
+}
+/* When Ask is open on home: fingerprint soft-exits as Ask fades in */
 #sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
   height:0!important;margin:0!important;min-height:0!important;overflow:hidden!important;
-  transform:scale(.92);transition:opacity .28s ease,transform .28s ease,height .28s ease,margin .28s ease;
+  transform:scale(.94) translateY(4px);
+  transition:opacity .32s cubic-bezier(0.4,0,0.2,1),transform .34s cubic-bezier(0.4,0,0.2,1),height .34s ease,margin .34s ease,visibility 0s linear .34s;
 }
 #sec-chat.askbar-off #chatEmptyState:not(.hidden) .syn-fp{
   opacity:1!important;visibility:visible!important;pointer-events:auto!important;
   height:auto!important;overflow:visible!important;
-  transition:opacity .32s ease .08s,transform .32s ease .08s;
+  transform:scale(1) translateY(0);
+  transition:opacity .4s cubic-bezier(0.22,1,0.36,1) .06s,transform .42s cubic-bezier(0.22,1,0.36,1) .06s,visibility 0s linear 0s;
 }
 /* Pulse — right of Notes */
 #bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:none;padding:0;}
