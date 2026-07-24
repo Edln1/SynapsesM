@@ -2486,15 +2486,20 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .syn-fp-icon{
   width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;
   filter:drop-shadow(0 0 4px rgba(124,106,247,.18));
-  /* Slow sleep-breath; long quiet stretch between soft pulses */
+  /* Slow sleep-breath only while speech-to-speech is OFF */
   animation:fpIdleBreath 10.5s ease-in-out infinite;
 }
-/* Active states pause idle life */
+/* Pause idle life when STS is live, or pad is actively scanning */
+body.voice-live .syn-fp-icon,
 .syn-fp.holding .syn-fp-icon,
 .syn-fp.scanning .syn-fp-icon,
 .syn-fp.ok .syn-fp-icon,
 .syn-fp.fail .syn-fp-icon{
   animation:none!important;
+}
+body.voice-live .syn-fp-icon{
+  opacity:.78;
+  filter:drop-shadow(0 0 3px rgba(124,106,247,.12));
 }
 .syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(167,139,250,.7)) brightness(1.1);transform:scale(.96);}
 .syn-fp-scan{
