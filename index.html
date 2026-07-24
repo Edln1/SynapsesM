@@ -2357,7 +2357,19 @@ to{opacity:0;transform:translateX(-40px);}}
    speech-to-speech stays live and the rest of the top bar is collapsed.
    Position itself (the glide) is driven by JS via inline transform/opacity —
    this just establishes the positioning context. */
-#topNavVoiceBtn.tnv-centered{position:absolute!important;top:50%!important;left:50%!important;margin:0!important;z-index:5;pointer-events:auto!important;}
+/* Center of top-bar: top/left 50% needs -50% transform or it sits down-right of true center.
+   transform is NOT !important so glide JS can temporarily override it. */
+#topNavVoiceBtn.tnv-centered{
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  margin:0!important;
+  transform:translate(-50%,-50%);
+  z-index:5;
+  pointer-events:auto!important;
+}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -5578,9 +5590,9 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Greeting -->
       <div class="syn-greeting">What's on your mind?</div>
       <div class="syn-sub">Synapses · Neural Interface</div>
-      <!-- Fingerprint pad — hold-to-scan (separate feature; does NOT open Ask) -->
-      <div class="syn-fp" id="synFingerprint" title="Hold fingerprint">
-        <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint">
+      <!-- Fingerprint pad — hold-to-scan → speech-to-speech (mic centers mid-header) -->
+      <div class="syn-fp" id="synFingerprint" title="Hold to start speech-to-speech">
+        <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint to start speech-to-speech">
           <span class="syn-fp-ring" id="synFpRing" aria-hidden="true"></span>
           <span class="syn-fp-scan" aria-hidden="true"></span>
           <img class="syn-fp-icon" src="fingeprint.png" alt="" width="44" height="44" draggable="false">
@@ -25129,9 +25141,12 @@ function _tnvGlideToCenter(){
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
   var last = btn.getBoundingClientRect();
+  /* last is already centered via CSS translate(-50%,-50%) — measure without it for FLIP */
+  btn.style.transition = 'none';
+  btn.style.transform = 'translate(-50%,-50%)';
+  last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
   var dy = first.top - last.top;
-  btn.style.transition = 'none';
   btn.style.opacity = '0';
   btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
   void btn.offsetWidth; // flush layout so the "from" state actually paints
@@ -25139,6 +25154,13 @@ function _tnvGlideToCenter(){
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
   _tnvTrackToastDuring(500);
+  /* After glide, keep pure center transform (no scale residue) */
+  btn.addEventListener('transitionend', function _centerSettle(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    if(!_tnvCentered) return;
+    btn.style.transition = '';
+    btn.style.transform = 'translate(-50%,-50%)';
+  }, {once:true});
 }
 
 function _tnvGlideHome(){
@@ -25148,9 +25170,10 @@ function _tnvGlideHome(){
   btn.classList.remove('tnv-centered');
   btn.style.transition = 'none';
   btn.style.transform = 'none';
-  if(_tnvHomeParent){
-    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === _tnvHomeParent) _tnvHomeParent.insertBefore(btn, _tnvHomeNextSibling);
-    else _tnvHomeParent.appendChild(btn);
+  var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
+  if(home){
+    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
+    else home.insertBefore(btn, home.firstChild);
   }
   var last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
@@ -25167,7 +25190,16 @@ function _tnvGlideHome(){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     btn.style.transition = '';
     btn.style.transform = '';
+    btn.style.opacity = '';
   }, {once:true});
+  /* Safety: clear residual transform if transitionend never fires */
+  setTimeout(function(){
+    if(!_tnvCentered && btn && !btn.classList.contains('tnv-centered')){
+      btn.style.transition = '';
+      btn.style.transform = '';
+      btn.style.opacity = '';
+    }
+  }, 500);
 }
 
 function toggleTopBar(){
@@ -25212,23 +25244,54 @@ function toggleTopBar(){
 // _tnvGlideToCenter above). This is a pure visual restore: it snaps the
 // button straight into place with no glide animation and does NOT resume
 // an actual live speech-to-speech session — clicking it just re-enters
-// voice mode like normal. Scheduled via setTimeout/DOMContentLoaded rather
-// than called inline so it always runs after _tnvCentered (declared further
-// up this same script) has been initialized, no matter when this fires.
+// voice mode like normal.
+// IMPORTANT: must apply translate(-50%,-50%) with top/left 50% — without it
+// the mic's top-left sits at center and looks shifted down+right (reload bug).
+function _tnvEnsureHomeMic(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn) return;
+  btn.classList.remove('tnv-centered');
+  btn.style.transition = '';
+  btn.style.transform = '';
+  btn.style.opacity = '';
+  btn.style.top = '';
+  btn.style.left = '';
+  btn.style.right = '';
+  btn.style.bottom = '';
+  btn.style.margin = '';
+  var actions = document.querySelector('.top-bar .top-actions');
+  if(actions && btn.parentNode !== actions){
+    /* Mic is the first control in the top-actions row */
+    actions.insertBefore(btn, actions.firstChild);
+  }
+  _tnvCentered = false;
+}
 function _restoreTnvCenteredState(){
-  try{
-    if(!TOP_BAR_HIDDEN) return;
-    if(localStorage.getItem('synapses_tnv_centered') !== '1') return;
-  }catch(e){ return; }
-  if(_tnvCentered) return;
   var btn = document.getElementById('topNavVoiceBtn');
   var bar = document.querySelector('.top-bar');
   if(!btn || !bar) return;
-  _tnvHomeParent = btn.parentNode;
-  _tnvHomeNextSibling = btn.nextSibling;
+  var wantCentered = false;
+  try{
+    wantCentered = !!(TOP_BAR_HIDDEN && localStorage.getItem('synapses_tnv_centered') === '1');
+  }catch(e){ wantCentered = false; }
+  if(!wantCentered){
+    /* Clear any leftover absolute/transform from a previous session */
+    _tnvEnsureHomeMic();
+    return;
+  }
+  if(_tnvCentered){
+    /* Re-assert true center (fixes partial restore) */
+    btn.style.transform = 'translate(-50%,-50%)';
+    btn.style.opacity = '1';
+    return;
+  }
+  _tnvHomeParent = document.querySelector('.top-bar .top-actions') || btn.parentNode;
+  _tnvHomeNextSibling = _tnvHomeParent ? _tnvHomeParent.firstChild : null;
   bar.appendChild(btn);
   btn.classList.add('tnv-centered');
+  btn.style.transition = 'none';
   btn.style.opacity = '1';
+  btn.style.transform = 'translate(-50%,-50%)';
   _tnvCentered = true;
 }
 if(document.readyState === 'loading'){
@@ -25236,6 +25299,10 @@ if(document.readyState === 'loading'){
 } else {
   setTimeout(_restoreTnvCenteredState, 0);
 }
+/* After layout settles (fonts/safe-area), re-assert position once more */
+window.addEventListener('load', function(){
+  setTimeout(_restoreTnvCenteredState, 50);
+});
 
 // ── Day / Night toggle ──────────────────────────────────────────
 function toggleDayNight(){
