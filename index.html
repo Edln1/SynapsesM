@@ -2380,37 +2380,65 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
-/* ── Fingerprint unlock — icon only (fingeprint.png), sits under subtitle ── */
-@keyframes fpScan{0%{top:18%;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:78%;opacity:0}}
+/* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
+@keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
 @keyframes fpShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@keyframes fpPulseRing{0%{box-shadow:0 0 0 0 rgba(124,106,247,.35)}70%{box-shadow:0 0 0 12px rgba(124,106,247,0)}100%{box-shadow:0 0 0 0 rgba(124,106,247,0)}}
+@keyframes fpStatusIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .syn-fp{
   display:flex!important;flex-direction:column;align-items:center;gap:0;margin:0 0 8px;
   opacity:1!important;visibility:visible!important;
   animation:none!important;user-select:none;-webkit-user-select:none;
   pointer-events:auto!important;z-index:30!important;position:relative;flex-shrink:0;
+  touch-action:none;
 }
 #chatEmptyState.hidden .syn-fp{display:none!important;}
-#sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{opacity:.5!important;transform:scale(.96);transition:opacity .35s,transform .35s;}
+#sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{opacity:.55!important;transition:opacity .35s;}
 .syn-fp-pad{
-  width:56px;height:56px;border-radius:50%;position:relative;cursor:pointer;border:none;padding:0;
-  background:transparent;
-  box-shadow:none;
-  display:flex!important;align-items:center;justify-content:center;transition:transform .2s,filter .25s,opacity .25s;
-  -webkit-tap-highlight-color:transparent;
+  width:64px;height:64px;border-radius:50%;position:relative;cursor:pointer;border:none;padding:0;
+  background:radial-gradient(circle at 50% 45%,rgba(28,24,48,.35),rgba(10,8,18,.15));
+  box-shadow:0 0 0 1px rgba(124,106,247,.18);
+  display:flex!important;align-items:center;justify-content:center;transition:transform .15s,filter .25s,box-shadow .25s;
+  -webkit-tap-highlight-color:transparent;outline:none;
 }
-.syn-fp-pad:hover{filter:brightness(1.15);}
-.syn-fp-pad:active{transform:scale(.92);}
-.syn-fp-icon{width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;transition:filter .25s,opacity .25s;filter:drop-shadow(0 0 6px rgba(124,106,247,.35));}
+.syn-fp-pad:hover{filter:brightness(1.08);}
+.syn-fp.holding .syn-fp-pad{
+  transform:scale(.94);
+  box-shadow:0 0 0 1px rgba(0,217,168,.45),0 0 22px rgba(124,106,247,.35);
+  animation:fpPulseRing 1.1s ease-out infinite;
+}
+.syn-fp-ring{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:0;
+  background:conic-gradient(from -90deg,rgba(0,217,168,.95) var(--fp-p,0%),transparent 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px));
+  opacity:0;transition:opacity .15s;
+}
+.syn-fp.holding .syn-fp-ring,.syn-fp.scanning .syn-fp-ring{opacity:1;}
+.syn-fp-icon{width:44px;height:44px;object-fit:contain;display:block;position:relative;z-index:1;pointer-events:none;transition:filter .25s,opacity .25s,transform .2s;filter:drop-shadow(0 0 6px rgba(124,106,247,.35));}
+.syn-fp.holding .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.65)) brightness(1.12);transform:scale(.96);}
 .syn-fp-scan{
-  position:absolute;left:22%;right:22%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(0,217,168,.95),rgba(124,106,247,.85),transparent);
-  box-shadow:0 0 10px rgba(0,217,168,.7);
+  position:absolute;left:20%;right:20%;height:2px;border-radius:2px;pointer-events:none;opacity:0;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(0,217,168,.95),rgba(167,139,250,.9),transparent);
+  box-shadow:0 0 12px rgba(0,217,168,.75);
 }
-.syn-fp.scanning .syn-fp-scan{opacity:1;animation:fpScan 1.1s linear infinite;}
-.syn-fp.scanning .syn-fp-icon{filter:drop-shadow(0 0 10px rgba(0,217,168,.7)) brightness(1.15);}
-.syn-fp.ok .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.75)) brightness(1.2);}
+.syn-fp.holding .syn-fp-scan,.syn-fp.scanning .syn-fp-scan{opacity:1;animation:fpScan .85s linear infinite;}
+.syn-fp.scanning .syn-fp-icon{filter:drop-shadow(0 0 12px rgba(0,217,168,.75)) brightness(1.18);}
+.syn-fp.ok .syn-fp-icon{filter:drop-shadow(0 0 14px rgba(0,217,168,.85)) brightness(1.25);}
+.syn-fp.ok .syn-fp-ring{--fp-p:100%;opacity:1;background:conic-gradient(from -90deg,#00d9a8 100%,transparent 0);}
 .syn-fp.fail{animation:fpShake .4s ease;}
 .syn-fp.fail .syn-fp-icon{filter:drop-shadow(0 0 8px rgba(255,107,138,.7)) hue-rotate(-20deg);}
+.syn-fp-status{
+  min-height:16px;margin-top:8px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;color:rgba(180,185,220,.55);
+  opacity:0;transition:opacity .2s,color .2s;pointer-events:none;text-align:center;
+}
+.syn-fp.holding .syn-fp-status,.syn-fp.scanning .syn-fp-status,.syn-fp.ok .syn-fp-status,.syn-fp.fail .syn-fp-status,
+.syn-fp.show-hint .syn-fp-status{opacity:1;animation:fpStatusIn .25s ease both;}
+.syn-fp.holding .syn-fp-status{color:rgba(167,139,250,.9);}
+.syn-fp.scanning .syn-fp-status{color:rgba(0,217,168,.9);}
+.syn-fp.ok .syn-fp-status{color:#00d9a8;}
+.syn-fp.fail .syn-fp-status{color:#ff8fa3;}
 .syn-fp-label{display:none!important;}
 .syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation:chatEmptyIn .6s ease-out .4s both;}
 .syn-prompt{padding:11px 14px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:10px;text-align:left;}
@@ -5482,12 +5510,14 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Greeting -->
       <div class="syn-greeting">What's on your mind?</div>
       <div class="syn-sub">Synapses · Neural Interface</div>
-      <!-- Fingerprint unlock (under greeting — original home position preserved) -->
-      <div class="syn-fp" id="synFingerprint" title="Unlock with fingerprint">
-        <button type="button" class="syn-fp-pad" id="synFpPad" onclick="window.startFingerprintUnlock&&window.startFingerprintUnlock()" aria-label="Scan fingerprint to unlock ask">
+      <!-- Fingerprint unlock — hold finger on pad to scan (not instant) -->
+      <div class="syn-fp" id="synFingerprint" title="Hold fingerprint to unlock">
+        <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint to unlock ask">
+          <span class="syn-fp-ring" id="synFpRing" aria-hidden="true"></span>
           <span class="syn-fp-scan" aria-hidden="true"></span>
           <img class="syn-fp-icon" src="fingeprint.png" alt="" width="44" height="44" draggable="false">
         </button>
+        <div class="syn-fp-status" id="synFpStatus" aria-live="polite"></div>
       </div>
       <!-- Sticky notes — inside chatEmptyState, same stacking context -->
       <div id="stickyNotesLayer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10;overflow:visible;"></div>
@@ -11861,12 +11891,29 @@ function runHeroBarLaser(bar, onDone) {
 window._askBarOpen = false;
 window._fpBusy = false;
 window._fpUnlocked = false;
+window._fpHoldActive = false;
+window._fpHoldDone = false;
+window._fpHoldRaf = 0;
+window._fpHoldStart = 0;
+/** Must keep finger down this long before biometrics / unlock fire */
+var FP_HOLD_MS = 1250;
 
 function _fpEl(){ return document.getElementById('synFingerprint'); }
+function _fpStatus(text){
+  var el = document.getElementById('synFpStatus');
+  if(el) el.textContent = text || '';
+}
+function _fpSetProgress(p){
+  var wrap = _fpEl();
+  if(!wrap) return;
+  wrap.style.setProperty('--fp-p', Math.max(0, Math.min(100, p * 100)) + '%');
+  var ring = document.getElementById('synFpRing');
+  if(ring) ring.style.setProperty('--fp-p', Math.max(0, Math.min(100, p * 100)) + '%');
+}
 function _fpSetState(state){
   var wrap = _fpEl();
   if(!wrap) return;
-  wrap.classList.remove('scanning','ok','fail');
+  wrap.classList.remove('holding','scanning','ok','fail','show-hint');
   if(state) wrap.classList.add(state);
 }
 function _postNativeBiometric(){
@@ -11892,38 +11939,57 @@ function _postNativeBiometric(){
 }
 function _fpSuccess(){
   window._fpBusy = false;
+  window._fpHoldActive = false;
+  window._fpHoldDone = false;
   window._fpUnlocked = true;
+  _fpSetProgress(1);
   _fpSetState('ok');
-  try { if(typeof _haptic === 'function') _haptic(12); } catch(e){}
+  _fpStatus('Verified');
+  try { if(typeof _haptic === 'function') _haptic(14); } catch(e){}
   if(typeof setAskBarVisible === 'function') setAskBarVisible(true);
-  setTimeout(function(){ _fpSetState(''); }, 700);
+  setTimeout(function(){
+    _fpSetState('');
+    _fpStatus('');
+    _fpSetProgress(0);
+  }, 900);
 }
 function _fpFail(msg){
   window._fpBusy = false;
-  /* User cancelled — stay locked; any other soft fail still unlocks if no biometrics path */
+  window._fpHoldActive = false;
+  window._fpHoldDone = false;
   if(msg === 'cancelled'){
     _fpSetState('fail');
-    setTimeout(function(){ _fpSetState(''); }, 500);
+    _fpStatus('Cancelled');
+    _fpSetProgress(0);
+    setTimeout(function(){ _fpSetState(''); _fpStatus(''); }, 650);
     return;
   }
-  /* Don't block the UI — treat as unlock if sensor/prompt failed oddly */
+  /* Soft fail (no enroll / sensor quirk) still unlocks after a full hold */
   _fpSuccess();
 }
-/** No native sensor / browser / no enrolled print — short pulse then open */
+/** After full hold on PC / no JSBridge — brief verify animation then open */
 function _fpOpenWithoutSensor(){
   _fpSetState('scanning');
-  setTimeout(function(){ _fpSuccess(); }, 420);
+  _fpStatus('Recognized');
+  _fpSetProgress(1);
+  try { if(typeof _haptic === 'function') _haptic(10); } catch(e){}
+  setTimeout(function(){ _fpSuccess(); }, 480);
 }
+/** Called only after user held finger long enough */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
   if(window._askBarOpen && window._fpUnlocked){
     if(typeof setAskBarVisible === 'function') setAskBarVisible(false);
     window._fpUnlocked = false;
     _fpSetState('');
+    _fpStatus('');
+    _fpSetProgress(0);
     return;
   }
   window._fpBusy = true;
   _fpSetState('scanning');
+  _fpStatus('Authenticating…');
+  _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(8); } catch(e){}
 
   window.__onBiometricResult = function(ok, message){
@@ -11933,10 +11999,8 @@ function startFingerprintUnlock(){
 
   var usedNative = _postNativeBiometric();
   if(!usedNative){
-    /* PC / no JSBridge — just open (no fingerprint to check) */
     _fpOpenWithoutSensor();
   }
-  /* If native: system prompt if enrolled; native returns success "skip" when none enrolled */
 }
 window.startFingerprintUnlock = startFingerprintUnlock;
 window.__onBiometricResult = function(ok, message){
@@ -11944,23 +12008,101 @@ window.__onBiometricResult = function(ok, message){
   else _fpFail(message || 'failed');
 };
 
+function _fpCancelHold(early){
+  if(window._fpHoldRaf){ cancelAnimationFrame(window._fpHoldRaf); window._fpHoldRaf = 0; }
+  window._fpHoldActive = false;
+  if(window._fpBusy) return; /* already in auth phase — don't stomp */
+  if(early && window._fpHoldDone === false){
+    _fpSetState('fail');
+    _fpStatus('Hold longer');
+    _fpSetProgress(0);
+    try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
+    setTimeout(function(){
+      if(!window._fpHoldActive && !window._fpBusy){
+        _fpSetState('');
+        _fpStatus('');
+      }
+    }, 700);
+  } else if(!window._fpBusy){
+    _fpSetState('');
+    _fpStatus('');
+    _fpSetProgress(0);
+  }
+  window._fpHoldDone = false;
+}
+function _fpBeginHold(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  /* Already unlocked → single tap can lock/hide ask bar */
+  if(window._askBarOpen && window._fpUnlocked){
+    startFingerprintUnlock();
+    return;
+  }
+  if(window._fpBusy || window._fpHoldActive) return;
+  window._fpHoldActive = true;
+  window._fpHoldDone = false;
+  window._fpHoldStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  _fpSetState('holding');
+  _fpStatus('Scanning…');
+  _fpSetProgress(0);
+  try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
+
+  function tick(now){
+    if(!window._fpHoldActive) return;
+    var t0 = window._fpHoldStart;
+    var elapsed = now - t0;
+    var p = Math.min(1, elapsed / FP_HOLD_MS);
+    _fpSetProgress(p);
+    if(p < 0.35) _fpStatus('Keep holding…');
+    else if(p < 0.75) _fpStatus('Scanning…');
+    else _fpStatus('Almost…');
+    if(elapsed >= FP_HOLD_MS){
+      window._fpHoldDone = true;
+      window._fpHoldActive = false;
+      window._fpHoldRaf = 0;
+      _fpSetProgress(1);
+      try { if(typeof _haptic === 'function') _haptic(10); } catch(err2){}
+      startFingerprintUnlock();
+      return;
+    }
+    window._fpHoldRaf = requestAnimationFrame(tick);
+  }
+  window._fpHoldRaf = requestAnimationFrame(tick);
+}
+function _fpEndHold(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(!window._fpHoldActive) return;
+  var early = !window._fpHoldDone;
+  window._fpHoldActive = false;
+  _fpCancelHold(early);
+}
+
 (function bootFingerprintPad(){
   function wire(){
     var pad = document.getElementById('synFpPad');
-    var wrap = document.getElementById('synFingerprint');
-    if(!pad) return;
+    if(!pad || pad._fpWired) return;
+    pad._fpWired = true;
+
+    /* Hold-to-scan only — no instant click unlock */
+    pad.addEventListener('pointerdown', function(e){
+      if(e.button != null && e.button !== 0) return;
+      try { pad.setPointerCapture(e.pointerId); } catch(err){}
+      _fpBeginHold(e);
+    });
+    pad.addEventListener('pointerup', _fpEndHold);
+    pad.addEventListener('pointercancel', _fpEndHold);
+    pad.addEventListener('pointerleave', function(e){
+      /* Only cancel if pointer actually left while holding (mouse) */
+      if(window._fpHoldActive && e.pointerType === 'mouse') _fpEndHold(e);
+    });
+    pad.addEventListener('lostpointercapture', function(){
+      if(window._fpHoldActive) _fpEndHold();
+    });
+    /* Block synthetic click after press */
     pad.addEventListener('click', function(e){
       e.preventDefault();
       e.stopPropagation();
-      startFingerprintUnlock();
     });
-    /* Long-press also works (feels like holding finger on sensor) */
-    var holdT = null;
-    pad.addEventListener('touchstart', function(){
-      holdT = setTimeout(function(){ startFingerprintUnlock(); }, 280);
-    }, {passive:true});
-    pad.addEventListener('touchend', function(){ if(holdT) clearTimeout(holdT); });
-    pad.addEventListener('touchcancel', function(){ if(holdT) clearTimeout(holdT); });
+    pad.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
   else wire();
