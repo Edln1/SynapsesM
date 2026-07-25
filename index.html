@@ -2758,6 +2758,24 @@ body.voice-live .syn-fp-icon{
 @keyframes lbPop{from{transform:scale(0.88);opacity:0;}to{transform:scale(1);opacity:1;}}
 </style>
   <script>
+    // ── Hard first-launch defaults ─────────────────────────────────────────────
+    // Single source of truth for "is this a brand-new install." Runs before any
+    // other init code touches synapses_topbar_hidden / synapses_synbot_enabled /
+    // synapses_pulse_open_v1, so those keys are guaranteed to hold OUR chosen
+    // defaults by the time each feature's own restore-logic reads them — no more
+    // relying on separate null-checks scattered across the file that could race
+    // against other init paths (profile load, tour, demo mode, etc).
+    // Bump FIRST_LAUNCH_FLAG's version suffix to force this to re-seed on next deploy.
+    (function _forceFirstLaunchDefaults(){
+      try {
+        var FLAG = 'synapses_first_launch_v1';
+        if (localStorage.getItem(FLAG) === '1') return; // not first launch — leave saved prefs alone
+        localStorage.setItem('synapses_topbar_hidden', '1');   // top-right icons hidden
+        localStorage.setItem('synapses_synbot_enabled', '0');  // SynBot off
+        localStorage.setItem('synapses_pulse_open_v1', '0');   // Pulse closed
+        localStorage.setItem(FLAG, '1');
+      } catch(e) {}
+    })();
     // Global error handler — prevent silent crashes after hours of use
     window.onerror = function(msg, src, line, col, err){
       // Suppress errors from external CDN scripts (e.g. Supabase, fonts, etc.)
