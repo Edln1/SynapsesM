@@ -8007,7 +8007,7 @@ if(_isVidMode){
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){goHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){goHome();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){if(typeof newChat==='function')newChat();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){if(typeof newChat==='function')newChat();}};
     var fn=secMap[_lastSec];
     if(fn){fn();}else if(typeof newChat==='function'){newChat();}
   }
