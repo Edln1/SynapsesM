@@ -28400,7 +28400,13 @@ function _neuInjectDownloadInterceptor(frame){
         var rootLive = document.getElementById('synTourRoot');
         var tourUiOn = !!(rootLive && rootLive.classList.contains('on') && rootLive.style.display !== 'none');
         if (window.__synTourActive && tourUiOn) {
-          if (_tourMode) canvas.style.opacity = '1';
+          /* Don't fight an intentional hide (hideGuideBot marks data-myth-hidden
+             while he's tucked away pre-hatch or between story beats). Without
+             this check, every _tinyBotSync() call during the story — which
+             happens repeatedly at step transitions — snapped opacity back to
+             1 right after hideGuideBot() set it to 0, causing a blink/reappear
+             for the whole runtime instead of just at the start. */
+          if (_tourMode && canvas.getAttribute('data-myth-hidden') !== '1') canvas.style.opacity = '1';
           return;
         }
         /* Stuck purple/fullscreen with tour UI gone — always recover mint BR */
@@ -39730,6 +39736,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   /** Soft park at crater — once. Do not hard-snap every frame (that caused stutter/freeze). */
   function pinGuideAtPlanet(force) {
+    /* Never fight an intentional hide — hideGuideBot() sets guideReleased
+       false and marks data-myth-hidden while he's tucked away. This function
+       is called from many places throughout the story (including a 2s
+       watchdog that used to treat "hidden" as a reason to force him back on
+       screen), so without this guard it kept re-showing him mid-story every
+       time any of those callers ran — the same fight as before, just from a
+       call site that never got the fix. */
+    if (!state.guideReleased) return;
     var m = state.myth;
     var body = activePlanet(m);
     if (!m || !body) return;
