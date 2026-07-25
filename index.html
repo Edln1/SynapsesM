@@ -30226,6 +30226,14 @@ var _synBotEnabled = (function(){
   }catch(e){ return false; }
 })();
 window._synBotEnabled = _synBotEnabled;
+/* Paint the correct on/off visual state at boot — the variable above was already
+   correct, but nothing ever applied it to the DOM until the user toggled it once,
+   so the button/tooltip/canvas kept showing whatever the static HTML markup had. */
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', function(){ if(typeof _applySynBotVisualState==='function') _applySynBotVisualState(); });
+} else {
+  setTimeout(function(){ if(typeof _applySynBotVisualState==='function') _applySynBotVisualState(); }, 0);
+}
 var _iconON  = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/><line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#7c6af7"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>';
 var _iconOFF = '<rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/><rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/><rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/><rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/><line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="4" r="2" fill="#555"/><rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/><rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>';
 function _applySynBotVisualState(){
@@ -38033,7 +38041,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    * this is the HTML-side fix for that.
    */
   /* Bump this on each tour UX change so Chrome localStorage re-unlocks the first tour */
-  var SYNAPSES_APP_BUILD = '2026-07-17-synbot-unstick-v3';
+  var SYNAPSES_APP_BUILD = '2026-07-24-tourfloat-restore-v4';
   var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
   var TOUR_DONE_KEY = 'synapses_tour_v1';
@@ -38364,7 +38372,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     /* Last hatch/home spawn so we never fall back to bottom-right */
     guideSpawn: null,
     /* full | story | tour | demo — how this run was opened */
-    entryMode: 'full'
+    entryMode: 'full',
+    /* 'toChoice' = Skip jumps ahead to the Continue-story/Do-the-tour choice (first film only).
+       'full' = Skip exits the whole demo. Flips to 'full' once the choice dock is reached. */
+    skipStage: 'toChoice'
   };
 
   function prefersReducedMotion() {
@@ -38941,26 +38952,40 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
   }
 
+  /**
+   * First press (skipStage 'toChoice'): jump past the film to the
+   * Continue story / Do the tour choice dock — never exits the demo.
+   * Once that choice dock is reached, skipStage flips to 'full' and this
+   * same button (relabeled) skips the rest of the session entirely.
+   */
+  function _skipMythAction(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (state.skipStage === 'toChoice') {
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_skip_to_choice', {});
+      } catch (eT0) {}
+      try { skipMythToChoice(); } catch (errC) {}
+      return;
+    }
+    try {
+      if (typeof finish === 'function') finish(true);
+      else if (typeof window.dismissSynapsesTour === 'function') {
+        try { markDone(); } catch (eM) {}
+        window.dismissSynapsesTour();
+      }
+      try {
+        if (typeof synTrack === 'function') synTrack('tour_skip_entire', {});
+      } catch (eT) {}
+    } catch (err) {
+      try { markDone(); } catch (e2) {}
+      try { window.dismissSynapsesTour(); } catch (e3) {}
+    }
+  }
+
   function wireTourSkipMyth() {
     var b = $('synTourSkipMyth');
     if (!b) return;
-    /* Skip ENTIRE demo — marks tour done so reinstalls / re-opens don’t force the full run */
-    b.onclick = function (e) {
-      if (e) { e.preventDefault(); e.stopPropagation(); }
-      try {
-        if (typeof finish === 'function') finish(true);
-        else if (typeof window.dismissSynapsesTour === 'function') {
-          try { markDone(); } catch (eM) {}
-          window.dismissSynapsesTour();
-        }
-        try {
-          if (typeof synTrack === 'function') synTrack('tour_skip_entire', {});
-        } catch (eT) {}
-      } catch (err) {
-        try { markDone(); } catch (e2) {}
-        try { window.dismissSynapsesTour(); } catch (e3) {}
-      }
-    };
+    b.onclick = _skipMythAction;
   }
 
   function ensureReplayHubDom() {
@@ -38989,26 +39014,29 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function ensureSkipMythDom() {
     var root = $('synTourRoot');
     if (!root) return;
+    var toChoice = state.skipStage === 'toChoice';
+    var label = toChoice ? 'Skip' : 'Skip entire demo';
+    var titleText = toChoice ? 'Skip ahead to the tour/story choice' : 'Skip entire demo and enter the app';
     var skipHtml =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<polygon points="5 4 15 12 5 20 5 4"/>' +
         '<line x1="19" y1="5" x2="19" y2="19"/>' +
       '</svg>' +
-      '<span class="st-skip-label">Skip entire demo</span>';
+      '<span class="st-skip-label">' + label + '</span>';
     var b = $('synTourSkipMyth');
     if (b) {
-      /* Always keep label current — Skip entire demo ends everything */
+      /* Always keep label current for the active skip stage */
       b.innerHTML = skipHtml;
-      b.title = 'Skip entire demo and enter the app';
-      b.setAttribute('aria-label', 'Skip entire demo and enter the app');
+      b.title = titleText;
+      b.setAttribute('aria-label', titleText);
       wireTourSkipMyth();
       return;
     }
     b = document.createElement('button');
     b.id = 'synTourSkipMyth';
     b.type = 'button';
-    b.title = 'Skip entire demo and enter the app';
-    b.setAttribute('aria-label', 'Skip entire demo and enter the app');
+    b.title = titleText;
+    b.setAttribute('aria-label', titleText);
     b.innerHTML = skipHtml;
     root.appendChild(b);
     wireTourSkipMyth();
@@ -39056,12 +39084,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     root.innerHTML =
       '<canvas id="synTourFx"></canvas>' +
       '<div id="synTourNarration" aria-live="polite"><span class="st-nar-text"></span></div>' +
-      '<button type="button" id="synTourSkipMyth" title="Skip entire demo and enter the app" aria-label="Skip entire demo and enter the app">' +
+      '<button type="button" id="synTourSkipMyth" title="Skip ahead to the tour/story choice" aria-label="Skip ahead to the tour/story choice">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
           '<polygon points="5 4 15 12 5 20 5 4"/>' +
           '<line x1="19" y1="5" x2="19" y2="19"/>' +
         '</svg>' +
-        '<span class="st-skip-label">Skip entire demo</span>' +
+        '<span class="st-skip-label">Skip</span>' +
       '</button>' +
       '<div id="synTourHole"></div>' +
       '<div id="synTourCard">' +
@@ -39129,6 +39157,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         '</div>' +
       '</div>';
     document.body.appendChild(root);
+    ensureSkipMythDom();
     wireTourNavButtons();
     var storyTourBtn = $('synTourStoryTourBtn');
     if (storyTourBtn) storyTourBtn.onclick = function (e) {
@@ -39602,6 +39631,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       state.mythTimer = 0;
     }
     showTourSkipMyth(false); /* Skip must not cover the two CTAs */
+    /* Past this point Skip means skip everything, not just jump to this dock */
+    state.skipStage = 'full';
+    try { ensureSkipMythDom(); } catch (eSk) {}
     hideMeetAvaPanel();
     pinGuideAtPlanet(true);
     showMythChoice();
@@ -43107,11 +43139,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       state.i = 1; /* Ava introduces Synapses — live video */
       state.guideReleased = true;
       window.__synBotStoryReleased = true;
+      state.skipStage = 'full'; /* no film to skip through here — Skip means exit */
     } else {
       state.i = 0;
       state.guideReleased = false;
       window.__synBotStoryReleased = false;
       if (opts.mode === 'story') state.entryMode = 'story';
+      state.skipStage = 'toChoice'; /* fresh film run — first Skip jumps to the choice dock */
     }
     state.open = true;
     window.__synTourActive = true;
