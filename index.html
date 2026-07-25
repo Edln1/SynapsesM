@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* One-time forced reset of the topbar/SynBot/Pulse toggle states.
+   Runs before anything else on the page. If the version marker below doesn't
+   match what's saved, it force-clears just these three saved states back to
+   their default (hidden/off) — this overrides stale values even if Android
+   restored old app data from a cloud backup after a reinstall. Bump
+   RESET_VERSION any time these three need to be force-reset again. */
+(function(){
+  try{
+    var RESET_VERSION = '1';
+    var VKEY = 'synapses_state_reset_version';
+    if(localStorage.getItem(VKEY) !== RESET_VERSION){
+      localStorage.removeItem('synapses_topbar_hidden');
+      localStorage.removeItem('synapses_synbot_enabled');
+      localStorage.removeItem('synapses_pulse_open_v1');
+      localStorage.setItem(VKEY, RESET_VERSION);
+    }
+  }catch(e){}
+})();
+</script>
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#000000">
   <style>html,body{background:#000000 !important;}</style>
