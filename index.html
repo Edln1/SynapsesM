@@ -12050,7 +12050,6 @@ function runHeroBarLaser(bar, onDone) {
 (function(){
   var _lastGreeting = '';
   var _modeFlip = 0; /* alternate classic <-> claude */
-  var _newsSpice = '';
   var _newsFetchedDay = '';
 
   function _pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
@@ -12138,45 +12137,37 @@ function runHeroBarLaser(bar, onDone) {
     return true;
   }
 
-  function _fetchNewsSpice(cb){
+  var _newsHeadlines = [];
+  var _newsRotateIdx = 0;
+  var _newsRotateTimer = null;
+  var NEWS_BACKEND = 'https://synbot-whatsapp-2.onrender.com';
+
+  function _fetchNewsHeadlines(cb){
     try {
       var dayKey = String(_daySeed());
-      if(_newsFetchedDay === dayKey && _newsSpice){ if(cb) cb(_newsSpice); return; }
-      var d = new Date();
-      var y = d.getUTCFullYear();
-      var m = _pad2(d.getUTCMonth()+1);
-      var day = _pad2(d.getUTCDate());
-      var url = 'https://api.wikimedia.org/feed/v1/wikipedia/en/featured/' + y + '/' + m + '/' + day;
+      if(_newsFetchedDay === dayKey && _newsHeadlines.length){ if(cb) cb(_newsHeadlines); return; }
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-      var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 4000);
-      fetch(url, {
+      var t = setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 6000);
+      fetch(NEWS_BACKEND + '/news-headlines', {
         signal: ctrl ? ctrl.signal : undefined,
-        headers: { 'Accept': 'application/json', 'Api-User-Agent': 'SynapsesHomeGreeting/1.0' }
+        headers: { 'Accept': 'application/json' }
       }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
         clearTimeout(t);
-        if(!data){ if(cb) cb(null); return; }
-        var title = '';
-        try {
-          if(data.news && data.news[0] && data.news[0].story && data.news[0].story.titles){
-            title = data.news[0].story.titles.normalized || data.news[0].story.titles.display || '';
-          }
-          if(!title && data.mostread && data.mostread.articles && data.mostread.articles[0]){
-            var a0 = data.mostread.articles[0];
-            title = a0.titles ? (a0.titles.normalized || a0.titles.display) : (a0.title || '');
-          }
-          if(!title && data.onthisday && data.onthisday[0] && data.onthisday[0].text){
-            title = String(data.onthisday[0].text).split(/[.!?]/)[0];
-          }
-        } catch(e2){}
-        title = String(title || '').replace(/_/g, ' ').trim();
-        if(title.length > 42) title = title.slice(0, 40).replace(/\s+\S*$/, '') + '\u2026';
-        if(title.length > 4){
-          _newsSpice = title;
+        var list = (data && Array.isArray(data.headlines)) ? data.headlines : [];
+        /* Backend already filters for tone (keyword pass + Groq tiebreak) and
+           picks up to 5 real current stories — just trim display length here. */
+        list = list.map(function(title){
+          title = String(title || '').trim();
+          if(title.length > 42) title = title.slice(0, 40).replace(/\s+\S*$/, '') + '\u2026';
+          return title;
+        }).filter(function(t){ return t.length > 4; });
+        if(list.length){
+          _newsHeadlines = list;
           _newsFetchedDay = dayKey;
-          if(cb) cb(title);
-        } else if(cb) cb(null);
-      }).catch(function(){ clearTimeout(t); if(cb) cb(null); });
-    } catch(e3){ if(cb) cb(null); }
+          if(cb) cb(list);
+        } else if(cb) cb([]);
+      }).catch(function(){ clearTimeout(t); if(cb) cb([]); });
+    } catch(e3){ if(cb) cb([]); }
   }
 
   /* One fixed phrasing for the live line — it should change because the
@@ -12222,24 +12213,67 @@ function runHeroBarLaser(bar, onDone) {
     }
   }
 
-  /** Show today's live headline. Cached per day (see _fetchNewsSpice) so this
-      re-displays the same real topic instead of spinning up new phrasing for it. */
+  /** Show today's live headline(s). Cached per day (see _fetchNewsHeadlines)
+      so this re-displays the same real stories instead of refetching, and
+      rotates through them on a fixed timer (see _startNewsRotation) rather
+      than changing every reload — a steady cycle reads as "live," a random
+      one reads as broken. */
   function refreshLiveGreeting(animate){
     var btn = _liveBtn();
     if(btn) btn.classList.add('busy');
-    function done(title){
-      if(btn) btn.classList.remove('busy');
-      var line = title ? _newsAwareLine(title) : 'Live feed is quiet right now.';
+    function showAt(idx){
+      if(!_newsHeadlines.length) return;
+      _newsRotateIdx = ((idx % _newsHeadlines.length) + _newsHeadlines.length) % _newsHeadlines.length;
+      var line = _newsAwareLine(_newsHeadlines[_newsRotateIdx]);
       if(line !== _lastGreeting){
         _lastGreeting = line;
         _setGreetingText(line, !!animate);
       }
     }
-    if(_newsSpice && _newsFetchedDay === String(_daySeed())){
-      done(_newsSpice);
+    function done(list){
+      if(btn) btn.classList.remove('busy');
+      if(list && list.length){
+        showAt(0);
+        _startNewsRotation();
+      } else {
+        /* No usable headlines today — don't show a "feed is quiet" filler,
+           just use the normal rotating greeting so the slot never sits
+           empty or reaches for something unfiltered to fill it. */
+        _stopNewsRotation();
+        var line;
+        try { line = _classicGreeting(); } catch(eC){ line = "What's on your mind?"; }
+        if(line !== _lastGreeting){
+          _lastGreeting = line;
+          _setGreetingText(line, !!animate);
+        }
+      }
+    }
+    if(_newsHeadlines.length && _newsFetchedDay === String(_daySeed())){
+      done(_newsHeadlines);
       return;
     }
-    _fetchNewsSpice(function(title){ done(title); });
+    _fetchNewsHeadlines(function(list){ done(list); });
+  }
+
+  /** Cycle through the day's filtered headlines on a fixed interval. Only
+      runs while live mode is on — started/stopped explicitly on mode switch
+      rather than gated on document.hidden inside the tick, since WebView-
+      wrapped builds (Neutralino desktop, Median-style mobile shells) don't
+      reliably report Page Visibility; a stuck "hidden === true" there would
+      have silently frozen the rotation on one headline forever. */
+  function _startNewsRotation(){
+    _stopNewsRotation();
+    if(_greetMode !== 'live' || _newsHeadlines.length < 2) return;
+    _newsRotateTimer = setInterval(function(){
+      if(_greetMode !== 'live') return;
+      _newsRotateIdx = (_newsRotateIdx + 1) % _newsHeadlines.length;
+      var line = _newsAwareLine(_newsHeadlines[_newsRotateIdx]);
+      _lastGreeting = line;
+      _setGreetingText(line, true);
+    }, 14000);
+  }
+  function _stopNewsRotation(){
+    if(_newsRotateTimer){ clearInterval(_newsRotateTimer); _newsRotateTimer = null; }
   }
 
   /** User taps the toggle → swap between the live feed and the normal greeting. */
@@ -12253,7 +12287,7 @@ function runHeroBarLaser(bar, onDone) {
       btn.title = _greetMode === 'live' ? 'Switch to normal greeting' : 'Switch to live feed';
     }
     if(_greetMode === 'live') refreshLiveGreeting(true);
-    else refreshHomeGreeting({ animate: true, forceNormal: true });
+    else { _stopNewsRotation(); refreshHomeGreeting({ animate: true, forceNormal: true }); }
   }
 
   window.refreshHomeGreeting = refreshHomeGreeting;
@@ -12286,7 +12320,10 @@ function runHeroBarLaser(bar, onDone) {
   setTimeout(boot, 400);
   document.addEventListener('visibilitychange', function(){
     if(document.hidden) return;
-    if(_greetMode === 'live') refreshLiveGreeting(true);
+    if(_greetMode === 'live'){
+      if(_newsHeadlines.length && _newsFetchedDay === String(_daySeed())) _startNewsRotation();
+      else refreshLiveGreeting(true);
+    }
     else refreshHomeGreeting({ animate: true });
   });
 })();
@@ -27946,8 +27983,13 @@ function _neuInjectDownloadInterceptor(frame){
         _exiting = false;
         _offScreen = false;
         if(_exitTimer){ clearTimeout(_exitTimer); _exitTimer = null; }
-        /* keep visible full-screen layer */
-        if(canvas.style.opacity === '0' || canvas.style.opacity === ''){
+        /* keep visible full-screen layer — but never override an intentional
+           hide (hideGuideBot marks data-myth-hidden while he's still inside
+           the UFO pre-hatch). Without this check, this per-frame safety net
+           fought that hide every single frame, forcing opacity back to 1
+           immediately after it was set to 0 — a continuous blink/reappear
+           for as long as the story wants him hidden. */
+        if(!canvas.hasAttribute('data-myth-hidden') && (canvas.style.opacity === '0' || canvas.style.opacity === '')){
           canvas.style.opacity = '1';
         }
       } else if(_exiting){
@@ -28508,9 +28550,12 @@ function _neuInjectDownloadInterceptor(frame){
   // Hide when big robot tooltip shows, restore when it hides
   var _rtip = document.getElementById('robotTooltip');
   if(_rtip) new MutationObserver(function(){
-    /* Never hide the guide bot during story/tour flight */
+    /* Never fight the guide bot during story/tour flight — the story's own
+       choreography (releaseGuideBot/hideGuideBot/render loop) is the sole
+       authority over opacity while it's live. Forcing a value here caused
+       the bot to visibly snap/flicker whenever this tooltip's class changed
+       for any unrelated reason mid-film. */
     if(_tourMode || (window.__synTourActive && window.__synBotStoryReleased)){
-      canvas.style.opacity = '1';
       return;
     }
     if(_rtip.classList.contains('rt-visible')){
