@@ -1,26 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>
-/* One-time forced reset of the topbar/SynBot/Pulse toggle states.
-   Runs before anything else on the page. If the version marker below doesn't
-   match what's saved, it force-clears just these three saved states back to
-   their default (hidden/off) — this overrides stale values even if Android
-   restored old app data from a cloud backup after a reinstall. Bump
-   RESET_VERSION any time these three need to be force-reset again. */
-(function(){
-  try{
-    var RESET_VERSION = '1';
-    var VKEY = 'synapses_state_reset_version';
-    if(localStorage.getItem(VKEY) !== RESET_VERSION){
-      localStorage.removeItem('synapses_topbar_hidden');
-      localStorage.removeItem('synapses_synbot_enabled');
-      localStorage.removeItem('synapses_pulse_open_v1');
-      localStorage.setItem(VKEY, RESET_VERSION);
-    }
-  }catch(e){}
-})();
-</script>
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#000000">
   <style>html,body{background:#000000 !important;}</style>
@@ -4063,7 +4043,7 @@ window.getWebAudioNode = getWebAudioNode;
 </script>
 
 </head>
-<body style="background:#000000;" class="topbar-hidden">
+<body style="background:#000000;">
 <script>
 (function(){
   function applyPreload(){
@@ -5333,7 +5313,7 @@ window.getWebAudioNode = getWebAudioNode;
   <!-- Dedicated Electron drag zone - thin strip at very top, avoids all buttons -->
 <!-- Floating win-controls strip: always visible, top-right, works bar on or off -->
 <div id="winStrip" style="position:fixed;top:0;right:0;z-index:9999999;display:flex;align-items:center;gap:0;-webkit-app-region:no-drag;app-region:no-drag;">
-  <button id="topBarToggle" onclick="toggleTopBar()" title="Show top icons" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;-webkit-app-region:no-drag;">▼</button>
+  <button id="topBarToggle" onclick="toggleTopBar()" title="Toggle top bar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;-webkit-app-region:no-drag;">▲</button>
   <button id="etbMin" title="Minimise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2014;</button>
   <button id="etbMax" title="Maximise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:11px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x25A1;</button>
   <button id="etbClose" title="Close" style="width:40px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='#c42b1c';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2715;</button>
@@ -5469,7 +5449,7 @@ window.getWebAudioNode = getWebAudioNode;
   }
 })();
 </script>
-<div class="top-bar hidden">
+<div class="top-bar">
     <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:-24px;padding-left:24px;">
     <!-- Refined synapse mark — same light-up animation, glass treatment -->
     <div id="bnavLogoMark" onclick="newChat()" title="Synapses" style="display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px;margin-right:8px;opacity:0.92;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.92'">
@@ -5567,18 +5547,18 @@ window.getWebAudioNode = getWebAudioNode;
       </button>
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
       <!-- Robot hover toggle -->
-      <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Show nav tooltips" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;opacity:0.35;">
+      <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
         <svg id="synBotToggleIcon" width="15" height="15" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/>
-          <rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/>
-          <rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/>
-          <rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/>
-          <line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="28" cy="4" r="2" fill="#555"/>
-          <rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/>
-          <rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/>
-          <rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>
-          <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>
+          <rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/>
+          <rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/>
+          <rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/>
+          <rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/>
+          <line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="28" cy="4" r="2" fill="#7c6af7"/>
+          <rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
+          <rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
+          <rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
+          <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
         </svg>
       </button>
       <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" title="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;transform:translateZ(0);overflow:hidden;">
@@ -15393,11 +15373,23 @@ async function sendMessage(){
       }
       try{ userNotes=JSON.parse(localStorage.getItem('synapses_notes')||'[]'); }catch(e){ userNotes=[]; }
       var dn=new Date(),mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      userNotes.unshift({title:title,body:body,tags:[],date:mon[dn.getMonth()]+' '+dn.getDate(),colorIdx:4});
+      var _ccNote={title:title,body:body,tags:[],date:mon[dn.getMonth()]+' '+dn.getDate(),colorIdx:4};
+      userNotes.unshift(_ccNote);
       try{ localStorage.setItem('synapses_notes',JSON.stringify(userNotes)); }catch(e2){}
       if(typeof nlSave==='function') nlSave(true);
       if(typeof renderNotes==='function') renderNotes();
       if(typeof renderStickyNotes==='function') setTimeout(function(){renderStickyNotes(true);},100);
+      if(typeof _nbLoad==='function' && typeof _nbRenderAll==='function'){ try{ _nbLoad(); _nbRenderAll(); }catch(eNb){} }
+      // Persist to Supabase — syncWhatsAppNotes() full-replaces userNotes on its 45s poll
+      // / realtime trigger, so a note that only lives in localStorage gets silently wiped.
+      if(window._supabase && currentUser && currentUser.email && !currentUser.isGuest){
+        window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_ccNote.title,body:_ccNote.body})
+          .select().then(function(r){
+            if(r.error){ console.error('chat note supabase error:', r.error); }
+            else if(r.data && r.data[0]){ _ccNote._supabaseId=r.data[0].id; try{ localStorage.setItem('synapses_notes',JSON.stringify(userNotes)); }catch(e3){} }
+            if(typeof notifyNotesWidget==='function') notifyNotesWidget(currentUser.email);
+          });
+      }
       // Tag this session as having notes so panel shows on re-open
       if(activeSession){
         if(!chatSessions[activeSession]) chatSessions[activeSession]={history:[],html:''};
@@ -27995,15 +27987,6 @@ function _neuInjectDownloadInterceptor(frame){
       ctx.fill();
     }
     drawRobot(r.x, r.y, r.angle, r.armAngle, r.jetFlicker, r.size);
-    /* Catch-all, runs every single frame no matter what: if he's marked
-       intentionally hidden but something else touching this canvas snuck
-       opacity back up, correct it right here — 60x/sec — instead of hunting
-       down every possible offending call site individually. Placed outside
-       the _paused gate below so it still corrects things even if whatever
-       caused the stray re-show left _paused in an unexpected state. */
-    if(canvas.hasAttribute('data-myth-hidden') && canvas.style.opacity !== '0'){
-      canvas.style.opacity = '0';
-    }
     if(!_paused){
       update();
 
@@ -28084,14 +28067,7 @@ function _neuInjectDownloadInterceptor(frame){
         (typeof r.y === 'number' && r.y < H) ? r.y : window.innerHeight * 0.5
       );
     }
-    /* Don't fight an intentional hide — same rule as the other two safety
-       nets. This one is called from guideFlyTo() at nearly every story
-       beat, so leaving it unconditional meant it could re-show the bot
-       mid-hide on the very first (cold-load) run, when timing lines up
-       differently than on a warm replay. */
-    if (!canvas.hasAttribute('data-myth-hidden')) {
-      canvas.style.opacity = '1';
-    }
+    canvas.style.opacity = '1';
     canvas.style.visibility = 'visible';
   };
   // Bring mini bot back on screen immediately (cancel any exit/offscreen)
@@ -28416,13 +28392,7 @@ function _neuInjectDownloadInterceptor(frame){
         var rootLive = document.getElementById('synTourRoot');
         var tourUiOn = !!(rootLive && rootLive.classList.contains('on') && rootLive.style.display !== 'none');
         if (window.__synTourActive && tourUiOn) {
-          /* Don't fight an intentional hide (hideGuideBot marks data-myth-hidden
-             while he's tucked away pre-hatch or between story beats). Without
-             this check, every _tinyBotSync() call during the story — which
-             happens repeatedly at step transitions — snapped opacity back to
-             1 right after hideGuideBot() set it to 0, causing a blink/reappear
-             for the whole runtime instead of just at the start. */
-          if (_tourMode && canvas.getAttribute('data-myth-hidden') !== '1') canvas.style.opacity = '1';
+          if (_tourMode) canvas.style.opacity = '1';
           return;
         }
         /* Stuck purple/fullscreen with tour UI gone — always recover mint BR */
@@ -28574,16 +28544,14 @@ function _neuInjectDownloadInterceptor(frame){
     splashMo.observe(document.body, {childList:true, subtree:false});
     // Safety net: always try to float BR bot if still hidden after load
     setTimeout(function(){
-      if(!_tourMode && !window.__synTourActive && !canvas.hasAttribute('data-myth-hidden')
-        && canvas.style.opacity==='0' && _synBotAllowed()
+      if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
         canvas.style.opacity='0.55';
       }
     }, 2500);
     setTimeout(function(){
-      if(!_tourMode && !window.__synTourActive && !canvas.hasAttribute('data-myth-hidden')
-        && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
+      if(!_tourMode && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
         canvas.style.opacity='0.55';
@@ -29655,11 +29623,21 @@ function synBotSend(text){
             var lines = full.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0&&!l.startsWith('{')&&!l.startsWith('"');});
             if(lines.length) title = lines[0].replace(/^[#\-\*\d\.\s]+/,'').slice(0,60)||'SYN-BOT note';
           }
-          userNotes.unshift({title:title,body:body,tags:[],date:mon[d.getMonth()]+' '+d.getDate(),colorIdx:4});
+          var _sbNote={title:title,body:body,tags:[],date:mon[d.getMonth()]+' '+d.getDate(),colorIdx:4};
+          userNotes.unshift(_sbNote);
           try{ localStorage.setItem('synapses_notes',JSON.stringify(userNotes)); }catch(e2){}
           if(typeof nlSave==='function') nlSave(true);
           if(typeof renderNotes==='function') renderNotes();
           if(typeof renderStickyNotes==='function') setTimeout(function(){ renderStickyNotes(true); },100);
+          if(typeof _nbLoad==='function' && typeof _nbRenderAll==='function'){ try{ _nbLoad(); _nbRenderAll(); }catch(eNb){} }
+          if(window._supabase && currentUser && currentUser.email && !currentUser.isGuest){
+            window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_sbNote.title,body:_sbNote.body})
+              .select().then(function(r){
+                if(r.error){ console.error('synbot note supabase error:', r.error); }
+                else if(r.data && r.data[0]){ _sbNote._supabaseId=r.data[0].id; try{ localStorage.setItem('synapses_notes',JSON.stringify(userNotes)); }catch(e3){} }
+                if(typeof notifyNotesWidget==='function') notifyNotesWidget(currentUser.email);
+              });
+          }
           // Tag this session as having notes
           if(typeof activeSession!=='undefined' && activeSession){
             if(typeof chatSessions!=='undefined'){if(!chatSessions[activeSession])chatSessions[activeSession]={history:[],html:''};chatSessions[activeSession].hasNotes=true;}
@@ -30648,12 +30626,21 @@ function synBotReply(msg){
         try{ userNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); }catch(e){ userNotes=[]; }
         var d=new Date(),mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         var title = noteText.length > 40 ? noteText.slice(0,40)+'…' : noteText;
-        userNotes.unshift({title:title, body:noteText, tags:[], date:mon[d.getMonth()]+' '+d.getDate(), colorIdx:4});
+        var _qnNote={title:title, body:noteText, tags:[], date:mon[d.getMonth()]+' '+d.getDate(), colorIdx:4};
+        userNotes.unshift(_qnNote);
         try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); }catch(e2){}
         if(typeof nlSave==='function') nlSave(true);
         if(typeof renderNotes==='function') renderNotes();
-        setTimeout(function(){ if(typeof renderStickyNotes==='function') renderStickyNotes(true); },100);
+        setTimeout(function(){ if(typeof renderStickyNotes==='function') renderStickyNotes(true); if(typeof _nbLoad==='function' && typeof _nbRenderAll==='function'){ try{ _nbLoad(); _nbRenderAll(); }catch(eNb){} } },100);
         if(typeof showToast==='function') showToast('📝 Note saved!');
+        if(window._supabase && currentUser && currentUser.email && !currentUser.isGuest){
+          window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_qnNote.title,body:_qnNote.body})
+            .select().then(function(r){
+              if(r.error){ console.error('ncmd note supabase error:', r.error); }
+              else if(r.data && r.data[0]){ _qnNote._supabaseId=r.data[0].id; try{ localStorage.setItem('synapses_notes',JSON.stringify(userNotes)); }catch(e3){} }
+              if(typeof notifyNotesWidget==='function') notifyNotesWidget(currentUser.email);
+            });
+        }
       } else {
         if(typeof _toolQuickNote==='function') _toolQuickNote();
       }
@@ -34396,12 +34383,28 @@ function speakVoiceReply(text) {
           var _nd = new Date();
           var _nmon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           var _ntitle = 'Voice Note — ' + _nmon[_nd.getMonth()] + ' ' + _nd.getDate();
-          userNotes.unshift({ title: _ntitle, body: _noteBody.replace(/\n+/g, ' ').trim(), tags: ['voice'], date: _nmon[_nd.getMonth()] + ' ' + _nd.getDate(), colorIdx: 4 });
+          var _vnNote = { title: _ntitle, body: _noteBody.replace(/\n+/g, ' ').trim(), tags: ['voice'], date: _nmon[_nd.getMonth()] + ' ' + _nd.getDate(), colorIdx: 4 };
+          userNotes.unshift(_vnNote);
           try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
           setTimeout(function(){
             if (typeof renderStickyNotes === 'function') renderStickyNotes(true);
             if (typeof renderNotes === 'function') renderNotes();
+            if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') { try { _nbLoad(); _nbRenderAll(); } catch(eNb){} }
           }, 150);
+          // Persist to Supabase — syncWhatsAppNotes() treats the DB as source of truth
+          // and full-replaces userNotes on its 45s poll / realtime trigger, so a note
+          // that only lives in localStorage gets silently wiped without this.
+          if (window._supabase && currentUser && currentUser.email && !currentUser.isGuest) {
+            window._supabase.from('notes').insert({ user_email: currentUser.email.toLowerCase(), title: _vnNote.title, body: _vnNote.body })
+              .select().then(function(r){
+                if (r.error) { console.error('voice note supabase error:', r.error); }
+                else if (r.data && r.data[0]) {
+                  _vnNote._supabaseId = r.data[0].id;
+                  try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
+                }
+                if (typeof notifyNotesWidget === 'function') notifyNotesWidget(currentUser.email);
+              });
+          }
           speak("Got it — note saved.");
         } else {
           speak("What would you like me to note?");
@@ -34422,12 +34425,25 @@ function speakVoiceReply(text) {
         var _npmon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         var _nptitle = 'Voice Note — ' + _npmon[_npd.getMonth()] + ' ' + _npd.getDate();
         if (typeof userNotes !== 'undefined') {
-          userNotes.unshift({ title: _nptitle, body: _npBody, tags: ['voice'], date: _npmon[_npd.getMonth()] + ' ' + _npd.getDate(), colorIdx: 4 });
+          var _npNote = { title: _nptitle, body: _npBody, tags: ['voice'], date: _npmon[_npd.getMonth()] + ' ' + _npd.getDate(), colorIdx: 4 };
+          userNotes.unshift(_npNote);
           try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
           setTimeout(function(){
             if (typeof renderStickyNotes === 'function') renderStickyNotes(true);
             if (typeof renderNotes === 'function') renderNotes();
+            if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') { try { _nbLoad(); _nbRenderAll(); } catch(eNb){} }
           }, 150);
+          if (window._supabase && currentUser && currentUser.email && !currentUser.isGuest) {
+            window._supabase.from('notes').insert({ user_email: currentUser.email.toLowerCase(), title: _npNote.title, body: _npNote.body })
+              .select().then(function(r){
+                if (r.error) { console.error('voice note supabase error:', r.error); }
+                else if (r.data && r.data[0]) {
+                  _npNote._supabaseId = r.data[0].id;
+                  try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
+                }
+                if (typeof notifyNotesWidget === 'function') notifyNotesWidget(currentUser.email);
+              });
+          }
         }
         speak("Noted.");
       } else {
@@ -39754,14 +39770,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   /** Soft park at crater — once. Do not hard-snap every frame (that caused stutter/freeze). */
   function pinGuideAtPlanet(force) {
-    /* Never fight an intentional hide — hideGuideBot() sets guideReleased
-       false and marks data-myth-hidden while he's tucked away. This function
-       is called from many places throughout the story (including a 2s
-       watchdog that used to treat "hidden" as a reason to force him back on
-       screen), so without this guard it kept re-showing him mid-story every
-       time any of those callers ran — the same fight as before, just from a
-       call site that never got the fix. */
-    if (!state.guideReleased) return;
     var m = state.myth;
     var body = activePlanet(m);
     if (!m || !body) return;
@@ -43393,40 +43401,21 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     setTimeout(killStuckTourOnBoot, 500);
   }
 
-  var _tourResizeLastW = window.innerWidth, _tourResizeLastH = window.innerHeight;
-  var _tourResizeTimer = null;
   window.addEventListener('resize', function () {
-    /* Mobile browsers fire resize constantly — address bar show/hide on
-       scroll, keyboard open/close — none of which should restart the
-       current step. Debounce, and ignore height-only changes under 150px
-       (typical browser-chrome jitter); only real width changes (rotation,
-       actual resize) or big height changes (real layout change) should
-       re-render the step. Without this, every mobile scroll during the
-       story was re-running the whole step's setup — including any
-       hide/release calls that step makes — causing the same blink/reappear
-       symptom but coming from resize noise, not the animation logic itself. */
-    clearTimeout(_tourResizeTimer);
-    _tourResizeTimer = setTimeout(function () {
-      var w = window.innerWidth, h = window.innerHeight;
-      var widthChanged = Math.abs(w - _tourResizeLastW) > 5;
-      var heightChanged = Math.abs(h - _tourResizeLastH) > 150;
-      _tourResizeLastW = w; _tourResizeLastH = h;
-      if (!widthChanged && !heightChanged) return;
-      if (!state.open) return;
-      fxResize();
-      /* Don't restart welcome myth mid-flight or while choice dock is up */
-      if (state.myth && state.myth.waitingChoice) {
-        try { positionMythChoice(); } catch (eP) {}
-        return;
-      }
-      if (state.myth && state.myth.active && !state.myth.panelShown) return;
-      var step = STEPS[state.i];
-      if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
-        /* Panel already revealed — keep it, only ensure layout */
-        return;
-      }
-      renderStep();
-    }, 200);
+    if (!state.open) return;
+    fxResize();
+    /* Don't restart welcome myth mid-flight or while choice dock is up */
+    if (state.myth && state.myth.waitingChoice) {
+      try { positionMythChoice(); } catch (eP) {}
+      return;
+    }
+    if (state.myth && state.myth.active && !state.myth.panelShown) return;
+    var step = STEPS[state.i];
+    if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
+      /* Panel already revealed — keep it, only ensure layout */
+      return;
+    }
+    renderStep();
   });
 })();
 
