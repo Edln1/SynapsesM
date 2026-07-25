@@ -28084,7 +28084,14 @@ function _neuInjectDownloadInterceptor(frame){
         (typeof r.y === 'number' && r.y < H) ? r.y : window.innerHeight * 0.5
       );
     }
-    canvas.style.opacity = '1';
+    /* Don't fight an intentional hide — same rule as the other two safety
+       nets. This one is called from guideFlyTo() at nearly every story
+       beat, so leaving it unconditional meant it could re-show the bot
+       mid-hide on the very first (cold-load) run, when timing lines up
+       differently than on a warm replay. */
+    if (!canvas.hasAttribute('data-myth-hidden')) {
+      canvas.style.opacity = '1';
+    }
     canvas.style.visibility = 'visible';
   };
   // Bring mini bot back on screen immediately (cancel any exit/offscreen)
@@ -28567,14 +28574,16 @@ function _neuInjectDownloadInterceptor(frame){
     splashMo.observe(document.body, {childList:true, subtree:false});
     // Safety net: always try to float BR bot if still hidden after load
     setTimeout(function(){
-      if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()
+      if(!_tourMode && !window.__synTourActive && !canvas.hasAttribute('data-myth-hidden')
+        && canvas.style.opacity==='0' && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
         canvas.style.opacity='0.55';
       }
     }, 2500);
     setTimeout(function(){
-      if(!_tourMode && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
+      if(!_tourMode && !window.__synTourActive && !canvas.hasAttribute('data-myth-hidden')
+        && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
         canvas.style.opacity='0.55';
