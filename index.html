@@ -27995,6 +27995,15 @@ function _neuInjectDownloadInterceptor(frame){
       ctx.fill();
     }
     drawRobot(r.x, r.y, r.angle, r.armAngle, r.jetFlicker, r.size);
+    /* Catch-all, runs every single frame no matter what: if he's marked
+       intentionally hidden but something else touching this canvas snuck
+       opacity back up, correct it right here — 60x/sec — instead of hunting
+       down every possible offending call site individually. Placed outside
+       the _paused gate below so it still corrects things even if whatever
+       caused the stray re-show left _paused in an unexpected state. */
+    if(canvas.hasAttribute('data-myth-hidden') && canvas.style.opacity !== '0'){
+      canvas.style.opacity = '0';
+    }
     if(!_paused){
       update();
 
@@ -43375,21 +43384,40 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     setTimeout(killStuckTourOnBoot, 500);
   }
 
+  var _tourResizeLastW = window.innerWidth, _tourResizeLastH = window.innerHeight;
+  var _tourResizeTimer = null;
   window.addEventListener('resize', function () {
-    if (!state.open) return;
-    fxResize();
-    /* Don't restart welcome myth mid-flight or while choice dock is up */
-    if (state.myth && state.myth.waitingChoice) {
-      try { positionMythChoice(); } catch (eP) {}
-      return;
-    }
-    if (state.myth && state.myth.active && !state.myth.panelShown) return;
-    var step = STEPS[state.i];
-    if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
-      /* Panel already revealed — keep it, only ensure layout */
-      return;
-    }
-    renderStep();
+    /* Mobile browsers fire resize constantly — address bar show/hide on
+       scroll, keyboard open/close — none of which should restart the
+       current step. Debounce, and ignore height-only changes under 150px
+       (typical browser-chrome jitter); only real width changes (rotation,
+       actual resize) or big height changes (real layout change) should
+       re-render the step. Without this, every mobile scroll during the
+       story was re-running the whole step's setup — including any
+       hide/release calls that step makes — causing the same blink/reappear
+       symptom but coming from resize noise, not the animation logic itself. */
+    clearTimeout(_tourResizeTimer);
+    _tourResizeTimer = setTimeout(function () {
+      var w = window.innerWidth, h = window.innerHeight;
+      var widthChanged = Math.abs(w - _tourResizeLastW) > 5;
+      var heightChanged = Math.abs(h - _tourResizeLastH) > 150;
+      _tourResizeLastW = w; _tourResizeLastH = h;
+      if (!widthChanged && !heightChanged) return;
+      if (!state.open) return;
+      fxResize();
+      /* Don't restart welcome myth mid-flight or while choice dock is up */
+      if (state.myth && state.myth.waitingChoice) {
+        try { positionMythChoice(); } catch (eP) {}
+        return;
+      }
+      if (state.myth && state.myth.active && !state.myth.panelShown) return;
+      var step = STEPS[state.i];
+      if (step && step.myth && step.mode === 'center' && state.myth && state.myth.panelShown) {
+        /* Panel already revealed — keep it, only ensure layout */
+        return;
+      }
+      renderStep();
+    }, 200);
   });
 })();
 
