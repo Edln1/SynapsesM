@@ -4043,7 +4043,7 @@ window.getWebAudioNode = getWebAudioNode;
 </script>
 
 </head>
-<body style="background:#000000;">
+<body style="background:#000000;" class="topbar-hidden">
 <script>
 (function(){
   function applyPreload(){
@@ -5313,7 +5313,7 @@ window.getWebAudioNode = getWebAudioNode;
   <!-- Dedicated Electron drag zone - thin strip at very top, avoids all buttons -->
 <!-- Floating win-controls strip: always visible, top-right, works bar on or off -->
 <div id="winStrip" style="position:fixed;top:0;right:0;z-index:9999999;display:flex;align-items:center;gap:0;-webkit-app-region:no-drag;app-region:no-drag;">
-  <button id="topBarToggle" onclick="toggleTopBar()" title="Toggle top bar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;-webkit-app-region:no-drag;">▲</button>
+  <button id="topBarToggle" onclick="toggleTopBar()" title="Show top icons" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.35);font-size:9px;display:flex;align-items:center;justify-content:center;padding-top:2px;-webkit-app-region:no-drag;">▼</button>
   <button id="etbMin" title="Minimise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2014;</button>
   <button id="etbMax" title="Maximise" style="width:34px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:11px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x25A1;</button>
   <button id="etbClose" title="Close" style="width:40px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='#c42b1c';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2715;</button>
@@ -5449,7 +5449,7 @@ window.getWebAudioNode = getWebAudioNode;
   }
 })();
 </script>
-<div class="top-bar">
+<div class="top-bar hidden">
     <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:-24px;padding-left:24px;">
     <!-- Refined synapse mark — same light-up animation, glass treatment -->
     <div id="bnavLogoMark" onclick="newChat()" title="Synapses" style="display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px;margin-right:8px;opacity:0.92;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.92'">
@@ -5547,18 +5547,18 @@ window.getWebAudioNode = getWebAudioNode;
       </button>
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
       <!-- Robot hover toggle -->
-      <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
+      <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Show nav tooltips" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;opacity:0.35;">
         <svg id="synBotToggleIcon" width="15" height="15" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/>
-          <rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/>
-          <rect x="20" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/>
-          <rect x="31" y="15" width="5" height="5" rx="1.5" fill="#00d9a8"/>
-          <line x1="28" y1="10" x2="28" y2="5" stroke="#7c6af7" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="28" cy="4" r="2" fill="#7c6af7"/>
-          <rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
-          <rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
-          <rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
-          <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
+          <rect x="14" y="25" width="28" height="22" rx="5" stroke="#555" stroke-width="2"/>
+          <rect x="15" y="10" width="26" height="17" rx="7" stroke="#555" stroke-width="2"/>
+          <rect x="20" y="15" width="5" height="5" rx="1.5" fill="#555"/>
+          <rect x="31" y="15" width="5" height="5" rx="1.5" fill="#555"/>
+          <line x1="28" y1="10" x2="28" y2="5" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="28" cy="4" r="2" fill="#555"/>
+          <rect x="5" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/>
+          <rect x="42" y="27" width="9" height="5" rx="2.5" stroke="#555" stroke-width="1.5"/>
+          <rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>
+          <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#555" stroke-width="1.5"/>
         </svg>
       </button>
       <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" title="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;transform:translateZ(0);overflow:hidden;">
