@@ -7577,6 +7577,29 @@ function startWhatsAppNotePolling(email) {
     }
   }, 45000);
 }
+// Realtime sockets (and setInterval polls) get suspended while the app/WebView is backgrounded.
+// So a note deleted from the widget while the app was backgrounded sits invisible until the
+// stale connection happens to wake up. Force an immediate resync + fresh channel on foreground.
+(function(){
+  var _lastResumeSync = 0;
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState !== 'visible') return;
+    if(!(currentUser && currentUser.email && !currentUser.isGuest)) return;
+    var now = Date.now();
+    if(now - _lastResumeSync < 3000) return; // debounce rapid tab-switch flapping
+    _lastResumeSync = now;
+    syncWhatsAppNotes(currentUser.email, true);          // pull latest immediately, don't wait for the 45s poll
+    startWhatsAppNotePolling(currentUser.email);          // re-subscribe in case the realtime socket died in background
+  });
+  window.addEventListener('focus', function(){
+    if(!(currentUser && currentUser.email && !currentUser.isGuest)) return;
+    var now = Date.now();
+    if(now - _lastResumeSync < 3000) return;
+    _lastResumeSync = now;
+    syncWhatsAppNotes(currentUser.email, true);
+    startWhatsAppNotePolling(currentUser.email);
+  });
+})();
 var SEED_USERS=[{name:'nova_ai',color:'#6366f1',initial:'N',email:'nova@synapses.dev',skills:['LLMs','React','Python'],project:'AI writing assistant'},{name:'flux_dev',color:'#4f46e5',initial:'F',email:'flux@synapses.dev',skills:['Rust','WebAssembly','Backend'],project:'Edge compute framework'},{name:'suno_fan',color:'#818cf8',initial:'S',email:'suno@synapses.dev',skills:['Music Production','Suno','MIDI'],project:'AI music label'},{name:'runway_pro',color:'#e85d96',initial:'R',email:'runway@synapses.dev',skills:['Video Editing','Runway','After Effects'],project:'Short film series'},{name:'cursor_hq',color:'#00d9a8',initial:'C',email:'cursor@synapses.dev',skills:['Full Stack','Cursor','TypeScript'],project:'Dev productivity tool'}];
 var CAT_META={collab:{label:'🤝 Collaborator',color:'#7c6af7',bg:'rgba(124,106,247,0.12)'},hiring:{label:'💼 Hiring',color:'#00d9a8',bg:'rgba(0,217,168,0.1)'},launch:{label:'🚀 Launch',color:'#f7a66a',bg:'rgba(247,166,106,0.12)'},feedback:{label:'💬 Feedback',color:'#6af7f7',bg:'rgba(106,247,247,0.1)'},skill:{label:'⚡ Skill',color:'#e85d96',bg:'rgba(232,93,150,0.1)'}};
 
@@ -12357,6 +12380,9 @@ window._fpHoldStart = 0;
 window._fpTapMode = false; /* true = quick tap activates STS; false = full hold scan required */
 /** Full hold only on first use / long absence */
 var FP_HOLD_MS = 1250;
+/** Keep holding past unlock for this long (from initial press) to open Ava's video call */
+var FP_VIDEO_CALL_HOLD_MS = 3000;
+window._fpVideoCallTimer = 0;
 /** Re-require hold if last success was longer ago than this (2 hours) */
 var FP_STALE_MS = 2 * 60 * 60 * 1000;
 var FP_TRUST_KEY = 'synapses_fp_trusted';
@@ -12448,6 +12474,26 @@ function _postNativeBiometric(){
     }
   } catch(e2){}
   return false;
+}
+/** Fired after a deliberate 3s hold, once past the one-time verification scan → open Ava's video call */
+function _fpTriggerVideoCall(){
+  window._fpVideoCallTimer = 0;
+  try {
+    var box = document.getElementById('avaAvatarBox');
+    // Already open/connecting — don't restart it out from under an active call
+    if(box && box.style.display !== 'none' && box.style.display !== '') return;
+    try { if(typeof setView === 'function'){
+      var sec = document.getElementById('sec-chat');
+      if(!sec || !sec.classList.contains('active')) setView('sec-chat');
+    } } catch(e0){}
+    try { if(typeof _haptic === 'function') _haptic([10,40,10]); } catch(e1){}
+    _fpSetState('ok');
+    _fpStatus('Starting video call…');
+    window._fpUnlocked = true;
+    try { _fpMarkTrusted(); } catch(e2){}
+    if(typeof enableAvaAvatar === 'function') enableAvaAvatar();
+    setTimeout(function(){ _fpSetState(''); _fpStatus(''); _fpSetProgress(0); }, 700);
+  } catch(e){}
 }
 /** Start speech-to-speech and park the mic in its middle-of-header (centered) state */
 function _fpActivateSpeechToSpeech(){
@@ -12786,24 +12832,35 @@ window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
     pad._fpWired = true;
     try { _fpSyncTapModeUi(); } catch(e0){}
 
-    /* First use / long absence: hold-to-scan. Trusted: tap activates STS. */
+    /* First use / long absence: hold-to-scan. Trusted: tap activates STS.
+       Once trusted (past the one-time verification scan), a deliberate
+       3s+ hold on top of the normal tap opens Ava's video call. */
     pad.addEventListener('pointerdown', function(e){
       if(e.button != null && e.button !== 0) return;
       try { pad.setPointerCapture(e.pointerId); } catch(err){}
+      if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
+      /* Only arm past the required scan: trusted/tap-mode, and not a tap meant to turn voice off */
+      if(!_fpRequiresHoldScan() && !_fpIsSpeechLive()){
+        window._fpVideoCallTimer = setTimeout(_fpTriggerVideoCall, FP_VIDEO_CALL_HOLD_MS);
+      }
       _fpBeginHold(e);
     });
     pad.addEventListener('pointerup', function(e){
+      if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       /* Only cancel an in-progress hold (tap mode never holds) */
       if(window._fpHoldActive) _fpEndHold(e);
     });
     pad.addEventListener('pointercancel', function(e){
+      if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       if(window._fpHoldActive) _fpEndHold(e);
     });
     pad.addEventListener('pointerleave', function(e){
+      if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       /* Only cancel if pointer actually left while holding (mouse) */
       if(window._fpHoldActive && e.pointerType === 'mouse') _fpEndHold(e);
     });
     pad.addEventListener('lostpointercapture', function(){
+      if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       if(window._fpHoldActive) _fpEndHold();
     });
     /* Click backup (some WebViews): if voice is live, always allow tap-to-off */
@@ -13539,13 +13596,6 @@ function closeNoteJournal(){
 
 function deleteNoteFromJournal(idx){
   var _delNote = window._journalNote || userNotes[idx];
-  if(_delNote && window._supabase && currentUser && currentUser.email){
-    var _dq = window._supabase.from('notes').delete().eq('user_email', currentUser.email.toLowerCase());
-    if(_delNote._supabaseId) _dq = _dq.eq('id', _delNote._supabaseId);
-    else if(_delNote.body) _dq = _dq.eq('body', (_delNote.body||'').trim());
-    else _dq = _dq.eq('title', (_delNote.title||'').trim());
-    _dq.then(function(r){ if(r.error) console.error('delete error:', r.error); });
-  }
   var _localIdx = userNotes.indexOf(_delNote);
   if(_localIdx === -1) _localIdx = idx;
   userNotes.splice(_localIdx, 1);
@@ -13554,6 +13604,20 @@ function deleteNoteFromJournal(idx){
   if(typeof renderStickyNotes==='function') setTimeout(function(){ renderStickyNotes(); },100);
   closeNoteJournal();
   showToast('Note deleted');
+  var _email = currentUser && currentUser.email ? currentUser.email.toLowerCase() : '';
+  if(_delNote && typeof deleteNoteFromCloud === 'function'){
+    deleteNoteFromCloud(_delNote, _email).then(function(res){
+      if(res.error && res.removed === 0){
+        console.warn('journal cloud delete:', res.error, _delNote);
+      } else if(res.removed > 0){
+        console.log('journal cloud deleted', res.removed, 'row(s)');
+      }
+      if(_email){
+        if(typeof syncWhatsAppNotes === 'function') syncWhatsAppNotes(_email, true);
+        if(typeof notifyNotesWidget === 'function') notifyNotesWidget(_email);
+      }
+    });
+  }
 }
 
 // ── Intent detection — understand what the user wants ──
@@ -15897,7 +15961,7 @@ function _checkAndShowNotesPanel(history){
   }, 500);
 }
 
-function openSavedChat(i){var c=savedChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});}else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
+function openSavedChat(i){var c=savedChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});}else{chatHistory=[];}var es=document.getElementById('chatEmptyState');if(es){es.classList.add('hidden');es._manualHide=true;}if(typeof setAskBarVisible==='function')setAskBarVisible(true);if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
 function saveRecentChat(label,key){if(recentChats.find(function(c){return c.key===key;}))return;recentChats.unshift({label:label.slice(0,36)+(label.length>36?'…':''),key:key});if(recentChats.length>20)recentChats.pop();renderRecentChats();persistChats();
   // Refresh list if open — do NOT auto-open past-chats drawer on first messages
   // (keeps empty-state clean; user opens via hamburger when they want history)
@@ -15965,7 +16029,7 @@ function loadPersistedChats(){
   }
 }
 function deleteRecentChat(i){recentChats.splice(i,1);persistChats();renderRecentChats();}
-function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
+function openRecentChat(i){var c=recentChats[i];if(!c)return;activeSession=c.key;setView('sec-chat');if(typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();var tt=document.getElementById('topTitle');tt.style.transition='none';tt.style.opacity='0';tt.innerHTML=c.label;tt.style.color='';tt.style.letterSpacing='-.02em';requestAnimationFrame(function(){tt.style.opacity='1';});var cc=document.getElementById('chatContainer');cc.innerHTML='';var sess=chatSessions[c.key];if(sess&&sess.history&&sess.history.length){chatHistory=[...sess.history];sess.history.forEach(function(m){addMsg('chatContainer',m.role==='assistant'?'ai':'user',m.content,false,'chat');});} else{chatHistory=[];}var es=document.getElementById('chatEmptyState');if(es){es.classList.add('hidden');es._manualHide=true;}if(typeof setAskBarVisible==='function')setAskBarVisible(true);if(cc)cc.scrollTop=cc.scrollHeight;updateChpActiveState();_checkAndShowNotesPanel(chatHistory);}
 
 
 
