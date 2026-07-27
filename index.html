@@ -12493,12 +12493,17 @@ function _fpTriggerVideoCall(){
     try { _fpMarkTrusted(); } catch(e2){}
     // Bring up the full speech-to-speech UI FIRST — same treatment a normal tap
     // uses (parks the mic/wave icon centered on screen) — so it's visibly on
-    // screen at the same time as the video window, not hidden behind it, and
-    // so enableAvaAvatar's auto-voice check below sees STS already active and
-    // defaults to passthrough (STS-driven) mode instead of Anam's own voice.
+    // screen at the same time as the video window, not hidden behind it.
     try {
-      if(!_fpIsSpeechLive()) _fpActivateSpeechToSpeech();
+      if(!window._topNavVoiceActive) _fpActivateSpeechToSpeech();
     } catch(e2b){}
+    // Force OUR voice (passthrough) as the default for this entry point —
+    // _avaNativeVoice loads from a persisted localStorage preference (set by
+    // the manual 🔈 toggle inside the avatar box), so without this explicit
+    // reset, a stale "Anam's own voice" preference from earlier testing stays
+    // stuck forever, since enableAvaAvatar's auto-logic only skips resetting
+    // it when STS is active — it never forces the correct default itself.
+    try { _avaNativeVoice = false; } catch(e2c){}
     if(typeof enableAvaAvatar === 'function') enableAvaAvatar();
     setTimeout(function(){ _fpSetState(''); _fpStatus(''); _fpSetProgress(0); }, 700);
   } catch(e){}
