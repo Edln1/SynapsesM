@@ -31875,6 +31875,9 @@ async function enableAvaAvatar(skipAutoVoice) {
   // voice and light up the icon — so the on-transition is visible instead
   // of happening in the same instant as the box opening.
   box.style.display = 'block';
+  // Restore whatever docked/popped state (and size/position) it was last
+  // closed in, rather than always reopening small in the default corner.
+  try { if (typeof _avaApplyPoppedVisualState === 'function') _avaApplyPoppedVisualState(box); } catch (ePop) {}
   statusEl.style.display = 'flex';
   statusEl.textContent = 'Connecting Ava\u2019s avatar…';
   videoEl.style.display = 'none';
@@ -32036,12 +32039,12 @@ function _avaInterruptLipsync() {
 
 function disableAvaAvatar() {
   if (document.pictureInPictureElement) { try { document.exitPictureInPicture(); } catch (e) {} }
-  if (_avaPopped) {
-    var _pbox = document.getElementById('avaAvatarBox');
-    if (_pbox) { _pbox.classList.remove('ava-popped', 'ava-dragging', 'ava-resizing'); _pbox.style.left = ''; _pbox.style.top = '14px'; _pbox.style.right = '14px'; _pbox.style.width = '160px'; _pbox.style.height = '160px'; }
-    _avaPopped = false;
-    if (typeof _avaUpdatePipBtnUI === 'function') _avaUpdatePipBtnUI();
-  }
+  var _pbox = document.getElementById('avaAvatarBox');
+  // Remember whatever state it was left in (docked or popped, and its exact
+  // size/position) so the next open restores it instead of resetting back to
+  // the small docked corner every time.
+  _avaSavePopState();
+  if (_pbox) _pbox.classList.remove('ava-dragging', 'ava-resizing');
   if (_avaAnamClient) { try { _avaAnamClient.stopStreaming(); } catch (e) {} _avaAnamClient = null; }
   _avaStopSilenceKeepalive();
   _avaAudioStream = null;
@@ -32075,20 +32078,53 @@ try {
   if (_avaSaved) {
     if (typeof _avaSaved.w === 'number' && typeof _avaSaved.h === 'number') _avaSize = { w: _avaSaved.w, h: _avaSaved.h };
     if (typeof _avaSaved.left === 'number' && typeof _avaSaved.top === 'number') _avaPos = { left: _avaSaved.left, top: _avaSaved.top };
+    if (typeof _avaSaved.popped === 'boolean') _avaPopped = _avaSaved.popped;
   }
 } catch (e) {}
 
-// Persists the current remembered size/position to localStorage. Called
-// after every drag/resize gesture ends so it survives reloads.
+// Persists the current remembered size/position/popped-state to localStorage.
+// Called after every drag/resize gesture ends, and whenever the popped state
+// itself changes (toggle, or the avatar closing), so it survives reloads.
 function _avaSavePopState() {
   try {
     localStorage.setItem('synapses_ava_popstate', JSON.stringify({
       w: _avaSize ? _avaSize.w : null,
       h: _avaSize ? _avaSize.h : null,
       left: _avaPos ? _avaPos.left : null,
-      top: _avaPos ? _avaPos.top : null
+      top: _avaPos ? _avaPos.top : null,
+      popped: _avaPopped
     }));
   } catch (e) {}
+}
+
+// Applies (or re-applies) the current _avaPopped/_avaSize/_avaPos state to the
+// box's actual classList/style — shared by toggleAvaPopout() and by
+// enableAvaAvatar() on open, so a video call always reopens in whatever
+// state (docked or popped, and at whatever size/position) it was last left.
+function _avaApplyPoppedVisualState(box) {
+  if (!box) return;
+  if (_avaPopped) {
+    var w = _avaSize ? _avaSize.w : Math.min(window.innerWidth * 0.74, 380);
+    var h = _avaSize ? _avaSize.h : w;
+    var left = _avaPos ? _avaPos.left : (window.innerWidth - w) / 2;
+    var top = _avaPos ? _avaPos.top : Math.max(70, (window.innerHeight - h) / 2);
+    box.style.width = w + 'px';
+    box.style.height = h + 'px';
+    box.style.left = left + 'px';
+    box.style.top = top + 'px';
+    box.style.right = 'auto'; // the docked box positions via right:14px — free it so left drives position
+    box.classList.add('ava-popped');
+    _avaClampToViewport(box, left, top);
+    _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
+  } else {
+    box.classList.remove('ava-popped');
+    box.style.left = '';
+    box.style.top = '14px';
+    box.style.right = '14px';
+    box.style.width = '160px';
+    box.style.height = '160px';
+  }
+  if (typeof _avaUpdatePipBtnUI === 'function') _avaUpdatePipBtnUI();
 }
 
 // Kills the pop/dock transition immediately (and cancels its pending removal
@@ -32128,36 +32164,13 @@ function toggleAvaPopout() {
   if (box.style.display === 'none') { showToast('Avatar isn\u2019t live yet'); return; }
   _avaPopped = !_avaPopped;
   box.classList.add('ava-pop-anim');
-  if (_avaPopped) {
-    // Land it back where the user last left it — reuses a remembered custom
-    // size/position if the user dragged/resized it before (including from a
-    // previous session, restored from localStorage), otherwise falls back to
-    // a centered default.
-    var w = _avaSize ? _avaSize.w : Math.min(window.innerWidth * 0.74, 380);
-    var h = _avaSize ? _avaSize.h : w;
-    var startLeft = _avaPos ? _avaPos.left : (window.innerWidth - w) / 2;
-    var startTop = _avaPos ? _avaPos.top : Math.max(70, (window.innerHeight - h) / 2);
-    box.style.width = w + 'px';
-    box.style.height = h + 'px';
-    box.style.left = startLeft + 'px';
-    box.style.top = startTop + 'px';
-    box.style.right = 'auto'; // the docked box positions via right:14px — free it so left drives position
-    box.classList.add('ava-popped');
-    // Re-clamp in case the viewport changed size since the position was saved
-    // (e.g. resized window, rotated device) so it can't land off-screen.
-    _avaClampToViewport(box, startLeft, startTop);
-    _avaPos = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0 };
-    _avaSavePopState();
-  } else {
-    box.classList.remove('ava-popped');
-    box.style.left = '';
-    box.style.top = '14px';
-    box.style.right = '14px'; // restore the docked corner position
-    box.style.width = '160px';
-    box.style.height = '160px';
-  }
+  // Land it back where the user last left it — reuses a remembered custom
+  // size/position if the user dragged/resized it before (including from a
+  // previous session, restored from localStorage), otherwise falls back to
+  // a centered default.
+  _avaApplyPoppedVisualState(box);
+  _avaSavePopState();
   _avaPopAnimTimer = setTimeout(function () { box.classList.remove('ava-pop-anim'); _avaPopAnimTimer = null; }, 380);
-  _avaUpdatePipBtnUI();
 }
 
 function _avaClampToViewport(box, knownLeft, knownTop) {
