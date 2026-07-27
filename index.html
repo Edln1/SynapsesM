@@ -12491,6 +12491,14 @@ function _fpTriggerVideoCall(){
     _fpStatus('Starting video call…');
     window._fpUnlocked = true;
     try { _fpMarkTrusted(); } catch(e2){}
+    // Bring up the full speech-to-speech UI FIRST — same treatment a normal tap
+    // uses (parks the mic/wave icon centered on screen) — so it's visibly on
+    // screen at the same time as the video window, not hidden behind it, and
+    // so enableAvaAvatar's auto-voice check below sees STS already active and
+    // defaults to passthrough (STS-driven) mode instead of Anam's own voice.
+    try {
+      if(!_fpIsSpeechLive()) _fpActivateSpeechToSpeech();
+    } catch(e2b){}
     if(typeof enableAvaAvatar === 'function') enableAvaAvatar();
     setTimeout(function(){ _fpSetState(''); _fpStatus(''); _fpSetProgress(0); }, 700);
   } catch(e){}
