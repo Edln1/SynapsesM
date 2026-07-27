@@ -12383,6 +12383,8 @@ var FP_HOLD_MS = 1250;
 /** Keep holding past unlock for this long (from initial press) to open Ava's video call */
 var FP_VIDEO_CALL_HOLD_MS = 3000;
 window._fpVideoCallTimer = 0;
+window._fpVideoCallFired = false;
+window._fpTapPending = false; /* trusted tap commit deferred until pointerup, so it can lose the race to a still-held 3s video-call press */
 /** Re-require hold if last success was longer ago than this (2 hours) */
 var FP_STALE_MS = 2 * 60 * 60 * 1000;
 var FP_TRUST_KEY = 'synapses_fp_trusted';
@@ -12478,6 +12480,8 @@ function _postNativeBiometric(){
 /** Fired after a deliberate 3s hold, once past the one-time verification scan → open Ava's video call */
 function _fpTriggerVideoCall(){
   window._fpVideoCallTimer = 0;
+  window._fpVideoCallFired = true;
+  window._fpTapPending = false;
   try {
     var box = document.getElementById('avaAvatarBox');
     // Already open/connecting — don't restart it out from under an active call
@@ -12738,9 +12742,15 @@ function _fpBeginHold(e){
 
   if(window._fpBusy) return;
 
-  /* Trusted → tap-to-activate (no hold) */
+  /* Trusted → tap-to-activate, but defer the actual commit (haptic/fog/STS-on)
+     until pointerup instead of firing it here on pointerdown. Firing instantly
+     on press is what made the single tap always win the race against the 3s
+     video-call hold: the tap would complete and cancel the hold timer before
+     the user had even finished deciding to keep holding. Now a press only
+     marks the tap as pending; pointerup commits it if the video call hasn't
+     already fired. */
   if(!_fpRequiresHoldScan()){
-    _fpQuickTapActivate();
+    window._fpTapPending = true;
     return;
   }
   window._fpHoldActive = true;
@@ -12852,6 +12862,8 @@ window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
       if(e.button != null && e.button !== 0) return;
       try { pad.setPointerCapture(e.pointerId); } catch(err){}
       if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
+      window._fpVideoCallFired = false;
+      window._fpTapPending = false;
       /* Only arm past the required scan: trusted/tap-mode, and not a tap meant to turn voice off */
       if(!_fpRequiresHoldScan() && !_fpIsSpeechLive()){
         window._fpVideoCallTimer = setTimeout(_fpTriggerVideoCall, FP_VIDEO_CALL_HOLD_MS);
@@ -12861,20 +12873,29 @@ window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
     pad.addEventListener('pointerup', function(e){
       if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       /* Only cancel an in-progress hold (tap mode never holds) */
-      if(window._fpHoldActive) _fpEndHold(e);
+      if(window._fpHoldActive){
+        _fpEndHold(e);
+      } else if(window._fpTapPending && !window._fpVideoCallFired){
+        /* Released before the 3s video-call hold completed → this was just a tap, commit it now */
+        _fpQuickTapActivate();
+      }
+      window._fpTapPending = false;
     });
     pad.addEventListener('pointercancel', function(e){
       if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       if(window._fpHoldActive) _fpEndHold(e);
+      window._fpTapPending = false;
     });
     pad.addEventListener('pointerleave', function(e){
       if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       /* Only cancel if pointer actually left while holding (mouse) */
       if(window._fpHoldActive && e.pointerType === 'mouse') _fpEndHold(e);
+      if(e.pointerType === 'mouse') window._fpTapPending = false;
     });
     pad.addEventListener('lostpointercapture', function(){
       if(window._fpVideoCallTimer){ clearTimeout(window._fpVideoCallTimer); window._fpVideoCallTimer = 0; }
       if(window._fpHoldActive) _fpEndHold();
+      window._fpTapPending = false;
     });
     /* Click backup (some WebViews): if voice is live, always allow tap-to-off */
     pad.addEventListener('click', function(e){
