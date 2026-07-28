@@ -14554,41 +14554,6 @@ var GROQ_PROXY = 'https://synbot-whatsapp-2.onrender.com';
 function getGroqKey(){ return ''; }
 function nextGroqKey(){ /* rotation now happens server-side in /groq-chat */ }
 
-// ── Ava's own identity/mood/memory (S2S voice hot path) ─────────────────
-// Cached and refreshed periodically — NOT fetched every voice turn. The
-// voice path below is latency-tuned (6s abort timeout, first-token time
-// logged/watched), and her own mood/memory doesn't meaningfully change
-// turn-to-turn, so paying a network round trip per turn for this would be
-// pure cost with no perceptible benefit.
-var _avaSelfCtx = '';
-var AVA_SELF_CTX_REFRESH_MS = 5 * 60 * 1000; // 5 min
-function _refreshAvaSelfCtx() {
-  fetch(GROQ_PROXY + '/ava-context')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ if (d && d.context) _avaSelfCtx = '\n\n' + d.context; })
-    .catch(function(){ /* keep whatever we had — never block voice chat on this */ });
-}
-_refreshAvaSelfCtx();
-setInterval(_refreshAvaSelfCtx, AVA_SELF_CTX_REFRESH_MS);
-
-// Fire-and-forget write after a real voice turn completes — mirrors the
-// existing _extractAndSaveMemory/_metaSave/_lifeContextSave pattern below,
-// never awaited, never blocks speak().
-function _avaSelfMemorySave(userText, replyText) {
-  try {
-    fetch(GROQ_PROXY + '/ava-self-log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: (typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id) ? currentUser.id : null,
-        userText: userText,
-        replyText: replyText
-      })
-    }).catch(function(){});
-  } catch (e) {}
-}
-
-
 var _skipDelay = false;
 /* Artificial stream pacing (ms per chunk). 0 = fastest; old value was 17 */
 window._streamPaceMs = 0;
@@ -34984,7 +34949,7 @@ function speakVoiceReply(text) {
       /* Keep system prompt short — large matrix/synapses dumps slow first token */
       var _matrixBit = (typeof _matrixGetInjection === 'function' && typeof _MATRIX_MODE !== 'undefined' && _MATRIX_MODE !== 'default')
         ? _matrixGetInjection() : '';
-      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + _avaSelfCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
+      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
       if (sys.length > 6000) sys = sys.slice(0, 6000) + '\n[context trimmed for speed]';
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : 320);
     var _groqCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -35072,7 +35037,6 @@ function speakVoiceReply(text) {
                   try { _metaSave(text, reply, _meta); } catch (eSave) {}
                 }
                 try { _lifeContextSave(text, reply); } catch(e) {}
-                try { _avaSelfMemorySave(text, reply); } catch(e) {}
               }, 0);
               if (_meta && _meta.asked_clarifying_question === true) {
                 _planningModeActive = true;
