@@ -2419,11 +2419,10 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
 .syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:0;line-height:1.25;}
-.syn-greeting-live-link{text-decoration:underline;text-decoration-color:rgba(240,240,255,0.35);text-underline-offset:4px;}
-.syn-greeting-live-link:hover{text-decoration-color:rgba(240,240,255,0.7);}
 /* Live / normal greeting toggle — a tiny, barely-visible dark-grey dot,
    not a deliberate icon/button. Hit area stays generous for tappability;
    only a small dot is actually painted. */
+.syn-greet-live-wrap{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
 .syn-greet-live-btn{
   flex-shrink:0;position:relative;width:22px;height:22px;padding:0;margin:0 0 0 2px;
   border:none;border-radius:50%;
@@ -2452,6 +2451,26 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   animation:fpIdleBreath 1.8s ease-in-out infinite;
 }
 .syn-greet-live-btn.busy{opacity:0.6;pointer-events:none;}
+/* Skip-to-next-headline — even more subtle than the orb dot itself, tucked
+   just below and to the right of it. Only shown while live mode is on and
+   there's more than one headline to cycle through. */
+.syn-greet-skip-btn{
+  position:absolute;top:100%;right:-2px;margin-top:2px;
+  width:16px;height:16px;padding:0;
+  border:none;border-radius:50%;background:transparent;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  color:transparent;-webkit-tap-highlight-color:transparent;z-index:5;
+}
+.syn-greet-skip-btn.syn-skip-visible{display:inline-flex;}
+.syn-greet-skip-btn::before{
+  content:"";width:4px;height:4px;border-radius:50%;
+  background:rgba(255,255,255,0.14);
+  transition:background .2s ease,transform .15s ease;
+}
+.syn-greet-skip-btn:hover::before,.syn-greet-skip-btn:focus-visible::before{
+  background:rgba(255,255,255,0.32);outline:none;
+}
+.syn-greet-skip-btn:active::before{transform:scale(0.8);}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
@@ -5686,7 +5705,10 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Greeting: rotates classic / Claude-style time+name; subtle news btn -->
       <div class="syn-greeting-row">
         <div class="syn-greeting" id="synHomeGreeting">What's on your mind?</div>
-        <button type="button" class="syn-greet-live-btn" id="synGreetLiveBtn" title="Switch to live feed" aria-label="Toggle live feed headline" aria-pressed="false"></button>
+        <span class="syn-greet-live-wrap">
+          <button type="button" class="syn-greet-live-btn" id="synGreetLiveBtn" title="Switch to live feed" aria-label="Toggle live feed headline" aria-pressed="false"></button>
+          <button type="button" class="syn-greet-skip-btn" id="synGreetSkipBtn" title="Next headline" aria-label="Skip to next headline"></button>
+        </span>
       </div>
       <div class="syn-sub">Synapses · Neural Interface</div>
       <!-- Fingerprint pad — hold-to-scan → speech-to-speech (mic centers mid-header) -->
@@ -12172,11 +12194,9 @@ function runHeroBarLaser(bar, onDone) {
     var el = _greetingEl();
     if(!el) return;
     if(_currentHeadlineUrl){
-      el.classList.add('syn-greeting-live-link');
       el.style.cursor = 'pointer';
       el.title = 'Open article';
     } else {
-      el.classList.remove('syn-greeting-live-link');
       el.style.cursor = '';
       el.title = '';
     }
@@ -12258,6 +12278,15 @@ function runHeroBarLaser(bar, onDone) {
   try { if(localStorage.getItem(GREET_MODE_KEY) === 'live') _greetMode = 'live'; } catch(eLS){}
 
   function _liveBtn(){ return document.getElementById('synGreetLiveBtn'); }
+  function _skipBtn(){ return document.getElementById('synGreetSkipBtn'); }
+
+  /** Show the skip dot only while live mode is on and there's actually
+      something to skip to. */
+  function _updateSkipVisibility(){
+    var btn = _skipBtn();
+    if(!btn) return;
+    btn.classList.toggle('syn-skip-visible', _greetMode === 'live' && _newsHeadlines.length > 1);
+  }
 
   /** Rotate: classic "What's on your mind?" <-> Claude-style Good X, Name.
       No-ops while the live feed is showing — it shouldn't get clobbered by
@@ -12316,12 +12345,14 @@ function runHeroBarLaser(bar, onDone) {
       if(list && list.length){
         showAt(0);
         _startNewsRotation();
+        _updateSkipVisibility();
       } else {
         /* No usable headlines today — don't show a "feed is quiet" filler,
            just use the normal rotating greeting so the slot never sits
            empty or reaches for something unfiltered to fill it. */
         _stopNewsRotation();
         _setLiveClickable(null);
+        _updateSkipVisibility();
         var line;
         try { line = _classicGreeting(); } catch(eC){ line = "What's on your mind?"; }
         if(line !== _lastGreeting){
@@ -12337,6 +12368,21 @@ function runHeroBarLaser(bar, onDone) {
     _fetchNewsHeadlines(function(list){ done(list); });
   }
 
+  /** Move to the next headline and display it. resetTimer=true (manual skip
+      tap) restarts the 14s rotation from now, so a tap isn't immediately
+      followed by an auto-advance a moment later. resetTimer=false is used
+      by the rotation timer's own tick, where restarting would be redundant. */
+  function _advanceNews(resetTimer){
+    if(_greetMode !== 'live' || _newsHeadlines.length < 2) return;
+    _newsRotateIdx = (_newsRotateIdx + 1) % _newsHeadlines.length;
+    var headline = _newsHeadlines[_newsRotateIdx];
+    var line = _newsAwareLine(headline);
+    _setLiveClickable(headline.url);
+    _lastGreeting = line;
+    _setGreetingText(line, true);
+    if(resetTimer) _startNewsRotation();
+  }
+
   /** Cycle through the day's filtered headlines on a fixed interval. Only
       runs while live mode is on — started/stopped explicitly on mode switch
       rather than gated on document.hidden inside the tick, since WebView-
@@ -12346,18 +12392,21 @@ function runHeroBarLaser(bar, onDone) {
   function _startNewsRotation(){
     _stopNewsRotation();
     if(_greetMode !== 'live' || _newsHeadlines.length < 2) return;
-    _newsRotateTimer = setInterval(function(){
-      if(_greetMode !== 'live') return;
-      _newsRotateIdx = (_newsRotateIdx + 1) % _newsHeadlines.length;
-      var headline = _newsHeadlines[_newsRotateIdx];
-      var line = _newsAwareLine(headline);
-      _setLiveClickable(headline.url);
-      _lastGreeting = line;
-      _setGreetingText(line, true);
-    }, 14000);
+    _newsRotateTimer = setInterval(function(){ _advanceNews(false); }, 14000);
   }
   function _stopNewsRotation(){
     if(_newsRotateTimer){ clearInterval(_newsRotateTimer); _newsRotateTimer = null; }
+  }
+
+  function _wireSkipBtn(){
+    var btn = _skipBtn();
+    if(!btn || btn._wired) return;
+    btn._wired = true;
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      _advanceNews(true);
+    });
   }
 
   /** User taps the toggle → swap between the live feed and the normal greeting. */
@@ -12371,7 +12420,7 @@ function runHeroBarLaser(bar, onDone) {
       btn.title = _greetMode === 'live' ? 'Switch to normal greeting' : 'Switch to live feed';
     }
     if(_greetMode === 'live') refreshLiveGreeting(true);
-    else { _stopNewsRotation(); refreshHomeGreeting({ animate: true, forceNormal: true }); }
+    else { _stopNewsRotation(); _updateSkipVisibility(); refreshHomeGreeting({ animate: true, forceNormal: true }); }
   }
 
   window.refreshHomeGreeting = refreshHomeGreeting;
@@ -12396,6 +12445,7 @@ function runHeroBarLaser(bar, onDone) {
   function boot(){
     wireLiveToggleBtn();
     _wireGreetingClick();
+    _wireSkipBtn();
     if(_greetMode === 'live') refreshLiveGreeting(false);
     else refreshHomeGreeting({ animate: false });
   }
@@ -12406,7 +12456,7 @@ function runHeroBarLaser(bar, onDone) {
   document.addEventListener('visibilitychange', function(){
     if(document.hidden) return;
     if(_greetMode === 'live'){
-      if(_newsHeadlines.length && _newsFetchedDay === String(_daySeed())) _startNewsRotation();
+      if(_newsHeadlines.length && _newsFetchedDay === String(_daySeed())){ _startNewsRotation(); _updateSkipVisibility(); }
       else refreshLiveGreeting(true);
     }
     else refreshHomeGreeting({ animate: true });
