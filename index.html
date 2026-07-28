@@ -2419,6 +2419,8 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
 .syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:0;line-height:1.25;}
+.syn-greeting-live-link{text-decoration:underline;text-decoration-color:rgba(240,240,255,0.35);text-underline-offset:4px;}
+.syn-greeting-live-link:hover{text-decoration-color:rgba(240,240,255,0.7);}
 /* Live / normal greeting toggle — a tiny, barely-visible dark-grey dot,
    not a deliberate icon/button. Hit area stays generous for tappability;
    only a small dot is actually painted. */
@@ -12160,6 +12162,36 @@ function runHeroBarLaser(bar, onDone) {
       || document.querySelector('.syn-greeting');
   }
 
+  var _currentHeadlineUrl = null;
+
+  /** Toggle whether the greeting is currently "pointing at" a real article.
+      Kept as one piece of state + one click listener (wired once in boot)
+      rather than attaching/removing listeners per headline swap. */
+  function _setLiveClickable(url){
+    _currentHeadlineUrl = url || null;
+    var el = _greetingEl();
+    if(!el) return;
+    if(_currentHeadlineUrl){
+      el.classList.add('syn-greeting-live-link');
+      el.style.cursor = 'pointer';
+      el.title = 'Open article';
+    } else {
+      el.classList.remove('syn-greeting-live-link');
+      el.style.cursor = '';
+      el.title = '';
+    }
+  }
+
+  function _wireGreetingClick(){
+    var el = _greetingEl();
+    if(!el || el._liveClickWired) return;
+    el._liveClickWired = true;
+    el.addEventListener('click', function(){
+      if(!_currentHeadlineUrl) return;
+      try { window.open(_currentHeadlineUrl, '_blank', 'noopener,noreferrer'); } catch(eOpen){}
+    });
+  }
+
   function _setGreetingText(text, animate){
     var el = _greetingEl();
     if(!el || !text) return false;
@@ -12194,14 +12226,18 @@ function runHeroBarLaser(bar, onDone) {
         headers: { 'Accept': 'application/json' }
       }).then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
         clearTimeout(t);
-        var list = (data && Array.isArray(data.headlines)) ? data.headlines : [];
+        var raw = (data && Array.isArray(data.headlines)) ? data.headlines : [];
         /* Backend already filters for tone (keyword pass + Groq tiebreak) and
-           picks up to 5 real current stories — just trim display length here. */
-        list = list.map(function(title){
-          title = String(title || '').trim();
-          if(title.length > 42) title = title.slice(0, 40).replace(/\s+\S*$/, '') + '\u2026';
-          return title;
-        }).filter(function(t){ return t.length > 4; });
+           picks up to 5 real current stories, each as {title, url} — trim
+           the display title here and drop any entry missing a real url,
+           since the greeting is only clickable when it has somewhere to go. */
+        var list = raw.map(function(h){
+          var title = String((h && h.title) || '').trim();
+          var url = (h && h.url) ? String(h.url) : '';
+          var display = title;
+          if(display.length > 42) display = display.slice(0, 40).replace(/\s+\S*$/, '') + '\u2026';
+          return { title: title, display: display, url: url };
+        }).filter(function(h){ return h.display.length > 4 && /^https?:\/\//i.test(h.url); });
         if(list.length){
           _newsHeadlines = list;
           _newsFetchedDay = dayKey;
@@ -12213,8 +12249,8 @@ function runHeroBarLaser(bar, onDone) {
 
   /* One fixed phrasing for the live line — it should change because the
      underlying headline changed, not because we reworded the same headline. */
-  function _newsAwareLine(title){
-    return 'Live: ' + title;
+  function _newsAwareLine(headline){
+    return 'Live: ' + (headline && headline.display ? headline.display : '');
   }
 
   var GREET_MODE_KEY = 'synapses_greet_mode';
@@ -12243,6 +12279,7 @@ function runHeroBarLaser(bar, onDone) {
       }
       _lastGreeting = line;
       var ok = _setGreetingText(line, !!opts.animate);
+      _setLiveClickable(null);
       if(!ok){
         setTimeout(function(){ refreshHomeGreeting(opts); }, 120);
         return line;
@@ -12250,6 +12287,7 @@ function runHeroBarLaser(bar, onDone) {
       return line;
     } catch(e){
       _setGreetingText("What's on your mind?", false);
+      _setLiveClickable(null);
       return "What's on your mind?";
     }
   }
@@ -12265,7 +12303,9 @@ function runHeroBarLaser(bar, onDone) {
     function showAt(idx){
       if(!_newsHeadlines.length) return;
       _newsRotateIdx = ((idx % _newsHeadlines.length) + _newsHeadlines.length) % _newsHeadlines.length;
-      var line = _newsAwareLine(_newsHeadlines[_newsRotateIdx]);
+      var headline = _newsHeadlines[_newsRotateIdx];
+      var line = _newsAwareLine(headline);
+      _setLiveClickable(headline.url);
       if(line !== _lastGreeting){
         _lastGreeting = line;
         _setGreetingText(line, !!animate);
@@ -12281,6 +12321,7 @@ function runHeroBarLaser(bar, onDone) {
            just use the normal rotating greeting so the slot never sits
            empty or reaches for something unfiltered to fill it. */
         _stopNewsRotation();
+        _setLiveClickable(null);
         var line;
         try { line = _classicGreeting(); } catch(eC){ line = "What's on your mind?"; }
         if(line !== _lastGreeting){
@@ -12308,7 +12349,9 @@ function runHeroBarLaser(bar, onDone) {
     _newsRotateTimer = setInterval(function(){
       if(_greetMode !== 'live') return;
       _newsRotateIdx = (_newsRotateIdx + 1) % _newsHeadlines.length;
-      var line = _newsAwareLine(_newsHeadlines[_newsRotateIdx]);
+      var headline = _newsHeadlines[_newsRotateIdx];
+      var line = _newsAwareLine(headline);
+      _setLiveClickable(headline.url);
       _lastGreeting = line;
       _setGreetingText(line, true);
     }, 14000);
@@ -12352,6 +12395,7 @@ function runHeroBarLaser(bar, onDone) {
 
   function boot(){
     wireLiveToggleBtn();
+    _wireGreetingClick();
     if(_greetMode === 'live') refreshLiveGreeting(false);
     else refreshHomeGreeting({ animate: false });
   }
