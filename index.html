@@ -2422,9 +2422,9 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 /* Live / normal greeting toggle — a tiny, barely-visible dark-grey dot,
    not a deliberate icon/button. Hit area stays generous for tappability;
    only a small dot is actually painted. */
-.syn-greet-live-wrap{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
+.syn-greet-live-wrap{position:relative;display:inline-flex;align-items:center;flex-shrink:0;margin-left:2px;}
 .syn-greet-live-btn{
-  flex-shrink:0;position:relative;width:22px;height:22px;padding:0;margin:0 0 0 2px;
+  flex-shrink:0;position:relative;width:22px;height:22px;padding:0;margin:0;
   border:none;border-radius:50%;
   background:transparent;cursor:pointer;
   display:inline-flex!important;align-items:center;justify-content:center;
@@ -2451,26 +2451,23 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   animation:fpIdleBreath 1.8s ease-in-out infinite;
 }
 .syn-greet-live-btn.busy{opacity:0.6;pointer-events:none;}
-/* Skip-to-next-headline — even more subtle than the orb dot itself, tucked
-   just below and to the right of it. Only shown while live mode is on and
-   there's more than one headline to cycle through. */
+/* Skip-to-next-headline — a tiny "skip forward" glyph (bar + triangle,
+   same shape as a media player's next-track button) so it actually reads
+   as "advance" rather than being an unlabeled dot. Centered directly under
+   the orb dot above it. Only shown while live mode is on and there's more
+   than one headline to cycle through. */
 .syn-greet-skip-btn{
-  position:absolute;top:100%;right:-2px;margin-top:2px;
-  width:16px;height:16px;padding:0;
+  position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;
+  width:18px;height:18px;padding:0;
   border:none;border-radius:50%;background:transparent;cursor:pointer;
   display:none;align-items:center;justify-content:center;
-  color:transparent;-webkit-tap-highlight-color:transparent;z-index:5;
+  color:rgba(255,255,255,0.28);-webkit-tap-highlight-color:transparent;z-index:5;
+  transition:color .2s ease;
 }
 .syn-greet-skip-btn.syn-skip-visible{display:inline-flex;}
-.syn-greet-skip-btn::before{
-  content:"";width:4px;height:4px;border-radius:50%;
-  background:rgba(255,255,255,0.14);
-  transition:background .2s ease,transform .15s ease;
-}
-.syn-greet-skip-btn:hover::before,.syn-greet-skip-btn:focus-visible::before{
-  background:rgba(255,255,255,0.32);outline:none;
-}
-.syn-greet-skip-btn:active::before{transform:scale(0.8);}
+.syn-greet-skip-btn svg{width:10px;height:10px;display:block;fill:currentColor;transition:transform .15s ease;}
+.syn-greet-skip-btn:hover,.syn-greet-skip-btn:focus-visible{color:rgba(255,255,255,0.55);outline:none;}
+.syn-greet-skip-btn:active svg{transform:scale(0.85);}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
@@ -5707,7 +5704,7 @@ window.getWebAudioNode = getWebAudioNode;
         <div class="syn-greeting" id="synHomeGreeting">What's on your mind?</div>
         <span class="syn-greet-live-wrap">
           <button type="button" class="syn-greet-live-btn" id="synGreetLiveBtn" title="Switch to live feed" aria-label="Toggle live feed headline" aria-pressed="false"></button>
-          <button type="button" class="syn-greet-skip-btn" id="synGreetSkipBtn" title="Next headline" aria-label="Skip to next headline"></button>
+          <button type="button" class="syn-greet-skip-btn" id="synGreetSkipBtn" title="Next headline" aria-label="Skip to next headline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14l10-7z"></path><rect x="17" y="5" width="2.5" height="14"></rect></svg></button>
         </span>
       </div>
       <div class="syn-sub">Synapses · Neural Interface</div>
