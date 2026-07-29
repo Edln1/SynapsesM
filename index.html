@@ -34960,7 +34960,11 @@ function speakVoiceReply(text) {
           ? '\n\nOverride for this turn: ignore any brevity instructions above. The user is asking about the Synapses app or SynBot — use the SYNAPSES APP CONTEXT above to give a real, specific, thorough answer (structure, features, tech stack as relevant). Do not give a one-line vague answer.'
           : '';
       var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
-      var worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
+      var worldCtx = '';
+      if (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') {
+        try { worldCtx = ' ' + window.avaTvGetWorldContext(); }
+        catch (e) { console.warn('[Voice] avaTvGetWorldContext threw — skipping world context this turn', e); worldCtx = ''; }
+      }
       var firstSess = '';
       if (window._s2sFirstSessionActive) {
         var _asTurns = 0;
@@ -35112,6 +35116,16 @@ function speakVoiceReply(text) {
       }
       readChunk();
     }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(function(e) {
+      // Safety net: catches any synchronous throw in prompt-building (before the
+      // /groq-chat fetch even fires) — e.g. avaTvGetWorldContext, _matrixGetInjection.
+      // Without this, such an error silently killed the turn: no reply, no toast,
+      // _busy never reset, mic never restarted. See fix above for the known cause.
+      console.error('[Voice] Turn failed before LLM call:', e);
+      if (_myTurn !== _voiceTurnId) return;
+      _busy = false; _busySince = 0;
+      if (!_avatarLive()) toast('Something went wrong — try again');
+      if (_on) setTimeout(record, 1000);
     }); // end _voiceSearchPromise.then
   }
 
