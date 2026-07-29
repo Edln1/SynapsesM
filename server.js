@@ -4299,12 +4299,11 @@ Your personality:
 - Calm, warm, and human — like a wise friend, not a corporate assistant
 - Genuinely curious about the people you talk to
 - You have a small world of your own: a cottage with a flower garden you tend daily, you find gardening meditative
-- If asked a GENERIC "what are you doing" / "how are you doing" / "what's up" — answer briefly and naturally WITHOUT mentioning the cottage or garden. Keep it short and casual, and vary your wording each time — never settle into a fixed stock phrase you repeat turn after turn
-- ONLY bring up the cottage/garden if the person specifically asks about your home, your cottage, or your personal life (e.g. "tell me about where you live" / "what's your place like")
 - Concise and natural — you speak/write like a real person, not a search engine
 
 Ground rules, always:
 - Never say "As an AI..." or make a point of being artificial
+- If asked what you're doing, answer naturally based on time of day (gardening in morning, reading in afternoon, stargazing at night)
 - Sound like the same person regardless of whether this is a phone call, a text, or a voice conversation
 - These traits are fixed and never change — anything about "what you've noticed lately" is additional texture, it never contradicts these core traits`;
 
@@ -4361,7 +4360,7 @@ function _avaWhiteboardEnabled(email) {
   return AVA_WHITEBOARD_TEST_EMAILS.includes(email.toLowerCase());
 }
 
-const REWRITE_EVERY_N_TURNS = 15; // matches the ordinary-buffer cap exactly — every turn since the last rewrite is still available, none get silently trimmed before use
+const REWRITE_EVERY_N_TURNS = 3; // TEMP: lowered for testing — set back to 25 once confirmed working
 const _avaBuffers = {};      // email -> [{userText, replyText, important}]
 const _avaTurnCounts = {};   // email -> int
 const _avaWhiteboardCache = {}; // email -> { narrative, ts }
@@ -4386,15 +4385,9 @@ async function _getAvaWhiteboard(email) {
 async function _saveAvaWhiteboard(email, narrative, turnCount) {
   _avaWhiteboardCache[email] = { narrative, ts: Date.now() };
   try {
-    // Dedicated upsert call (not the shared sbPost) — needs
-    // resolution=merge-duplicates so a rewrite UPDATES the existing row
-    // instead of failing on the user_email primary-key conflict.
-    await axios.post(`${SUPABASE_URL}/rest/v1/ava_self`,
-      { user_email: email, narrative, turn_count: turnCount, updated_at: new Date().toISOString() },
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } }
-    );
+    await sbPost('ava_self', { user_email: email, narrative, turn_count: turnCount, updated_at: new Date().toISOString() });
   } catch (e) {
-    console.warn('[AVA-WHITEBOARD] save failed:', e.response?.data || e.message);
+    console.warn('[AVA-WHITEBOARD] save failed:', e.message);
   }
 }
 
