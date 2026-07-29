@@ -36472,8 +36472,14 @@ async function srcAgentContact(supplier) {
   };
 
   // Walk interpolation state
-  var _routineIdx = 0;
+  var _routineIdx = (function(){
+    try {
+      var startRout = ROUTINES[getTod()] || ROUTINES.morning;
+      return Math.floor(Math.random() * startRout.length);
+    } catch(e) { return 0; }
+  })();
   var _beatFrame = 0;
+  var _lastReportedActivity = '';
   // Ava X position (0=plants side, 0.5=center, 0.85=door, 1=inside house)
   var _avaX = 0.5; // 0..1 across world
   var _avaY = 0;   // 0=ground level, >0 = deeper down forest path (in pixels)
@@ -36737,12 +36743,24 @@ async function srcAgentContact(supplier) {
     try {
       var beat = getCurBeat();
       if (!beat) return '';
+      var activityRaw = (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
+      // Don't report the same activity twice in a row — if she was already
+      // "reading in the garden" last time we were asked, nudge her forward
+      // through the routine (up to a few beats) until it's something new.
+      var guard = 0;
+      while (!_avaWoken && activityRaw === _lastReportedActivity && guard < (ROUTINES[getTod()] || ROUTINES.morning).length) {
+        advanceBeat();
+        beat = getCurBeat();
+        activityRaw = (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
+        guard++;
+      }
       var timeOfDay = getTod();
       var locationMap = { plants:'in my garden', center:'outside on the path', door:'by my front door', house:'inside my cottage' };
       var location = locationMap[beat.pos] || 'outside';
       var weatherMap = { dawn:'early morning, just before sunrise', morning:'a sunny morning', afternoon:'a bright afternoon', evening:'golden hour evening', dusk:'dusk, getting dark', night:'late night' };
       var weather = weatherMap[timeOfDay] || 'nighttime';
-      var activity = _avaWoken ? 'I woke up and came outside to stargaze' : (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
+      var activity = _avaWoken ? 'I woke up and came outside to stargaze' : activityRaw;
+      _lastReportedActivity = activity;
       // Only mention the garden/cottage as background detail when she's not already there or talking about it —
       // avoids restating it on every single beat and over-emphasizing it in conversation.
       var mentionsGardenAlready = beat.pos === 'plants' || /garden|flower/i.test(activity);
