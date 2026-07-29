@@ -33542,9 +33542,9 @@ function speakVoiceReply(text) {
 
   function _refreshAvaSelfCtx() {
     if (Date.now() - _avaSelfCtxTs < AVA_SELF_CTX_TTL_MS) return;
-    _avaSelfCtxTs = Date.now(); // set immediately so slow/failed calls don't retry-storm
     var email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
-    if (!email) return;
+    if (!email) return; // currentUser not loaded yet — don't start the TTL clock, try again next turn
+    _avaSelfCtxTs = Date.now(); // set only once we're actually about to fetch, so slow/failed calls don't retry-storm
     fetch(GROQ_PROXY + '/ava-context?email=' + encodeURIComponent(email))
       .then(function (r) { return r.json(); })
       .then(function (d) { if (d && d.context) _avaSelfCtx = '\n\n' + d.context; })
