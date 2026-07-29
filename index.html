@@ -35156,7 +35156,6 @@ function speakVoiceReply(text) {
         'please subscribe','like and subscribe',
         'i hope you enjoyed','i hope you have a great day',
         'talking','talk','hmm','um','uh','ah','oh','okay','ok',
-        'hows it going','how\'s it going',
         'music','background music','[music]','[applause]','[laughter]',
       ];
       var lc = text.toLowerCase().replace(/[.!?,]/g,'').trim();
@@ -36732,20 +36731,29 @@ async function srcAgentContact(supplier) {
   };
 
   window.avaTvGetWorldContext = function() {
-    var beat = getCurBeat();
-    var timeOfDay = getTod();
-    var locationMap = { plants:'in my garden', center:'outside on the path', door:'by my front door', house:'inside my cottage' };
-    var location = locationMap[beat.pos] || 'outside';
-    var weatherMap = { dawn:'early morning, just before sunrise', morning:'a sunny morning', afternoon:'a bright afternoon', evening:'golden hour evening', dusk:'dusk, getting dark', night:'late night' };
-    var weather = weatherMap[timeOfDay] || 'nighttime';
-    var activity = _avaWoken ? 'I woke up and came outside to stargaze' : beat.name.replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
-    // Only mention the garden/cottage as background detail when she's not already there or talking about it —
-    // avoids restating it on every single beat and over-emphasizing it in conversation.
-    var mentionsGardenAlready = beat.pos === 'plants' || /garden|flower/i.test(activity);
-    var background = mentionsGardenAlready
-      ? ''
-      : ' You live in a small cottage and keep a flower garden nearby, but don\'t bring it up unless it\'s relevant.';
-    return 'YOUR CURRENT STATE (answer naturally if asked about what you\'re doing or how your day is going — speak in first person as if this is real): It\'s ' + weather + '. You\'re ' + location + '. You\'ve been ' + activity + '.' + background;
+    // Hardened: this function must NEVER throw, since it sits directly in the
+    // voice turn's prompt-building path with nothing after it but a fetch call.
+    // Any error here previously meant total silent failure (no reply, no toast).
+    try {
+      var beat = getCurBeat();
+      if (!beat) return '';
+      var timeOfDay = getTod();
+      var locationMap = { plants:'in my garden', center:'outside on the path', door:'by my front door', house:'inside my cottage' };
+      var location = locationMap[beat.pos] || 'outside';
+      var weatherMap = { dawn:'early morning, just before sunrise', morning:'a sunny morning', afternoon:'a bright afternoon', evening:'golden hour evening', dusk:'dusk, getting dark', night:'late night' };
+      var weather = weatherMap[timeOfDay] || 'nighttime';
+      var activity = _avaWoken ? 'I woke up and came outside to stargaze' : (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
+      // Only mention the garden/cottage as background detail when she's not already there or talking about it —
+      // avoids restating it on every single beat and over-emphasizing it in conversation.
+      var mentionsGardenAlready = beat.pos === 'plants' || /garden|flower/i.test(activity);
+      var background = mentionsGardenAlready
+        ? ''
+        : ' You live in a small cottage and keep a flower garden nearby, but don\'t bring it up unless it\'s relevant.';
+      return 'YOUR CURRENT STATE (answer naturally if asked about what you\'re doing or how your day is going — speak in first person as if this is real): It\'s ' + weather + '. You\'re ' + location + '. You\'ve been ' + activity + '.' + background;
+    } catch (e) {
+      console.warn('[Ava] avaTvGetWorldContext internal error — returning empty context', e);
+      return '';
+    }
   };
 
   function refresh(){ tod=getTod(); pal=PALS[tod]; }
