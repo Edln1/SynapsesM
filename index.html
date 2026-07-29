@@ -33532,6 +33532,39 @@ function speakVoiceReply(text) {
     return _mem0UserId;
   }
 
+  // ── Ava's identity/mood/whiteboard context for voice ──────────────────
+  // Fetched every 5 min (not per-turn) so it never adds latency to a live
+  // reply. Empty string if it hasn't loaded yet or the fetch fails — voice
+  // just falls back to _sysCached alone, same as before this existed.
+  var _avaSelfCtx = '';
+  var _avaSelfCtxTs = 0;
+  var AVA_SELF_CTX_TTL_MS = 5 * 60 * 1000;
+
+  function _refreshAvaSelfCtx() {
+    if (Date.now() - _avaSelfCtxTs < AVA_SELF_CTX_TTL_MS) return;
+    _avaSelfCtxTs = Date.now(); // set immediately so slow/failed calls don't retry-storm
+    var email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
+    if (!email) return;
+    fetch(GROQ_PROXY + '/ava-context?email=' + encodeURIComponent(email))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.context) _avaSelfCtx = '\n\n' + d.context; })
+      .catch(function () {});
+  }
+
+  // Fire-and-forget after each voice reply completes. Never delays TTS —
+  // the server responds immediately and does its own work after.
+  function _avaSelfMemorySave(userText, replyText) {
+    try {
+      var email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
+      if (!email) return;
+      fetch(GROQ_PROXY + '/ava-self-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, userText: userText, replyText: replyText })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
   /** Hard-cap mem0 so a cold Render box never stalls voice */
   var _MEM0_TIMEOUT_MS = 450;
 
@@ -34725,7 +34758,8 @@ function speakVoiceReply(text) {
     var synCtx = _synKwRegex.test(text) ? '\n\n' + _synapsesCtx : '';
     var relCtx = _getRelPrompt();
     _trackPersonalTurn(text);
-    var _brainLayer = ''; // brain deactivated
+    _refreshAvaSelfCtx(); // kicks off/refreshes fetch if stale; uses cached value below either way
+    var _brainLayer = _avaSelfCtx;
 
     // ── Voice Search: keyword trigger, minimal blockers ──
     var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
@@ -35037,6 +35071,7 @@ function speakVoiceReply(text) {
                   try { _metaSave(text, reply, _meta); } catch (eSave) {}
                 }
                 try { _lifeContextSave(text, reply); } catch(e) {}
+                try { _avaSelfMemorySave(text, reply); } catch(e) {}
               }, 0);
               if (_meta && _meta.asked_clarifying_question === true) {
                 _planningModeActive = true;
