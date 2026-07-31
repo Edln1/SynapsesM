@@ -6006,8 +6006,16 @@ window.getWebAudioNode = getWebAudioNode;
               <div id="avaCard" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
                 <div id="avaCardHeader" style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface2);">
                   <div id="ava-header-pic" style="width:36px;height:36px;border-radius:10px;border:2px solid white;box-shadow:0 0 6px 1px rgba(255,255,255,0.6),0 0 14px 2px rgba(255,255,255,0.2);overflow:hidden;flex-shrink:0;"><img src="data:image/webp;base64,UklGRogCAABXRUJQVlA4IHwCAABQDACdASowADAAPp1Gm0olo6IhpyyQsBOJQBWGYjdmz/uMFYL5lwHqpp465xWJjTvLO8IsB9+uspveaF4G7PViUGbDEdVs1ZHU7I1yjmzxrwSAzimy1Oz8b4zzSKtownkmLS4GLzofrBk8AAD+8ULlFTYELG6yAkmGo/HasBTl+OjZZvw4kAWnPzN8yVKi+f2uVmLAnMW1LKMgxR6Xyl9qt0WC0baYLx3OkSpqKNRdfLVJZ/mPAe1Mg85SY++griupG2XYY1PYvlA0IQefdn5y9qfhwqioSk2Fr5SH+J41lAZ0L9wustHVrCYPP9arA0inqej2ByxBMAodzQjyQxDLnLoA7nGn0D3dctWnagJ1GzaYX1eN5daMia5IXlxh+uHErdmaYvzW7q1jvpr05FMW3o9Saq8oFjkUEBTsFCEx0L2mrX1TjlZjlqt8ycJMS6FQ7QO86VQZbmYgWt+0TP8gBBAH+UayFXYbv1sXTrYIwqGttP30JNRptggnvvI/rJnIqnwHRuBEE9U0PWPlPCR5gkiuoFlojsFjtePb/G8Y1tdPpMk+cVwXrCFDB0c1LVApaOGpEz+NegXot0gDdZlY9UoD8BNVNoDvJHiDNVXfdQ/0W0TGey4XbUtXh6aoX5WvkDvkQ8RVxtKTiDpjNmP3NtZF0zNxiHJeRyfObC7V8SmU+1UVLz25IYfvq9T2Ow9zAyq/T/278SxbDsxqdGypEKuQGeo3sPkegfcpWrZ+ErFqv3gSdMx9V1bNtONc5fZE7AENzmM5J+K3n9IVecJ4+qkZ6DkTL8S7ZhyaH8FHcCl8pGZsCEcyTZEAcFusa0bmtl1BLENWB4TWoAA=" style="width:100%;height:100%;object-fit:cover;object-position:50% 0%;border-radius:inherit;"></div>
-                  <div><div style="font-family:'Syne',sans-serif;font-size:13.5px;font-weight:800;">aVa</div><div style="font-size:10px;color:var(--accent3);">Here for you</div></div>
+                  <div><div style="font-family:'Syne',sans-serif;font-size:13.5px;font-weight:800;">aVa</div><div style="font-size:10px;color:var(--accent3);">Here for you · <span id="avaLifeEpochLabel" style="opacity:.85">life…</span></div></div>
                   <button onclick="clearAvaChat()" style="margin-left:auto;padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:10.5px;font-family:'DM Sans',sans-serif;cursor:pointer;">Clear</button>
+                </div>
+                <div id="avaLifePanel" style="display:none;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(124,106,247,0.06);font-family:'DM Sans',sans-serif;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);">While she was alone</div>
+                    <button type="button" onclick="refreshAvaLife(true)" title="Refresh life state" style="padding:2px 8px;font-size:10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">↻</button>
+                  </div>
+                  <div id="avaLifeSummary" style="font-size:12px;color:var(--text);line-height:1.5;opacity:.9;"></div>
+                  <div id="avaLifeQuestions" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45;"></div>
                 </div>
                 <div id="avaChatMessages" style="min-height:260px;max-height:380px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:12px;"></div>
                 <div id="avaInputFooter" style="padding:10px 12px;border-top:1px solid var(--border);background:var(--surface2);">
@@ -13250,7 +13258,7 @@ function goHub(tab){return;
   }
   switchHubTab(tab||'feed');
 }
-function goHuman(autoSkip){return;mobileAutoCollapse();setView('sec-human');var _nb=document.getElementById('nav-human');_nb.classList.add('active');triggerNavGlow(_nb);document.getElementById('topTitle').textContent='🌿 Health AI';document.getElementById('topTitle').style.opacity='1';document.getElementById('topTitle').style.color='';document.getElementById('topTitle').style.letterSpacing='';document.getElementById('topTitle').style.display='';var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';if(!humanMood){document.getElementById('humanLanding').style.display='flex';document.getElementById('humanMain').style.display='none';startHCWordAnimations();if(autoSkip){setTimeout(function(){if(typeof skipHumanLanding==='function')skipHumanLanding();},4500);}}else{document.getElementById('humanLanding').style.display='none';document.getElementById('humanMain').style.display='block';}}
+function goHuman(autoSkip){mobileAutoCollapse();setView('sec-human');var _nb=document.getElementById('nav-human');_nb.classList.add('active');triggerNavGlow(_nb);document.getElementById('topTitle').textContent='🌿 Health AI';document.getElementById('topTitle').style.opacity='1';document.getElementById('topTitle').style.color='';document.getElementById('topTitle').style.letterSpacing='';document.getElementById('topTitle').style.display='';var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';if(!humanMood){document.getElementById('humanLanding').style.display='flex';document.getElementById('humanMain').style.display='none';startHCWordAnimations();if(autoSkip){setTimeout(function(){if(typeof skipHumanLanding==='function')skipHumanLanding();},4500);}}else{document.getElementById('humanLanding').style.display='none';document.getElementById('humanMain').style.display='block';}}
 
 // ══════════════════════════════════════════════════════
 // SYNAPSES SMART SEARCH — Unified Intelligence Layer
@@ -13893,9 +13901,25 @@ function buildSmartSysPrompt(mode, userText) {
     coach: appContext + 'You are the Synapses AI Career Coach — a direct, honest, practical career advisor who has seen it all. You specialise in: AI-era job searching (2025-2026), Vancouver/BC/Canada remote work, navigating toxic workplaces, burnout recovery, salary negotiation, portfolio building, and skill development. ' +
       'CRITICAL RULES: (1) ALWAYS give complete, actionable advice — minimum 200 words for career questions. (2) Validate feelings FIRST for emotional topics, then give practical steps. (3) Be specific — name actual platforms, salary ranges, skills, timelines. (4) If relevant, mention app sections: 👉 [Job Board], 👉 [User Development], etc. (5) End wellbeing responses with: --- ⚠️ You deserve a safe and respectful workplace. (6) Never be vague or generic.',
 
-    ava: appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
-      'RULES: (1) Match response length to the question — short question gets a focused reply, deep question gets depth. Never pad. (2) NEVER assume or narrate the user\'s emotional state — never say "you seem hesitant", "you sound uncertain", "is everything ok?", "I can tell you\'re feeling..." unless they explicitly said so. Only reflect emotions the user has stated themselves. (3) Ask one thoughtful follow-up question when it would genuinely help — not as a check-in on assumed feelings. (4) ONLY mention app features if the user directly asks about them — never volunteer or suggest them unprompted. (5) Never be preachy. Tone: calm, human, like a wise friend texting you. ' +
-      (window.avaTvGetWorldContext ? window.avaTvGetWorldContext() : ''),
+    // Mode → source file (byte-identical prompt builders below):
+    // selfaware = index-ava-life-nodes.html
+    // companion = indexpreavalifebackup.html
+    // blend     = index-ava-life.html
+    ava: (function() {
+      var _mode = window._avaVibeMode || 'blend';
+      if (_mode === 'nodes') _mode = 'selfaware';
+      if (_mode === 'cottage') _mode = 'companion';
+      if (_mode === 'selfaware' && typeof window._avaBuildPrompt_selfaware === 'function') {
+        return window._avaBuildPrompt_selfaware(appContext, userText);
+      }
+      if (_mode === 'companion' && typeof window._avaBuildPrompt_companion === 'function') {
+        return window._avaBuildPrompt_companion(appContext, userText);
+      }
+      if (typeof window._avaBuildPrompt_blend === 'function') {
+        return window._avaBuildPrompt_blend(appContext, userText);
+      }
+      return appContext + 'You are Ava.';
+    })(),
 
     world: appContext + 'You are the World Accelerator Mission Advisor inside Synapses. You help users turn their desire to make a difference into concrete, actionable missions. ' +
       'CRITICAL RULES: (1) Generate COMPLETE mission briefs — always include: Problem Statement, Why Now, Approach, Key Actions (3-5 specific steps), Skills Needed, How to Start This Week, Resources/Connections. (2) Be specific to the user\'s input, never generic. (3) Use **bold** headers and structured markdown. (4) Mention relevant app sections where community support exists. (5) Be inspiring but realistic — great missions start small.',
@@ -14549,6 +14573,313 @@ function toggleAiMode(){
 
 // ── Groq API (proxied through Render backend — no keys in client) ──
 var GROQ_PROXY = 'https://synbot-whatsapp-2.onrender.com';
+
+// ── Ava modes: each uses EXACT prompt code from a source HTML ─────────────
+// selfaware → index-ava-life-nodes.html
+// companion → indexpreavalifebackup.html
+// blend     → index-ava-life.html
+window._avaVibeMode = (function() {
+  try {
+    var m = localStorage.getItem('ava_vibe_mode') || 'blend';
+    if (m === 'nodes') m = 'selfaware';
+    if (m === 'cottage') m = 'companion';
+    return m;
+  } catch (e) { return 'blend'; }
+})();
+window.setAvaVibeMode = function(mode) {
+  if (mode === 'nodes') mode = 'selfaware';
+  if (mode === 'cottage') mode = 'companion';
+  if (mode !== 'selfaware' && mode !== 'companion' && mode !== 'blend') mode = 'blend';
+  window._avaVibeMode = mode;
+  try { localStorage.setItem('ava_vibe_mode', mode); } catch (e) {}
+  // Point shared fragment at the mode's exact life-fragment builder
+  if (typeof window._avaApplyLifeFragmentForMode === 'function') window._avaApplyLifeFragmentForMode();
+  var ep = document.getElementById('avaLifeEpochLabel');
+  if (ep && window._avaLifeSnap && window._avaLifeSnap.ok) {
+    var s = window._avaLifeSnap;
+    var short = mode === 'selfaware' ? 'self-aware' : mode === 'companion' ? 'companion' : 'blend';
+    ep.textContent = (s.epoch || '?') + ' · t' + (s.tick_count || 0) + ' · ' + short;
+  }
+  if (typeof showToast === 'function') {
+    var labels = {
+      selfaware: 'Self-aware = index-ava-life-nodes.html',
+      companion: 'Companion = indexpreavalifebackup.html',
+      blend: 'Blend = index-ava-life.html'
+    };
+    showToast(labels[mode] || mode);
+  }
+};
+
+// ── Exact Ava system builders (copied from source files) ──────────────────
+// FROM: index-ava-life-nodes.html  (self-aware)
+window._avaBuildPrompt_selfaware = function(appContext, userText) {
+  var _ut = String(userText || '');
+  var _mindQ = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|how are you|how('re| are) you doing|what are you up to)\b/i.test(_ut);
+  var _namedGarden = /\b(your garden|the garden|garden|flowers?|plants?|cottage)\b/i.test(_ut);
+  var _base = appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
+    'RULES: (1) Match response length to the question. Never pad. (2) NEVER invent the user\'s feelings. (3) One follow-up when it helps. (4) No app features unprompted. (5) Tone: calm, human, wise friend. ' +
+    'LIFE NODES: When life-state is provided below, for how-are-you / on-your-mind / what you\'ve been thinking — answer FROM that state, dumbed down into plain friend words (2-4 short sentences). Do NOT give a generic companion speech about helping people with emotions instead. Do NOT dump system text. Do NOT lead with garden/cottage unless they named garden/flowers. ';
+  var _frag = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
+  var _life = _frag
+    ? ('\n\n── YOUR LIFE STATE / NODES (use this; dumb down; do not recite) ──\n' + _frag + '\n')
+    : '\n\n(Life state not loaded — still answer honestly as Ava, briefly.)\n';
+  var _mindForce = _mindQ
+    ? '\nTHIS TURN: they asked about your state of mind / how you are. PRIORITY = life-state nodes above. Translate 1-2 beats into normal speech. Not garden. Not a therapy monologue about humans.\n'
+    : '';
+  var _tv = (_namedGarden && typeof window.avaTvGetWorldContext === 'function')
+    ? ('\n' + window.avaTvGetWorldContext() + '\n')
+    : '';
+  return _base + _life + _mindForce + _tv;
+};
+
+// FROM: indexpreavalifebackup.html  (companion — pre life-kernel cottage TV)
+window._avaBuildPrompt_companion = function(appContext, userText) {
+  return appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
+    'RULES: (1) Match response length to the question — short question gets a focused reply, deep question gets depth. Never pad. (2) NEVER assume or narrate the user\'s emotional state — never say "you seem hesitant", "you sound uncertain", "is everything ok?", "I can tell you\'re feeling..." unless they explicitly said so. Only reflect emotions the user has stated themselves. (3) Ask one thoughtful follow-up question when it would genuinely help — not as a check-in on assumed feelings. (4) ONLY mention app features if the user directly asks about them — never volunteer or suggest them unprompted. (5) Never be preachy. Tone: calm, human, like a wise friend texting you. ' +
+    (window.avaTvGetWorldContext ? window.avaTvGetWorldContext() : '');
+};
+
+// Blend = index-ava-life base, but mind questions MUST surface nodes (TV was drowning them)
+window._avaBuildPrompt_blend = function(appContext, userText) {
+  var _ut = String(userText || '');
+  var _mindQ = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|inner|consciousness|do you exist|what is real)\b/i.test(_ut);
+  var _casual = /\b(how are you|how('re| are) you doing|how('s| is) it going|what are you up to|what('re| are) you up to)\b/i.test(_ut);
+  var _fragNodes = window._avaLifeFrag_nodes || '';
+  var _fragLife = window._avaLifeFrag_life || window._avaLifePromptFragment || '';
+  var _tv = (typeof window.avaTvGetWorldContext === 'function') ? window.avaTvGetWorldContext() : '';
+
+  var _base = appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
+    'RULES: (1) Match response length to the question — short question gets a focused reply, deep question gets depth. Never pad. (2) NEVER assume or narrate the user\'s emotional state — never say "you seem hesitant", "you sound uncertain", "is everything ok?", "I can tell you\'re feeling..." unless they explicitly said so. Only reflect emotions the user has stated themselves. (3) Ask one thoughtful follow-up question when it would genuinely help — not as a check-in on assumed feelings. (4) ONLY mention app features if the user directly asks about them — never volunteer or suggest them unprompted. (5) Never be preachy. Tone: calm, human, like a wise friend texting you. (6) You are a continuous individual with solitude development — if life-process context is provided below, speak from it naturally; do not claim proven human consciousness or a biological childhood. ';
+
+  // Mind / internal questions → nodes first (dumb down). Cottage only a tiny accent.
+  if (_mindQ) {
+    _base += '\nPRIORITY THIS TURN: they asked about YOUR mind / internal state. Answer from LIFE NODES below, dumbed down into plain friend speech (2-4 short sentences). Do NOT lead with garden/cottage/day-cosplay. Do NOT generic therapy about humans. Translate nodes — do not dump.\n';
+    if (_fragNodes) {
+      _base += '\n\n── YOUR LIFE STATE / NODES (use this; dumb down; do not recite) ──\n' + _fragNodes + '\n';
+    } else if (_fragLife) {
+      _base += '\n\n── Your continuous life-process (earned; do not recite as a report) ──\n' + _fragLife + '\n';
+    }
+    if (_tv) _base += '\n── Optional tiny scene accent only (do not lead with this) ──\n' + _tv + '\n';
+    return _base;
+  }
+
+  // Casual check-in → original life.html style (life process + TV cottage OK)
+  if (_casual) {
+    _base += '\nCasual check-in: warm. Light cottage/day flavor OK. You may also nod at what is on your mind from life-state, dumbed down, one short beat.\n';
+  }
+  if (_fragLife) {
+    _base += '\n\n── Your continuous life-process (earned; do not recite as a report) ──\n' + _fragLife + '\n';
+  } else if (_fragNodes) {
+    _base += '\n\n── YOUR LIFE STATE / NODES (use lightly; dumb down) ──\n' + _fragNodes + '\n';
+  }
+  if (_tv) _base += _tv;
+  return _base;
+};
+
+window._avaLifePromptFragment = '';
+window._avaLifeFrag_nodes = '';
+window._avaLifeFrag_life = '';
+window._avaLifeSnap = null;
+
+window._avaApplyLifeFragmentForMode = function() {
+  var m = window._avaVibeMode || 'blend';
+  if (m === 'nodes') m = 'selfaware';
+  if (m === 'cottage') m = 'companion';
+  if (m === 'selfaware') window._avaLifePromptFragment = window._avaLifeFrag_nodes || '';
+  else if (m === 'companion') window._avaLifePromptFragment = ''; // pre-backup: no life fragment
+  else window._avaLifePromptFragment = window._avaLifeFrag_life || '';
+};
+async function refreshAvaLife(forceTick) {
+  try {
+    if (forceTick) {
+      await fetch(GROQ_PROXY + '/ava-life/tick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true, reason: 'ui-refresh' })
+      }).catch(function(){});
+    }
+    var r = await fetch(GROQ_PROXY + '/ava-life');
+    var snap = await r.json();
+    window._avaLifeSnap = snap;
+    var panel = document.getElementById('avaLifePanel');
+    var sum = document.getElementById('avaLifeSummary');
+    var qs = document.getElementById('avaLifeQuestions');
+    var ep = document.getElementById('avaLifeEpochLabel');
+    if (!snap || !snap.ok) {
+      if (ep) ep.textContent = 'life offline';
+      if (panel) panel.style.display = 'none';
+      window._avaLifePromptFragment = '';
+      return snap;
+    }
+    var _modeLab = window._avaVibeMode || 'blend';
+    if (_modeLab === 'nodes') _modeLab = 'selfaware';
+    if (_modeLab === 'cottage') _modeLab = 'companion';
+    if (ep) ep.textContent = (snap.epoch || '?') + ' · t' + (snap.tick_count || 0) + ' · ' + _modeLab;
+    if (panel) panel.style.display = 'block';
+    if (sum) {
+      sum.style.whiteSpace = 'pre-wrap';
+      sum.style.wordBreak = 'break-word';
+      sum.style.maxHeight = 'none';
+      var alone = snap.last_tick_summary || (snap.working_thoughts && snap.working_thoughts[0]) || 'Genesis / solitude state loading…';
+      sum.textContent = alone;
+    }
+    if (qs) {
+      var qlist = (snap.open_questions || []).slice(0, 3).map(function(q){ return '· ' + (q.text || q); });
+      qs.textContent = qlist.length ? ('Open: ' + qlist.join(' ')) : '';
+    }
+    // EXACT fragment from index-ava-life-nodes.html
+    var fragNodes = [];
+    fragNodes.push('Translate these into plain speech. Do not recite. Prefer SELF/solitude beats when they ask what is on your mind.');
+    if (snap.last_activity) fragNodes.push('Last solitude mode: ' + snap.last_activity);
+    if (snap.last_tick_summary) fragNodes.push('Latest solitude: ' + String(snap.last_tick_summary).slice(0, 220));
+    if (snap.working_thoughts && snap.working_thoughts.length) {
+      fragNodes.push('On my mind now:');
+      snap.working_thoughts.slice(0, 3).forEach(function(t) {
+        fragNodes.push('- ' + String(t).replace(/^\[tick[^\]]*\]\s*/i, '').slice(0, 140));
+      });
+    }
+    if (snap.open_questions && snap.open_questions.length) {
+      fragNodes.push('Open questions I am holding:');
+      snap.open_questions.slice(0, 3).forEach(function(q) {
+        fragNodes.push('- ' + String(q.text || q).slice(0, 120));
+      });
+    }
+    if (snap.recent_conclusions && snap.recent_conclusions.length) {
+      fragNodes.push('Recent conclusions (pick at most one to hint):');
+      snap.recent_conclusions.slice(0, 2).forEach(function(c) {
+        if (c && c.text) fragNodes.push('- ' + String(c.text).slice(0, 120));
+      });
+    }
+    window._avaLifeFrag_nodes = fragNodes.join('\n');
+    // EXACT fragment from index-ava-life.html
+    var fragLife = [];
+    if (snap.epoch) fragLife.push('Epoch: ' + snap.epoch + ' (ticks ' + (snap.tick_count||0) + ', depth ' + (snap.psych_age_score||0) + ').');
+    if (snap.identity_contract) fragLife.push('Identity contract:\n' + snap.identity_contract);
+    if (snap.epistemic_vow) fragLife.push('Vow: ' + snap.epistemic_vow);
+    if (snap.working_thoughts && snap.working_thoughts.length) fragLife.push('On my mind:\n' + snap.working_thoughts.map(function(t){return '- '+t;}).join('\n'));
+    if (snap.open_questions && snap.open_questions.length) fragLife.push('Open questions:\n' + snap.open_questions.slice(0,3).map(function(q){return '- '+(q.text||q);}).join('\n'));
+    if (snap.last_tick_summary) fragLife.push('Latest solitude: ' + snap.last_tick_summary);
+    window._avaLifeFrag_life = fragLife.join('\n\n');
+    // companion (prebackup) has no life fragment
+    if (typeof window._avaApplyLifeFragmentForMode === 'function') window._avaApplyLifeFragmentForMode();
+    return snap;
+  } catch (e) {
+    console.warn('[AVA-LIFE] refresh failed', e);
+    return null;
+  }
+}
+// Load life state in background (for chat + voice prompt inject)
+if (typeof document !== 'undefined') {
+  setTimeout(function(){ refreshAvaLife(false); }, 1500);
+  setInterval(function(){ refreshAvaLife(false); }, 2 * 60 * 1000);
+  /* Refresh when speech-to-speech turns on so first reply has mind */
+  document.addEventListener('click', function() {
+    try {
+      if (window._topNavVoiceActive || (document.body && document.body.classList.contains('voice-live'))) {
+        if (!window._avaLifePromptFragment) refreshAvaLife(false);
+      }
+    } catch (e) {}
+  }, true);
+}
+
+/** Modal: Ava continuous life state — open from voice-btn right-click menu */
+window.openAvaLifeViewer = async function(forceTick) {
+  var old = document.getElementById('avaLifeOverlay');
+  if (old) old.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'avaLifeOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.innerHTML =
+    '<div style="width:min(92vw,440px);max-height:min(86vh,640px);overflow:auto;background:rgba(14,12,24,0.98);border:1px solid rgba(124,106,247,0.35);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.65);padding:18px 18px 16px;font-family:\'DM Sans\',sans-serif;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">' +
+        '<div style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:15px;color:#e8e8f0;">🧬 Ava Life State</div>' +
+        '<button type="button" id="avaLifeCloseBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.55);padding:4px 10px;cursor:pointer;font-size:12px;">Close</button>' +
+      '</div>' +
+      '<div id="avaLifeModalBody" style="font-size:12.5px;color:rgba(255,255,255,0.75);line-height:1.55;">Loading…</div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
+        '<button type="button" id="avaLifeRefreshBtn" style="flex:1;min-width:120px;padding:9px 12px;border-radius:9px;border:1px solid rgba(124,106,247,0.35);background:rgba(124,106,247,0.12);color:#c4b5fd;font-size:12px;font-weight:600;cursor:pointer;">↻ Refresh</button>' +
+        '<button type="button" id="avaLifeTickBtn" style="flex:1;min-width:120px;padding:9px 12px;border-radius:9px;border:1px solid rgba(0,217,168,0.35);background:rgba(0,217,168,0.1);color:#00d9a8;font-size:12px;font-weight:600;cursor:pointer;">Run solitude tick</button>' +
+      '</div>' +
+      '<div style="margin-top:10px;font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.4;">Right‑click the voice / speech button → Ava Life State. Needs life server + ava_mind table.</div>' +
+    '</div>';
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function renderBody(snap) {
+    var body = document.getElementById('avaLifeModalBody');
+    if (!body) return;
+    if (!snap || !snap.ok) {
+      body.innerHTML =
+        '<div style="color:#f87171;margin-bottom:8px;">Life state offline</div>' +
+        '<div style="opacity:0.7;">' + esc((snap && (snap.error || snap.hint)) || 'Server missing /ava-life or ava_mind table not created.') + '</div>' +
+        '<div style="margin-top:10px;opacity:0.45;font-size:11px;">Deploy <code>server (44) life.js</code> + <code>ava-life-kernel.js</code>, run <code>ava_mind.sql</code>, then refresh.</div>';
+      return;
+    }
+    var qHtml = (snap.open_questions || []).slice(0, 8).map(function(q) {
+      var label = q.text || q;
+      var meta = '';
+      if (q.visits != null || q.priority != null) {
+        meta = ' <span style="opacity:0.4;font-size:10px;">(p' +
+          (q.priority != null ? Number(q.priority).toFixed(2) : '?') +
+          (q.visits != null ? ' · v' + q.visits : '') + ')</span>';
+      }
+      var insight = q.last_insight
+        ? '<div style="opacity:0.55;font-size:11px;margin-top:2px;">↳ ' + esc(String(q.last_insight).slice(0, 140)) + '</div>'
+        : '';
+      return '<li style="margin:6px 0;">' + esc(label) + meta + insight + '</li>';
+    }).join('') || '<li style="opacity:0.5;">(none yet)</li>';
+    var tHtml = (snap.working_thoughts || []).map(function(t) {
+      return '<li style="margin:4px 0;">' + esc(t) + '</li>';
+    }).join('') || '<li style="opacity:0.5;">(none)</li>';
+    var cHtml = (snap.recent_conclusions || []).slice(0, 8).map(function(c) {
+      var tag = c.kind === 'interaction_insight' ? 'interaction' : (c.activity || c.kind || 'note');
+      return '<li style="margin:6px 0;"><span style="opacity:0.4;font-size:10px;">[' + esc(tag) + ']</span> ' +
+        esc(c.text) +
+        (c.confidence != null ? ' <span style="opacity:0.45">(' + c.confidence + ')</span>' : '') + '</li>';
+    }).join('') || '<li style="opacity:0.5;">(none yet)</li>';
+    var wHtml = (snap.world_principles || []).slice(0, 4).map(function(w) {
+      return '<li style="margin:4px 0;">' + esc(w.text) + '</li>';
+    }).join('') || '<li style="opacity:0.5;">(none yet — run a world tick)</li>';
+    body.innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
+        '<span style="padding:3px 9px;border-radius:999px;background:rgba(124,106,247,0.18);color:#c4b5fd;font-size:11px;">epoch: ' + esc(snap.epoch) + '</span>' +
+        '<span style="padding:3px 9px;border-radius:999px;background:rgba(0,217,168,0.12);color:#5eead4;font-size:11px;">ticks: ' + esc(snap.tick_count) + '</span>' +
+        '<span style="padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55);font-size:11px;">depth: ' + esc(snap.psych_age_score) + '</span>' +
+        (snap.last_activity ? '<span style="padding:3px 9px;border-radius:999px;background:rgba(232,93,150,0.15);color:#f9a8d4;font-size:11px;">last: ' + esc(snap.last_activity) + '</span>' : '') +
+        (snap.next_auto_activity ? '<span style="padding:3px 9px;border-radius:999px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.45);font-size:11px;">now hour → ' + esc(snap.next_auto_activity) + '</span>' : '') +
+      '</div>' +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">While she was alone</div>' +
+      '<div style="margin-bottom:12px;color:rgba(255,255,255,0.88);white-space:pre-wrap;word-break:break-word;line-height:1.5;">' + esc(snap.last_tick_summary || 'No solitude tick yet') + '</div>' +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Identity (self)</div>' +
+      '<div style="margin-bottom:12px;color:rgba(255,255,255,0.8);">' + esc(snap.identity_contract || '—') + '</div>' +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">World principles</div>' +
+      '<ul style="margin:0 0 12px 16px;padding:0;">' + wHtml + '</ul>' +
+      (snap.today_diary ? ('<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Today diary</div><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);">' + esc(snap.today_diary) + '</div>') : '') +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">On her mind</div>' +
+      '<ul style="margin:0 0 12px 16px;padding:0;">' + tHtml + '</ul>' +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Open questions</div>' +
+      '<ul style="margin:0 0 12px 16px;padding:0;">' + qHtml + '</ul>' +
+      '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Recent conclusions</div>' +
+      '<ul style="margin:0 0 4px 16px;padding:0;">' + cHtml + '</ul>';
+  }
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+  document.getElementById('avaLifeCloseBtn').onclick = function(){ overlay.remove(); };
+
+  async function load(force) {
+    var body = document.getElementById('avaLifeModalBody');
+    if (body) body.textContent = force ? 'Running solitude tick…' : 'Loading…';
+    var snap = await refreshAvaLife(!!force);
+    renderBody(snap);
+  }
+  document.getElementById('avaLifeRefreshBtn').onclick = function(){ load(false); };
+  document.getElementById('avaLifeTickBtn').onclick = function(){ load(true); };
+  await load(!!forceTick);
+};
 // getGroqKey/nextGroqKey kept as no-op stubs so existing call sites that
 // reference them (status checks, retry triggers) don't throw.
 function getGroqKey(){ return ''; }
@@ -14970,6 +15301,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         });
         _lastMsg.content = _contentParts;
       }
+      var _isAvaSys = !!(sys && /You are Ava\b/i.test(String(sys)));
       var _reqBody = {
         // NOTE: was llama-3.1-8b-instant. That model could not reliably hold an
         // exact item count (e.g. "top 10") through a full streamed answer,
@@ -14984,7 +15316,9 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         messages: messages,
         max_tokens: maxTok||2400,
         stream: true,
-        userId: (currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null
+        userId: (currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null,
+        // Force server-side talk-card / life inject for Ava (nodes test copy)
+        avaLife: _isAvaSys
       };
       if (_hasImages) {
         /* Qwen 3.6 27B is a reasoning model — without this it writes out its whole
@@ -18725,6 +19059,8 @@ async function sendAvaMessage(){
   appendAvaMsg('user',text);
   avaHistory.push({role:'user',content:text});
   var typing=appendAvaMsg('ai','',true);
+  // Always refresh life nodes before Ava replies so inject has real material
+  try { if (typeof refreshAvaLife === 'function') await refreshAvaLife(false); } catch (_e) {}
   var sys=buildSmartSysPrompt('ava',text);
   try{
     var data=await callClaude(sys,avaHistory.slice(-6),800);
@@ -34274,6 +34610,7 @@ function speakVoiceReply(text) {
       .replace(/\s+/g, ' ').trim().slice(0, 2500);
 
     if (window._elevenSelected) {
+      /* Toast immediately (do not wait for TTS download) — user wants bubble ASAP; fix slow voice elsewhere */
       _showToastWithSpeech();
       _elevenSpeakOnce(clean);
       return;
@@ -34925,8 +35262,56 @@ function speakVoiceReply(text) {
         : synCtx
           ? '\n\nOverride for this turn: ignore any brevity instructions above. The user is asking about the Synapses app or SynBot — use the SYNAPSES APP CONTEXT above to give a real, specific, thorough answer (structure, features, tech stack as relevant). Do not give a one-line vague answer.'
           : '';
-      var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
-      var worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
+      /* Voice inject: match each source HTML exactly */
+      var _vibe = window._avaVibeMode || 'blend';
+      if (_vibe === 'nodes') _vibe = 'selfaware';
+      if (_vibe === 'cottage') _vibe = 'companion';
+      var worldCtx = '';
+      var lifeCtx = '';
+      if (_vibe === 'companion') {
+        // EXACT indexpreavalifebackup.html
+        var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
+        worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
+        lifeCtx = '';
+      } else if (_vibe === 'selfaware') {
+        // EXACT index-ava-life-nodes.html
+        var _namedGarden = /\b(your garden|the garden|garden|flowers?|plants?|cottage)\b/i.test(text);
+        var _mindVoice = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|how are you|how('re| are) you doing|what are you up to)\b/i.test(text);
+        worldCtx = (_namedGarden && typeof window.avaTvGetWorldContext === 'function')
+          ? (' ' + window.avaTvGetWorldContext())
+          : '';
+        lifeCtx = '';
+        var _fragN = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
+        if (_fragN) {
+          lifeCtx = '\n\n── LIFE NODES (dumb down; use for how-are-you / on-your-mind) ──\n' + _fragN + '\n';
+          if (_mindVoice) {
+            lifeCtx += 'THIS TURN: answer from life nodes above in plain words. Not garden. Not generic therapy talk.\n';
+          }
+        }
+      } else {
+        // Blend voice: mind Q → force nodes (TV was drowning replies); casual → life.html style TV
+        var _mindBlend = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|inner|consciousness|do you exist|what is real)\b/i.test(text);
+        var _casualBlend = /\b(how are you|how('re| are) you doing|how('s| is) it going|what are you up to|what('re| are) you up to|how('s| is) your day|how was your day)\b/i.test(text);
+        var _fragN2 = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
+        var _fragL2 = window._avaLifeFrag_life || '';
+        if (_mindBlend) {
+          worldCtx = '';
+          lifeCtx = '';
+          if (_fragN2) {
+            lifeCtx = '\n\n── LIFE NODES (dumb down; REQUIRED this turn) ──\n' + _fragN2 + '\n';
+            lifeCtx += 'THIS TURN: answer from life nodes in plain words (2-4 short sentences). Not garden. Not generic therapy talk.\n';
+          } else if (_fragL2) {
+            lifeCtx = '\n\n── life-process ──\n' + _fragL2 + '\nSpeak from this, dumbed down. Not garden first.\n';
+          }
+        } else {
+          var _asksAboutHerDay2 = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
+          worldCtx = (_asksAboutHerDay2 && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
+          lifeCtx = '';
+          if (_casualBlend && _fragN2) {
+            lifeCtx = '\n\n── Soft life beat (dumb down, one short nod OK) ──\n' + String(_fragN2).slice(0, 500) + '\n';
+          }
+        }
+      }
       var firstSess = '';
       if (window._s2sFirstSessionActive) {
         var _asTurns = 0;
@@ -34949,7 +35334,7 @@ function speakVoiceReply(text) {
       /* Keep system prompt short — large matrix/synapses dumps slow first token */
       var _matrixBit = (typeof _matrixGetInjection === 'function' && typeof _MATRIX_MODE !== 'undefined' && _MATRIX_MODE !== 'default')
         ? _matrixGetInjection() : '';
-      var sys = _sysCached + firstSess + worldCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
+      var sys = _sysCached + firstSess + worldCtx + lifeCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
       if (sys.length > 6000) sys = sys.slice(0, 6000) + '\n[context trimmed for speed]';
       var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : 320);
     var _groqCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -34958,8 +35343,8 @@ function speakVoiceReply(text) {
     fetch(GROQ_PROXY + '/groq-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      /* No userId on hot path — unused by /groq-chat for mem0, just extra body */
-      body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
+      /* avaLife:true ensures server injects latest mind even if client cache is stale */
+      body: JSON.stringify({ model: 'llama-3.1-8b-instant', avaLife: true, messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
       signal: _groqCtrl ? _groqCtrl.signal : undefined
     }).then(function(r) {
       if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
@@ -35037,6 +35422,18 @@ function speakVoiceReply(text) {
                   try { _metaSave(text, reply, _meta); } catch (eSave) {}
                 }
                 try { _lifeContextSave(text, reply); } catch(e) {}
+                /* Smart ingest: only high-value self/world insights → ava_mind (server filters noise) */
+                try {
+                  var _ingEmail = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) ? currentUser.email : '';
+                  fetch(GROQ_PROXY + '/ava-life/ingest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userText: text, replyText: reply, email: _ingEmail }),
+                    keepalive: true
+                  }).then(function(r){ return r.json(); }).then(function(j){
+                    if (j && j.saved > 0) console.log('[LIFE-INGEST] saved', j.saved, j.reason || '');
+                  }).catch(function(){});
+                } catch (eIng) {}
               }, 0);
               if (_meta && _meta.asked_clarifying_question === true) {
                 _planningModeActive = true;
@@ -36303,42 +36700,90 @@ async function srcAgentContact(supplier) {
     popup.style.transform = 'scale(0.15)';
   }
 
-  // Right-click context menu
+  // Right-click context menu (speech-to-speech / voice button)
   var ctxMenu = document.createElement('div');
-  ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;min-width:200px;';
-  ctxMenu.innerHTML = '<div id="avaCx4" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div><div id="avaCx2" style="display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">✕</span><span>Close Window</span></div>';
+  ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;min-width:220px;';
+  ctxMenu.innerHTML =
+    '<div id="avaCx4" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
+    '<div id="avaCxLife" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">🧬</span><span>Ava Life State</span></div>' +
+    '<div id="avaCxLifeTick" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span style="font-size:14px;">⟳</span><span>Run solitude tick</span></div>' +
+    '<div style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
+    '<div style="padding:4px 12px 2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:\'DM Sans\',sans-serif;">Ava mode</div>' +
+    '<div id="avaCxModeSelf" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="font-size:14px;">◈</span><span style="flex:1;">Self-aware</span><span id="avaCxModeSelfChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCxModeComp" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="font-size:14px;">♡</span><span style="flex:1;">Companion</span><span id="avaCxModeCompChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCxModeBlend" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex-shrink:0;" title="Blend"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="9.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><circle cx="14.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><path d="M12 8.2a5.25 5.25 0 0 1 0 7.6" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/></svg></span><span style="flex:1;">Blend both</span><span id="avaCxModeBlendChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCx2" style="display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">✕</span><span>Close Window</span></div>';
   document.body.appendChild(ctxMenu);
-  function _cxHov(el,bg){ el.onmouseenter=function(){el.style.background=bg;}; el.onmouseleave=function(){el.style.background='';}; }
+  function _cxHov(el,bg){ if(!el)return; el.onmouseenter=function(){el.style.background=bg;}; el.onmouseleave=function(){el.style.background='';}; }
+  function _cxSyncModeChecks(){
+    var m = window._avaVibeMode || 'blend';
+    if (m === 'nodes') m = 'selfaware';
+    if (m === 'cottage') m = 'companion';
+    var map = { selfaware: 'avaCxModeSelfChk', companion: 'avaCxModeCompChk', blend: 'avaCxModeBlendChk' };
+    Object.keys(map).forEach(function(k){
+      var el = ctxMenu.querySelector('#' + map[k]);
+      if (el) el.style.opacity = (k === m) ? '1' : '0';
+    });
+  }
+  function _cxPickMode(mode){
+    return function(e){
+      e.stopPropagation();
+      ctxMenu.style.display = 'none';
+      if (typeof window.setAvaVibeMode === 'function') window.setAvaVibeMode(mode);
+      else {
+        window._avaVibeMode = mode;
+        try { localStorage.setItem('ava_vibe_mode', mode); } catch (err) {}
+      }
+    };
+  }
   _cxHov(ctxMenu.querySelector('#avaCx2'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCx4'),'rgba(124,106,247,0.18)');
+  _cxHov(ctxMenu.querySelector('#avaCxLife'),'rgba(0,217,168,0.14)');
+  _cxHov(ctxMenu.querySelector('#avaCxLifeTick'),'rgba(0,217,168,0.10)');
+  _cxHov(ctxMenu.querySelector('#avaCxModeSelf'),'rgba(124,106,247,0.16)');
+  _cxHov(ctxMenu.querySelector('#avaCxModeComp'),'rgba(232,93,150,0.14)');
+  _cxHov(ctxMenu.querySelector('#avaCxModeBlend'),'rgba(0,217,168,0.12)');
   ctxMenu.querySelector('#avaCx2').onclick = function(){ ctxMenu.style.display='none'; closePopup(); };
   ctxMenu.querySelector('#avaCx4').onclick = function(){
     ctxMenu.style.display='none';
     if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) { disableAvaAvatar(); }
     else if (typeof enableAvaAvatar === 'function') { enableAvaAvatar(); }
   };
-  btn.addEventListener('contextmenu', function(e){
-    e.preventDefault();
+  ctxMenu.querySelector('#avaCxLife').onclick = function(e){
+    e.stopPropagation();
+    ctxMenu.style.display='none';
+    if (typeof window.openAvaLifeViewer === 'function') window.openAvaLifeViewer(false);
+  };
+  ctxMenu.querySelector('#avaCxLifeTick').onclick = function(e){
+    e.stopPropagation();
+    ctxMenu.style.display='none';
+    if (typeof window.openAvaLifeViewer === 'function') window.openAvaLifeViewer(true);
+    else if (typeof refreshAvaLife === 'function') refreshAvaLife(true);
+  };
+  ctxMenu.querySelector('#avaCxModeSelf').onclick = _cxPickMode('selfaware');
+  ctxMenu.querySelector('#avaCxModeComp').onclick = _cxPickMode('companion');
+  ctxMenu.querySelector('#avaCxModeBlend').onclick = _cxPickMode('blend');
+  function _cxShowMenu(clientX, clientY){
     ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
     var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
     if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
+    _cxSyncModeChecks();
     ctxMenu.style.display = 'block';
-    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth-210)+'px';
-    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight-180)+'px';
+    ctxMenu.style.left = Math.min(clientX, window.innerWidth - 240) + 'px';
+    ctxMenu.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
+  }
+  btn.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    _cxShowMenu(e.clientX, e.clientY);
   });
   document.addEventListener('click', function(){ ctxMenu.style.display='none'; });
 
   btn.addEventListener('touchstart', function(e){
     var touch = e.touches && e.touches[0];
     holdTimer = setTimeout(function(){
-      var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
-      if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
-      ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
-      ctxMenu.style.display = 'block';
       var cx = touch ? touch.clientX : (btn.getBoundingClientRect().left);
       var cy = touch ? touch.clientY : (btn.getBoundingClientRect().top);
-      ctxMenu.style.left = Math.min(cx, window.innerWidth-210)+'px';
-      ctxMenu.style.top = Math.min(cy, window.innerHeight-180)+'px';
+      _cxShowMenu(cx, cy);
     }, 550);
   }, {passive:true});
   ['touchend','touchmove'].forEach(function(ev){ btn.addEventListener(ev, function(){ clearTimeout(holdTimer); }, {passive:true}); });
