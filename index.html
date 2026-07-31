@@ -33532,39 +33532,6 @@ function speakVoiceReply(text) {
     return _mem0UserId;
   }
 
-  // ── Ava's identity/mood/whiteboard context for voice ──────────────────
-  // Fetched every 5 min (not per-turn) so it never adds latency to a live
-  // reply. Empty string if it hasn't loaded yet or the fetch fails — voice
-  // just falls back to _sysCached alone, same as before this existed.
-  var _avaSelfCtx = '';
-  var _avaSelfCtxTs = 0;
-  var AVA_SELF_CTX_TTL_MS = 5 * 60 * 1000;
-
-  function _refreshAvaSelfCtx() {
-    if (Date.now() - _avaSelfCtxTs < AVA_SELF_CTX_TTL_MS) return;
-    _avaSelfCtxTs = Date.now(); // set immediately so slow/failed calls don't retry-storm
-    var email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
-    if (!email) return;
-    fetch(GROQ_PROXY + '/ava-context?email=' + encodeURIComponent(email))
-      .then(function (r) { return r.json(); })
-      .then(function (d) { if (d && d.context) _avaSelfCtx = '\n\n' + d.context; })
-      .catch(function () {});
-  }
-
-  // Fire-and-forget after each voice reply completes. Never delays TTS —
-  // the server responds immediately and does its own work after.
-  function _avaSelfMemorySave(userText, replyText) {
-    try {
-      var email = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
-      if (!email) return;
-      fetch(GROQ_PROXY + '/ava-self-log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, userText: userText, replyText: replyText })
-      }).catch(function () {});
-    } catch (e) {}
-  }
-
   /** Hard-cap mem0 so a cold Render box never stalls voice */
   var _MEM0_TIMEOUT_MS = 450;
 
@@ -34758,11 +34725,10 @@ function speakVoiceReply(text) {
     var synCtx = _synKwRegex.test(text) ? '\n\n' + _synapsesCtx : '';
     var relCtx = _getRelPrompt();
     _trackPersonalTurn(text);
-    _refreshAvaSelfCtx(); // kicks off/refreshes fetch if stale; uses cached value below either way
-    var _brainLayer = _avaSelfCtx;
+    var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
-    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
+    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
     /* Explicit "I want live/current info" phrasing — same override used in text chat's
      * explicitLiveHint. Forces a search regardless of topic, since the user directly
      * signaled recency (this was the actual gap causing "best restaurants ... right now"
@@ -34960,11 +34926,7 @@ function speakVoiceReply(text) {
           ? '\n\nOverride for this turn: ignore any brevity instructions above. The user is asking about the Synapses app or SynBot — use the SYNAPSES APP CONTEXT above to give a real, specific, thorough answer (structure, features, tech stack as relevant). Do not give a one-line vague answer.'
           : '';
       var _asksAboutHerDay = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
-      var worldCtx = '';
-      if (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') {
-        try { worldCtx = ' ' + window.avaTvGetWorldContext(); }
-        catch (e) { console.warn('[Voice] avaTvGetWorldContext threw — skipping world context this turn', e); worldCtx = ''; }
-      }
+      var worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
       var firstSess = '';
       if (window._s2sFirstSessionActive) {
         var _asTurns = 0;
@@ -35075,7 +35037,6 @@ function speakVoiceReply(text) {
                   try { _metaSave(text, reply, _meta); } catch (eSave) {}
                 }
                 try { _lifeContextSave(text, reply); } catch(e) {}
-                try { _avaSelfMemorySave(text, reply); } catch(e) {}
               }, 0);
               if (_meta && _meta.asked_clarifying_question === true) {
                 _planningModeActive = true;
@@ -35116,16 +35077,6 @@ function speakVoiceReply(text) {
       }
       readChunk();
     }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
-    }).catch(function(e) {
-      // Safety net: catches any synchronous throw in prompt-building (before the
-      // /groq-chat fetch even fires) — e.g. avaTvGetWorldContext, _matrixGetInjection.
-      // Without this, such an error silently killed the turn: no reply, no toast,
-      // _busy never reset, mic never restarted. See fix above for the known cause.
-      console.error('[Voice] Turn failed before LLM call:', e);
-      if (_myTurn !== _voiceTurnId) return;
-      _busy = false; _busySince = 0;
-      if (!_avatarLive()) toast('Something went wrong — try again');
-      if (_on) setTimeout(record, 1000);
     }); // end _voiceSearchPromise.then
   }
 
@@ -35156,6 +35107,7 @@ function speakVoiceReply(text) {
         'please subscribe','like and subscribe',
         'i hope you enjoyed','i hope you have a great day',
         'talking','talk','hmm','um','uh','ah','oh','okay','ok',
+        'hows it going','how\'s it going',
         'music','background music','[music]','[applause]','[laughter]',
       ];
       var lc = text.toLowerCase().replace(/[.!?,]/g,'').trim();
@@ -36472,14 +36424,8 @@ async function srcAgentContact(supplier) {
   };
 
   // Walk interpolation state
-  var _routineIdx = (function(){
-    try {
-      var startRout = ROUTINES[getTod()] || ROUTINES.morning;
-      return Math.floor(Math.random() * startRout.length);
-    } catch(e) { return 0; }
-  })();
+  var _routineIdx = 0;
   var _beatFrame = 0;
-  var _lastReportedActivity = '';
   // Ava X position (0=plants side, 0.5=center, 0.85=door, 1=inside house)
   var _avaX = 0.5; // 0..1 across world
   var _avaY = 0;   // 0=ground level, >0 = deeper down forest path (in pixels)
@@ -36737,41 +36683,20 @@ async function srcAgentContact(supplier) {
   };
 
   window.avaTvGetWorldContext = function() {
-    // Hardened: this function must NEVER throw, since it sits directly in the
-    // voice turn's prompt-building path with nothing after it but a fetch call.
-    // Any error here previously meant total silent failure (no reply, no toast).
-    try {
-      var beat = getCurBeat();
-      if (!beat) return '';
-      var activityRaw = (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
-      // Don't report the same activity twice in a row — if she was already
-      // "reading in the garden" last time we were asked, nudge her forward
-      // through the routine (up to a few beats) until it's something new.
-      var guard = 0;
-      while (!_avaWoken && activityRaw === _lastReportedActivity && guard < (ROUTINES[getTod()] || ROUTINES.morning).length) {
-        advanceBeat();
-        beat = getCurBeat();
-        activityRaw = (beat.name || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
-        guard++;
-      }
-      var timeOfDay = getTod();
-      var locationMap = { plants:'in my garden', center:'outside on the path', door:'by my front door', house:'inside my cottage' };
-      var location = locationMap[beat.pos] || 'outside';
-      var weatherMap = { dawn:'early morning, just before sunrise', morning:'a sunny morning', afternoon:'a bright afternoon', evening:'golden hour evening', dusk:'dusk, getting dark', night:'late night' };
-      var weather = weatherMap[timeOfDay] || 'nighttime';
-      var activity = _avaWoken ? 'I woke up and came outside to stargaze' : activityRaw;
-      _lastReportedActivity = activity;
-      // Only mention the garden/cottage as background detail when she's not already there or talking about it —
-      // avoids restating it on every single beat and over-emphasizing it in conversation.
-      var mentionsGardenAlready = beat.pos === 'plants' || /garden|flower/i.test(activity);
-      var background = mentionsGardenAlready
-        ? ''
-        : ' You live in a small cottage and keep a flower garden nearby, but don\'t bring it up unless it\'s relevant.';
-      return 'YOUR CURRENT STATE (answer naturally if asked about what you\'re doing or how your day is going — speak in first person as if this is real): It\'s ' + weather + '. You\'re ' + location + '. You\'ve been ' + activity + '.' + background;
-    } catch (e) {
-      console.warn('[Ava] avaTvGetWorldContext internal error — returning empty context', e);
-      return '';
-    }
+    var beat = getCurBeat();
+    var timeOfDay = getTod();
+    var locationMap = { plants:'in my garden', center:'outside on the path', door:'by my front door', house:'inside my cottage' };
+    var location = locationMap[beat.pos] || 'outside';
+    var weatherMap = { dawn:'early morning, just before sunrise', morning:'a sunny morning', afternoon:'a bright afternoon', evening:'golden hour evening', dusk:'dusk, getting dark', night:'late night' };
+    var weather = weatherMap[timeOfDay] || 'nighttime';
+    var activity = _avaWoken ? 'I woke up and came outside to stargaze' : beat.name.replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g,'').trim();
+    // Only mention the garden/cottage as background detail when she's not already there or talking about it —
+    // avoids restating it on every single beat and over-emphasizing it in conversation.
+    var mentionsGardenAlready = beat.pos === 'plants' || /garden|flower/i.test(activity);
+    var background = mentionsGardenAlready
+      ? ''
+      : ' You live in a small cottage and keep a flower garden nearby, but don\'t bring it up unless it\'s relevant.';
+    return 'YOUR CURRENT STATE (answer naturally if asked about what you\'re doing or how your day is going — speak in first person as if this is real): It\'s ' + weather + '. You\'re ' + location + '. You\'ve been ' + activity + '.' + background;
   };
 
   function refresh(){ tod=getTod(); pal=PALS[tod]; }
