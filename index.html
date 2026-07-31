@@ -33393,7 +33393,7 @@ function speakVoiceReply(text) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
     _reacquiringMic = true;
     console.warn('[Watchdog] mic track dead — reacquiring stream');
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }).then(function(s) {
       _stream = s;
       _reacquiringMic = false;
       _busy = false; _busySince = 0;
@@ -34439,7 +34439,7 @@ function speakVoiceReply(text) {
   }
 
   function ask(text) {
-    if (!text || text.trim().length < 2) { if (_on) record(); return; }
+    if (!text || text.trim().length < 2) { _busy = false; _busySince = 0; if (_on) record(); return; }
     var _myTurn = ++_voiceTurnId; // this turn's id — async completions below check this is still current
     // ── Voice App Commands ────────────────────────────────────────────────────
     var _vcHandled = false;
@@ -35107,7 +35107,6 @@ function speakVoiceReply(text) {
         'please subscribe','like and subscribe',
         'i hope you enjoyed','i hope you have a great day',
         'talking','talk','hmm','um','uh','ah','oh','okay','ok',
-        'hows it going','how\'s it going',
         'music','background music','[music]','[applause]','[laughter]',
       ];
       var lc = text.toLowerCase().replace(/[.!?,]/g,'').trim();
@@ -35381,7 +35380,7 @@ function speakVoiceReply(text) {
         _on = false;
         _setTopNavVoiceActive(false);
       } else {
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }).then(function(s) {
           _stream = s;
           // Keep mic stream alive when tab is backgrounded
           document.addEventListener('visibilitychange', function() {
