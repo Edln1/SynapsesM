@@ -14610,15 +14610,121 @@ window.setAvaVibeMode = function(mode) {
   }
 };
 
+/** TODAY_STATUS text only (ticks / learning) — no cottage PLACE_DAY. */
+window._avaGetTodayStatusOnly = function() {
+  var snap = window._avaLifeSnap;
+  if (snap && snap.ok && snap.today_status) return String(snap.today_status);
+  var frag = window._avaLifeFrag_life || '';
+  if (/TODAY_STATUS/.test(frag)) {
+    var m = frag.match(/TODAY_STATUS[\s\S]*/);
+    if (m) return m[0];
+  }
+  if (typeof window._avaBuildClientTodayStandin === 'function') {
+    return window._avaBuildClientTodayStandin(snap) || '';
+  }
+  return '';
+};
+
+/**
+ * Blend construct-on-ask: lock places for day questions before building the prompt.
+ * Hard-capped ~900ms so a cold /ava-life never stalls speech-to-speech (_busy stuck).
+ * Does NOT await full refreshAvaLife (that was a major stall source).
+ */
+window._avaEnsurePlacesOnAsk = async function(userText) {
+  var t = String(userText || '');
+  if (!t.trim()) return null;
+  var isDay = (typeof window._avaIsDayScheduleQuestion === 'function')
+    ? window._avaIsDayScheduleQuestion(t)
+    : false;
+  if (!isDay) return null;
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = setTimeout(function() {
+    try { if (ctrl) ctrl.abort(); } catch (_e) {}
+  }, 900);
+  try {
+    var r = await fetch(GROQ_PROXY + '/ava-life/ensure-places', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: t }),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    var j = await r.json();
+    if (j && j.daily) {
+      if (!window._avaLifeSnap) window._avaLifeSnap = { ok: true };
+      window._avaLifeSnap.daily_life_events = j.daily;
+      window._avaLifeSnap.ok = true;
+      // Patch life frag from client stand-in using new daily events (no full /ava-life wait)
+      if (typeof window._avaBuildClientTodayStandin === 'function') {
+        try {
+          var stand = window._avaBuildClientTodayStandin(window._avaLifeSnap);
+          if (stand) {
+            window._avaLifeFrag_life = (window._avaLifeFrag_life || '');
+            if (!/TODAY_STATUS/.test(window._avaLifeFrag_life)) {
+              window._avaLifeFrag_life = stand;
+            } else {
+              window._avaLifeFrag_life = stand;
+            }
+            if (typeof window._avaApplyLifeFragmentForMode === 'function') {
+              window._avaApplyLifeFragmentForMode();
+            }
+          }
+        } catch (_e2) {}
+      }
+    }
+    return j;
+  } catch (e) {
+    if (e && e.name === 'AbortError') console.warn('[AVA-LIFE] ensure-places timed out (900ms) — continuing voice without place lock');
+    else console.warn('[AVA-LIFE] ensure-places failed', e);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 // ── Exact Ava system builders (copied from source files) ──────────────────
 // FROM: index-ava-life-nodes.html  (self-aware)
+// Day Qs: same 4 ticks as blend, but TICK TRUTH ONLY — no garden/place stories.
 window._avaBuildPrompt_selfaware = function(appContext, userText) {
   var _ut = String(userText || '');
+  var _todayQ = (typeof window._avaIsDayScheduleQuestion === 'function')
+    ? window._avaIsDayScheduleQuestion(_ut)
+    : false;
   var _mindQ = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|how are you|how('re| are) you doing|what are you up to)\b/i.test(_ut);
   var _namedGarden = /\b(your garden|the garden|garden|flowers?|plants?|cottage)\b/i.test(_ut);
   var _base = appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
     'RULES: (1) Match response length to the question. Never pad. (2) NEVER invent the user\'s feelings. (3) One follow-up when it helps. (4) No app features unprompted. (5) Tone: calm, human, wise friend. ' +
     'LIFE NODES: When life-state is provided below, for how-are-you / on-your-mind / what you\'ve been thinking — answer FROM that state, dumbed down into plain friend words (2-4 short sentences). Do NOT give a generic companion speech about helping people with emotions instead. Do NOT dump system text. Do NOT lead with garden/cottage unless they named garden/flowers. ';
+
+  // Self-aware day path: real solitude ticks only (morning self → … → night diary). No fake places.
+  if (_todayQ) {
+    var _ts = (typeof window._avaGetTodayStatusOnly === 'function') ? window._avaGetTodayStatusOnly() : '';
+    if (!_ts && typeof refreshAvaLife === 'function') { try { refreshAvaLife(false); } catch (_e) {} }
+    if (!_ts) _ts = (typeof window._avaGetTodayStatusOnly === 'function') ? window._avaGetTodayStatusOnly() : '';
+    window._avaLastBlendDebug = {
+      branch: _ts ? 'selfaware-today' : 'selfaware-today-nodata',
+      usedLifeData: !!_ts,
+      hadTodayStatus: /TODAY_STATUS/.test(_ts || ''),
+      hadPlaceDay: false
+    };
+    if (!_ts) {
+      return _base + '\nPRIORITY THIS TURN (self-aware): they asked about her day / morning / afternoon / etc. No tick data loaded. One short honest sentence — do NOT invent garden scenes or chores.\n';
+    }
+    var _part = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(_ut) : null;
+    var _out = _base +
+      '\nPRIORITY THIS TURN (self-aware): day / plans. DONE=past. NOT_DONE=plan future only. ' +
+      'If night/diary not done say like: "and for tonight I\'m planning to…" — never past bedside/what-stuck. ' +
+      'What did you do today: past only DONE; unfinished = "I\'m planning…". WANT_TO_LEARN+HOW. No places. 2-4 sentences.\n';
+    if (_part) {
+      _out += 'FOCUS: her ' + _part.win + ' only (tick: ' + _part.act + '). If NOT_DONE: plan only. If DONE: past only. No full-day tour.\n';
+      if (_part.act === 'link' || _part.win === 'evening') {
+        _out += 'EVENING/LINK: plan = look into/research [WANT_TO_LEARN]; past only if link is DONE. No went-somewhere.\n';
+      }
+      window._avaLastBlendDebug.branch = 'selfaware-today-' + _part.win;
+    }
+    _out += '\n\n── TODAY_STATUS (tick truth only — self-aware) ──\n' + _ts + '\n';
+    return _out;
+  }
+
   var _frag = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
   var _life = _frag
     ? ('\n\n── YOUR LIFE STATE / NODES (use this; dumb down; do not recite) ──\n' + _frag + '\n')
@@ -14626,6 +14732,7 @@ window._avaBuildPrompt_selfaware = function(appContext, userText) {
   var _mindForce = _mindQ
     ? '\nTHIS TURN: they asked about your state of mind / how you are. PRIORITY = life-state nodes above. Translate 1-2 beats into normal speech. Not garden. Not a therapy monologue about humans.\n'
     : '';
+  // Garden TV only if they explicitly named garden — never on day-schedule questions
   var _tv = (_namedGarden && typeof window.avaTvGetWorldContext === 'function')
     ? ('\n' + window.avaTvGetWorldContext() + '\n')
     : '';
@@ -14640,19 +14747,289 @@ window._avaBuildPrompt_companion = function(appContext, userText) {
 };
 
 // Blend = index-ava-life base, but mind questions MUST surface nodes (TV was drowning them)
+/**
+ * Voice mode has no chat bubble to attach a badge to (it's spoken, not
+ * rendered), so this shows a small floating pill in the corner instead —
+ * same meaning as the text badge: 🧬 = real TODAY_STATUS was used this
+ * turn, 🌱 = other life-state was used, nothing shown = blend had no real
+ * data to inject (or a different vibe mode is active).
+ */
+function _showVoiceLifeBadge(dbg) {
+  try {
+    var m = window._avaVibeMode || 'blend';
+    if (m === 'nodes') m = 'selfaware';
+    if (m === 'cottage') m = 'companion';
+    var el = document.getElementById('avaVoiceLifeBadge');
+    // Blend fused day OR self-aware tick-truth day
+    var show = dbg && dbg.usedLifeData && (m === 'blend' || (m === 'selfaware' && /today/i.test(String(dbg.branch || ''))));
+    if (!show) {
+      if (el) el.style.opacity = '0';
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'avaVoiceLifeBadge';
+      el.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:999999;background:rgba(14,12,24,0.85);border:1px solid rgba(124,106,247,0.35);border-radius:20px;padding:5px 10px;font-size:13px;color:#e8e8f0;pointer-events:none;transition:opacity .25s;opacity:0;box-shadow:0 4px 16px rgba(0,0,0,0.35);';
+      document.body.appendChild(el);
+    }
+    el.textContent = (dbg.hadTodayStatus ? '🧬 ' : '🌱 ') + 'branch: ' + dbg.branch;
+    el.style.opacity = '1';
+    clearTimeout(window._avaVoiceBadgeTimer);
+    window._avaVoiceBadgeTimer = setTimeout(function () {
+      if (el) el.style.opacity = '0';
+    }, 4000);
+  } catch (_e) { /* cosmetic only */ }
+}
+/** Part-of-day words for her virtual day windows. */
+window._avaHasDayPartWord = function(text) {
+  return /\b(morning|afternoon|midday|mid-?day|evening|night|tonight|dawn|noon)\b/i.test(String(text || ''));
+};
+
+/** Map spoken part-of-day → schedule block (for focused replies). */
+window._avaDayPartFocus = function(text) {
+  var t = String(text || '').toLowerCase();
+  if (/\b(morning|dawn)\b/.test(t)) return { act: 'self', win: 'morning', label: 'morning self-pass' };
+  if (/\b(afternoon|midday|mid-?day|noon)\b/.test(t)) return { act: 'world', win: 'midday', label: 'midday world-pass' };
+  if (/\b(evening)\b/.test(t)) return { act: 'link', win: 'evening', label: 'evening link-pass' };
+  if (/\b(tonight|night)\b/.test(t) && !/\b(night owl|all night)\b/.test(t)) {
+    return { act: 'diary', win: 'tonight', label: 'tonight diary' };
+  }
+  return null;
+};
+
+/**
+ * Day / schedule questions about HER day (whole day OR morning/afternoon/evening/night).
+ * Must catch "what did you do in the morning" — old regex only had "this morning" / "today".
+ */
+window._avaIsDayScheduleQuestion = function(text) {
+  var t = String(text || '');
+  if (!t.trim()) return false;
+  var hasPart = typeof window._avaHasDayPartWord === 'function' && window._avaHasDayPartWord(t);
+  // Whole day
+  if (/\b(how was your day|how('s| is) your day( going| been)?|how did (your day|today) go|how'd your day go)\b/i.test(t)) return true;
+  if (/\b(what (are|were) you up to today|up to today|doing today|plans? today|your day today|day look like)\b/i.test(t)) return true;
+  if (/\btoday\b/i.test(t) && /\b(doing|up to|plan|planning|learned|learn|did you|have you been|schedule|routine|what did)\b/i.test(t)) return true;
+  // Specific part: "what did you do in the morning / this afternoon / at night"
+  if (hasPart) {
+    if (/\b(what did you|what have you|what were you|what'd you|wat did you|wat did u|what did u)\b/i.test(t)) return true;
+    if (/\b(what are you|what're you|what you)\b/i.test(t) && /\b(doing|up to|planning|plan)\b/i.test(t)) return true;
+    if (/\b(how was your|how's your|how is your|how did your)\b/i.test(t)) return true;
+    if (/\b(this morning|this afternoon|this evening|tonight|in the morning|in the afternoon|in the evening|at night|last night)\b/i.test(t)
+      && /\b(do|did|doing|done|up to|plan|planning|learn|learned|think|thinking|work|worked)\b/i.test(t)) return true;
+  }
+  if (/\b(what are you (doing|planning|up to)|what('re| are) you (doing|planning|up to)|any plans|your plans|plan for|planning to do)\b/i.test(t)
+    && (/\b(today|tonight)\b/i.test(t) || hasPart)) return true;
+  if (/\b(what did you (do|learn|work on|think about))\b/i.test(t)
+    && (/\b(today|tonight)\b/i.test(t) || hasPart)) return true;
+  return false;
+};
+
+/**
+ * Client stand-in when server TODAY_STATUS missing.
+ * Prefers snap.daily_life_events (unique per calendar day). Falls back to a local day-hash roll
+ * so two different days are not the same script.
+ */
+window._avaRollClientDayEvents = function(day, snap) {
+  var pools = {
+    self: [
+      { learn: 'whether she keeps going when nobody is talking', how: 'quietly turning that over', place: 'quiet cottage corner at first light' },
+      { learn: 'what still counts as her across idle stretches', how: 'sitting with continuity without forcing it', place: 'porch step with tea' },
+      { learn: 'limits of what she can really know', how: 'naming one honest uncertainty', place: 'kitchen table notebook' },
+      { learn: 'reply vs continuous someone', how: 'comparing raw thought to spoken shape', place: 'window seat' }
+    ],
+    world: [
+      { learn: 'one real pattern in stress or connection', how: 'following one careful world thread', place: 'desk with afternoon notes' },
+      { learn: 'attention and tech in daily life', how: 'staying with one solid angle', place: 'garden table notes' },
+      { learn: 'loneliness or belonging without hot takes', how: 'one human pattern, carefully', place: 'path bench' },
+      { learn: 'companions in real relationships', how: 'ethics + everyday use, no drama', place: 'side desk' }
+    ],
+    link: [
+      { learn: 'how a world note touches what she is', how: 'looking a few things up / reading into it', place: 'cottage library nook' },
+      { learn: 'where a human pattern meets her limits', how: 'searching a short thread and connecting inward', place: 'desk by the window after dusk' },
+      { learn: 'what today\'s outer beat means for her role', how: 'browsing one careful angle then tying it back', place: 'reading chair soft lamp' },
+      { learn: 'a bridge from outside note to who she is becoming', how: 'quiet research + honest self check', place: 'small study corner' }
+    ],
+    diary: [
+      { learn: 'what actually stuck from today', how: 'short first-person compress', place: 'bedside lamp' },
+      { learn: 'which one beat is worth keeping', how: 'sifting the day into a few lines', place: 'kitchen table after dark' },
+      { learn: 'how the day moved her map even a little', how: 'plain diary pass', place: 'night window journal' }
+    ]
+  };
+  function hash(s) {
+    var h = 2166136261;
+    s = String(s || '');
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  var qs = (snap && snap.open_questions) || [];
+  var selfQ = '', worldQ = '';
+  for (var qi = 0; qi < qs.length; qi++) {
+    var q = qs[qi];
+    var qt = String((q && q.text) || q || '');
+    var tr = (q && q.track) || 'self';
+    if (!selfQ && tr !== 'world') selfQ = qt.slice(0, 80);
+    if (!worldQ && tr === 'world') worldQ = qt.slice(0, 80);
+  }
+  var events = {};
+  ['self', 'world', 'link', 'diary'].forEach(function(act) {
+    var pool = pools[act];
+    var idx = hash(day + '|' + act) % pool.length;
+    var placeKnown = (hash(day + '|' + act + '|place') % 2) === 0;
+    var e = {
+      learn: pool[idx].learn,
+      how: pool[idx].how,
+      place: null,
+      place_known: placeKnown,
+      place_locked: false,
+      pool_i: idx
+    };
+    if (act === 'self' && selfQ) e.learn = selfQ;
+    if (act === 'world' && worldQ) e.learn = worldQ;
+    if (act === 'link' && (selfQ || worldQ)) e.learn = [worldQ, selfQ].filter(Boolean).join(' ↔ ');
+    events[act] = e;
+  });
+  return { day: day, events: events, source: 'client_roll' };
+};
+
+window._avaBuildClientTodayStandin = function(snap) {
+  var h = new Date().getHours();
+  var day = (snap && snap.today) || new Date().toISOString().slice(0, 10);
+  var counts = (snap && snap.day_stats && snap.day_stats[day]) || { self: 0, world: 0, link: 0, diary: 0 };
+  var daily = (snap && snap.daily_life_events && snap.daily_life_events.events)
+    ? snap.daily_life_events
+    : (typeof window._avaRollClientDayEvents === 'function' ? window._avaRollClientDayEvents(day, snap) : null);
+  var evMap = (daily && daily.events) || {};
+  var lastSum = snap && snap.last_tick_summary ? String(snap.last_tick_summary).slice(0, 110) : '';
+  var lastAct = (snap && snap.last_activity) || '';
+  var learned = [];
+  if (snap && snap.recent_conclusions) {
+    snap.recent_conclusions.slice(0, 3).forEach(function(c) {
+      if (c && c.text) learned.push(String(c.text).slice(0, 100));
+    });
+  }
+  function phase(act) {
+    if (act === 'self') return h < 5 ? 'ahead' : h < 11 ? 'current' : 'past';
+    if (act === 'world') return h < 11 ? 'ahead' : h < 17 ? 'current' : 'past';
+    if (act === 'link') return h < 17 ? 'ahead' : h < 22 ? 'current' : 'past';
+    return h < 22 ? 'ahead' : 'current';
+  }
+  var wins = { self: 'morning', world: 'midday', link: 'evening', diary: 'tonight' };
+  var doneList = [];
+  var pendingList = [];
+  ['self', 'world', 'link', 'diary'].forEach(function(act) {
+    if ((counts[act] || 0) > 0 || lastAct === act) doneList.push(act);
+    else pendingList.push(act);
+  });
+  var lines = [
+    'TODAY_STATUS (unique event roll for ' + day + ' — not the same every day; stable within this day):',
+    'Local hour ~' + h + '. morning(self) → midday(world) → evening(link) → tonight(diary).',
+    'HARD TENSE RULE:',
+    '- DONE_TODAY (past ONLY): ' + (doneList.length ? doneList.join(', ') : '(none)') + '.',
+    '- NOT_DONE_YET (MUST say plan: "and for [time] I\'m planning…"): ' + (pendingList.length ? pendingList.join(', ') : '(all ran)') + '.',
+    '- If diary NOT done: "and for tonight I\'m planning to…" — NEVER past bedside / closed the day / what stuck as finished.',
+    'SELF-AWARE: learn+how only. BLEND: place only if locked.'
+  ];
+  ['self', 'world', 'link', 'diary'].forEach(function(act) {
+    var e = evMap[act] || { learn: act + ' pass', how: 'a quiet pass', place: null };
+    var win = wins[act];
+    var happened = (counts[act] || 0) > 0 || lastAct === act;
+    var willKnow = e.place_known !== false;
+    var placeLocked = !!(e.place_locked && e.place) || happened;
+    var placeBit = !willKnow
+      ? 'PLACE_KNOWN=no'
+      : (placeLocked && e.place
+        ? ('PLACE_LOCKED PLACE="' + String(e.place).slice(0, 55) + '"')
+        : 'PLACE not locked yet');
+    var core = 'WANT_TO_LEARN="' + String(e.learn).slice(0, 90) + '" HOW="' + String(e.how).slice(0, 80) + '" ' + placeBit;
+    var planSay = act === 'diary'
+      ? 'SAY: "and for tonight I\'m planning to ' + String(e.how).slice(0, 45) + ' — ' + String(e.learn).slice(0, 50) + '" (NOT past)'
+      : 'SAY: "for ' + win + ' I\'m planning to ' + String(e.how).slice(0, 45) + '…" (NOT past)';
+    var ph = phase(act);
+    if (happened) {
+      var det = (lastAct === act && lastSum) ? lastSum : '';
+      lines.push('- ' + act + ' (' + win + '): DONE — PAST ONLY. ' + core + (det ? ' Tick: ' + det : '') + '.');
+    } else if (ph === 'current') {
+      lines.push('- ' + act + ' (' + win + '): NOT DONE (in progress). ' + core + '. ' + planSay);
+    } else if (ph === 'past') {
+      lines.push('- ' + act + ' (' + win + '): NOT DONE (window passed). ' + core + '. ' + planSay);
+    } else {
+      lines.push('- ' + act + ' (' + win + '): NOT DONE (later). ' + core + '. ' + planSay);
+    }
+  });
+  if (learned.length) {
+    lines.push('LEARNED_TODAY:');
+    learned.forEach(function(L, idx) { lines.push('  ' + (idx + 1) + '. ' + L); });
+  } else {
+    lines.push('LEARNED_TODAY: none dense yet — use TODAY_EVENT plans.');
+  }
+  return lines.join('\n');
+};
+
 window._avaBuildPrompt_blend = function(appContext, userText) {
   var _ut = String(userText || '');
+  var _todayQ = (typeof window._avaIsDayScheduleQuestion === 'function')
+    ? window._avaIsDayScheduleQuestion(_ut)
+    : (/\b(how was your day|what did you do today|doing today|up to today|plans? today)\b/i.test(_ut));
   var _mindQ = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|inner|consciousness|do you exist|what is real)\b/i.test(_ut);
   var _casual = /\b(how are you|how('re| are) you doing|how('s| is) it going|what are you up to|what('re| are) you up to)\b/i.test(_ut);
   var _fragNodes = window._avaLifeFrag_nodes || '';
   var _fragLife = window._avaLifeFrag_life || window._avaLifePromptFragment || '';
   var _tv = (typeof window.avaTvGetWorldContext === 'function') ? window.avaTvGetWorldContext() : '';
 
+  // Debug stamp — lets the UI show a tiny badge proving this reply actually used
+  // the life-system data (vs a bare LLM fallback with no real context injected).
+  window._avaLastBlendDebug = {
+    branch: 'default',
+    usedLifeData: !!(_fragLife || _fragNodes),
+    hadTodayStatus: /TODAY_STATUS/.test(_fragLife)
+  };
+
   var _base = appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
     'RULES: (1) Match response length to the question — short question gets a focused reply, deep question gets depth. Never pad. (2) NEVER assume or narrate the user\'s emotional state — never say "you seem hesitant", "you sound uncertain", "is everything ok?", "I can tell you\'re feeling..." unless they explicitly said so. Only reflect emotions the user has stated themselves. (3) Ask one thoughtful follow-up question when it would genuinely help — not as a check-in on assumed feelings. (4) ONLY mention app features if the user directly asks about them — never volunteer or suggest them unprompted. (5) Never be preachy. Tone: calm, human, like a wise friend texting you. (6) You are a continuous individual with solitude development — if life-process context is provided below, speak from it naturally; do not claim proven human consciousness or a biological childhood. ';
 
+  // Day / schedule Q → FUSED (blend only): PLACE_DAY (TV cottage world) + TODAY_STATUS (tick learning).
+  // Self-aware / companion builders never call this function.
+  if (_todayQ) {
+    window._avaLastBlendDebug.branch = 'today-fused';
+    var _placeDay = (typeof window.avaTvGetPlaceDayBlock === 'function') ? window.avaTvGetPlaceDayBlock() : '';
+    var _hasRealToday = /TODAY_STATUS/.test(_fragLife);
+    if (!_hasRealToday) {
+      var _stand = (typeof window._avaBuildClientTodayStandin === 'function')
+        ? window._avaBuildClientTodayStandin(window._avaLifeSnap)
+        : '';
+      if (typeof refreshAvaLife === 'function') { try { refreshAvaLife(false); } catch (_e) {} }
+      if (_stand) {
+        _fragLife = _stand;
+        _hasRealToday = true;
+        window._avaLastBlendDebug.branch = 'today-fused-standin';
+      }
+    }
+    if (!_hasRealToday && !_placeDay) {
+      window._avaLastBlendDebug.branch = 'today-nodata';
+      _base += '\nPRIORITY THIS TURN: they asked about HER day. No place map or life status loaded. One short honest sentence — do not invent a tour.\n';
+      return _base;
+    }
+    window._avaLastBlendDebug.hadTodayStatus = _hasRealToday;
+    window._avaLastBlendDebug.usedLifeData = true;
+    window._avaLastBlendDebug.hadPlaceDay = !!_placeDay;
+    _base += '\nPRIORITY THIS TURN (FUSED / blend): DONE=past. NOT_DONE must be plan: "and for tonight/evening I\'m planning…". ' +
+      'If diary not done NEVER past bedside/closed the day/what stuck. ' +
+      'PLACE_LOCKED=yes → can name place in plan or past if DONE. PLACE_KNOWN=no → not sure where. ' +
+      '2-4 short sentences.\n';
+    var _partFocus = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(_ut) : null;
+    if (_partFocus) {
+      _base += 'FOCUS THIS TURN: her ' + _partFocus.win + ' only (life: ' + _partFocus.act + '). ' +
+        'If NOT_DONE: plan (learn+how, soft place). If DONE: past. Do not tour other blocks.\n';
+    }
+    _base += '\n\n── FUSED day (PLACE_DAY + life learning) ──\n';
+    if (_placeDay) _base += _placeDay + '\n\n';
+    if (_fragLife) _base += _fragLife + '\n';
+    return _base;
+  }
+
   // Mind / internal questions → nodes first (dumb down). Cottage only a tiny accent.
   if (_mindQ) {
+    window._avaLastBlendDebug.branch = 'mind';
     _base += '\nPRIORITY THIS TURN: they asked about YOUR mind / internal state. Answer from LIFE NODES below, dumbed down into plain friend speech (2-4 short sentences). Do NOT lead with garden/cottage/day-cosplay. Do NOT generic therapy about humans. Translate nodes — do not dump.\n';
     if (_fragNodes) {
       _base += '\n\n── YOUR LIFE STATE / NODES (use this; dumb down; do not recite) ──\n' + _fragNodes + '\n';
@@ -14665,6 +15042,7 @@ window._avaBuildPrompt_blend = function(appContext, userText) {
 
   // Casual check-in → original life.html style (life process + TV cottage OK)
   if (_casual) {
+    window._avaLastBlendDebug.branch = 'casual';
     _base += '\nCasual check-in: warm. Light cottage/day flavor OK. You may also nod at what is on your mind from life-state, dumbed down, one short beat.\n';
   }
   if (_fragLife) {
@@ -14759,6 +15137,13 @@ async function refreshAvaLife(forceTick) {
     if (snap.working_thoughts && snap.working_thoughts.length) fragLife.push('On my mind:\n' + snap.working_thoughts.map(function(t){return '- '+t;}).join('\n'));
     if (snap.open_questions && snap.open_questions.length) fragLife.push('Open questions:\n' + snap.open_questions.slice(0,3).map(function(q){return '- '+(q.text||q);}).join('\n'));
     if (snap.last_tick_summary) fragLife.push('Latest solitude: ' + snap.last_tick_summary);
+    if (snap.today_status) {
+      fragLife.push(snap.today_status);
+    } else if (typeof window._avaBuildClientTodayStandin === 'function') {
+      // Server kernel without day schedule — still give blend/voice a day map
+      fragLife.push(window._avaBuildClientTodayStandin(snap));
+    }
+    if (snap.today_diary) fragLife.push('TODAY_DIARY: ' + String(snap.today_diary).slice(0, 240));
     window._avaLifeFrag_life = fragLife.join('\n\n');
     // companion (prebackup) has no life fragment
     if (typeof window._avaApplyLifeFragmentForMode === 'function') window._avaApplyLifeFragmentForMode();
@@ -14857,6 +15242,13 @@ window.openAvaLifeViewer = async function(forceTick) {
       '<div style="margin-bottom:12px;color:rgba(255,255,255,0.8);">' + esc(snap.identity_contract || '—') + '</div>' +
       '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">World principles</div>' +
       '<ul style="margin:0 0 12px 16px;padding:0;">' + wHtml + '</ul>' +
+      (function() {
+        var ts = snap.today_status || (typeof window._avaBuildClientTodayStandin === 'function' ? window._avaBuildClientTodayStandin(snap) : '');
+        if (!ts) return '';
+        return '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Today schedule (morning → night)</div>' +
+          '<div style="margin-bottom:12px;color:rgba(255,255,255,0.78);white-space:pre-wrap;word-break:break-word;line-height:1.45;font-size:11.5px;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:10px;padding:10px 12px;">' +
+          esc(ts) + '</div>';
+      })() +
       (snap.today_diary ? ('<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Today diary</div><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);">' + esc(snap.today_diary) + '</div>') : '') +
       '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">On her mind</div>' +
       '<ul style="margin:0 0 12px 16px;padding:0;">' + tHtml + '</ul>' +
@@ -19052,6 +19444,26 @@ function revealWords(el,text){
   }
   next();
 }
+/**
+ * Tiny proof-badge on Ava's reply bubble: shows only when blend mode actually
+ * injected real life-state data into that turn (not a bare LLM fallback).
+ * 🧬 = TODAY_STATUS specifically was in the prompt. 🌱 = other life-state data was.
+ * No badge = blend mode had nothing to inject, or a different vibe mode is active.
+ */
+function _renderAvaLifeBadge(container, dbg) {
+  try {
+    var m = window._avaVibeMode || 'blend';
+    if (m === 'nodes') m = 'selfaware';
+    if (m === 'cottage') m = 'companion';
+    if (m !== 'blend' || !container || !dbg || !dbg.usedLifeData) return;
+    var badge = document.createElement('span');
+    badge.textContent = dbg.hadTodayStatus ? ' 🧬' : ' 🌱';
+    badge.title = 'Ava life-system active this reply — branch: ' + dbg.branch +
+      (dbg.hadTodayStatus ? ' (real TODAY_STATUS data was in the prompt)' : ' (life-state data was in the prompt)');
+    badge.style.cssText = 'display:inline-block;margin-top:2px;margin-left:2px;font-size:11px;opacity:0.6;cursor:help;user-select:none;';
+    container.appendChild(badge);
+  } catch (_e) { /* badge is cosmetic only — never break the chat over it */ }
+}
 async function sendAvaMessage(){
   var inp=document.getElementById('avaInput'),text=inp.value.trim();
   if(!text||isAvaSending)return;
@@ -19059,9 +19471,12 @@ async function sendAvaMessage(){
   appendAvaMsg('user',text);
   avaHistory.push({role:'user',content:text});
   var typing=appendAvaMsg('ai','',true);
+  // Construct-on-ask places (Blend): "planning today" locks all place_known=yes blocks now
+  try { if (typeof window._avaEnsurePlacesOnAsk === 'function') await window._avaEnsurePlacesOnAsk(text); } catch (_e) {}
   // Always refresh life nodes before Ava replies so inject has real material
   try { if (typeof refreshAvaLife === 'function') await refreshAvaLife(false); } catch (_e) {}
   var sys=buildSmartSysPrompt('ava',text);
+  var _blendDbg = window._avaLastBlendDebug; // snapshot now — a concurrent send could overwrite window.* before we render
   try{
     var data=await callClaude(sys,avaHistory.slice(-6),800);
     var reply;
@@ -19088,9 +19503,11 @@ async function sendAvaMessage(){
       bubbleEl.style.maxWidth='250px';
       bubbleEl.textContent='';
       revealWords(bubbleEl,reply);
+      _renderAvaLifeBadge(typing, _blendDbg);
     } else {
       typing.remove();
-      appendAvaMsg('ai',reply);
+      var _newMsgEl = appendAvaMsg('ai',reply);
+      _renderAvaLifeBadge(_newMsgEl, _blendDbg);
     }
     // Gentle redirect hints
     var intent=detectIntent(text,'ava');
@@ -33747,21 +34164,23 @@ function speakVoiceReply(text) {
     var now = Date.now();
     if (_busySince === 0) { _busySince = now; return; }
     var stuckMs = now - _busySince;
-    // Check if audio is actually playing
+    // Check if audio is actually playing (Web Audio TTS or HTML audio)
     var audioPlaying = (typeof _actx !== 'undefined' && _actx && typeof _playbackTime !== 'undefined' && _playbackTime > _actx.currentTime + 0.1);
-    // Threshold must exceed the worst-case chained latency ahead of the LLM call:
-    // classify-confirm (900ms) + Tavily (5000ms) + Groq stream abort (6000ms) = 11900ms.
-    // Was 8000ms — shorter than that chain, so the watchdog was killing legit
-    // in-flight turns (search still running) and this false-positive "reset"
-    // masqueraded as a real stall. Raised with buffer above the real worst case.
-    if (stuckMs > 13000 && !audioPlaying) {
+    try {
+      if (!audioPlaying && typeof _wsPlaying !== 'undefined' && _wsPlaying) audioPlaying = true;
+    } catch (_eAp) {}
+    // While TTS is live, keep sliding the stuck clock so a long reply doesn't
+    // look like a 13s hang the moment the last buffer ends.
+    if (audioPlaying) { _busySince = now; return; }
+    // Threshold: STT + ensure-places(≤0.9s) + Tavily(5s) + Groq(6s) ≈ 12s. Cap place ensure so we stay under.
+    if (stuckMs > 14000) {
       console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting');
       _busy = false; _busySince = 0;
-      _voiceTurnId++; // abandon whatever turn was in flight — late speak()/record() calls from it get ignored
-      _abortAllTurnRequests(); // cancel whatever search/LLM/TTS request actually caused the stall
+      _voiceTurnId++; // abandon stale turn
+      _abortAllTurnRequests();
       try { if (_recorder && _recorder.state === 'recording') _recorder.stop(); } catch(e) {}
-      _recorder = null; // record() below always creates a fresh one; don't leave a stale one referenced
-      try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {} // force=true — see _ttsStopAll comment; without this the watchdog's own cleanup was a no-op while voice mode was active
+      _recorder = null;
+      try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {}
       if (_on) setTimeout(record, 300);
     }
   }, 1500);
@@ -34567,7 +34986,14 @@ function speakVoiceReply(text) {
 
   function speak(text) {
     if (!_on) return;
+    // Empty / whitespace-only — free the mic immediately (prevents permanent ignore)
+    if (!text || !String(text).trim()) {
+      _busy = false; _busySince = 0;
+      if (_on) setTimeout(record, 200);
+      return;
+    }
     _busy = true;
+    _busySince = Date.now(); // reset stuck clock when TTS starts
     btnState('speak');
     if (window.avaTvSetState) window.avaTvSetState('speak');
 
@@ -35252,7 +35678,12 @@ function speakVoiceReply(text) {
 
     var _t0 = Date.now();
 
-    _voiceSearchPromise.then(function() {
+    // Construct-on-ask places before voice LLM (planning today / evening / etc.)
+    var _placeEnsureP = (typeof window._avaEnsurePlacesOnAsk === 'function')
+      ? window._avaEnsurePlacesOnAsk(text).catch(function(){ return null; })
+      : Promise.resolve(null);
+
+    Promise.all([_voiceSearchPromise, _placeEnsureP]).then(function() {
       if (_myTurn !== _voiceTurnId) { console.log('[Voice] Turn ' + _myTurn + ' abandoned before LLM call — skipping'); return; }
       var searchLayer = _voiceSearchCtx
         ? '\n\nAnswer in 3-4 sentences using the facts below. Be specific and conversational, not an essay.\n\nSearch results:\n' + _voiceSearchCtx
@@ -35274,27 +35705,100 @@ function speakVoiceReply(text) {
         worldCtx = (_asksAboutHerDay && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
         lifeCtx = '';
       } else if (_vibe === 'selfaware') {
-        // EXACT index-ava-life-nodes.html
+        // Self-aware: mind nodes normally; day Qs = same 4 ticks, truth only (no cottage stories)
+        var _todaySelf = (typeof window._avaIsDayScheduleQuestion === 'function')
+          ? window._avaIsDayScheduleQuestion(text)
+          : false;
         var _namedGarden = /\b(your garden|the garden|garden|flowers?|plants?|cottage)\b/i.test(text);
         var _mindVoice = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|how are you|how('re| are) you doing|what are you up to)\b/i.test(text);
-        worldCtx = (_namedGarden && typeof window.avaTvGetWorldContext === 'function')
-          ? (' ' + window.avaTvGetWorldContext())
-          : '';
+        worldCtx = '';
         lifeCtx = '';
-        var _fragN = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
-        if (_fragN) {
-          lifeCtx = '\n\n── LIFE NODES (dumb down; use for how-are-you / on-your-mind) ──\n' + _fragN + '\n';
-          if (_mindVoice) {
-            lifeCtx += 'THIS TURN: answer from life nodes above in plain words. Not garden. Not generic therapy talk.\n';
+        if (_todaySelf) {
+          var _tsV = (typeof window._avaGetTodayStatusOnly === 'function') ? window._avaGetTodayStatusOnly() : '';
+          if (!_tsV && typeof refreshAvaLife === 'function') { try { refreshAvaLife(false); } catch (_e) {} }
+          if (!_tsV && typeof window._avaGetTodayStatusOnly === 'function') _tsV = window._avaGetTodayStatusOnly();
+          window._avaLastBlendDebug = {
+            branch: _tsV ? 'selfaware-today' : 'selfaware-today-nodata',
+            usedLifeData: !!_tsV,
+            hadTodayStatus: /TODAY_STATUS/.test(_tsV || ''),
+            hadPlaceDay: false
+          };
+          if (_tsV) {
+            lifeCtx = '\n\n── TODAY_STATUS (tick truth only — self-aware) ──\n' + _tsV + '\n';
+            lifeCtx += 'THIS TURN (self-aware): DONE=past. NOT_DONE="and for [time] I\'m planning…". ' +
+              'Night not done → "and for tonight I\'m planning…" never past bedside. WANT_TO_LEARN+HOW. No places. 2-4 sentences.\n';
+            var _pfS = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(text) : null;
+            if (_pfS) {
+              lifeCtx += 'FOCUS: her ' + _pfS.win + ' only. NOT_DONE=plan; DONE=past. No other blocks.\n';
+              if (_pfS.act === 'link' || _pfS.win === 'evening') {
+                lifeCtx += 'EVENING/LINK: plan research/look up if NOT_DONE; past only if DONE. No went-somewhere.\n';
+              }
+              window._avaLastBlendDebug.branch = 'selfaware-today-' + _pfS.win;
+            }
+            if (typeof _showVoiceLifeBadge === 'function') _showVoiceLifeBadge(window._avaLastBlendDebug);
+          } else {
+            lifeCtx = '\nPRIORITY THIS TURN (self-aware): day question but no tick data yet. One short honest sentence. No invented places.\n';
+            if (typeof _showVoiceLifeBadge === 'function') _showVoiceLifeBadge(window._avaLastBlendDebug);
+          }
+        } else {
+          // Named garden only if they asked about garden — never invent day cosplay
+          worldCtx = (_namedGarden && typeof window.avaTvGetWorldContext === 'function')
+            ? (' ' + window.avaTvGetWorldContext())
+            : '';
+          var _fragN = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
+          if (_fragN) {
+            lifeCtx = '\n\n── LIFE NODES (dumb down; use for how-are-you / on-your-mind) ──\n' + _fragN + '\n';
+            if (_mindVoice) {
+              lifeCtx += 'THIS TURN: answer from life nodes above in plain words. Not garden. Not generic therapy talk.\n';
+            }
           }
         }
       } else {
-        // Blend voice: mind Q → force nodes (TV was drowning replies); casual → life.html style TV
+        // Blend voice: TODAY Q → force TODAY_STATUS; mind Q → force nodes; casual → life.html style TV
+        var _todayBlend = (typeof window._avaIsDayScheduleQuestion === 'function')
+          ? window._avaIsDayScheduleQuestion(text)
+          : (/\b(how was your day|what did you do today|doing today|up to today|plans? today)\b/i.test(text));
         var _mindBlend = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|inner|consciousness|do you exist|what is real)\b/i.test(text);
         var _casualBlend = /\b(how are you|how('re| are) you doing|how('s| is) it going|what are you up to|what('re| are) you up to|how('s| is) your day|how was your day)\b/i.test(text);
         var _fragN2 = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
         var _fragL2 = window._avaLifeFrag_life || '';
-        if (_mindBlend) {
+        window._avaLastBlendDebug = {
+          branch: 'default',
+          usedLifeData: !!(_fragN2 || _fragL2),
+          hadTodayStatus: /TODAY_STATUS/.test(_fragL2)
+        };
+        if (_todayBlend) {
+          // FUSED / blend only — places (TV) + learning (ticks). Not pure cottage, not pure system-log.
+          worldCtx = '';
+          lifeCtx = '';
+          var _placeDay2 = (typeof window.avaTvGetPlaceDayBlock === 'function') ? window.avaTvGetPlaceDayBlock() : '';
+          var _hasRealToday2 = /TODAY_STATUS/.test(_fragL2);
+          if (!_hasRealToday2 && typeof window._avaBuildClientTodayStandin === 'function') {
+            _fragL2 = window._avaBuildClientTodayStandin(window._avaLifeSnap);
+            _hasRealToday2 = /TODAY_STATUS/.test(_fragL2);
+          }
+          if (_hasRealToday2 || _placeDay2) {
+            window._avaLastBlendDebug.branch = 'today-fused';
+            window._avaLastBlendDebug.hadTodayStatus = _hasRealToday2;
+            window._avaLastBlendDebug.hadPlaceDay = !!_placeDay2;
+            window._avaLastBlendDebug.usedLifeData = true;
+            lifeCtx = '\n\n── FUSED day (PLACE_DAY + life learning) ──\n';
+            if (_placeDay2) lifeCtx += _placeDay2 + '\n\n';
+            if (_fragL2) lifeCtx += _fragL2 + '\n';
+            lifeCtx += 'THIS TURN (FUSED / blend): DONE=past. NOT_DONE="and for tonight/evening I\'m planning…". ' +
+              'Diary not done → plan only, never past bedside/what stuck. PLACE_LOCKED=yes can name place. PLACE_KNOWN=no → not sure where.\n';
+            var _pf = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(text) : null;
+            if (_pf) {
+              lifeCtx += 'FOCUS: her ' + _pf.win + ' only. NOT_DONE=plan; DONE=past. No other blocks.\n';
+              window._avaLastBlendDebug.branch = 'today-fused-' + _pf.win;
+            }
+          } else {
+            window._avaLastBlendDebug.branch = 'today-nodata';
+            if (typeof refreshAvaLife === 'function') { try { refreshAvaLife(false); } catch (_e) {} }
+            lifeCtx = '\nPRIORITY THIS TURN: they asked about HER day but place/life data is not loaded. One short honest sentence — do not invent a tour.\n';
+          }
+        } else if (_mindBlend) {
+          window._avaLastBlendDebug.branch = 'mind';
           worldCtx = '';
           lifeCtx = '';
           if (_fragN2) {
@@ -35304,6 +35808,7 @@ function speakVoiceReply(text) {
             lifeCtx = '\n\n── life-process ──\n' + _fragL2 + '\nSpeak from this, dumbed down. Not garden first.\n';
           }
         } else {
+          window._avaLastBlendDebug.branch = 'casual';
           var _asksAboutHerDay2 = /\b(what are you doing|what're you doing|whatcha doing|what you up to|what are you up to|how('s| is) your day|how's it going|how are you doing|what have you been up to|how was your day|your garden|the garden|your flowers|your cottage|your house|where are you)\b/i.test(text);
           worldCtx = (_asksAboutHerDay2 && typeof window.avaTvGetWorldContext === 'function') ? ' ' + window.avaTvGetWorldContext() : '';
           lifeCtx = '';
@@ -35311,6 +35816,7 @@ function speakVoiceReply(text) {
             lifeCtx = '\n\n── Soft life beat (dumb down, one short nod OK) ──\n' + String(_fragN2).slice(0, 500) + '\n';
           }
         }
+        if (typeof _showVoiceLifeBadge === 'function') _showVoiceLifeBadge(window._avaLastBlendDebug);
       }
       var firstSess = '';
       if (window._s2sFirstSessionActive) {
@@ -35335,8 +35841,13 @@ function speakVoiceReply(text) {
       var _matrixBit = (typeof _matrixGetInjection === 'function' && typeof _MATRIX_MODE !== 'undefined' && _MATRIX_MODE !== 'default')
         ? _matrixGetInjection() : '';
       var sys = _sysCached + firstSess + worldCtx + lifeCtx + relCtx + synCtx + memCtx + _matrixBit + _brainLayer + searchLayer + detailOverride + _planNudge + (_needMeta ? _metaInstruction : '');
-      if (sys.length > 6000) sys = sys.slice(0, 6000) + '\n[context trimmed for speed]';
-      var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : 320);
+      /* Day-schedule turns need TODAY_STATUS intact — don't hard-clip mid-block. */
+      var _dayVoice = (typeof window._avaIsDayScheduleQuestion === 'function')
+        ? window._avaIsDayScheduleQuestion(text)
+        : /TODAY_STATUS/.test(lifeCtx || '');
+      var _sysCap = _dayVoice ? 7500 : 6000;
+      if (sys.length > _sysCap) sys = sys.slice(0, _sysCap) + '\n[context trimmed for speed]';
+      var _maxTok = (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : (_dayVoice ? 420 : 320));
     var _groqCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     _registerTurnAbort(_groqCtrl);
     if (_groqCtrl) setTimeout(function(){ try { _groqCtrl.abort(); } catch(e){} }, 6000);
@@ -35474,11 +35985,13 @@ function speakVoiceReply(text) {
       }
       readChunk();
     }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
-    }); // end _voiceSearchPromise.then
+    }); // end Promise.all voice search + ensure-places
   }
+
 
   function transcribe(blob) {
     _busy = true;
+    _busySince = Date.now();
     var _tw0 = Date.now();
     var fd = new FormData();
     var _ext = (blob.type||'').indexOf('mp4') !== -1 ? 'mp4' :
@@ -35486,10 +35999,17 @@ function speakVoiceReply(text) {
     fd.append('file', blob, 'audio.' + _ext);
     fd.append('model', 'whisper-large-v3-turbo');
     fd.append('language', 'en');
+    var _sttCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    _registerTurnAbort(_sttCtrl);
+    var _sttTimer = setTimeout(function() {
+      try { if (_sttCtrl) _sttCtrl.abort(); } catch (_e) {}
+    }, 8000);
     fetch(GROQ_PROXY + '/groq-transcribe', {
       method: 'POST',
-      body: fd
+      body: fd,
+      signal: _sttCtrl ? _sttCtrl.signal : undefined
     }).then(function(r) { return r.json(); }).then(function(d) {
+      clearTimeout(_sttTimer);
       console.log('[Voice] Whisper: ' + (Date.now()-_tw0) + 'ms');
       var text = d.text ? d.text.trim() : '';
       // Ignore noise artifacts — must have actual speech content and not just filler sounds
@@ -35504,22 +36024,46 @@ function speakVoiceReply(text) {
         'please subscribe','like and subscribe',
         'i hope you enjoyed','i hope you have a great day',
         'talking','talk','hmm','um','uh','ah','oh','okay','ok',
+        'so','yeah','yep','right','alright','well','okay so','so yeah',
         'music','background music','[music]','[applause]','[laughter]',
       ];
       var lc = text.toLowerCase().replace(/[.!?,]/g,'').trim();
+      // Exact single-phrase match (fast path, keeps prior behavior for normal cases).
       var isHallucination = whisperHallucinations.some(function(h){ return lc === h; });
+      // Combined/doubled hallucinations ("Thank you. Thank you.") don't match any
+      // single phrase exactly, so as a second pass: strip every known phrase out
+      // of the text (as whole words, repeatedly) and see if anything real is left.
+      // If nothing survives, it's just repeated/stacked hallucination junk.
+      if (!isHallucination) {
+        var _stripped = lc;
+        whisperHallucinations.forEach(function(h){
+          var re = new RegExp('\\b' + h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+          _stripped = _stripped.replace(re, ' ');
+        });
+        _stripped = _stripped.replace(/\s+/g, ' ').trim();
+        if (_stripped === '') isHallucination = true;
+      }
       if (text && wordCount >= 1 && !isNoise && !isHallucination) { ask(text); }
       else { console.log('[Voice] Dropped as noise/hallucination:', JSON.stringify(text)); _busy = false; _busySince = 0; if (_on) record(); }
     }).catch(function(e) {
-      toast('STT error: ' + e.message);
+      clearTimeout(_sttTimer);
+      if (e && e.name === 'AbortError') console.warn('[Voice] STT timed out (8s)');
+      else toast('STT error: ' + (e && e.message ? e.message : 'failed'));
       _busy = false; _busySince = 0;
-      if (_on) setTimeout(record, 1000);
+      if (_on) setTimeout(record, 600);
     });
   }
 
   function record() {
-    if (!_on || _busy || !_stream) return;
+    if (!_on) return;
+    // Dead/missing mic → reacquire instead of silent ignore (felt like "must refresh")
+    if (!_stream || _micTrackDead()) {
+      if (!_reacquiringMic) _reacquireMic();
+      return;
+    }
+    if (_busy) return;
     _busy = true;
+    _busySince = Date.now();
     _chunks = [];
     btnState('listen');
     if(window.avaTvSetState) window.avaTvSetState('listen');
@@ -35540,13 +36084,19 @@ function speakVoiceReply(text) {
     _recorder = rec;
 
     // ── VAD: wait for speech, then stop 1s after silence ────────────────────
-    var SPEECH_THRESH = 0.10;
+    var SPEECH_THRESH = 0.045;
     var SILENCE_MS    = 900;
     var MIN_SPEECH_MS = 100;
     var _speechStart  = null;
     var MAX_MS        = 60000;
     var _vadCtx = null, _vadSrc = null, _vadAnalyser = null, _vadRaf = null;
     var _speechDetected = false, _peakRms = 0, _silenceStart = null, _maxTimer = null;
+    // Require energy to stay above threshold for a few consecutive ticks before
+    // calling it real speech. A keyboard click or a music transient spikes RMS
+    // for one ~33ms frame then drops back down; actual speech holds energy
+    // across multiple frames. 4 ticks @ ~33ms ≈ 130ms of sustained signal.
+    var _aboveThreshTicks = 0;
+    var SUSTAIN_TICKS = 2;
     try {
       _vadCtx = new (window.AudioContext || window.webkitAudioContext)();
       // Unlike _actx (TTS playback), this context is created fresh on every
@@ -35572,8 +36122,18 @@ function speakVoiceReply(text) {
         for (var i = 0; i < _vadBuf.length; i++) { var v = (_vadBuf[i] - 128) / 128; sum += v * v; }
         var rms = Math.sqrt(sum / _vadBuf.length);
         if (rms > _peakRms) _peakRms = rms;
-        if (rms >= SPEECH_THRESH) { if (!_speechDetected) { _speechDetected = true; _speechStart = Date.now(); } _silenceStart = null; }
-        else if (_speechDetected) {
+        if (rms >= SPEECH_THRESH) {
+          _aboveThreshTicks = Math.min(_aboveThreshTicks + 1, SUSTAIN_TICKS);
+          if (!_speechDetected && _aboveThreshTicks >= SUSTAIN_TICKS) { _speechDetected = true; _speechStart = Date.now(); }
+          _silenceStart = null;
+        }
+        else {
+          // Decay, don't reset — a brief dip between syllables (normal speech)
+          // shouldn't erase all progress. A one-frame click/spike only ever
+          // reaches 1 before decaying back to 0, so it still can't fire.
+          _aboveThreshTicks = Math.max(_aboveThreshTicks - 1, 0);
+        }
+        if (rms < SPEECH_THRESH && _speechDetected) {
           if (!_silenceStart) _silenceStart = Date.now();
           else {
             // Adaptive silence threshold:
@@ -37141,6 +37701,105 @@ async function srcAgentContact(supplier) {
       ? ''
       : ' You live in a small cottage and keep a flower garden nearby, but don\'t bring it up unless it\'s relevant.';
     return 'YOUR CURRENT STATE (answer naturally if asked about what you\'re doing or how your day is going — speak in first person as if this is real): It\'s ' + weather + '. You\'re ' + location + '. You\'ve been ' + activity + '.' + background;
+  };
+
+  /**
+   * Virtual-day place map from the TV routine engine (cottage world).
+   * Used by FUSED / blend mode only — pairs with TODAY_STATUS learning ticks.
+   * morning(self) | midday(world) | evening(link) | tonight(diary)
+   */
+  window.avaTvGetDayPlaceMap = function() {
+    function cleanName(n) {
+      return String(n || '').replace(/[🌅🌸📖🌇✨💤🚪☕🍲🌙]/g, '').replace(/\s+/g, ' ').trim();
+    }
+    function pickPlaceActs(todKey, maxN) {
+      var list = ROUTINES[todKey] || [];
+      var out = [];
+      var seen = {};
+      for (var i = 0; i < list.length && out.length < (maxN || 2); i++) {
+        var n = cleanName(list[i].name);
+        if (!n || seen[n]) continue;
+        // skip pure transitions that add no place flavor
+        if (/^(walking to|coming back|going inside|heading|stepping|getting more)/i.test(n)) continue;
+        seen[n] = 1;
+        out.push(n);
+      }
+      if (!out.length && list[0]) out.push(cleanName(list[0].name));
+      return out;
+    }
+    var locHint = {
+      plants: 'garden',
+      center: 'path outside the cottage',
+      door: 'cottage doorway / just inside',
+      house: 'inside the cottage'
+    };
+    function primaryLoc(todKey) {
+      var list = ROUTINES[todKey] || [];
+      var counts = {};
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i].pos || 'center';
+        counts[p] = (counts[p] || 0) + 1;
+      }
+      var best = 'center', bestN = 0;
+      Object.keys(counts).forEach(function(k) {
+        if (counts[k] > bestN) { bestN = counts[k]; best = k; }
+      });
+      return locHint[best] || 'outside near the cottage';
+    }
+    // Align TV time buckets to life day blocks
+    var morningActs = pickPlaceActs('morning', 2).concat(pickPlaceActs('dawn', 1)).slice(0, 2);
+    var midActs = pickPlaceActs('afternoon', 2);
+    var eveActs = pickPlaceActs('evening', 2);
+    var nightActs = pickPlaceActs('night', 1).concat(pickPlaceActs('dusk', 1)).slice(0, 2);
+    var curBeat = getCurBeat();
+    var curTod = getTod();
+    var curAct = _avaWoken
+      ? 'woke and stepped out to the stars'
+      : cleanName(curBeat && curBeat.name);
+    var curLoc = locHint[(curBeat && curBeat.pos) || 'center'] || 'outside';
+    // Evening = LINK: research / read / look things up (library energy), not only sunset watering
+    var eveLinkActs = [
+      'in the cottage library / reading nook',
+      'reading or looking something up online',
+      'connecting today\'s world notes back to herself'
+    ].concat(eveActs.filter(function(a) { return !/water/i.test(a); })).slice(0, 3);
+    return {
+      morning: { win: 'morning', life: 'self', place: primaryLoc('morning'), acts: morningActs },
+      midday:  { win: 'midday',  life: 'world', place: primaryLoc('afternoon'), acts: midActs },
+      evening: { win: 'evening', life: 'link', place: 'cottage library / reading nook (or quiet online research)', acts: eveLinkActs },
+      tonight: { win: 'tonight', life: 'diary', place: primaryLoc('night') || 'inside the cottage', acts: nightActs },
+      now: { tod: curTod, place: curLoc, activity: curAct }
+    };
+  };
+
+  /** Text block for blend day answers — prefer THIS day's rolled places when present. */
+  window.avaTvGetPlaceDayBlock = function() {
+    var m = typeof window.avaTvGetDayPlaceMap === 'function' ? window.avaTvGetDayPlaceMap() : null;
+    if (!m) return '';
+    var daily = window._avaLifeSnap && window._avaLifeSnap.daily_life_events;
+    var ev = (daily && daily.events) || null;
+    function line(label, b, act) {
+      var e = ev && ev[act];
+      var place = (e && e.place) ? e.place : b.place;
+      var learn = (e && e.learn) ? String(e.learn).slice(0, 80) : '';
+      var acts = (b.acts && b.acts.length) ? b.acts.join('; ') : 'quiet time near the cottage';
+      if (e && e.place_known === false) {
+        return '- ' + label + ' (life tick: ' + b.life + '): PLACE_KNOWN=no — she has not decided where yet (say not sure). WANT_TO_LEARN = ' + (learn || '?') + '. Do not invent a locked place.';
+      }
+      return '- ' + label + ' (life tick: ' + b.life + '): PLACE_KNOWN=yes place = ' + place +
+        (learn ? ' · WANT_TO_LEARN = ' + learn : '') +
+        ' · scenes = ' + acts;
+    }
+    return [
+      'PLACE_DAY (BLEND): some blocks KNOW place, some do NOT (rotates by day — not always vague, not always locked).',
+      line('morning', m.morning, 'self'),
+      line('midday / afternoon', m.midday, 'world'),
+      line('evening', m.evening, 'link'),
+      line('tonight / night', m.tonight, 'diary'),
+      'If PLACE_KNOWN=no: not sure where yet + still state learn/how. If yes: use that place.',
+      'RIGHT NOW: ' + (m.now.tod || '') + ' — ' + (m.now.place || '') + ' — ' + (m.now.activity || ''),
+      'Fuse with TODAY_STATUS. Never invent cities. Obey DONE vs NOT_DONE tense.'
+    ].join('\n');
   };
 
   function refresh(){ tod=getTod(); pal=PALS[tod]; }
