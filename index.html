@@ -15743,8 +15743,31 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
     var reader = res.body.getReader();
     var decoder = new TextDecoder();
     var fullText = '';
+    /* Cellular connections routinely die silently mid-stream (tower handoff,
+     * carrier NAT timeout, radio throttling) without ever delivering a
+     * FIN/RST — unlike Wi-Fi, where a dropped connection reliably throws
+     * here. Without a watchdog, reader.read() just hangs forever, callClaude
+     * never resolves, and the caller's finally{isSending=false} never runs —
+     * so the whole chat silently stops responding until the page is reloaded.
+     * Race each read against a stall timeout so a dead stream always
+     * resolves (as an error) instead of hanging indefinitely. */
+    var _STALL_MS = 20000;
     while(true){
-      var _r = await reader.read();
+      var _r;
+      var _stallTimer = null;
+      try {
+        _r = await Promise.race([
+          reader.read(),
+          new Promise(function(_resolve, _reject){
+            _stallTimer = setTimeout(function(){ _reject(new Error('Connection stalled — no response from server. Please try again.')); }, _STALL_MS);
+          })
+        ]);
+        clearTimeout(_stallTimer);
+      } catch(_stallErr){
+        clearTimeout(_stallTimer);
+        try{ reader.cancel(); }catch(_c){}
+        throw _stallErr;
+      }
       if(_r.done) break;
       var chunk = decoder.decode(_r.value, {stream:true});
       var lines = chunk.split('\n');
