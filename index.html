@@ -681,9 +681,10 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   html,body{overflow-x:hidden!important;max-width:100vw!important;}
 
   /* Desktop window chrome (minimize/maximize/close) has no place on mobile,
-     but keep the little toggle arrow — pin it to the very top-right corner
-     so it still lets people collapse the top-right icon cluster. */
+     but keep the little toggle arrow — pin it to the top-right of the APP
+     (below notification bar on Android via html.android-status-blend #winStrip). */
   #winStrip{display:flex!important;top:0!important;right:0!important;background:transparent!important;}
+  html.android-status-blend #winStrip{top:var(--android-status-inset, 28px)!important;}
   #winStrip #etbMin,#winStrip #etbMax,#winStrip #etbClose{display:none!important;}
   #winStrip #topBarToggle{display:flex!important;width:16px!important;height:24px!important;font-size:7px!important;}
   .top-actions{padding-right:8px!important;}
@@ -2787,10 +2788,10 @@ body.voice-live .syn-fp-icon{
   .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 }
 @media (min-width:769px){
-  #imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top));padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+  #imageGenScrollCol{padding-top:calc(72px + env(safe-area-inset-top, 0px));padding-bottom:calc(66px + env(safe-area-inset-bottom));}
 }
 @media (max-width:768px){
-  #imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top));}
+  #imageGenScrollCol.igRowHidden{padding-top:calc(72px + env(safe-area-inset-top, 0px));}
 }
 </style>
 <style>
@@ -3300,19 +3301,27 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 html.android-status-blend{
   --android-status-inset:28px;
 }
-/* Main top bar: glass under transparent notification bar (same idea as Studio header) */
+/* Main top bar: glass under transparent notification bar (same idea as Studio header).
+   ONLY extra pad is on top (status inset). Bottom/side spacing matches original mobile
+   bar so sun/moon (#dayNightToggle) gap under the buttons stays the same. */
 html.android-status-blend .top-bar{
+  /* original mobile was padding:8px 12px + min-height:60 (border-box) → ~44px content row */
   padding-top:calc(var(--android-status-inset) + 8px)!important;
   padding-bottom:8px!important;
   padding-left:12px!important;
   padding-right:12px!important;
   max-height:none!important;
-  min-height:calc(48px + var(--android-status-inset))!important;
+  /* keep same content-row height as before: inset + original 60px bar */
+  min-height:calc(var(--android-status-inset) + 60px)!important;
   overflow:visible!important;
   background:rgba(10,10,14,0.42)!important;
   backdrop-filter:blur(16px) saturate(150%)!important;
   -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
+}
+/* Do not restyle #dayNightToggle — size/margin unchanged */
+html.android-status-blend #dayNightToggle{
+  margin:0!important;
 }
 /* Sidebar continues under bar so the strip doesn’t look cut off */
 html.android-status-blend .sidebar{
@@ -3323,9 +3332,37 @@ html.android-status-blend .sidebar{
 html.android-status-blend #chatHistoryPanel{
   top:calc(12px + var(--android-status-inset))!important;
 }
-/* Studio already full-bleed + own safe-area — leave alone */
-html.android-status-blend #imageGenModal{
-  /* no body pad; studio keeps its own calc(12px + env(safe-area-inset-top)) */
+/* Tiny ▲ (and win strip) — sit at top of APP chrome, NOT inside the notification bar */
+html.android-status-blend #winStrip{
+  top:var(--android-status-inset)!important;
+}
+html.android-status-blend #etbDragZoneL{
+  top:var(--android-status-inset)!important;
+}
+/* Studio: more top air so header + speech-to-speech bubble clear status icons */
+html.android-status-blend #studioTopBar{
+  padding-top:calc(var(--android-status-inset) + 18px)!important;
+  padding-bottom:12px!important;
+  padding-left:14px!important;
+  padding-right:14px!important;
+}
+html.android-status-blend #imageGenScrollCol,
+html.android-status-blend #imageGenScrollCol.igRowHidden{
+  padding-top:calc(72px + var(--android-status-inset))!important;
+}
+html.android-status-blend #imageGenTemplateRow{
+  padding-top:calc(72px + var(--android-status-inset))!important;
+}
+html.android-status-blend #studioCommunityScroll{
+  padding-top:calc(72px + var(--android-status-inset))!important;
+}
+/* Centered speech-to-speech mic: keep below status strip when top bar is collapsed */
+html.android-status-blend #topNavVoiceBtn.tnv-centered{
+  top:calc(50% + (var(--android-status-inset) * 0.5))!important;
+}
+html.android-status-blend body.topbar-hidden #topNavVoiceBtn.tnv-centered{
+  top:calc(var(--android-status-inset) + 28px)!important;
+  transform:translate(-50%,0)!important;
 }
 </style>
 <script>
@@ -5484,7 +5521,7 @@ window.getWebAudioNode = getWebAudioNode;
   </div>
 
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
+  <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -5514,7 +5551,7 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
            full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
            Has its own top clearance since the scroll column itself has none. -->
-      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(58px + env(safe-area-inset-top)) 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(72px + env(safe-area-inset-top, 0px)) 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
 
       <!-- Error banner -->
       <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
@@ -5592,7 +5629,7 @@ window.getWebAudioNode = getWebAudioNode;
        (same socialPosts data, same Supabase `posts` table + `posts` bucket)
   ══════════════════════════════════════════════════════════════════════ -->
   <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;background:transparent;">
-    <div style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(58px + env(safe-area-inset-top)) 14px 16px;position:relative;z-index:1;">
+    <div id="studioCommunityScroll" style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(72px + env(safe-area-inset-top, 0px)) 14px 16px;position:relative;z-index:1;">
 
       <!-- Header — small button opens the Posts column, EXACT same width/min-width/
            padding/overflow toggle + transition as the old matchConnectCol/toggleMatchConnect. -->
@@ -7739,7 +7776,7 @@ function toggleStudioFeedPanel(){
       col.style.width='100%';
       col.style.minWidth='0';
       col.style.height='100%';
-      col.style.padding='calc(14px + env(safe-area-inset-top)) 16px 16px';
+      col.style.padding='calc(18px + max(env(safe-area-inset-top, 0px), var(--android-status-inset, 0px))) 16px 16px';
       col.style.background='#000';
       col.style.zIndex='50';
       col.style.overflow='auto';
@@ -27828,7 +27865,15 @@ function _tnvEscapeAboveModal(){
   btn.style.transition = 'none';
   document.body.appendChild(btn);
   btn.style.position = 'fixed';
-  btn.style.top = r.top + 'px';
+  // Keep speech bubble below status icons (overlay Android); don't pin into notification bar
+  var statusPad = 0;
+  try{
+    var cs = getComputedStyle(document.documentElement).getPropertyValue('--android-status-inset').trim();
+    if(cs) statusPad = parseFloat(cs) || 0;
+    if(!statusPad && document.documentElement.classList.contains('android-status-blend')) statusPad = 28;
+  }catch(_sp){}
+  var minTop = statusPad + 10;
+  btn.style.top = Math.max(r.top, minTop) + 'px';
   btn.style.left = r.left + 'px';
   btn.style.right = 'auto';
   btn.style.bottom = 'auto';
