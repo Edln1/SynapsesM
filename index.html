@@ -5404,7 +5404,7 @@ window.getWebAudioNode = getWebAudioNode;
 
     <!-- Results area (scrollable) -->
     <div style="flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;">
-      <div id="imageGenEmptyState" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;min-height:260px;padding:0;"></div>
+      <div id="imageGenEmptyState" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;"></div>
       <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr;gap:10px;padding:2px 14px 16px;"></div>
     </div>
 
@@ -7248,7 +7248,7 @@ function resetImageGenStudio(){
   document.getElementById('imageGenPrompt').value = '';
   document.getElementById('imageGenResults').innerHTML = '';
   document.getElementById('imageGenResults').style.display = 'none';
-  document.getElementById('imageGenEmptyState').style.display = 'grid';
+  document.getElementById('imageGenEmptyState').style.display = 'none';
   document.getElementById('imageGenError').style.display = 'none';
   document.getElementById('imageGenSettingsSheet').style.display = 'none';
   closeImageGenHistory();
@@ -7344,9 +7344,10 @@ async function submitImageGen(){
   btn.disabled = true;
   btn.innerHTML = '<span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>';
   document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  // Don't wipe what's already on screen — new images join the top of the
+  // same feed instead of replacing the previous batch.
   document.getElementById('imageGenEmptyState').style.display = 'none';
   resultsEl.style.display = 'grid';
-  resultsEl.innerHTML = '';
   try{
     var uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : (localStorage.getItem('synapses_anon_id') || '');
     var res = await fetch(GROQ_PROXY + '/generate-image', {
@@ -7359,37 +7360,36 @@ async function submitImageGen(){
       throw new Error(data.error || 'Image generation failed.');
     }
     var images = data.images || [];
-    images.forEach(function(src, i){
-      var card = document.createElement('div');
-      card.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
-      var img = document.createElement('img');
-      img.src = src;
-      img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
-      var dl = document.createElement('button');
-      dl.innerHTML = '⬇';
-      dl.title = 'Download';
-      dl.style.cssText = 'position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-      dl.onclick = function(){ downloadGeneratedImage(src, 'synapses-image-' + (i + 1) + '.jpg'); };
-      card.appendChild(img);
-      card.appendChild(dl);
-      resultsEl.appendChild(card);
-      // Persist so the image survives a page reload / app exit — synced to the
-      // account when signed in, kept in this browser's storage for guests.
-      saveGeneratedImageToHistory(src, { prompt: prompt, model: model, aspect: aspect });
-    });
+    // Prepend in original order so image 1 ends up top-left of the new batch.
+    for(var i = images.length - 1; i >= 0; i--){
+      (function(src, i){
+        var card = document.createElement('div');
+        card.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
+        var img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
+        var dl = document.createElement('button');
+        dl.innerHTML = '⬇';
+        dl.title = 'Download';
+        dl.style.cssText = 'position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        dl.onclick = function(){ downloadGeneratedImage(src, 'synapses-image-' + (i + 1) + '.jpg'); };
+        card.appendChild(img);
+        card.appendChild(dl);
+        resultsEl.insertBefore(card, resultsEl.firstChild);
+        // Persist so the image survives a page reload / app exit — synced to the
+        // account when signed in, kept in this browser's storage for guests.
+        saveGeneratedImageToHistory(src, { prompt: prompt, model: model, aspect: aspect });
+      })(images[i], i);
+    }
     if(!images.length){
       errEl.textContent = 'No images came back — try again.';
       errEl.style.display = 'block';
-      resultsEl.style.display = 'none';
-      document.getElementById('imageGenEmptyState').style.display = 'grid';
-      renderImageGenDefaultFeed();
+      if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
     }
   }catch(e){
     errEl.textContent = e.message || 'Something went wrong.';
     errEl.style.display = 'block';
-    resultsEl.style.display = 'none';
-    document.getElementById('imageGenEmptyState').style.display = 'grid';
-    renderImageGenDefaultFeed();
+    if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
   }finally{
     btn.disabled = false;
     btn.innerHTML = origLabel;
@@ -7504,33 +7504,40 @@ function reuseHistoryImage(it){
   showToast('Prompt loaded — tap ↑ to generate it again.');
 }
 
-// Fills the default (pre-generation) screen with the person's own past
-// generations in a full-bleed 2-column feed, so Studio never opens to an
-// empty box — mirrors the "gallery behind a translucent header" look.
+// Fills the persistent feed with the person's own past generations, so
+// Studio never opens to an empty box and nothing ever disappears — every
+// new generation joins the top of this same feed instead of replacing it.
+var _imageGenFeedLoaded = false;
 async function renderImageGenDefaultFeed(){
-  var grid = document.getElementById('imageGenEmptyState');
-  if(!grid) return;
+  var resultsEl = document.getElementById('imageGenResults');
+  var emptyEl = document.getElementById('imageGenEmptyState');
+  if(!resultsEl) return;
   var items = await loadImageGenHistory();
-  grid.innerHTML = '';
+  _imageGenFeedLoaded = true;
   if(!items.length){
-    grid.style.display = 'flex';
-    grid.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
-    grid.innerHTML = '<div style="font-size:13px;">Nothing generated yet.</div><div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    if(emptyEl){
+      emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
+      emptyEl.innerHTML = '<div style="font-size:13px;">Nothing generated yet.</div><div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
+    }
     return;
   }
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:3px;min-height:260px;padding:0;';
+  if(emptyEl) emptyEl.style.display = 'none';
+  resultsEl.style.display = 'grid';
+  resultsEl.innerHTML = '';
   items.forEach(function(it){
     var cell = document.createElement('button');
     cell.type = 'button';
     cell.title = it.prompt || '';
-    cell.style.cssText = 'position:relative;border:none;padding:0;margin:0;cursor:pointer;aspect-ratio:3/4;overflow:hidden;background:var(--surface);';
+    cell.style.cssText = 'position:relative;border:none;padding:0;margin:0;cursor:pointer;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
     var img = document.createElement('img');
     img.src = it.src;
     img.loading = 'lazy';
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
     cell.appendChild(img);
     cell.onclick = function(){ reuseHistoryImage(it); };
-    grid.appendChild(cell);
+    resultsEl.appendChild(cell);
   });
 }
 
