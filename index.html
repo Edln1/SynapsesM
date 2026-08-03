@@ -681,10 +681,9 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   html,body{overflow-x:hidden!important;max-width:100vw!important;}
 
   /* Desktop window chrome (minimize/maximize/close) has no place on mobile,
-     but keep the little toggle arrow — pin it to the top-right of the APP
-     (below notification bar on Android via html.android-status-blend #winStrip). */
+     but keep the little toggle arrow — pin it to the very top-right corner
+     so it still lets people collapse the top-right icon cluster. */
   #winStrip{display:flex!important;top:0!important;right:0!important;background:transparent!important;}
-  html.android-status-blend #winStrip{top:var(--android-status-inset, 28px)!important;}
   #winStrip #etbMin,#winStrip #etbMax,#winStrip #etbClose{display:none!important;}
   #winStrip #topBarToggle{display:flex!important;width:16px!important;height:24px!important;font-size:7px!important;}
   .top-actions{padding-right:8px!important;}
@@ -713,23 +712,6 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
-  /* DAY (sun / easyview) only: home top bar clear-blends into wallpaper.
-     MOON (dark / purple): keep classic glass overlay + divider (old layout). */
-  html[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
-  html[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
-  html[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html.android-status-blend[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
-  html.android-status-blend[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
-  html.android-status-blend[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html.android-status-blend[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
-    background:transparent!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    border-bottom-color:transparent!important;
-    border-bottom-width:0!important;
-    box-shadow:none!important;
-  }
 
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -2379,16 +2361,17 @@ to{opacity:0;transform:translateX(-40px);}}
    speech-to-speech stays live and the rest of the top bar is collapsed.
    Position itself (the glide) is driven by JS via inline transform/opacity —
    this just establishes the positioning context. */
-/* Centered STS mic: fixed to the VIEWPORT so left:50% is true screen center
-   (under the front camera), not “middle of the top-bar box” which can be offset. */
+/* Center of top-bar: top/left 50% needs -50% transform or it sits down-right of true center.
+   transform is NOT !important so glide JS can temporarily override it. */
 #topNavVoiceBtn.tnv-centered{
-  position:fixed!important;
+  position:absolute!important;
+  top:50%!important;
   left:50%!important;
   right:auto!important;
   bottom:auto!important;
   margin:0!important;
   transform:translate(-50%,-50%);
-  z-index:100050;
+  z-index:5;
   pointer-events:auto!important;
 }
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
@@ -2803,24 +2786,11 @@ body.voice-live .syn-fp-icon{
 @media (max-width:768px){
   .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 }
-/* Studio scroll clearance under floating header — keep tight (was huge empty black) */
-#imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top, 0px));padding-bottom:calc(66px + env(safe-area-inset-bottom, 0px));}
-#imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top, 0px));}
-/* Style chips row sits just under header — only header height, not double-pad */
-#imageGenTemplateRow{padding-top:calc(54px + env(safe-area-inset-top, 0px))!important;padding-bottom:10px!important;}
-/* When styles row is open, scroll col itself needs no top pad (row owns clearance) */
-#imageGenScrollCol:not(.igRowHidden){padding-top:0!important;}
-/* Community: transparent studio header (blend like home), hide style/reset icons */
-#imageGenModal.studio-tab-community #studioTopBar{
-  background:transparent!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  border-bottom:none!important;
-  box-shadow:none!important;
+@media (min-width:769px){
+  #imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top));padding-bottom:calc(66px + env(safe-area-inset-bottom));}
 }
-#imageGenModal.studio-tab-community #studioHistoryGlassBtn,
-#imageGenModal.studio-tab-community #studioResetBtn{
-  display:none!important;
+@media (max-width:768px){
+  #imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top));}
 }
 </style>
 <style>
@@ -3323,24 +3293,17 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #ncmdLaunchBtn,#ncmdLauncher{display:none!important;}
 .quick-actions{display:none!important;}
 </style>
-<!-- Android: Studio-style status bar blend for main chrome (try-it pass).
-     Overlay WebView = edge-to-edge; only .top-bar / .sidebar pad content under icons.
-     Do NOT pad body (that pushed the whole app too low). -->
+<!-- Android: Studio-style status bar blend for main chrome (try-it pass). -->
 <style id="androidStatusBlendCSS">
 html.android-status-blend{
   --android-status-inset:28px;
 }
-/* Main top bar: glass under transparent notification bar (same idea as Studio header).
-   ONLY extra pad is on top (status inset). Bottom/side spacing matches original mobile
-   bar so sun/moon (#dayNightToggle) gap under the buttons stays the same. */
 html.android-status-blend .top-bar{
-  /* original mobile was padding:8px 12px + min-height:60 (border-box) → ~44px content row */
   padding-top:calc(var(--android-status-inset) + 8px)!important;
   padding-bottom:8px!important;
   padding-left:12px!important;
   padding-right:12px!important;
   max-height:none!important;
-  /* keep same content-row height as before: inset + original 60px bar */
   min-height:calc(var(--android-status-inset) + 60px)!important;
   overflow:visible!important;
   background:rgba(10,10,14,0.42)!important;
@@ -3348,95 +3311,22 @@ html.android-status-blend .top-bar{
   -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
 }
-/* ── MOON / dark (purple): classic “old layout” header for comparison ──
-   Restore pre-experiment glass tint + divider + tighter classic margins.
-   Wallpaper / page background is NOT changed. */
-html.android-status-blend[data-theme="purple"] .top-bar,
-html[data-theme="purple"].android-status-blend .top-bar{
-  /* classic frosted header (old shade) */
-  background:rgba(15,15,26,0.55)!important;
-  backdrop-filter:blur(12px)!important;
-  -webkit-backdrop-filter:blur(12px)!important;
-  border-bottom:1px solid rgba(255,255,255,0.08)!important;
-  /* classic mobile chrome under white status strip */
-  padding-top:calc(var(--android-status-inset) + 8px)!important;
-  padding-bottom:8px!important;
-  padding-left:12px!important;
-  padding-right:12px!important;
-  min-height:calc(var(--android-status-inset) + 56px)!important;
-  max-height:none!important;
-  overflow:visible!important;
-  box-shadow:none!important;
-}
-/* Moon: ALWAYS keep the separator line (including home) */
-html[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
-html[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
-html[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html.android-status-blend[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
-html.android-status-blend[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
-html.android-status-blend[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html.android-status-blend[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
-  background:rgba(15,15,26,0.55)!important;
-  backdrop-filter:blur(12px)!important;
-  -webkit-backdrop-filter:blur(12px)!important;
-  border-bottom:1px solid rgba(255,255,255,0.08)!important;
-  border-bottom-width:1px!important;
-  border-bottom-color:rgba(255,255,255,0.08)!important;
-  box-shadow:none!important;
-}
-/* Do not restyle #dayNightToggle — size/margin unchanged */
 html.android-status-blend #dayNightToggle{
   margin:0!important;
 }
-/* Sidebar continues under bar so the strip doesn’t look cut off */
 html.android-status-blend .sidebar{
   padding-top:var(--android-status-inset)!important;
   box-sizing:border-box!important;
 }
-/* Floating history control: clear the status icons */
 html.android-status-blend #chatHistoryPanel{
   top:calc(12px + var(--android-status-inset))!important;
 }
-/* Tiny ▲ (and win strip) — sit at top of APP chrome, NOT inside the notification bar */
-html.android-status-blend #winStrip{
-  top:var(--android-status-inset)!important;
-}
-html.android-status-blend #etbDragZoneL{
-  top:var(--android-status-inset)!important;
-}
-/* Studio: more top air so header + speech-to-speech bubble clear status icons */
-html.android-status-blend #studioTopBar{
-  padding-top:calc(var(--android-status-inset) + 18px)!important;
-  padding-bottom:12px!important;
-  padding-left:14px!important;
-  padding-right:14px!important;
-}
-html.android-status-blend #imageGenScrollCol.igRowHidden{
-  padding-top:calc(54px + var(--android-status-inset))!important;
-}
-html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
-  padding-top:0!important;
-}
-html.android-status-blend #imageGenTemplateRow{
-  padding-top:calc(50px + var(--android-status-inset))!important;
-}
-html.android-status-blend #studioCommunityScroll{
-  padding-top:calc(54px + var(--android-status-inset))!important;
-}
-html.android-status-blend #imageGenModal.studio-tab-community #studioTopBar{
-  background:transparent!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-}
-/* Centered mic top is set in JS (_tnvGlideToCenter) — same Y as right-side icons. */
 </style>
 <script>
 (function(){
   try{
     if(!/Android/i.test(navigator.userAgent||'')) return;
     document.documentElement.classList.add('android-status-blend');
-
     function applyInset(){
       var envH = 0;
       try{
@@ -3446,22 +3336,17 @@ html.android-status-blend #imageGenModal.studio-tab-community #studioTopBar{
         envH = probe.getBoundingClientRect().height || 0;
         if(probe.parentNode) probe.parentNode.removeChild(probe);
       }catch(e){}
-      // Exact safe-area when WebView reports it; modest floor when overlay reports 0
       var inset = Math.max(Math.round(envH), 28);
       document.documentElement.style.setProperty('--android-status-inset', inset + 'px');
-      document.documentElement.classList.add('android-status-blend');
-      // Clear any old experiment that padded the whole body
       if(document.body){
         document.body.classList.remove('android-status-pad');
         document.body.style.removeProperty('padding-top');
       }
-      document.documentElement.classList.remove('android-status-pad');
     }
     applyInset();
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyInset);
     window.addEventListener('load', applyInset);
     window.addEventListener('resize', applyInset);
-    try{ if(window.visualViewport) window.visualViewport.addEventListener('resize', applyInset); }catch(e2){}
     setTimeout(applyInset, 300);
     setTimeout(applyInset, 1000);
   }catch(e){}
@@ -5587,17 +5472,17 @@ window.getWebAudioNode = getWebAudioNode;
   </div>
 
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
+  <div style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
-    <div id="studioTopBarActions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
       <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
-      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Clear studio history" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🗑</button>
+      <button onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
     </div>
   </div>
 
@@ -5617,7 +5502,7 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
            full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
            Has its own top clearance since the scroll column itself has none. -->
-      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(58px + env(safe-area-inset-top)) 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
 
       <!-- Error banner -->
       <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
@@ -5695,7 +5580,7 @@ window.getWebAudioNode = getWebAudioNode;
        (same socialPosts data, same Supabase `posts` table + `posts` bucket)
   ══════════════════════════════════════════════════════════════════════ -->
   <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;background:transparent;">
-    <div id="studioCommunityScroll" style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 16px;position:relative;z-index:1;">
+    <div style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(58px + env(safe-area-inset-top)) 14px 16px;position:relative;z-index:1;">
 
       <!-- Header — small button opens the Posts column, EXACT same width/min-width/
            padding/overflow toggle + transition as the old matchConnectCol/toggleMatchConnect. -->
@@ -7487,48 +7372,7 @@ function toggleImageGenSettingsSheet(){
   sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
 }
 
-/** Clear studio image cache + grid — always asks first so history isn’t wiped by accident */
 function resetImageGenStudio(){
-  showStudioClearHistoryConfirm();
-}
-
-function showStudioClearHistoryConfirm(){
-  var existing = document.getElementById('studioClearHistoryModal');
-  if(existing) existing.remove();
-  var ov = document.createElement('div');
-  ov.id = 'studioClearHistoryModal';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px;';
-  ov.innerHTML =
-    '<div role="dialog" aria-modal="true" style="width:min(360px,100%);background:rgba(18,16,28,0.96);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:22px 20px 18px;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:DM Sans,sans-serif;">' +
-      '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#e8e6f5;margin-bottom:8px;">Clear studio history?</div>' +
-      '<div style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.55);margin-bottom:18px;">This deletes all saved generated images on this device (local cache). You can’t undo this.</div>' +
-      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
-        '<button type="button" id="studioClearCancel" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>' +
-        '<button type="button" id="studioClearConfirm" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(232,93,150,0.45);background:rgba(232,93,150,0.18);color:#ffb3c9;font-size:13px;font-weight:600;cursor:pointer;">Clear history</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(ov);
-  function close(){ try{ ov.remove(); }catch(e){} }
-  ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
-  var cancel = document.getElementById('studioClearCancel');
-  var conf = document.getElementById('studioClearConfirm');
-  if(cancel) cancel.onclick = close;
-  if(conf) conf.onclick = function(){
-    close();
-    clearStudioImageHistoryAndUi();
-  };
-}
-
-function clearStudioImageHistoryAndUi(){
-  try{ clearStudioImageCache(); }catch(e){}
-  // Also wipe guest legacy key if present
-  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
-  // Best-effort remote clear for signed-in users
-  try{
-    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
-      _supabase.from('generated_images').delete().eq('user_id', currentUser.id).then(function(){}).catch(function(){});
-    }
-  }catch(e3){}
   document.getElementById('imageGenPrompt').value = '';
   document.getElementById('imageGenResults').innerHTML = '';
   document.getElementById('imageGenResults').style.display = 'none';
@@ -7540,26 +7384,24 @@ function clearStudioImageHistoryAndUi(){
   document.getElementById('imageGenAspect').value = 'square';
   document.getElementById('imageGenCount').value = '4';
   clearImageGenRef();
-  _imageGenFeedLoaded = false;
   renderImageGenDefaultFeed();
-  if(typeof showToast === 'function') showToast('Studio history cleared');
 }
 
 function openImageGenModal(){
   closeMobileMore();
   renderImageGenTemplates();
   switchStudioTab('generate');
-  // Always restore from local (and account) cache so reloads don’t empty the grid
-  renderImageGenDefaultFeed();
+  if(document.getElementById('imageGenResults').style.display !== 'grid'){
+    renderImageGenDefaultFeed();
+  }
   var modal = document.getElementById('imageGenModal');
   modal.style.transition = 'none';
   modal.style.opacity = '0';
   modal.style.display = 'flex';
   void modal.offsetWidth; // force reflow so the transition below actually animates
   modal.style.transition = 'opacity .4s ease';
-  // STS mic flies to Studio icon cluster in the same open animation
-  if(typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
   requestAnimationFrame(function(){ modal.style.opacity = '1'; });
+  if(typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
 }
 function closeImageGenModal(){
   var modal = document.getElementById('imageGenModal');
@@ -7691,10 +7533,11 @@ function downloadGeneratedImage(dataUrl, filename){
   a.remove();
 }
 
-// ── Studio image history: always local cache (survives reset) + optional cloud ─
-var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history'; // legacy
-var STUDIO_IMAGE_CACHE_KEY = 'synapses_studio_image_cache_v1';
-var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use 🗑 to clear; no 100-image pileups
+// ── Generated-image history — signed-in users sync to Supabase (account +
+// storage bucket), guests keep a capped history in this browser's localStorage
+// so images aren't lost when they exit the app or reload the page. ─────────
+var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history';
+var GUEST_IMAGE_HISTORY_MAX = 24; // data URLs are heavy — cap so localStorage doesn't overflow
 
 function _dataUrlToBlob(dataUrl){
   var parts = dataUrl.split(',');
@@ -7707,46 +7550,9 @@ function _dataUrlToBlob(dataUrl){
   return new Blob([u8], {type: mime});
 }
 
-function _readStudioImageCache(){
-  var hist = [];
-  try{ hist = JSON.parse(localStorage.getItem(STUDIO_IMAGE_CACHE_KEY) || '[]'); }catch(e){ hist = []; }
-  if(!hist || !hist.length){
-    try{
-      var legacy = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]');
-      if(legacy && legacy.length){ hist = legacy; _writeStudioImageCache(hist); }
-    }catch(e2){}
-  }
-  return Array.isArray(hist) ? hist : [];
-}
-
-function _writeStudioImageCache(hist){
-  if(!Array.isArray(hist)) hist = [];
-  if(hist.length > STUDIO_IMAGE_CACHE_MAX) hist = hist.slice(0, STUDIO_IMAGE_CACHE_MAX);
-  try{
-    localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist));
-    return true;
-  }catch(e){
-    hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
-    try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist)); return true; }catch(e2){
-      try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist.slice(0, 4))); return true; }catch(e3){ return false; }
-    }
-  }
-}
-
-function clearStudioImageCache(){
-  try{ localStorage.removeItem(STUDIO_IMAGE_CACHE_KEY); }catch(e){}
-  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
-}
-
 function saveGeneratedImageToHistory(src, meta){
   try{
-    meta = meta || {};
-    // Always local first so app reset still shows images
-    var hist = _readStudioImageCache();
-    hist.unshift({ src: src, prompt: meta.prompt || '', model: meta.model || '', aspect: meta.aspect || '', ts: Date.now() });
-    _writeStudioImageCache(hist);
-
-    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined'){
       if(/^data:/.test(src)){
         var blob = _dataUrlToBlob(src);
         var ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
@@ -7754,15 +7560,7 @@ function saveGeneratedImageToHistory(src, meta){
         _supabase.storage.from('generated-images').upload(path, blob, {contentType: blob.type}).then(function(r){
           if(r.error){ console.error('Image storage upload error:', r.error); return; }
           var pub = _supabase.storage.from('generated-images').getPublicUrl(path);
-          var url = pub && pub.data && pub.data.publicUrl;
-          if(url){
-            try{
-              var h2 = _readStudioImageCache();
-              for(var i = 0; i < h2.length; i++){ if(h2[i].src === src){ h2[i].src = url; break; } }
-              _writeStudioImageCache(h2);
-            }catch(_u){}
-          }
-          _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: url || src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
+          _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: pub.data.publicUrl, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
             if(r2.error) console.error('generated_images insert error:', r2.error.message);
           });
         });
@@ -7771,34 +7569,32 @@ function saveGeneratedImageToHistory(src, meta){
           if(r2.error) console.error('generated_images insert error:', r2.error.message);
         });
       }
+    } else {
+      var hist = [];
+      try{ hist = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]'); }catch(e){}
+      hist.unshift({src: src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect, ts: Date.now()});
+      if(hist.length > GUEST_IMAGE_HISTORY_MAX) hist = hist.slice(0, GUEST_IMAGE_HISTORY_MAX);
+      try{
+        localStorage.setItem(GUEST_IMAGE_HISTORY_KEY, JSON.stringify(hist));
+      }catch(e){
+        // storage full — drop the older half and retry once
+        hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
+        try{ localStorage.setItem(GUEST_IMAGE_HISTORY_KEY, JSON.stringify(hist)); }catch(e2){}
+      }
     }
   }catch(e){ console.error('saveGeneratedImageToHistory error:', e); }
 }
 
 async function loadImageGenHistory(){
   try{
-    var local = _readStudioImageCache();
-    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
-      try{
-        var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
-        if(!r.error && r.data && r.data.length){
-          var remote = r.data.map(function(row){
-            return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect, ts: row.created_at ? Date.parse(row.created_at) : 0};
-          });
-          var seen = {};
-          var merged = [];
-          local.concat(remote).forEach(function(it){
-            if(!it || !it.src || seen[it.src]) return;
-            seen[it.src] = 1;
-            merged.push(it);
-          });
-          if(merged.length > STUDIO_IMAGE_CACHE_MAX) merged = merged.slice(0, STUDIO_IMAGE_CACHE_MAX);
-          if(merged.length) _writeStudioImageCache(merged);
-          return merged;
-        }
-      }catch(er){ console.error('load remote image history:', er); }
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined'){
+      var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
+      if(r.error){ console.error('load image history error:', r.error.message); return []; }
+      return (r.data || []).map(function(row){ return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect}; });
     }
-    return local;
+    var hist = [];
+    try{ hist = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]'); }catch(e){}
+    return hist;
   }catch(e){ console.error('loadImageGenHistory error:', e); return []; }
 }
 
@@ -7931,7 +7727,7 @@ function toggleStudioFeedPanel(){
       col.style.width='100%';
       col.style.minWidth='0';
       col.style.height='100%';
-      col.style.padding='calc(18px + max(env(safe-area-inset-top, 0px), var(--android-status-inset, 0px))) 16px 16px';
+      col.style.padding='calc(14px + env(safe-area-inset-top)) 16px 16px';
       col.style.background='#000';
       col.style.zIndex='50';
       col.style.overflow='auto';
@@ -7977,12 +7773,9 @@ function initStudioBeamsCanvas(){
 
 function switchStudioTab(tab){
   var glassBtn = document.getElementById('studioCommunityGlassBtn');
-  var styleBtn = document.getElementById('studioHistoryGlassBtn');
-  var resetBtn = document.getElementById('studioResetBtn');
   var genView = document.getElementById('studioGenerateView');
   var comView = document.getElementById('studioCommunityView');
   var bgLayer = document.getElementById('studioBgLayer');
-  var modal = document.getElementById('imageGenModal');
   // Toggle: clicking the glass button while already on community goes back to generate.
   if(tab === 'community' && comView.style.display === 'flex'){
     tab = 'generate';
@@ -7992,24 +7785,6 @@ function switchStudioTab(tab){
     comView.style.display = 'flex';
     comView.style.opacity = '0';
     comView.style.transition = 'opacity .45s ease';
-    if(modal) modal.classList.add('studio-tab-community');
-    // Style templates + reset do nothing on community — hide so they don’t confuse
-    if(styleBtn) styleBtn.style.display = 'none';
-    if(resetBtn) resetBtn.style.display = 'none';
-    // Close style row if it was open on generate
-    try{
-      var trow = document.getElementById('imageGenTemplateRow');
-      if(trow && trow.style.display === 'flex'){
-        trow.style.display = 'none';
-        var sc = document.getElementById('imageGenScrollCol');
-        if(sc) sc.classList.add('igRowHidden');
-        if(styleBtn){
-          styleBtn.style.background = 'rgba(255,255,255,0.05)';
-          styleBtn.style.borderColor = 'rgba(255,255,255,0.1)';
-          styleBtn.style.color = 'var(--muted)';
-        }
-      }
-    }catch(_tr){}
     if(glassBtn){
       glassBtn.style.background = 'rgba(124,106,247,0.2)';
       glassBtn.style.borderColor = 'rgba(124,106,247,0.5)';
@@ -8030,9 +7805,6 @@ function switchStudioTab(tab){
   } else {
     if(bgLayer) bgLayer.style.opacity = '0';
     comView.style.opacity = '0';
-    if(modal) modal.classList.remove('studio-tab-community');
-    if(styleBtn) styleBtn.style.display = '';
-    if(resetBtn) resetBtn.style.display = '';
     if(glassBtn){
       glassBtn.style.background = 'rgba(255,255,255,0.05)';
       glassBtn.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -27916,76 +27688,33 @@ function _tnvGlideToCenter(){
   if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
-  /*
-    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%,
-    not “middle of .top-bar” (bar can be offset by layout/padding).
-    Vertical: optical mid of #topTitle / icon row.
-  */
-  var rowCy = first.top + first.height / 2;
-  try{
-    var titleEl = document.getElementById('topTitle');
-    if(titleEl && titleEl.getBoundingClientRect().height > 4){
-      var tr = titleEl.getBoundingClientRect();
-      rowCy = tr.top + tr.height / 2;
-    } else {
-      var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
-      if(barHidden) rowCy += 16;
-      var actions = document.querySelector('.top-bar .top-actions');
-      if(actions){
-        var row = actions.getBoundingClientRect();
-        if(row.height > 8){
-          var acy = row.top + row.height / 2;
-          if(barHidden) acy += 16;
-          rowCy = acy - 3;
-        }
-      }
-    }
-  }catch(_r){}
-  rowCy -= 2;
   _tnvHomeParent = btn.parentNode;
   _tnvHomeNextSibling = btn.nextSibling;
-  // Body + fixed = left:50% is screen center (camera), independent of top-bar box
-  document.body.appendChild(btn);
+  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
   btn.classList.add('tnv-centered');
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
-  btn.style.transition = 'none';
-  btn.style.setProperty('position', 'fixed', 'important');
-  btn.style.setProperty('left', '50%', 'important');
-  btn.style.setProperty('top', rowCy + 'px', 'important');
-  btn.style.right = 'auto';
-  btn.style.bottom = 'auto';
-  btn.style.margin = '0';
-  btn.style.zIndex = '100050';
-  btn.style.transform = 'translate(-50%,-50%)';
   var last = btn.getBoundingClientRect();
+  /* last is already centered via CSS translate(-50%,-50%) — measure without it for FLIP */
+  btn.style.transition = 'none';
+  btn.style.transform = 'translate(-50%,-50%)';
+  last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
   var dy = first.top - last.top;
   btn.style.opacity = '0';
   btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
-  void btn.offsetWidth;
+  void btn.offsetWidth; // flush layout so the "from" state actually paints
   btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
   _tnvTrackToastDuring(500);
+  /* After glide, keep pure center transform (no scale residue) */
   btn.addEventListener('transitionend', function _centerSettle(e){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     if(!_tnvCentered) return;
     btn.style.transition = '';
     btn.style.transform = 'translate(-50%,-50%)';
   }, {once:true});
-}
-
-function _tnvClearCenteredInline(){
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn) return;
-  btn.style.removeProperty('position');
-  btn.style.removeProperty('top');
-  btn.style.removeProperty('left');
-  btn.style.removeProperty('right');
-  btn.style.removeProperty('bottom');
-  btn.style.removeProperty('margin');
-  btn.style.removeProperty('z-index');
 }
 
 function _tnvGlideHome(){
@@ -27995,7 +27724,6 @@ function _tnvGlideHome(){
   btn.classList.remove('tnv-centered');
   btn.style.transition = 'none';
   btn.style.transform = 'none';
-  _tnvClearCenteredInline();
   var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
   if(home){
     if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -28018,12 +27746,12 @@ function _tnvGlideHome(){
     btn.style.transform = '';
     btn.style.opacity = '';
   }, {once:true});
+  /* Safety: clear residual transform if transitionend never fires */
   setTimeout(function(){
     if(!_tnvCentered && btn && !btn.classList.contains('tnv-centered')){
       btn.style.transition = '';
       btn.style.transform = '';
       btn.style.opacity = '';
-      _tnvClearCenteredInline();
     }
   }, 500);
 }
@@ -28047,7 +27775,6 @@ function _tnvSendAway(){
     btn.style.transition = 'none';
     btn.style.transform = '';
     btn.style.opacity = '';
-    _tnvClearCenteredInline();
     var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
     if(home){
       if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -28075,70 +27802,35 @@ var _tnvEscaped = false;
 var _tnvEscapeHomeParent = null;
 var _tnvEscapeHomeNextSibling = null;
 var _tnvEscapeWasCentered = false;
-/**
- * While STS is live and Studio opens: lift mic above the modal and FLIP-fly it
- * to the Studio header's 3-icon cluster (same row as community / templates / reset).
- */
 function _tnvEscapeAboveModal(){
   if(!window._topNavVoiceActive) return;
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || _tnvEscaped) return;
-  var first = btn.getBoundingClientRect();
+  var r = btn.getBoundingClientRect();
   _tnvEscapeHomeParent = btn.parentNode;
   _tnvEscapeHomeNextSibling = btn.nextSibling;
   _tnvEscapeWasCentered = btn.classList.contains('tnv-centered');
-  if(_tnvEscapeWasCentered){
-    btn.classList.remove('tnv-centered');
-    _tnvClearCenteredInline();
-  }
+  if(_tnvEscapeWasCentered) btn.classList.remove('tnv-centered'); // drop the !important top/left so inline fixed coords apply
   _tnvEscaped = true;
-
-  // Pin at current screen position on body (fixed), then fly to studio icons
-  if(btn.parentNode !== document.body) document.body.appendChild(btn);
+  var savedTransition = btn.style.transition;
   btn.style.transition = 'none';
+  document.body.appendChild(btn);
   btn.style.position = 'fixed';
-  btn.style.left = first.left + 'px';
-  btn.style.top = first.top + 'px';
+  btn.style.top = r.top + 'px';
+  btn.style.left = r.left + 'px';
   btn.style.right = 'auto';
   btn.style.bottom = 'auto';
-  btn.style.margin = '0';
   btn.style.transform = 'none';
-  btn.style.zIndex = '600'; // above #imageGenModal (500)
-  btn.style.opacity = '1';
+  btn.style.margin = '0';
+  btn.style.zIndex = '600'; // above #imageGenModal's z-index:500
   void btn.offsetWidth;
-
-  var _flyTries = 0;
-  function flyToStudioIcons(){
-    if(!_tnvEscaped || !btn) return;
-    var modal = document.getElementById('imageGenModal');
-    if(!modal || modal.style.display === 'none') return;
-    // Leftmost of the 3 Studio icons (community) — park STS just to its LEFT
-    var leftIcon = document.getElementById('studioCommunityGlassBtn')
-      || (document.getElementById('studioTopBarActions') && document.getElementById('studioTopBarActions').querySelector('button'));
-    var target = leftIcon ? leftIcon.getBoundingClientRect() : null;
-    if(!target || target.width < 4){
-      if(_flyTries++ < 12) requestAnimationFrame(flyToStudioIcons);
-      return;
-    }
-    var gap = 8;
-    var tx = target.left - first.width - gap;
-    var ty = target.top + target.height / 2 - first.height / 2;
-    // Keep on-screen if needed (narrow phones)
-    if(tx < 8) tx = 8;
-    btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1)';
-    btn.style.left = Math.round(tx) + 'px';
-    btn.style.top = Math.round(ty) + 'px';
-    _tnvTrackToastDuring(450);
-  }
-  // Same beat as Studio open: fly while modal fades in
-  requestAnimationFrame(function(){
-    requestAnimationFrame(flyToStudioIcons);
-  });
+  btn.style.transition = savedTransition;
 }
 function _tnvReturnFromModal(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || !_tnvEscaped) return;
   _tnvEscaped = false;
+  var savedTransition = btn.style.transition;
   btn.style.transition = 'none';
   var home = _tnvEscapeHomeParent;
   if(home){
@@ -28153,33 +27845,9 @@ function _tnvReturnFromModal(){
   btn.style.transform = '';
   btn.style.margin = '';
   btn.style.zIndex = '';
-  btn.style.opacity = '';
-  btn.style.removeProperty('top');
-  if(_tnvEscapeWasCentered){
-    // Stay on body + true viewport center under camera
-    if(btn.parentNode !== document.body) document.body.appendChild(btn);
-    btn.classList.add('tnv-centered');
-    try{
-      if(window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
-        var rowCy;
-        var titleEl = document.getElementById('topTitle');
-        if(titleEl && titleEl.getBoundingClientRect().height > 4){
-          var tr = titleEl.getBoundingClientRect();
-          rowCy = tr.top + tr.height / 2 - 2;
-        } else {
-          var actions = document.querySelector('.top-bar .top-actions');
-          var row = actions ? actions.getBoundingClientRect() : null;
-          rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
-        }
-        btn.style.setProperty('position', 'fixed', 'important');
-        btn.style.setProperty('left', '50%', 'important');
-        btn.style.setProperty('top', rowCy + 'px', 'important');
-        btn.style.zIndex = '100050';
-        btn.style.transform = 'translate(-50%,-50%)';
-      }
-    }catch(_re){}
-  }
+  if(_tnvEscapeWasCentered) btn.classList.add('tnv-centered');
   void btn.offsetWidth;
+  btn.style.transition = savedTransition;
 }
 window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
 window._tnvReturnFromModal = _tnvReturnFromModal;
@@ -28292,33 +27960,6 @@ function toggleDayNight(){
   var next = (cur === 'easyview') ? 'purple' : 'easyview';
   window._applyTheme(next);
   _syncDayNightToggle(next);
-  _syncAndroidStatusBarForTheme(next);
-}
-/**
- * Moon/dark: white notification bar + dark icons (classic chrome).
- * Day/sun: transparent overlay status bar (current blend experiment).
- * Does not change app wallpaper / page background.
- */
-function _syncAndroidStatusBarForTheme(t){
-  try{
-    if(!/Android/i.test(navigator.userAgent||'')) return;
-    var isMoon = (t === 'purple'); // moon = dark theme
-    // Median / GoNative bridge
-    if(typeof median !== 'undefined' && median.statusbar && typeof median.statusbar.set === 'function'){
-      if(isMoon){
-        median.statusbar.set({ style: 'dark', color: '#FFFFFF' }); // white bar, dark icons (style name varies by shell)
-        try{ median.statusbar.set({ style: 'light', color: '#FFFFFF' }); }catch(_s){}
-      } else {
-        median.statusbar.set({ style: 'light', color: '#00000000' });
-        try{ median.statusbar.set({ style: 'dark', color: '#00000000' }); }catch(_s2){}
-      }
-    }
-    if(typeof gonative !== 'undefined' && gonative.statusbar && typeof gonative.statusbar.set === 'function'){
-      if(isMoon) gonative.statusbar.set({ style: 'light', color: '#FFFFFF' });
-      else gonative.statusbar.set({ style: 'dark', color: '#00000000' });
-    }
-    document.documentElement.setAttribute('data-status-chrome', isMoon ? 'classic-white' : 'overlay');
-  }catch(e){}
 }
 function _syncDayNightToggle(t){
   var wrap  = document.getElementById('dayNightToggle');
@@ -28330,7 +27971,7 @@ function _syncDayNightToggle(t){
 
   var moonSVG = '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   var sunWhite= '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-  var sunDim  = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  var sunDim  = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
   var moonDim = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 
   if(t === 'easyview'){
@@ -28352,17 +27993,9 @@ function _syncDayNightToggle(t){
     right.style.background = 'transparent';
     right.innerHTML        = sunDim;
   }
-  _syncAndroidStatusBarForTheme(t);
 }
 // init toggle state on load
-(function(){
-  var t = localStorage.getItem('_appTheme')||'easyview';
-  window._syncDayNightToggle = _syncDayNightToggle;
-  window._syncAndroidStatusBarForTheme = _syncAndroidStatusBarForTheme;
-  _syncDayNightToggle(t);
-  setTimeout(function(){ _syncAndroidStatusBarForTheme(t); }, 400);
-  setTimeout(function(){ _syncAndroidStatusBarForTheme(t); }, 1200);
-})();
+(function(){ _syncDayNightToggle(localStorage.getItem('_appTheme')||'easyview'); })();
 
 // ── Chrome border-radius repaint fix ─────────────────────────────────
 // Chrome bug: border-radius on small GPU-composited elements renders
@@ -29823,7 +29456,6 @@ function _openNeutralinoWebview(url){
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
-    else if(window._syncAndroidStatusBarForTheme) window._syncAndroidStatusBarForTheme(t);
     if(t==='easyview'){
       // Canvases sit at 0x0 while hidden (display:none), so re-measure and
       // reinit whichever ones now have visible dimensions in sun mode.
@@ -29839,9 +29471,6 @@ function _openNeutralinoWebview(url){
   window._applyTheme = applyTheme;
   window._getThemes  = function(){ return THEMES; };
   window._curTheme   = function(){ return localStorage.getItem('_appTheme')||'easyview'; };
-  // Expose day/night helpers so theme card can sync status chrome
-  if(typeof _syncDayNightToggle === 'function') window._syncDayNightToggle = _syncDayNightToggle;
-  if(typeof _syncAndroidStatusBarForTheme === 'function') window._syncAndroidStatusBarForTheme = _syncAndroidStatusBarForTheme;
 
   function patchIosLanding(){
     var t = localStorage.getItem('_appTheme')||'easyview';
