@@ -5399,11 +5399,12 @@ window.getWebAudioNode = getWebAudioNode;
          absolutely-positioned overlays, so the 2-col grid runs edge-to-edge/full-screen
          and scrolls fully behind both of them. Top/bottom padding here just keeps the
          FIRST/LAST row clear of the bars at rest — everything still scrolls underneath. -->
-    <div id="imageGenScrollCol" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:calc(58px + env(safe-area-inset-top));padding-bottom:calc(66px + env(safe-area-inset-bottom));">
+    <div id="imageGenScrollCol" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
       <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
-           full-screen; toggled by the 4-square button up top. Scrolls away with the grid. -->
-      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:2px 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+           full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
+           Has its own top clearance since the scroll column itself has none. -->
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(58px + env(safe-area-inset-top)) 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
 
       <!-- Error banner -->
       <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
@@ -5412,7 +5413,7 @@ window.getWebAudioNode = getWebAudioNode;
       <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:0 14px 10px;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
 
       <div id="imageGenEmptyState" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;"></div>
-      <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr;gap:10px;padding:2px 14px 16px;"></div>
+      <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr;gap:3px;padding:0;"></div>
     </div>
 
     <!-- Settings sheet (slides up over the input bar) -->
@@ -7385,7 +7386,7 @@ async function submitImageGen(){
     for(var i = images.length - 1; i >= 0; i--){
       (function(src, i){
         var card = document.createElement('div');
-        card.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
+        card.style.cssText = 'position:relative;overflow:hidden;background:var(--surface);';
         var img = document.createElement('img');
         img.src = src;
         img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
@@ -7551,7 +7552,7 @@ async function renderImageGenDefaultFeed(){
     var cell = document.createElement('button');
     cell.type = 'button';
     cell.title = it.prompt || '';
-    cell.style.cssText = 'position:relative;border:none;padding:0;margin:0;cursor:pointer;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
+    cell.style.cssText = 'position:relative;border:none;padding:0;margin:0;cursor:pointer;overflow:hidden;background:var(--surface);';
     var img = document.createElement('img');
     img.src = it.src;
     img.loading = 'lazy';
