@@ -713,23 +713,8 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
-  /* DAY (sun / easyview) only: home top bar clear-blends into wallpaper.
-     MOON (dark / purple): keep classic glass overlay + divider (old layout). */
-  html[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
-  html[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
-  html[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html.android-status-blend[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
-  html.android-status-blend[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
-  html.android-status-blend[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-  html.android-status-blend[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
-    background:transparent!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    border-bottom-color:transparent!important;
-    border-bottom-width:0!important;
-    box-shadow:none!important;
-  }
+  /* Top bar keeps glass overlay + divider on ALL themes (incl. home) —
+     no wallpaper clear-blend. Status bar color is matched in JS. */
 
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -3333,51 +3318,30 @@ html.android-status-blend{
 /* Main top bar: glass under transparent notification bar (same idea as Studio header).
    ONLY extra pad is on top (status inset). Bottom/side spacing matches original mobile
    bar so sun/moon (#dayNightToggle) gap under the buttons stays the same. */
+/* Unified header chrome (sun + moon): PC-style glass overlay + bottom line.
+   Status bar is painted the same solid tone so notification + top-bar read as one strip.
+   No wallpaper showing through the header. */
 html.android-status-blend .top-bar{
-  /* original mobile was padding:8px 12px + min-height:60 (border-box) → ~44px content row */
   padding-top:calc(var(--android-status-inset) + 8px)!important;
   padding-bottom:8px!important;
   padding-left:12px!important;
   padding-right:12px!important;
   max-height:none!important;
-  /* keep same content-row height as before: inset + original 60px bar */
   min-height:calc(var(--android-status-inset) + 60px)!important;
   overflow:visible!important;
-  background:rgba(10,10,14,0.42)!important;
-  backdrop-filter:blur(16px) saturate(150%)!important;
-  -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
-  border-bottom:1px solid rgba(255,255,255,0.08)!important;
-}
-/* ── MOON / dark (purple): classic “old layout” header for comparison ──
-   Restore pre-experiment glass tint + divider + tighter classic margins.
-   Wallpaper / page background is NOT changed. */
-html.android-status-blend[data-theme="purple"] .top-bar,
-html[data-theme="purple"].android-status-blend .top-bar{
-  /* classic frosted header (old shade) */
-  background:rgba(15,15,26,0.55)!important;
+  /* PC glass shade (same family as desktop .top-bar) */
+  background:rgba(15,15,26,0.92)!important;
   backdrop-filter:blur(12px)!important;
   -webkit-backdrop-filter:blur(12px)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
-  /* classic mobile chrome under white status strip */
-  padding-top:calc(var(--android-status-inset) + 8px)!important;
-  padding-bottom:8px!important;
-  padding-left:12px!important;
-  padding-right:12px!important;
-  min-height:calc(var(--android-status-inset) + 56px)!important;
-  max-height:none!important;
-  overflow:visible!important;
   box-shadow:none!important;
 }
-/* Moon: ALWAYS keep the separator line (including home) */
-html[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
-html[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
-html[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html.android-status-blend[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
-html.android-status-blend[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
-html.android-status-blend[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-html.android-status-blend[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
-  background:rgba(15,15,26,0.55)!important;
+/* Force line + glass on home too (override any old transparent rules) */
+html.android-status-blend .main:has(#sec-welcome.active) .top-bar,
+html.android-status-blend body:has(#sec-welcome.active) .top-bar,
+html.android-status-blend .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+html.android-status-blend body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+  background:rgba(15,15,26,0.92)!important;
   backdrop-filter:blur(12px)!important;
   -webkit-backdrop-filter:blur(12px)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
@@ -28295,17 +28259,19 @@ function toggleDayNight(){
   _syncAndroidStatusBarForTheme(next);
 }
 /**
- * Moon/dark (purple): WHITE status bar + DARK icons (clock/wifi same dark color).
- * Day/sun (easyview): transparent overlay (blend experiment).
- * Median style: "dark" = dark content/icons on light bar (see JSBridge luma helper).
- * Does not change app wallpaper / page background.
+ * Status bar matches header chrome (no wallpaper bleed):
+ * - Moon (purple): WHITE bar + dark icons
+ * - Sun / other: solid dark matching top-bar glass (#0f0f1a ≈ rgba(15,15,26,0.92)) + light icons
+ * Native paints a scrim WITHOUT pushing the WebView down (no double margin).
  */
 function _syncAndroidStatusBarForTheme(t){
   try{
     if(!/Android/i.test(navigator.userAgent||'')) return;
-    var isMoon = (t === 'purple'); // moon = dark theme
-    var color = isMoon ? '#FFFFFF' : '#00000000';
-    // Median: light bg → style "dark" (dark icons). Dark/transparent → style "light".
+    var isMoon = (t === 'purple');
+    // Same family as .top-bar glass so notification + header read as one band
+    var headerMatch = '#0f0f1a';
+    var color = isMoon ? '#FFFFFF' : headerMatch;
+    // Median: "dark" = dark icons (white bar); "light" = light icons (dark bar)
     var style = isMoon ? 'dark' : 'light';
     if(typeof median !== 'undefined' && median.statusbar && typeof median.statusbar.set === 'function'){
       median.statusbar.set({ style: style, color: color });
@@ -28313,12 +28279,11 @@ function _syncAndroidStatusBarForTheme(t){
     if(typeof gonative !== 'undefined' && gonative.statusbar && typeof gonative.statusbar.set === 'function'){
       gonative.statusbar.set({ style: style, color: color });
     }
-    // theme-color meta (some WebViews tint the system bar from this)
     try{
       var meta = document.querySelector('meta[name="theme-color"]');
-      if(meta) meta.setAttribute('content', isMoon ? '#FFFFFF' : '#000000');
+      if(meta) meta.setAttribute('content', color);
     }catch(_m){}
-    document.documentElement.setAttribute('data-status-chrome', isMoon ? 'classic-white' : 'overlay');
+    document.documentElement.setAttribute('data-status-chrome', isMoon ? 'white' : 'header-match');
   }catch(e){}
 }
 function _syncDayNightToggle(t){
