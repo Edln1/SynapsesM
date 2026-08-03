@@ -2112,6 +2112,10 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 *::-webkit-scrollbar-button{display:none;width:0;height:0;}
 *::-webkit-scrollbar-thumb{background:rgba(124,106,247,0.22);border-radius:10px;}
 *::-webkit-scrollbar-thumb:hover{background:rgba(124,106,247,0.22);}
+#imageGenModal *::-webkit-scrollbar-thumb{background:transparent;}
+#imageGenModal *::-webkit-scrollbar-thumb:hover{background:transparent;}
+#imageGenModal{scrollbar-width:none;}
+#imageGenModal *{scrollbar-width:none;}
 
 #toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px) scale(0.96);background:rgba(18,16,28,0.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .22s ease,transform .28s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);max-width:min(320px,calc(100vw - 40px));text-align:center;line-height:1.35;letter-spacing:0.01em;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
@@ -5448,8 +5452,8 @@ window.getWebAudioNode = getWebAudioNode;
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="flux" selected style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
-          <option value="dreamshaper" style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
+          <option value="flux" style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
+          <option value="dreamshaper" selected style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
           <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
           <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
         </select>
@@ -7293,11 +7297,10 @@ function resetImageGenStudio(){
   document.getElementById('imageGenError').style.display = 'none';
   document.getElementById('imageGenSettingsSheet').style.display = 'none';
   closeImageGenHistory();
-  document.getElementById('imageGenModel').value = 'flux';
+  document.getElementById('imageGenModel').value = 'dreamshaper';
   document.getElementById('imageGenAspect').value = 'square';
   document.getElementById('imageGenCount').value = '4';
   clearImageGenRef();
-  document.getElementById('imageGenPrompt').focus();
   renderImageGenDefaultFeed();
 }
 
@@ -7315,7 +7318,6 @@ function openImageGenModal(){
   void modal.offsetWidth; // force reflow so the transition below actually animates
   modal.style.transition = 'opacity .4s ease';
   requestAnimationFrame(function(){ modal.style.opacity = '1'; });
-  setTimeout(function(){ document.getElementById('imageGenPrompt').focus(); }, 50);
 }
 function closeImageGenModal(){
   var modal = document.getElementById('imageGenModal');
