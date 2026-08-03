@@ -2928,6 +2928,7 @@ body.voice-live .syn-fp-icon{
         var FLAG = 'synapses_first_launch_v1';
         if (localStorage.getItem(FLAG) === '1') return; // not first launch — leave saved prefs alone
         localStorage.setItem('synapses_topbar_hidden', '1');   // top-right icons hidden
+        localStorage.setItem('synapses_askbar_open', '0');     // Ask me anything off
         localStorage.setItem('synapses_synbot_enabled', '0');  // SynBot off
         localStorage.setItem('synapses_pulse_open_v1', '0');   // Pulse closed
         localStorage.setItem('synapses_rel_enabled', 'false'); // Ava relationship bond OFF until user turns it on
@@ -2939,6 +2940,14 @@ body.voice-live .syn-fp-icon{
       try {
         if (localStorage.getItem('synapses_rel_enabled') == null) {
           localStorage.setItem('synapses_rel_enabled', 'false');
+        }
+      } catch(e) {}
+    })();
+    /* Ask me anything: first install / unset → off (user can still toggle on) */
+    (function _defaultAskBarOffIfUnset(){
+      try {
+        if (localStorage.getItem('synapses_askbar_open') == null) {
+          localStorage.setItem('synapses_askbar_open', '0');
         }
       } catch(e) {}
     })();
@@ -14506,9 +14515,21 @@ function _positionAskBarAtFingerprint(){
   area.style.setProperty('margin', '0', 'important');
   area.style.setProperty('z-index', '6', 'important');
 }
-/** Return to empty chat home with Ask bar correctly under the greeting */
+/** Saved pref: Ask me anything open on empty home? Default off (first install). */
+function _prefAskBarOpen(){
+  try { return localStorage.getItem('synapses_askbar_open') === '1'; } catch(e){ return false; }
+}
+function _saveAskBarPref(on){
+  try { localStorage.setItem('synapses_askbar_open', on ? '1' : '0'); } catch(e){}
+}
+/**
+ * Return to empty chat home.
+ * withAsk undefined → restore last saved toggle (survives app kill/reopen).
+ * withAsk true/false → force that UI state; true also saves (user opened Ask).
+ */
 function _restoreEmptyChatHome(withAsk){
-  if(withAsk === undefined) withAsk = true;
+  var forced = (withAsk !== undefined);
+  if(!forced) withAsk = _prefAskBarOpen();
   window._fpSlotTop = null; /* drop stale mid-chat measurements */
   chatHistory = [];
   activeSession = null;
@@ -14518,12 +14539,16 @@ function _restoreEmptyChatHome(withAsk){
   if(es){ es.classList.remove('hidden'); es._manualHide = false; }
   try{ if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility(); }catch(_s){}
   setView('sec-chat');
-  /* Pad visible first → measure → then open Ask (prevents low offset) */
-  setAskBarVisible(false);
+  /* Pad visible first → measure → then restore Ask. silent: do not clobber saved pref mid-restore */
+  setAskBarVisible(false, { silent: true });
   function finish(){
     try{ _cacheFingerprintSlotTop(); }catch(_c){}
-    if(withAsk) setAskBarVisible(true);
-    else if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+    if(withAsk){
+      /* forced open from Ask button → save on; pure restore → silent (pref already correct) */
+      setAskBarVisible(true, { silent: !forced });
+    } else if(typeof _positionAskBarAtFingerprint === 'function') {
+      _positionAskBarAtFingerprint();
+    }
   }
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
@@ -14615,11 +14640,18 @@ function _isChatEmptyHome(){
   } catch(e){}
   return !!(sec && es && !es.classList.contains('hidden') && !hasMsgs);
 }
-function setAskBarVisible(on){
+/**
+ * Show/hide Ask me anything on empty home.
+ * opts.silent = true → apply UI only (used during restore so we don't overwrite saved pref).
+ * User toggles always persist to localStorage for next app open.
+ */
+function setAskBarVisible(on, opts){
+  opts = opts || {};
   var sec = document.getElementById('sec-chat');
   var btn = document.getElementById('bnavAskBtn');
   if(!sec) return;
-  /* Active conversation: bar always on (bottom layout, no fingerprint swap) */
+  /* Active conversation: bar always on (bottom layout, no fingerprint swap).
+     Do NOT rewrite empty-home ask pref here. */
   if(!_isChatEmptyHome()){
     window._askBarOpen = true;
     sec.classList.remove('askbar-off');
@@ -14639,6 +14671,8 @@ function setAskBarVisible(on){
     try { _cacheFingerprintSlotTop(); } catch(eM){}
   }
   window._askBarOpen = !!on;
+  /* Persist only real user toggles / forced open — not silent restore steps */
+  if(!opts.silent && typeof _saveAskBarPref === 'function') _saveAskBarPref(!!on);
   if(on){
     sec.classList.remove('askbar-off');
     sec.classList.add('askbar-on');
@@ -14747,8 +14781,8 @@ function newChat(){
   if(keys.length>10){
     keys.slice(0,keys.length-10).forEach(function(k){delete chatSessions[k];});
   }
-  /* Always restore empty home + remeasure Ask (fixes low offset after a chat) */
-  _restoreEmptyChatHome(true);
+  /* Empty home; Ask bar only if user left it on (default off on first install) */
+  _restoreEmptyChatHome();
 }
 // Opens a blank LLM chat (from + button in sidebar) without showing "What's on your mind?"
 function blankNewChat(){
