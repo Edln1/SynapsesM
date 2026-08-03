@@ -5361,168 +5361,54 @@ window.getWebAudioNode = getWebAudioNode;
 </div>
 
 <!-- Create Image modal — text-to-image generation, opened from the bottom nav -->
-<div id="imageGenModal" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;">
-
-  <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;">
-    <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <button id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </button>
-      <button onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
+<div id="imageGenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
+  <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:20px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:20px 18px 22px;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#d4d0ee;">Create Image</div>
+      <button onclick="closeImageGenModal()" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;">×</button>
     </div>
-  </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Describe what you want to see and generate it as an image.</div>
 
-  <!-- ══════════════════════════════════════════════════════════════════════
-       GENERATE TAB
-  ══════════════════════════════════════════════════════════════════════ -->
-  <div id="studioGenerateView" style="display:flex;flex-direction:column;flex:1;min-height:0;">
-
-    <!-- Template chips (horizontal scroll) -->
-    <div id="imageGenTemplateRow" style="display:flex;gap:10px;overflow-x:auto;padding:2px 14px 14px;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
-
-    <!-- Error banner -->
-    <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;flex-shrink:0;"></div>
-
-    <!-- Edit note (shown only when a reference photo is attached) -->
-    <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:0 14px 10px;flex-shrink:0;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
-
-    <!-- Results area (scrollable) -->
-    <div style="flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;">
-      <div id="imageGenEmptyState" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:100%;min-height:260px;color:var(--muted);text-align:center;padding:20px;"></div>
-      <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr;gap:10px;padding:2px 14px 16px;"></div>
+    <!-- Reference photo — "make an image like this but ___" / "next scene of this" -->
+    <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
+        <img id="imageGenRefPreview" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
+        <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+      <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--surface);border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
+        📎 <span id="imageGenRefLabelText">Attach a reference photo (optional) — describe the change below</span>
+        <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
+      </label>
     </div>
 
-    <!-- Settings sheet (slides up over the input bar) -->
-    <div id="imageGenSettingsSheet" style="display:none;flex-shrink:0;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Generation settings</div>
-        <button onclick="toggleImageGenSettingsSheet()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
-      </div>
+    <textarea id="imageGenPrompt" placeholder="A cozy cabin in a snowy forest at night, warm lights in the windows..." rows="3" style="width:100%;box-sizing:border-box;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;margin-bottom:12px;outline:none;"></textarea>
 
-      <!-- Reference photo attach -->
-      <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
-          <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
-          <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
-        </div>
-        <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
-          📎 <span id="imageGenRefLabelText">Attach a reference photo (optional)</span>
-          <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
-        </label>
-      </div>
+    <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:-6px 0 12px;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="flux" selected>Flux 1 — 0.002 pollen</option>
-          <option value="dreamshaper">DreamShaper 8 — 0.0001 pollen</option>
-          <option value="klein">Flux.2 Klein — 0.005 pollen</option>
-          <option value="gpt-image-2">GPT Image 2 — ~0.04 pollen</option>
-        </select>
-        <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="square">Square</option>
-          <option value="portrait">Portrait</option>
-          <option value="landscape">Landscape</option>
-        </select>
-        <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="1">1 image</option>
-          <option value="2">2 images</option>
-          <option value="4" selected>4 images</option>
-        </select>
-      </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <option value="flux" selected>Flux 1 — 0.002 pollen</option>
+        <option value="dreamshaper">DreamShaper 8 — 0.0001 pollen</option>
+        <option value="klein">Flux.2 Klein — 0.005 pollen</option>
+        <option value="gpt-image-2">GPT Image 2 — ~0.04 pollen</option>
+      </select>
+      <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <option value="square">Square</option>
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+      <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <option value="1">1 image</option>
+        <option value="2">2 images</option>
+        <option value="4" selected>4 images</option>
+      </select>
     </div>
 
-    <!-- Bottom input bar -->
-    <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);">
-      <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
-      <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
-        <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
-        <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
-      </div>
-    </div>
-  </div>
+    <button id="imageGenSubmitBtn" onclick="submitImageGen()" style="width:100%;padding:13px;background:rgba(124,106,247,0.16);border:1px solid rgba(124,106,247,0.4);border-radius:12px;color:rgba(255,255,255,0.95);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Generate</button>
 
-  <!-- ══════════════════════════════════════════════════════════════════════
-       COMMUNITY TAB — transplanted from the Builder Feed's photo/video gallery
-       (same socialPosts data, same Supabase `posts` table + `posts` bucket)
-  ══════════════════════════════════════════════════════════════════════ -->
-  <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;">
-    <div style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:0 14px 16px;">
+    <div id="imageGenError" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
 
-      <!-- Header — small button opens the Posts column, EXACT same width/min-width/
-           padding/overflow toggle + transition as the old matchConnectCol/toggleMatchConnect. -->
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin:4px 0 12px;color:var(--text);display:flex;align-items:center;gap:6px;">
-        🌐 Community Feed <span style="font-size:10px;font-weight:400;color:var(--muted);">all posts</span>
-        <div style="margin-left:auto;">
-          <button id="studioFeedToggleBtn" onclick="toggleStudioFeedPanel()" title="Show posts" style="width:32px;height:32px;flex-shrink:0;border-radius:9px;border:1px solid rgba(124,106,247,0.3);background:rgba(124,106,247,0.1);color:rgba(255,255,255,0.65);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Social composer -->
-
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:14px;">
-        <div style="display:flex;gap:9px;margin-bottom:9px;">
-          <div id="studioComposerAv" style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:white;font-size:12px;flex-shrink:0;">?</div>
-          <textarea id="studioSocialPostText" placeholder="Share a photo with the community…" style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;resize:none;height:56px;outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-        </div>
-        <div id="studioSocialMediaPreview" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:9px;"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <button onclick="document.getElementById('studioSocialMediaInput').click()" style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11.5px;cursor:pointer;">📷 Photo/Video</button>
-          <input type="file" id="studioSocialMediaInput" accept="image/*,video/*" multiple style="display:none;" onchange="studioSocialHandleMedia(event)">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <button id="studioGridToggleBtn" onclick="toggleStudioSocialGrid()" title="Toggle grid layout" style="width:28px;height:28px;flex-shrink:0;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-              <svg id="studioGridToggleIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg>
-            </button>
-            <button onclick="submitStudioSocialPost()" style="padding:6px 16px;background:var(--accent);border:none;border-radius:7px;color:white;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;">Post →</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="studioSocialFeedList" style="display:grid;"></div>
-    </div>
-
-    <!-- Posts column — EXACT same collapsible mechanic as the old matchConnectCol:
-         width/min-width/padding/overflow toggled with the same transition, body+label+
-         close-button shown/hidden the same way. This is where Collab/Hiring/Launch/
-         Feedback/Skill posts (feedPosts) live — same data + `posts` table as the
-         Builder Feed's #feedList. -->
-    <div id="studioFeedCol" style="width:0;min-width:0;flex-shrink:0;overflow:hidden;padding:0;transition:width .25s ease,min-width .25s ease,padding .25s ease;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div id="studioFeedLabel" style="overflow:hidden;transition:opacity .2s;display:none;">
-          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:3px;">📝 Posts</div>
-          <div style="font-size:11px;color:var(--muted);">Collab, hiring, launches &amp; more.</div>
-        </div>
-        <button id="studioFeedCloseBtn" onclick="toggleStudioFeedPanel()" title="Hide Posts" style="display:none;width:22px;height:22px;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:11px;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✕</button>
-      </div>
-      <div id="studioFeedBody" style="display:none;">
-        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:10px;">
-          <textarea id="studioFeedPostText" placeholder="Share a project, look for a collaborator, or post a hiring opening…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;resize:none;height:56px;outline:none;margin-bottom:9px;transition:border-color .15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <select id="studioFeedPostCat" style="flex:1;min-width:0;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:7px 8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;outline:none;">
-              <option value="collab">🤝 Looking for Collaborator</option>
-              <option value="hiring">💼 Hiring</option>
-              <option value="launch">🚀 Project Launch</option>
-              <option value="feedback">💬 Idea Feedback</option>
-              <option value="skill">⚡ Offering Skill</option>
-            </select>
-            <button onclick="submitStudioFeedPost()" style="padding:7px 16px;background:var(--accent);border:none;border-radius:7px;color:white;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;">Post →</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="feed-filter active" id="stf-all" onclick="filterFeed('all',this)">All</button>
-          <button class="feed-filter" id="stf-collab" onclick="filterFeed('collab',this)">Collab</button>
-          <button class="feed-filter" id="stf-hiring" onclick="filterFeed('hiring',this)">Hiring</button>
-          <button class="feed-filter" id="stf-launch" onclick="filterFeed('launch',this)">Launch</button>
-          <button class="feed-filter" id="stf-feedback" onclick="filterFeed('feedback',this)">Feedback</button>
-          <button class="feed-filter" id="stf-skill" onclick="filterFeed('skill',this)">Skill</button>
-        </div>
-        <div id="studioFeedList"></div>
-      </div>
-    </div>
+    <div id="imageGenResults" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;"></div>
   </div>
 </div>
 
@@ -7175,74 +7061,16 @@ function closeNavCustomizer(){
   document.getElementById('navCustomizerModal').style.display='none';
 }
 
-// ── Create Image (Studio) ───────────────────────────────────────────────────
+// ── Create Image ──────────────────────────────────────────────────────────
 var imageGenRefDataUrl = null; // base64 data URL of attached reference photo, or null
-
-// Quick-start templates shown as horizontal chips at the top of the Studio,
-// mirroring the "Glossy Product Shot / Chibi / Object Remover" row style.
-// Each swatch is a CSS gradient + emoji (no external images needed).
-var IMAGE_GEN_TEMPLATES = [
-  { label:'Fantasy Portrait', emoji:'🧝', swatch:'linear-gradient(135deg,#5b8def,#9b5bef)', prompt:'A cinematic fantasy portrait of ' },
-  { label:'Cyberpunk',        emoji:'🌆', swatch:'linear-gradient(135deg,#e85d96,#ff9f5b)', prompt:'A neon-lit cyberpunk cityscape scene of ' },
-  { label:'Anime Style',      emoji:'🎨', swatch:'linear-gradient(135deg,#ff9f5b,#f5d76e)', prompt:'A vibrant anime-style illustration of ' },
-  { label:'Retro Film',       emoji:'📷', swatch:'linear-gradient(135deg,#6ec6a6,#3fa9f5)', prompt:'A grainy retro 35mm film photo of ' }
-];
-
-function renderImageGenTemplates(){
-  var row = document.getElementById('imageGenTemplateRow');
-  if(!row || row.childElementCount) return; // render once
-  IMAGE_GEN_TEMPLATES.forEach(function(t){
-    var chip = document.createElement('button');
-    chip.type = 'button';
-    chip.title = t.label;
-    chip.style.cssText = 'flex-shrink:0;width:78px;display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;padding:0;';
-    chip.innerHTML =
-      '<span style="width:64px;height:64px;border-radius:14px;background:'+t.swatch+';display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 14px rgba(0,0,0,0.25);">'+t.emoji+'</span>' +
-      '<span style="font-family:\'DM Sans\',sans-serif;font-size:10.5px;font-weight:600;color:var(--text);line-height:1.2;text-align:center;">'+t.label+'</span>';
-    chip.onclick = function(){ applyImageGenTemplate(t); };
-    row.appendChild(chip);
-  });
-}
-
-function applyImageGenTemplate(t){
-  var promptEl = document.getElementById('imageGenPrompt');
-  promptEl.value = t.prompt;
-  promptEl.focus();
-  // Cursor at the end so the person can just keep typing the subject.
-  var len = promptEl.value.length;
-  try{ promptEl.setSelectionRange(len, len); }catch(e){}
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
-}
-
-function toggleImageGenSettingsSheet(){
-  var sheet = document.getElementById('imageGenSettingsSheet');
-  sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
-}
-
-function resetImageGenStudio(){
-  document.getElementById('imageGenPrompt').value = '';
-  document.getElementById('imageGenResults').innerHTML = '';
-  document.getElementById('imageGenResults').style.display = 'none';
-  document.getElementById('imageGenEmptyState').style.display = 'flex';
-  document.getElementById('imageGenError').style.display = 'none';
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
-  document.getElementById('imageGenModel').value = 'flux';
-  document.getElementById('imageGenAspect').value = 'square';
-  document.getElementById('imageGenCount').value = '4';
-  clearImageGenRef();
-  document.getElementById('imageGenPrompt').focus();
-}
 
 function openImageGenModal(){
   closeMobileMore();
-  renderImageGenTemplates();
-  switchStudioTab('generate');
   document.getElementById('imageGenModal').style.display='flex';
   setTimeout(function(){ document.getElementById('imageGenPrompt').focus(); }, 50);
 }
 function closeImageGenModal(){
   document.getElementById('imageGenModal').style.display='none';
-  document.getElementById('imageGenSettingsSheet').style.display='none';
   clearImageGenRef();
 }
 
@@ -7279,7 +7107,7 @@ function clearImageGenRef(){
   imageGenRefDataUrl = null;
   document.getElementById('imageGenRefInput').value = '';
   document.getElementById('imageGenRefPreviewWrap').style.display = 'none';
-  document.getElementById('imageGenRefLabelText').textContent = 'Attach a reference photo (optional)';
+  document.getElementById('imageGenRefLabelText').textContent = 'Attach a reference photo (optional) — describe the change below';
   document.getElementById('imageGenEditNote').style.display = 'none';
   document.getElementById('imageGenPrompt').placeholder = 'A cozy cabin in a snowy forest at night, warm lights in the windows...';
 }
@@ -7299,12 +7127,9 @@ async function submitImageGen(){
   var aspect = document.getElementById('imageGenAspect').value;
   var count = document.getElementById('imageGenCount').value;
   var model = document.getElementById('imageGenModel').value;
-  var origLabel = btn.innerHTML;
+  var origLabel = btn.textContent;
   btn.disabled = true;
-  btn.innerHTML = '<span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>';
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
-  document.getElementById('imageGenEmptyState').style.display = 'none';
-  resultsEl.style.display = 'grid';
+  btn.textContent = 'Generating…';
   resultsEl.innerHTML = '';
   try{
     var uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : (localStorage.getItem('synapses_anon_id') || '');
@@ -7336,17 +7161,13 @@ async function submitImageGen(){
     if(!images.length){
       errEl.textContent = 'No images came back — try again.';
       errEl.style.display = 'block';
-      resultsEl.style.display = 'none';
-      document.getElementById('imageGenEmptyState').style.display = 'flex';
     }
   }catch(e){
     errEl.textContent = e.message || 'Something went wrong.';
     errEl.style.display = 'block';
-    resultsEl.style.display = 'none';
-    document.getElementById('imageGenEmptyState').style.display = 'flex';
   }finally{
     btn.disabled = false;
-    btn.innerHTML = origLabel;
+    btn.textContent = origLabel;
   }
 }
 
@@ -7359,251 +7180,6 @@ function downloadGeneratedImage(dataUrl, filename){
   a.remove();
 }
 // ── End Create Image ──────────────────────────────────────────────────────
-
-// ── Studio tabs ──────────────────────────────────────────────────────────
-// Small toggle button that opens the Posts column (Collab/Hiring/Launch/Feedback/Skill
-// feed) inside Studio's Community tab — this is a direct port of the old
-// matchConnectCol/toggleMatchConnect mechanic: same width/min-width/padding/overflow
-// toggle, same transition, same show/hide of a label + body + close button.
-var _studioFeedVisible = false;
-function toggleStudioFeedPanel(){
-  _studioFeedVisible = !_studioFeedVisible;
-  var col      = document.getElementById('studioFeedCol');
-  var body     = document.getElementById('studioFeedBody');
-  var label    = document.getElementById('studioFeedLabel');
-  var closeBtn = document.getElementById('studioFeedCloseBtn');
-  var openBtn  = document.getElementById('studioFeedToggleBtn');
-  if(!col) return;
-  if(!_studioFeedVisible){
-    col.style.width='0'; col.style.minWidth='0'; col.style.padding='0'; col.style.overflow='hidden';
-    if(body)     body.style.display='none';
-    if(label)    label.style.display='none';
-    if(closeBtn) closeBtn.style.display='none';
-    if(openBtn){ openBtn.style.background='rgba(124,106,247,0.1)'; openBtn.style.borderColor='rgba(124,106,247,0.3)'; openBtn.style.color='rgba(255,255,255,0.65)'; openBtn.title='Show posts'; }
-  } else {
-    col.style.width='280px'; col.style.minWidth='180px'; col.style.padding='18px 16px'; col.style.overflow='';
-    if(body)     body.style.display='';
-    if(label)    label.style.display='';
-    if(closeBtn) closeBtn.style.display='flex';
-    if(openBtn){ openBtn.style.background='rgba(124,106,247,0.22)'; openBtn.style.borderColor='rgba(124,106,247,0.6)'; openBtn.style.color='#fff'; openBtn.title='Hide posts'; }
-    renderFeed();
-  }
-}
-
-function switchStudioTab(tab){
-  var glassBtn = document.getElementById('studioCommunityGlassBtn');
-  var genView = document.getElementById('studioGenerateView');
-  var comView = document.getElementById('studioCommunityView');
-  // Toggle: clicking the glass button while already on community goes back to generate.
-  if(tab === 'community' && comView.style.display === 'flex'){
-    tab = 'generate';
-  }
-  if(tab === 'community'){
-    genView.style.display = 'none';
-    comView.style.display = 'flex';
-    if(glassBtn){
-      glassBtn.style.background = 'rgba(124,106,247,0.2)';
-      glassBtn.style.borderColor = 'rgba(124,106,247,0.5)';
-      glassBtn.style.color = '#fff';
-    }
-    renderStudioSocialFeed();
-    if(typeof renderFeed==='function') renderFeed();
-  } else {
-    comView.style.display = 'none';
-    genView.style.display = 'flex';
-    if(glassBtn){
-      glassBtn.style.background = 'rgba(255,255,255,0.05)';
-      glassBtn.style.borderColor = 'rgba(255,255,255,0.1)';
-      glassBtn.style.color = 'var(--muted)';
-    }
-  }
-}
-
-// ── Studio · Community tab ──────────────────────────────────────────────────
-// Transplanted from the Builder Feed's photo/video gallery (#communityFeedCol).
-// Reuses the same `socialPosts` array, the same `posts` Supabase table, and
-// the same `posts` storage bucket — this is the SAME feed, just mounted here
-// too, so a post made from either place shows up in both.
-var _studioSocialMediaFiles = [];
-var _studioSocialGridSize = 1;
-
-function studioSocialHandleMedia(e){
-  var files = Array.from(e.target.files);
-  _studioSocialMediaFiles = _studioSocialMediaFiles.concat(files).slice(0, 9);
-  _studioRenderMediaPreview();
-  e.target.value = '';
-}
-function studioSocialRemoveMedia(i){
-  _studioSocialMediaFiles.splice(i, 1);
-  _studioRenderMediaPreview();
-}
-function _studioRenderMediaPreview(){
-  var preview = document.getElementById('studioSocialMediaPreview');
-  if(!preview) return;
-  if(!_studioSocialMediaFiles.length){ preview.style.display = 'none'; preview.innerHTML = ''; return; }
-  preview.style.display = 'flex';
-  preview.innerHTML = _studioSocialMediaFiles.map(function(f, i){
-    var url = URL.createObjectURL(f);
-    var isVideo = f.type.startsWith('video');
-    return '<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;flex-shrink:0;">' +
-      (isVideo
-        ? '<video src="'+url+'" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">▶</div>'
-        : '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;">') +
-      '<button onclick="studioSocialRemoveMedia('+i+')" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>' +
-    '</div>';
-  }).join('');
-}
-
-function toggleStudioSocialGrid(){
-  _studioSocialGridSize = (_studioSocialGridSize + 1) % 3;
-  var list = document.getElementById('studioSocialFeedList');
-  var btn  = document.getElementById('studioGridToggleBtn');
-  var icon = document.getElementById('studioGridToggleIcon');
-  if(!list) return;
-  var cols = [3,4,5][_studioSocialGridSize];
-  var gap  = ['6px','4px','3px'][_studioSocialGridSize];
-  list.style.gridTemplateColumns = 'repeat('+cols+',1fr)';
-  list.style.gap = gap;
-  var active = _studioSocialGridSize > 0;
-  if(btn){ btn.style.background=active?'rgba(124,106,247,0.15)':'rgba(255,255,255,0.04)'; btn.style.borderColor=active?'rgba(124,106,247,0.4)':'rgba(255,255,255,0.1)'; btn.style.color=active?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.45)'; }
-  var r3='<rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/>';
-  var r4='<rect x="2" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="18.5" width="3.5" height="3.5" rx="0.7"/>';
-  var r5='<rect x="1" y="1" width="3" height="3" rx="0.6"/><rect x="5.5" y="1" width="3" height="3" rx="0.6"/><rect x="10" y="1" width="3" height="3" rx="0.6"/><rect x="14.5" y="1" width="3" height="3" rx="0.6"/><rect x="19" y="1" width="3" height="3" rx="0.6"/><rect x="1" y="5.5" width="3" height="3" rx="0.6"/><rect x="5.5" y="5.5" width="3" height="3" rx="0.6"/><rect x="10" y="5.5" width="3" height="3" rx="0.6"/><rect x="14.5" y="5.5" width="3" height="3" rx="0.6"/><rect x="19" y="5.5" width="3" height="3" rx="0.6"/><rect x="1" y="10" width="3" height="3" rx="0.6"/><rect x="5.5" y="10" width="3" height="3" rx="0.6"/><rect x="10" y="10" width="3" height="3" rx="0.6"/><rect x="14.5" y="10" width="3" height="3" rx="0.6"/><rect x="19" y="10" width="3" height="3" rx="0.6"/><rect x="1" y="14.5" width="3" height="3" rx="0.6"/><rect x="5.5" y="14.5" width="3" height="3" rx="0.6"/><rect x="10" y="14.5" width="3" height="3" rx="0.6"/><rect x="14.5" y="14.5" width="3" height="3" rx="0.6"/><rect x="19" y="14.5" width="3" height="3" rx="0.6"/>';
-  if(icon) icon.innerHTML = [r3,r4,r5][_studioSocialGridSize];
-  var tiles = list.querySelectorAll('.sf-tile');
-  tiles.forEach(function(t, i){
-    t.classList.remove('grid-resizing');
-    void t.offsetWidth;
-    t.style.animationDelay = (i * 28) + 'ms';
-    t.classList.add('grid-resizing');
-    t.addEventListener('animationend', function(){ t.classList.remove('grid-resizing'); t.style.animationDelay=''; }, {once:true});
-  });
-}
-
-function renderStudioSocialFeed(){
-  var list = document.getElementById('studioSocialFeedList');
-  if(!list) return;
-  if(!window._studioSocialGridInit){
-    window._studioSocialGridInit = true;
-    list.style.gridTemplateColumns = 'repeat(4,1fr)';
-    list.style.gap = '4px';
-  }
-  var av = document.getElementById('studioComposerAv');
-  if(av && currentUser){
-    if(currentUser.avatar){
-      av.textContent = '';
-      av.style.background = currentUser.color;
-      av.style.backgroundImage = 'url('+currentUser.avatar+')';
-      av.style.backgroundSize = 'cover';
-      av.style.backgroundPosition = 'center';
-    } else {
-      av.textContent = currentUser.initial;
-      av.style.background = currentUser.color;
-      av.style.backgroundImage = '';
-    }
-  }
-  if(!socialPosts.length){ list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;grid-column:1/-1;">No posts yet. Say something!</div>'; return; }
-  var mediaPosts = socialPosts.filter(function(p){ return p.media && p.media.length > 0; });
-  if(!mediaPosts.length){ list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;grid-column:1/-1;">No photo or video posts yet.</div>'; return; }
-  list.innerHTML = mediaPosts.map(function(p){
-    var liked = currentUser && p.likedBy.has(currentUser.email);
-    var m = p.media[0];
-    var thumbHtml = m.type === 'video'
-      ? '<video src="'+m.url+'" autoplay muted loop playsinline class="sf-thumb-video"></video>'
-      : '<img src="'+m.url+'" class="sf-thumb" loading="lazy">';
-    var avStyle = 'background:'+p.color+';';
-    if(p.avatar) avStyle += 'background-image:url('+p.avatar+');background-size:cover;background-position:center;';
-    var textHtml = esc(p.text).replace(/\n/g, '<br>');
-    return '<div class="sf-tile">' +
-      thumbHtml +
-      '<div class="sf-body">' +
-        '<div class="sf-author" onclick="showMiniProfile(\''+p.email+'\',\''+p.name+'\',\''+p.color+'\',\''+p.initial+'\')" style="cursor:pointer;">' +
-          '<div class="sf-av" style="'+avStyle+'">'+getUserAvatarContent(p.email, p.initial)+'</div>' +
-          '<div style="min-width:0;flex:1;">' +
-            '<div class="sf-name">'+esc(p.name)+'</div>' +
-            '<div class="sf-time">'+p.time+'</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="sf-text">'+textHtml+'</div>' +
-      '</div>' +
-      '<div class="sf-actions">' +
-        '<button onclick="likeSocialPost(\''+p.id+'\')" style="color:'+(liked?'#e85d96':'var(--muted)')+';">'+(liked?'❤️':'🤍')+' '+p.likes+'</button>' +
-        '<button onclick="toggleStudioSocialComments(\''+p.id+'\')" style="color:var(--muted);">💬 '+p.comments.length+'</button>' +
-        (currentUser && p.email === currentUser.email ? '<button onclick="deleteSocialPost(\''+p.id+'\')" style="color:rgba(232,93,150,0.7);margin-left:auto;">🗑</button>' : '') +
-      '</div>' +
-      '<div id="stsc_'+p.id+'" style="display:none;padding:0 9px 9px;">' +
-        p.comments.map(function(c){ return '<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>'; }).join('') +
-        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="stsci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;outline:none;" onkeydown="if(event.key===\'Enter\'){addStudioSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addStudioSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;cursor:pointer;">→</button></div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function toggleStudioSocialComments(id){
-  var el = document.getElementById('stsc_'+id);
-  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-function addStudioSocialComment(id){
-  if(!currentUser) return;
-  var inp = document.getElementById('stsci_'+id);
-  if(!inp || !inp.value.trim()) return;
-  var p = socialPosts.find(function(x){ return x.id === id; });
-  if(!p) return;
-  p.comments.push({name: currentUser.name, color: currentUser.color, initial: currentUser.initial, text: inp.value.trim()});
-  inp.value = '';
-  renderStudioSocialFeed();
-  if(typeof renderSocialFeed === 'function') renderSocialFeed();
-  setTimeout(function(){ var el = document.getElementById('stsc_'+id); if(el) el.style.display = 'block'; }, 0);
-}
-
-function submitStudioSocialPost(){
-  if(!currentUser){ showToast('Sign in to post.'); return; }
-  var text = document.getElementById('studioSocialPostText').value.trim();
-  var files = _studioSocialMediaFiles.slice();
-  if(!text && files.length === 0){ showToast('Write something or add a photo.'); return; }
-  var base64Promises = files.map(function(f){
-    return new Promise(function(res){
-      var reader = new FileReader();
-      var mediaType = f.type.startsWith('video') ? 'video' : 'image';
-      reader.onload = function(ev){ res({url: ev.target.result, type: mediaType, file: f}); };
-      reader.readAsDataURL(f);
-    });
-  });
-  Promise.all(base64Promises).then(function(localMedia){
-    var tempId = 'sp_'+Date.now();
-    var localUrls = localMedia.map(function(m){ return {url: m.url, type: m.type}; });
-    document.getElementById('studioSocialPostText').value = '';
-    _studioSocialMediaFiles = [];
-    _studioRenderMediaPreview();
-    if(localUrls.length){
-      socialPosts.unshift({id: tempId, email: currentUser.email, name: currentUser.name, color: currentUser.color, initial: currentUser.initial, text: text, time: 'just now', likes: 0, likedBy: new Set(), comments: [], card: null, media: localUrls});
-      renderStudioSocialFeed();
-      if(typeof renderSocialFeed === 'function') renderSocialFeed();
-    }
-    showToast('Posted!');
-    if(localMedia.length > 0){
-      var uploadPromises = localMedia.map(function(m, i){
-        var ext = m.file.name.split('.').pop() || 'jpg';
-        var path = currentUser.id+'/post_'+tempId+'_'+i+'.'+ext;
-        return _supabase.storage.from('posts').upload(path, m.file, {contentType: m.file.type}).then(function(r){
-          if(r.error){ console.error('Storage upload error:', r.error); return {url: m.url, type: m.type}; }
-          var pub = _supabase.storage.from('posts').getPublicUrl(path);
-          return {url: pub.data.publicUrl, type: m.type};
-        });
-      });
-      Promise.all(uploadPromises).then(function(finalUrls){
-        _supabase.from('posts').insert({user_id: currentUser.id, user_email: currentUser.email, user_name: currentUser.name, user_color: currentUser.color, user_avatar: currentUser.avatar || null, content: text, type: 'social', media_urls: finalUrls, likes: [], liked_by: [], comments: [], applies: []}).then(function(r){
-          if(r.error) console.error('Post save error:', r.error.message);
-        });
-      });
-    } else if(text) {
-      _supabase.from('posts').insert({user_id: currentUser.id, user_email: currentUser.email, user_name: currentUser.name, user_color: currentUser.color, user_avatar: currentUser.avatar || null, content: text, type: 'social', media_urls: [], likes: [], liked_by: [], comments: [], applies: []}).then(function(r){
-        if(r.error) console.error('Post save error:', r.error.message);
-      });
-    }
-  });
-}
-// ── End Studio · Community tab ──────────────────────────────────────────────
 
 function renderCustomizerPanels(){
   var atBottom = document.body.classList.contains('bottom-nav');
@@ -18001,25 +17577,19 @@ function _buildFeedFromRaw(data,profileMap,coverMap){
     _feedLoaded=true;_feedFetching=false;
 }
 function timeAgo(ts){var d=new Date(ts),n=new Date(),s=Math.floor((n-d)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
-function _submitFeedPostCore(textElId,catElId){
-  if(!currentUser){showToast('⚠️ Sign in to post.');return;}
-  var textEl=document.getElementById(textElId),catEl=document.getElementById(catElId);
-  var text=textEl.value.trim(),cat=catEl.value;
-  if(!text){showToast('⚠️ Write something first.');return;}
-  textEl.value='';
+function submitPost(){if(!currentUser){showToast('⚠️ Sign in to post.');return;}var text=document.getElementById('feedPostText').value.trim(),cat=document.getElementById('feedPostCat').value;if(!text){showToast('⚠️ Write something first.');return;}
   var useVideo=getPostMediaPref()==='video';
   var coverVid=useVideo?(currentUser.coverVideo||null):null;
   var tempId='fp_tmp_'+Date.now();
   feedPosts.unshift({id:tempId,email:currentUser.email,name:currentUser.name,color:currentUser.color,initial:currentUser.initial,avatar:currentUser.avatar||null,coverVideo:coverVid,cat:cat,text:text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]});
+  document.getElementById('feedPostText').value='';
   renderFeed();
   showToast('🚀 Posted!');
   _supabase.from('posts').insert({user_id:currentUser.id,user_email:currentUser.email,user_name:currentUser.name,user_color:currentUser.color,user_avatar:currentUser.avatar||null,user_cover_video:coverVid,content:text,type:cat,likes:[],liked_by:[],comments:[],applies:[]}).then(function(r){
     if(r.error){showToast('⚠️ Failed to post.');feedPosts=feedPosts.filter(function(p){return p.id!==tempId;});renderFeed();return;}
-    if(r.data&&r.data[0]){var real=r.data[0];feedPosts=feedPosts.map(function(p){return p.id===tempId?{id:real.id,email:p.email,name:p.name,color:p.color,initial:p.initial,avatar:p.avatar,coverVideo:p.coverVideo,cat:p.cat,text:p.text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]}:p;});renderFeed();}
+    if(r.data&&r.data[0]){var real=r.data[0];feedPosts=feedPosts.map(function(p){return p.id===tempId?{id:real.id,email:p.email,name:p.name,color:p.color,initial:p.initial,avatar:p.avatar,coverVideo:p.coverVideo,cat:p.cat,text:p.text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]}:p;});}
   });
 }
-function submitPost(){ _submitFeedPostCore('feedPostText','feedPostCat'); }
-function submitStudioFeedPost(){ _submitFeedPostCore('studioFeedPostText','studioFeedPostCat'); }
 
 function seedSocialPosts(){
   if(socialPosts.length)return;
@@ -18087,7 +17657,6 @@ function seedSocialPosts(){
   });
 }
 function renderSocialFeed(){
-  if(document.getElementById('studioSocialFeedList')) renderStudioSocialFeed();
   var list=document.getElementById('socialFeedList');if(!list)return;
   if(!window._socialGridInit){
     window._socialGridInit=true;
@@ -18349,10 +17918,6 @@ function filterFeed(cat,btn){
   var filterMap={'all':'ff-all','collab':'ff-collab','hiring':'ff-hiring','launch':'ff-launch','feedback':'ff-feedback','skill':'ff-skill'};
   var filterId=filterMap[cat];
   if(filterId){var fb=document.getElementById(filterId);if(fb)fb.classList.add('active');}
-  // Sync the Studio Community tab's copy of the filter chips too
-  var stfMap={'all':'stf-all','collab':'stf-collab','hiring':'stf-hiring','launch':'stf-launch','feedback':'stf-feedback','skill':'stf-skill'};
-  var stfId=stfMap[cat];
-  if(stfId){var sfb=document.getElementById(stfId);if(sfb)sfb.classList.add('active');}
   renderFeed();
 }
 function renderFeed(){
@@ -18385,13 +17950,10 @@ function renderFeed(){
   var tt=document.getElementById('trendingTags');
   if(tt){var tags=['#AI','#OpenSource','#React','#Collab','#LLM','#Startup','#RemoteWork'];tt.innerHTML=tags.map(function(t){return'<span onclick="document.getElementById(\'feedPostText\').value+=\''+t+' \';document.getElementById(\'feedPostText\').focus();" style="display:inline-block;padding:4px 10px;border-radius:100px;background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.2);color:rgba(255,255,255,0.65);font-size:11px;font-family:\'DM Sans\',sans-serif;margin:0 4px 6px 0;cursor:pointer;transition:all .15s;" onmouseover="this.style.background=\'rgba(124,106,247,0.2)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.1)\'">'+t+'</span>';}).join('');}
   // Posts
-  var list=document.getElementById('feedList');
+  var list=document.getElementById('feedList');if(!list)return;
   var posts=feedFilter==='all'?feedPosts:feedPosts.filter(function(p){return p.cat===feedFilter;});
-  var _feedHtml=posts.length?posts.map(buildPostHTML).join(''):'<div style="text-align:center;padding:40px;color:var(--muted)">No posts yet. Be the first!</div>';
-  if(list)list.innerHTML=_feedHtml;
-  // Mirror into the Studio Community tab's Posts section (same feedPosts data/filter)
-  var stuList=document.getElementById('studioFeedList');
-  if(stuList)stuList.innerHTML=posts.length?posts.map(buildPostHTML).join(''):'<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;">No posts yet. Be the first!</div>';
+  if(!posts.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No posts yet. Be the first!</div>';return;}
+  list.innerHTML=posts.map(buildPostHTML).join('');
 }
 
 function reactPost(id){if(!currentUser)return;var p=feedPosts.find(function(x){return x.id===id;});if(!p)return;var liked=p.reactedBy.has(currentUser.email);liked?p.reactedBy.delete(currentUser.email):p.reactedBy.add(currentUser.email);p.reactions=p.reactedBy.size;_supabase.from('posts').update({likes:p.reactions,liked_by:[...p.reactedBy]}).eq('id',id).then(function(){renderFeed();});
