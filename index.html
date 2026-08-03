@@ -5597,7 +5597,7 @@ window.getWebAudioNode = getWebAudioNode;
       <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
-      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Clear studio history" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🗑</button>
+      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Clear studio history" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
     </div>
   </div>
 
@@ -7694,7 +7694,7 @@ function downloadGeneratedImage(dataUrl, filename){
 // ── Studio image history: always local cache (survives reset) + optional cloud ─
 var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history'; // legacy
 var STUDIO_IMAGE_CACHE_KEY = 'synapses_studio_image_cache_v1';
-var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use 🗑 to clear; no 100-image pileups
+var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use ⟲ to clear (with confirm); no 100-image pileups
 
 function _dataUrlToBlob(dataUrl){
   var parts = dataUrl.split(',');
