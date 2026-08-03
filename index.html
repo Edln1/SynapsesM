@@ -713,6 +713,15 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
+  /* Mobile only: no divider under top bar on home / “What's on your mind?”
+     PC keeps the line + original glass shade. */
+  .main:has(#sec-welcome.active) .top-bar,
+  body:has(#sec-welcome.active) .top-bar,
+  .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+  body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+    border-bottom-color:transparent!important;
+    border-bottom-width:0!important;
+  }
 
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -3318,14 +3327,6 @@ html.android-status-blend .top-bar{
   backdrop-filter:blur(16px) saturate(150%)!important;
   -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
-}
-/* Home / chat empty only: no divider under top bar above “What's on your mind?” */
-.main:has(#sec-welcome.active) .top-bar,
-body:has(#sec-welcome.active) .top-bar,
-.main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
-body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
-  border-bottom-color:transparent!important;
-  border-bottom-width:0!important;
 }
 /* Do not restyle #dayNightToggle — size/margin unchanged */
 html.android-status-blend #dayNightToggle{
