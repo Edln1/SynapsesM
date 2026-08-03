@@ -7496,7 +7496,9 @@ function closeImageGenModal(){
   modal.style.opacity = '0';
   // Glide STS home while Studio fades out (not a snap)
   if(typeof window._tnvReturnFromModal === 'function') window._tnvReturnFromModal();
-  // Restore main-app status bar chrome
+  // Hide studio first so status restore can't think Studio is still open
+  try{ modal.style.display = 'none'; }catch(_d){}
+  // Restore solid main/home status bar (not transparent)
   try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(false); }catch(_s){}
   setTimeout(function(){
     modal.style.display = 'none';
@@ -9364,14 +9366,18 @@ function mobileAutoCollapse(){
   }
 }
 var _hasLoadedOnce=false;function goHome(){
-  // Leaving Studio → home: put STS bubble back on the front page (placement logic unchanged)
+  // Leaving Studio → home: glide STS back + restore solid main status bar
   try{
     var ig=document.getElementById('imageGenModal');
-    if(ig&&(ig.style.display==='flex'||ig.style.display==='block')){
+    if(ig&&(ig.style.display==='flex'||ig.style.display==='block'||parseFloat(ig.style.opacity||'0')>0.01)){
       if(typeof closeImageGenModal==='function') closeImageGenModal();
-      else if(typeof window._tnvReturnFromModal==='function') window._tnvReturnFromModal();
-    } else if(typeof window._tnvReturnFromModal==='function'){
-      window._tnvReturnFromModal();
+      else {
+        if(typeof window._tnvReturnFromModal==='function') window._tnvReturnFromModal();
+        if(typeof _setAndroidStatusBarStudio==='function') _setAndroidStatusBarStudio(false);
+      }
+    } else {
+      if(typeof window._tnvReturnFromModal==='function') window._tnvReturnFromModal();
+      if(typeof _applyMainStatusBarChrome==='function') _applyMainStatusBarChrome(localStorage.getItem('_appTheme')||'easyview');
     }
   }catch(_ig){}
   mobileAutoCollapse();setView('sec-welcome');var _nb=document.getElementById('nav-home');_nb.classList.add('active');if(_hasLoadedOnce)triggerNavGlow(_nb);_hasLoadedOnce=true;document.getElementById('topTitle').textContent='AI Tools Hub';document.getElementById('topTitle').style.opacity='1';document.getElementById('topTitle').style.display='';document.getElementById('topTitle').style.color='';document.getElementById('topTitle').style.letterSpacing='';document.getElementById('topTitle').style.display='';var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';setTimeout(renderHomeRecent,80);}
@@ -28308,21 +28314,13 @@ function toggleDayNight(){
   _syncAndroidStatusBarForTheme(next);
 }
 /**
- * Main app status bar chrome.
- * Sun: dark #0a0a0e matching top-bar glass. Moon: white + dark icons.
- * Studio uses transparent (see _setAndroidStatusBarStudio).
+ * HOME / main pages only — solid status bar matching header glass (NOT transparent).
+ * Sun: #0a0a0e + light icons. Moon: #FFFFFF + dark icons.
+ * Studio is separate: see _setAndroidStatusBarStudio(true) for transparent blend.
  */
-function _syncAndroidStatusBarForTheme(t){
+function _applyMainStatusBarChrome(t){
   try{
     if(!/Android/i.test(navigator.userAgent||'')) return;
-    // If Studio is open, keep transparent blend — don't override
-    try{
-      var ig = document.getElementById('imageGenModal');
-      if(ig && (ig.style.display === 'flex' || ig.style.display === 'block')){
-        _setAndroidStatusBarStudio(true);
-        return;
-      }
-    }catch(_ig){}
     var isMoon = (t === 'purple');
     var color = isMoon ? '#FFFFFF' : '#0a0a0e';
     var style = isMoon ? 'dark' : 'light';
@@ -28338,7 +28336,18 @@ function _syncAndroidStatusBarForTheme(t){
     }catch(_m){}
   }catch(e){}
 }
-/** Studio open: transparent status bar so Studio header blends under icons again. */
+function _syncAndroidStatusBarForTheme(t){
+  try{
+    // While Studio is open, leave transparent alone (don't re-apply solid)
+    var ig = document.getElementById('imageGenModal');
+    if(ig && (ig.style.display === 'flex' || ig.style.display === 'block') && parseFloat(ig.style.opacity||'1') > 0.05){
+      return;
+    }
+  }catch(_ig){}
+  _applyMainStatusBarChrome(t || localStorage.getItem('_appTheme') || 'easyview');
+}
+/** Studio ONLY: transparent notification bar so Studio header blends under system icons.
+ *  Main/home pages never use this — they use solid header-matching chrome. */
 function _setAndroidStatusBarStudio(on){
   try{
     if(!/Android/i.test(navigator.userAgent||'')) return;
@@ -28354,12 +28363,13 @@ function _setAndroidStatusBarStudio(on){
         if(meta) meta.setAttribute('content', '#000000');
       }catch(_m){}
     } else {
-      var t = localStorage.getItem('_appTheme') || 'easyview';
-      _syncAndroidStatusBarForTheme(t);
+      // Always restore solid main chrome (do NOT call through studio-open guard)
+      _applyMainStatusBarChrome(localStorage.getItem('_appTheme') || 'easyview');
     }
   }catch(e){}
 }
 window._setAndroidStatusBarStudio = _setAndroidStatusBarStudio;
+window._applyMainStatusBarChrome = _applyMainStatusBarChrome;
 function _syncDayNightToggle(t){
   var wrap  = document.getElementById('dayNightToggle');
   var left  = document.getElementById('dnt-left');
