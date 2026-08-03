@@ -713,14 +713,30 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
-  /* Mobile only: no divider under top bar on home / “What's on your mind?”
-     PC keeps the line + original glass shade. */
+  /* Mobile only: top bar fully blends with wallpaper (no glass overlay / no line)
+     on home / “What's on your mind?”. PC keeps glass shade + divider. */
   .main:has(#sec-welcome.active) .top-bar,
   body:has(#sec-welcome.active) .top-bar,
   .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
   body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
     border-bottom-color:transparent!important;
     border-bottom-width:0!important;
+    box-shadow:none!important;
+  }
+  /* Android blend was forcing a dark glass fill — kill it on home only */
+  html.android-status-blend .main:has(#sec-welcome.active) .top-bar,
+  html.android-status-blend body:has(#sec-welcome.active) .top-bar,
+  html.android-status-blend .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+  html.android-status-blend body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    border-bottom-color:transparent!important;
+    border-bottom-width:0!important;
+    box-shadow:none!important;
   }
 
   /* ── Home input: desktop-style rectangle on mobile ── */
