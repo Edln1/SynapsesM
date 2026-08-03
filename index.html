@@ -1878,8 +1878,9 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .applicant-name{font-size:13.5px;font-weight:600;margin-bottom:2px;}
 .applicant-email{font-size:12px;color:var(--muted);}
 #sec-chat,#sec-coach{overflow:hidden;}
-/* ── Beams Background ── */
-#chatBeamsWrap{display:none;}
+/* ── Beams Background (re-enabled, now properly positioned as an overlay) ── */
+#chatBeamsWrap{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+#chatBeamsCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
 #chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
@@ -1914,7 +1915,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-composer textarea:focus{border-color:var(--accent);}
 .feed-composer-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .feed-cat-select{flex:1;background:#000000;border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;cursor:pointer;min-width:160px;}
-.feed-post-btn{padding:9px 20px;background:rgba(99,102,241,0.13);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:rgba(255,255,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.feed-post-btn{padding:9px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .feed-post-btn:hover{opacity:.88;}
 .post-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;animation:fadeUp .3s ease;}
 .post-card:hover{border-color:rgba(124,106,247,0.2);}
@@ -1944,7 +1945,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:14px;scrollbar-width:none;padding-bottom:2px;}
 .feed-filter{padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10.5px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .feed-filter:hover{border-color:var(--accent);color:var(--text);}
-.feed-filter.active{background:var(--accent);border-color:var(--accent);color:white;}
+.feed-filter.active{background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(255,255,255,0.22);color:var(--text);}
 .match-card{background:rgba(255,255,255,0.012);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;transition:all .2s;box-shadow:none;}
 .match-card:hover{background:rgba(255,255,255,0.025);border-color:rgba(255,255,255,0.09);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
 .match-score-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;border:2px solid;}
@@ -1963,12 +1964,12 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-composer textarea:focus{border-color:var(--accent);}
 .feed-composer-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .feed-cat-select{flex:1;background:rgba(255,255,255,0.012);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;cursor:pointer;min-width:160px;}
-.feed-post-btn{padding:9px 20px;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s;}
+.feed-post-btn{padding:9px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .feed-post-btn:hover{opacity:.88;}
 .feed-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:14px;scrollbar-width:none;padding-bottom:2px;}
 .feed-filter{padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10.5px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .feed-filter:hover{border-color:var(--accent);color:var(--text);}
-.feed-filter.active{background:var(--accent);border-color:var(--accent);color:white;}
+.feed-filter.active{background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(255,255,255,0.22);color:var(--text);}
 .post-card{background:rgba(255,255,255,0.012);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:11px 13px;margin-bottom:7px;transition:all .2s;}
 .post-card:hover{background:rgba(255,255,255,0.025);border-color:rgba(255,255,255,0.09);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
 .post-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px;}
@@ -3243,7 +3244,6 @@ body.voice-live .syn-fp-icon{
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
 #chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas{opacity:0;transition:opacity 1.4s ease;}
-#chatBeamsWrap{display:none!important;}
 html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
@@ -5363,8 +5363,18 @@ window.getWebAudioNode = getWebAudioNode;
 <!-- Create Image modal — text-to-image generation, opened from the bottom nav -->
 <div id="imageGenModal" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;">
 
+  <!-- Background layers — sit at modal level (not inside studioCommunityView) so they
+       extend behind the top bar too. Hidden/faded on Generate tab, faded in on Community. -->
+  <div id="studioBgLayer" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .6s ease;">
+    <canvas id="studioFlowCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+    <div id="studioBeamsWrap" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;">
+      <canvas id="studioBeamsCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(99,102,241,.08) 0%,transparent 70%);pointer-events:none;"></div>
+    </div>
+  </div>
+
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;">
+  <div style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;background:transparent;">
     <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
@@ -5408,28 +5418,28 @@ window.getWebAudioNode = getWebAudioNode;
           <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
           <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
         </div>
-        <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:#15151c;border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
+        <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
           📎 <span id="imageGenRefLabelText">Attach a reference photo (optional)</span>
           <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
         </label>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:#15151c;border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="flux" selected style="background:#15151c;color:#fff;">Flux 1 — 0.002 pollen</option>
-          <option value="dreamshaper" style="background:#15151c;color:#fff;">DreamShaper 8 — 0.0001 pollen</option>
-          <option value="klein" style="background:#15151c;color:#fff;">Flux.2 Klein — 0.005 pollen</option>
-          <option value="gpt-image-2" style="background:#15151c;color:#fff;">GPT Image 2 — ~0.04 pollen</option>
+        <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="flux" selected style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
+          <option value="dreamshaper" style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
+          <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
+          <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
         </select>
-        <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:#15151c;border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="square" style="background:#15151c;color:#fff;">Square</option>
-          <option value="portrait" style="background:#15151c;color:#fff;">Portrait</option>
-          <option value="landscape" style="background:#15151c;color:#fff;">Landscape</option>
+        <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="square" style="background:#17171a;color:#f2f2f5;">Square</option>
+          <option value="portrait" style="background:#17171a;color:#f2f2f5;">Portrait</option>
+          <option value="landscape" style="background:#17171a;color:#f2f2f5;">Landscape</option>
         </select>
-        <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:#15151c;border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-          <option value="1" style="background:#15151c;color:#fff;">1 image</option>
-          <option value="2" style="background:#15151c;color:#fff;">2 images</option>
-          <option value="4" selected style="background:#15151c;color:#fff;">4 images</option>
+        <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="1" style="background:#17171a;color:#f2f2f5;">1 image</option>
+          <option value="2" style="background:#17171a;color:#f2f2f5;">2 images</option>
+          <option value="4" selected style="background:#17171a;color:#f2f2f5;">4 images</option>
         </select>
       </div>
     </div>
@@ -5448,8 +5458,7 @@ window.getWebAudioNode = getWebAudioNode;
        COMMUNITY TAB — transplanted from the Builder Feed's photo/video gallery
        (same socialPosts data, same Supabase `posts` table + `posts` bucket)
   ══════════════════════════════════════════════════════════════════════ -->
-  <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;">
-    <canvas id="studioFlowCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+  <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;background:transparent;">
     <div style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:0 14px 16px;position:relative;z-index:1;">
 
       <!-- Header — small button opens the Posts column, EXACT same width/min-width/
@@ -5478,7 +5487,7 @@ window.getWebAudioNode = getWebAudioNode;
             <button id="studioGridToggleBtn" onclick="toggleStudioSocialGrid()" title="Toggle grid layout" style="width:28px;height:28px;flex-shrink:0;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);cursor:pointer;display:flex;align-items:center;justify-content:center;">
               <svg id="studioGridToggleIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg>
             </button>
-            <button onclick="submitStudioSocialPost()" style="padding:6px 16px;background:var(--accent);border:none;border-radius:7px;color:white;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;">Post →</button>
+            <button onclick="submitStudioSocialPost()" style="padding:6px 16px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;">Post →</button>
           </div>
         </div>
       </div>
@@ -5510,7 +5519,7 @@ window.getWebAudioNode = getWebAudioNode;
               <option value="feedback">💬 Idea Feedback</option>
               <option value="skill">⚡ Offering Skill</option>
             </select>
-            <button onclick="submitStudioFeedPost()" style="padding:7px 16px;background:var(--accent);border:none;border-radius:7px;color:white;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;">Post →</button>
+            <button onclick="submitStudioFeedPost()" style="padding:7px 16px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;">Post →</button>
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
@@ -7238,13 +7247,24 @@ function openImageGenModal(){
   closeMobileMore();
   renderImageGenTemplates();
   switchStudioTab('generate');
-  document.getElementById('imageGenModal').style.display='flex';
+  var modal = document.getElementById('imageGenModal');
+  modal.style.transition = 'none';
+  modal.style.opacity = '0';
+  modal.style.display = 'flex';
+  void modal.offsetWidth; // force reflow so the transition below actually animates
+  modal.style.transition = 'opacity .4s ease';
+  requestAnimationFrame(function(){ modal.style.opacity = '1'; });
   setTimeout(function(){ document.getElementById('imageGenPrompt').focus(); }, 50);
 }
 function closeImageGenModal(){
-  document.getElementById('imageGenModal').style.display='none';
-  document.getElementById('imageGenSettingsSheet').style.display='none';
-  clearImageGenRef();
+  var modal = document.getElementById('imageGenModal');
+  modal.style.transition = 'opacity .3s ease';
+  modal.style.opacity = '0';
+  setTimeout(function(){
+    modal.style.display = 'none';
+    document.getElementById('imageGenSettingsSheet').style.display = 'none';
+    clearImageGenRef();
+  }, 300);
 }
 
 function handleImageGenRefSelect(event){
@@ -7364,8 +7384,9 @@ function downloadGeneratedImage(dataUrl, filename){
 // ── Studio tabs ──────────────────────────────────────────────────────────
 // Small toggle button that opens the Posts column (Collab/Hiring/Launch/Feedback/Skill
 // feed) inside Studio's Community tab — this is a direct port of the old
-// matchConnectCol/toggleMatchConnect mechanic: same width/min-width/padding/overflow
-// toggle, same transition, same show/hide of a label + body + close button.
+// matchConnectCol/toggleMatchConnect mechanic on desktop (same width/min-width/padding/
+// overflow toggle). On mobile it becomes a full-screen takeover with a back button instead
+// of squeezing into a 280px column, since that left almost nothing for the feed itself.
 var _studioFeedVisible = false;
 function toggleStudioFeedPanel(){
   _studioFeedVisible = !_studioFeedVisible;
@@ -7375,14 +7396,49 @@ function toggleStudioFeedPanel(){
   var closeBtn = document.getElementById('studioFeedCloseBtn');
   var openBtn  = document.getElementById('studioFeedToggleBtn');
   if(!col) return;
+  var isMobile = window.innerWidth <= 768;
+
   if(!_studioFeedVisible){
-    col.style.width='0'; col.style.minWidth='0'; col.style.padding='0'; col.style.overflow='hidden';
+    if(isMobile){
+      col.style.transform = 'translateX(100%)';
+      setTimeout(function(){
+        col.style.display='none'; col.style.position=''; col.style.inset='';
+        col.style.width='0'; col.style.height=''; col.style.zIndex='';
+        col.style.background=''; col.style.overflow='hidden'; col.style.transform='';
+        col.style.transition=''; col.style.minWidth='0'; col.style.padding='0';
+      }, 280);
+    } else {
+      col.style.width='0'; col.style.minWidth='0'; col.style.padding='0'; col.style.overflow='hidden';
+    }
     if(body)     body.style.display='none';
     if(label)    label.style.display='none';
     if(closeBtn) closeBtn.style.display='none';
     if(openBtn){ openBtn.style.background='rgba(124,106,247,0.1)'; openBtn.style.borderColor='rgba(124,106,247,0.3)'; openBtn.style.color='rgba(255,255,255,0.65)'; openBtn.title='Show posts'; }
   } else {
-    col.style.width='280px'; col.style.minWidth='180px'; col.style.padding='18px 16px'; col.style.overflow='';
+    if(isMobile){
+      col.style.transition='none';
+      col.style.display='block';
+      col.style.position='fixed';
+      col.style.inset='0';
+      col.style.width='100%';
+      col.style.minWidth='0';
+      col.style.height='100%';
+      col.style.padding='calc(14px + env(safe-area-inset-top)) 16px 16px';
+      col.style.background='#000';
+      col.style.zIndex='50';
+      col.style.overflow='auto';
+      col.style.transform='translateX(100%)';
+      void col.offsetWidth; // force reflow so the transition below actually animates
+      col.style.transition='transform .3s cubic-bezier(0.22,1,0.36,1)';
+      requestAnimationFrame(function(){ col.style.transform='translateX(0)'; });
+      if(closeBtn){
+        closeBtn.style.width='34px'; closeBtn.style.height='34px'; closeBtn.style.borderRadius='50%';
+        closeBtn.style.background='rgba(255,255,255,0.06)'; closeBtn.style.border='none';
+        closeBtn.style.fontSize='16px'; closeBtn.title='Back';
+      }
+    } else {
+      col.style.width='280px'; col.style.minWidth='180px'; col.style.padding='18px 16px'; col.style.overflow='';
+    }
     if(body)     body.style.display='';
     if(label)    label.style.display='';
     if(closeBtn) closeBtn.style.display='flex';
@@ -7398,13 +7454,24 @@ var _studioFlowInited = false;
 function initStudioFlowCanvas(){
   if(_studioFlowInited) return;
   _studioFlowInited = true;
-  var canvas=document.getElementById('studioFlowCanvas'),container=document.getElementById('studioCommunityView');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0,chatFade=null;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;this.fadeA=1;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?38:56;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());chatFade=document.body.classList.contains('pulse-open')?0:1;}function draw(now){now=now||performance.now();if(container.style.display==='none'||document.hidden){setTimeout(function(){requestAnimationFrame(draw);},document.hidden?600:200);return;}if(isMobile&&lastT&&(now-lastT)<48){requestAnimationFrame(draw);return;}if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);var _pulseOpen=document.body.classList.contains('pulse-open');var _fadeTgt=_pulseOpen?0:1;if(chatFade===undefined||chatFade===null)chatFade=1;chatFade+=(_fadeTgt-chatFade)*Math.min(1,0.07*dt);if(Math.abs(_fadeTgt-chatFade)<0.01)chatFade=_fadeTgt;particles.forEach(function(p,idx){p.fadeA=idx<20?1:chatFade;});particles.forEach(function(p,idx){var fadeMul=p.fadeA;var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));if(fadeMul<=0.01)return;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha*fadeMul;ctx.fill();});ctx.lineWidth=.6;particles.forEach(function(p,i){var fi=p.fadeA;if(fi<=0.01)return;particles.slice(i+1).forEach(function(q){var fq=q.fadeA;if(fq<=0.01)return;var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.globalAlpha=.12*Math.min(fi,fq);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){if(container.style.display==='none')return;canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},50);
+  var canvas=document.getElementById('studioFlowCanvas'),bgBox=document.getElementById('imageGenModal'),container=document.getElementById('studioCommunityView');if(!canvas||!container||!bgBox)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0,chatFade=null;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;this.fadeA=1;}function init(){w=canvas.width=bgBox.offsetWidth||window.innerWidth;h=canvas.height=bgBox.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?38:56;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());chatFade=document.body.classList.contains('pulse-open')?0:1;}function draw(now){now=now||performance.now();if(container.style.display==='none'||document.hidden){setTimeout(function(){requestAnimationFrame(draw);},document.hidden?600:200);return;}if(isMobile&&lastT&&(now-lastT)<48){requestAnimationFrame(draw);return;}if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);var _pulseOpen=document.body.classList.contains('pulse-open');var _fadeTgt=_pulseOpen?0:1;if(chatFade===undefined||chatFade===null)chatFade=1;chatFade+=(_fadeTgt-chatFade)*Math.min(1,0.07*dt);if(Math.abs(_fadeTgt-chatFade)<0.01)chatFade=_fadeTgt;particles.forEach(function(p,idx){p.fadeA=idx<20?1:chatFade;});particles.forEach(function(p,idx){var fadeMul=p.fadeA;var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));if(fadeMul<=0.01)return;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha*fadeMul;ctx.fill();});ctx.lineWidth=.6;particles.forEach(function(p,i){var fi=p.fadeA;if(fi<=0.01)return;particles.slice(i+1).forEach(function(q){var fq=q.fadeA;if(fq<=0.01)return;var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.globalAlpha=.12*Math.min(fi,fq);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){if(container.style.display==='none')return;canvas.style.width=(bgBox.offsetWidth||window.innerWidth)+'px';canvas.style.height=(bgBox.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},50);
+}
+
+// EXACT port of the home chat screen's "Chat Beams Background" engine
+// (#chatBeamsCanvas — rising diagonal blurred light beams) — same physics,
+// same blur/gradient rendering, just retargeted at the Studio canvas/container.
+var _studioBeamsInited = false;
+function initStudioBeamsCanvas(){
+  if(_studioBeamsInited) return;
+  _studioBeamsInited = true;
+  var canvas=document.getElementById('studioBeamsCanvas');var bgBox=document.getElementById('imageGenModal');var container=document.getElementById('studioCommunityView');if(!canvas||!container||!bgBox)return;var ctx=canvas.getContext('2d');var beams=[];var BEAM_COUNT=22;function createBeam(w,h){var angle=-35+Math.random()*10;return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}function resize(){var dpr=window.devicePixelRatio||1;var w=bgBox.offsetWidth,h=bgBox.offsetHeight;if(!w||!h)return;canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});}function resetBeam(beam,i,total,w,h){var col=i%3,spacing=w/3;beam.y=h+100;beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.5;beam.width=80+Math.random()*80;beam.speed=0.5+Math.random()*0.4;beam.hue=190+(i*70)/total;beam.opacity=0.18+Math.random()*0.1;return beam;}function drawBeam(beam,w,h){ctx.save();ctx.translate(beam.x,beam.y);ctx.rotate(beam.angle*Math.PI/180);var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);var g=ctx.createLinearGradient(0,0,0,beam.length);g.addColorStop(0,'hsla('+beam.hue+',85%,65%,0)');g.addColorStop(0.1,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(0.4,'hsla('+beam.hue+',85%,65%,'+op+')');g.addColorStop(0.6,'hsla('+beam.hue+',85%,65%,'+op+')');g.addColorStop(0.9,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(1,'hsla('+beam.hue+',85%,65%,0)');ctx.fillStyle=g;ctx.fillRect(-beam.width/2,0,beam.width,beam.length);ctx.restore();}var _beamLast=0;function animate(ts){if(container.style.display==='none'){requestAnimationFrame(animate);return;}if(ts-_beamLast<32){requestAnimationFrame(animate);return;}_beamLast=ts;var w=bgBox.offsetWidth,h=bgBox.offsetHeight;ctx.clearRect(0,0,w,h);ctx.filter='blur(35px)';var total=beams.length;beams.forEach(function(beam,i){beam.y-=beam.speed;beam.pulse+=beam.pulseSpeed;if(beam.y+beam.length<-100)resetBeam(beam,i,total,w,h);drawBeam(beam,w,h);});ctx.filter='none';requestAnimationFrame(animate);}window.addEventListener('resize',function(){if(container.style.display==='none')return;canvas.style.width=bgBox.offsetWidth+'px';canvas.style.height=bgBox.offsetHeight+'px';});setTimeout(function(){resize();animate();},50);
 }
 
 function switchStudioTab(tab){
   var glassBtn = document.getElementById('studioCommunityGlassBtn');
   var genView = document.getElementById('studioGenerateView');
   var comView = document.getElementById('studioCommunityView');
+  var bgLayer = document.getElementById('studioBgLayer');
   // Toggle: clicking the glass button while already on community goes back to generate.
   if(tab === 'community' && comView.style.display === 'flex'){
     tab = 'generate';
@@ -7412,6 +7479,8 @@ function switchStudioTab(tab){
   if(tab === 'community'){
     genView.style.display = 'none';
     comView.style.display = 'flex';
+    comView.style.opacity = '0';
+    comView.style.transition = 'opacity .45s ease';
     if(glassBtn){
       glassBtn.style.background = 'rgba(124,106,247,0.2)';
       glassBtn.style.borderColor = 'rgba(124,106,247,0.5)';
@@ -7420,14 +7489,27 @@ function switchStudioTab(tab){
     renderStudioSocialFeed();
     if(typeof renderFeed==='function') renderFeed();
     if(typeof initStudioFlowCanvas==='function') initStudioFlowCanvas();
+    if(typeof initStudioBeamsCanvas==='function') initStudioBeamsCanvas();
+    // Fade the shared background layer and the feed itself in gently, next frame
+    // (so the display:flex/opacity:0 above has actually painted first).
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        if(bgLayer) bgLayer.style.opacity = '1';
+        comView.style.opacity = '1';
+      });
+    });
   } else {
-    comView.style.display = 'none';
-    genView.style.display = 'flex';
+    if(bgLayer) bgLayer.style.opacity = '0';
+    comView.style.opacity = '0';
     if(glassBtn){
       glassBtn.style.background = 'rgba(255,255,255,0.05)';
       glassBtn.style.borderColor = 'rgba(255,255,255,0.1)';
       glassBtn.style.color = 'var(--muted)';
     }
+    setTimeout(function(){
+      comView.style.display = 'none';
+      genView.style.display = 'flex';
+    }, 240);
   }
 }
 
