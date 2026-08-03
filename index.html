@@ -4,21 +4,17 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0a0a0e">
   <style>
-    /* Concrete colors (not var(--bg)) so browsers actually interpolate the 1.4s fade
-       — same duration as particle/beams opacity when moon turns aurora off. */
-    html,body{background-color:#0d0c15!important;transition:background-color 1.4s ease!important;}
-    html[data-theme="easyview"],html[data-theme="easyview"] body{background-color:#0d0c15!important;}
-    html[data-theme="purple"],html[data-theme="purple"] body{background-color:#000000!important;}
-    html[data-theme="ios"],html[data-theme="ios"] body{background-color:#0e0d16!important;}
-    html[data-theme="light"],html[data-theme="light"] body{background-color:#f2f2f7!important;}
+    /* Base app chrome is pure black (sun + moon). Do NOT paint easyview as #0d0c15 —
+       that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
+       particles/beams only; moon fades beams out over 1.4s to stay true black. */
+    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
+    html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
-    /* Apply saved theme before paint so moon starts true black (no sun→black flash on load) */
     (function(){
       try{
         var t = localStorage.getItem('_appTheme') || 'easyview';
         document.documentElement.setAttribute('data-theme', t);
-        if(t === 'purple') document.documentElement.style.backgroundColor = '#000000';
       }catch(e){}
     })();
   </script>
@@ -34,8 +30,8 @@
 /* ── Themes ── */
 /* Moon / True Black: pure black aurora field (particles already fade out over 1.4s) */
 html[data-theme="purple"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#d8d8e8;--muted:#7a7a8a;}
-/* Sun / Easy View: soft indigo field under particles */
-html[data-theme="easyview"]{--bg:#0d0c15;--sidebar:rgba(19,18,34,0.36);--surface:#18172a;--surface2:#1f1e34;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7070a0;}
+/* Sun / Easy View: black base (same as before) — particles/beams add the atmosphere, not a purple page wash */
+html[data-theme="easyview"]{--bg:#000000;--sidebar:rgba(19,18,34,0.36);--surface:#18172a;--surface2:#1f1e34;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7070a0;}
 html[data-theme="slate"]{--bg:#0b0d12;--sidebar:#101318;--surface:#161a22;--surface2:#1d222d;--border:rgba(255,255,255,0.07);--accent:#94a3b8;--accent2:#f97316;--accent3:#38bdf8;--text:#e2e8f0;--muted:#64748b;}
 html[data-theme="mj"]{--bg:#0e0e0e;--sidebar:#141414;--surface:#1a1a1a;--surface2:#222222;--border:rgba(255,255,255,0.06);--accent:#e8e8e8;--accent2:#a0a0a0;--accent3:#c8c8c8;--text:#f0f0f0;--muted:#666666;}
 html[data-theme="deepsea"]{--bg:#050e12;--sidebar:rgba(5,18,28,0.55);--surface:#071520;--surface2:#0a1e2c;--border:rgba(0,180,220,0.12);--accent:#00b4dc;--accent2:#00d9a8;--accent3:#38bdf8;--text:#d0f0f8;--muted:#4a7a8a;}
@@ -362,7 +358,7 @@ html[data-theme="light"] #authLeftPanel{background:linear-gradient(135deg,#e8eaf
 .theme-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 input,textarea{-webkit-user-select:text!important;user-select:text!important;}.message-text,.message-text *{-webkit-user-select:text!important;user-select:text!important;cursor:text!important;}
-body{font-family:'DM Sans',sans-serif;background-color:#0d0c15;color:var(--text);display:flex;height:100vh;overflow:hidden;position:relative;transition:background-color 1.4s ease;}
+body{font-family:'DM Sans',sans-serif;background:#000000;color:var(--text);display:flex;height:100vh;overflow:hidden;position:relative;transition:background-color 1.4s ease;}
 .sidebar{width:260px;min-width:180px;max-width:400px;flex-shrink:0;background:rgba(15,15,26,0.85);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:visible;position:relative;transition:width .25s cubic-bezier(0.4,0,0.2,1);}
 .sidebar::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;}
 
@@ -2820,29 +2816,35 @@ body.voice-live .syn-fp-icon{
   border-bottom:none!important;
   box-shadow:none!important;
 }
-/* Keep style/reset in layout (invisible) so title + community btn don't shift */
+/* Keep style/reset in layout (invisible) so community btn doesn't jump — title stays default flex position */
 #imageGenModal.studio-tab-community #studioHistoryGlassBtn,
 #imageGenModal.studio-tab-community #studioResetBtn{
   visibility:hidden!important;
   pointer-events:none!important;
   opacity:0!important;
 }
-/* Studio header: true-center title; stable right cluster width */
+/* Default Studio header layout (original): back | Studio | actions — NOT viewport-centered */
 #studioTopBar{
-  display:grid!important;
-  grid-template-columns:1fr auto 1fr!important;
+  display:flex!important;
   align-items:center!important;
-  justify-content:unset!important;
+  justify-content:space-between!important;
 }
-#studioTopBar > button:first-child{justify-self:start;}
-#studioTopBarTitle{justify-self:center;grid-column:2;pointer-events:none;}
+#studioTopBarTitle{
+  font-family:'Syne',sans-serif;
+  font-size:15px;
+  font-weight:800;
+  color:#d4d0ee;
+  letter-spacing:.2px;
+  /* Natural flex middle item — do not absolute/grid center (was too close to STS) */
+  flex:0 0 auto;
+  pointer-events:none;
+}
 #studioTopBarActions{
-  justify-self:end;
-  grid-column:3;
   display:flex!important;
   align-items:center!important;
   gap:8px!important;
-  /* Reserve full 3-icon width always so community hide never reflows */
+  flex-shrink:0;
+  /* Keep 3-icon width reserved so hiding style/reset on community doesn't reflow title */
   min-width:calc(30px * 3 + 8px * 2);
   justify-content:flex-end;
 }
@@ -2872,7 +2874,6 @@ body.voice-live .syn-fp-icon{
   height:100%;
   font-size:15px;
   line-height:1;
-  /* Optical center — ⟲ sits slightly low in most fonts */
   transform:translateY(-0.5px);
 }
 </style>
@@ -3367,10 +3368,10 @@ body.voice-live .syn-fp-icon{
 /* Particles on in sun only — fade 1.4s with the aurora/bg (same ease curve) */
 #chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas{opacity:0;transition:opacity 1.4s ease;}
 html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
-/* Moon: aurora beams + particles fade out together; page bg fades to #000 over the same 1.4s */
-#globalBeamsCanvas{transition:opacity 1.4s ease!important;}
+/* Moon: beams fade out over 1.4s (black base already). Sun: original beam strength. */
+#globalBeamsCanvas{transition:opacity 1.4s ease;}
 html[data-theme="purple"] #globalBeamsCanvas{opacity:0!important;}
-html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7!important;}
+html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -5603,10 +5604,10 @@ window.getWebAudioNode = getWebAudioNode;
   </div>
 
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
+  <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
-    <div id="studioTopBarTitle" style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;text-align:center;">Studio</div>
-    <div id="studioTopBarActions">
+    <div id="studioTopBarTitle">Studio</div>
+    <div id="studioTopBarActions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button type="button" id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
@@ -30188,38 +30189,26 @@ function _openNeutralinoWebview(url){
 (function(){
   var THEMES = [
     {id:'purple',   label:'True Black', accent:'#7c6af7', bg:'#000000'},
-    {id:'easyview', label:'Easy View',       accent:'#7c6af7', bg:'#0d0c15'},
+    {id:'easyview', label:'Easy View',       accent:'#7c6af7', bg:'#000000'},
     {id:'ios',      label:'✦ Frost Glass',   accent:'#6e6cf7', bg:'#0e0d16'},
     {id:'light',    label:'☀ iOS Light',     accent:'#5e5ce6', bg:'#f2f2f7'},
   ];
 
   function applyTheme(t){
     if(!THEMES.find(function(x){return x.id===t;})) t='purple';
-    // Fade body/html bg with same 1.4s ease as particles/beams (concrete hex, not CSS var)
+    // Sun + moon share pure black page chrome. Only light theme is different.
+    // (Never force easyview to #0d0c15 — that painted a purple wash over the app.)
     try{
-      var bgMap = { purple:'#000000', easyview:'#0d0c15', ios:'#0e0d16', light:'#f2f2f7' };
+      var bgMap = { purple:'#000000', easyview:'#000000', ios:'#000000', light:'#f2f2f7' };
       var toBg = bgMap[t] || '#000000';
-      var fromBg = '';
-      try{ fromBg = window.getComputedStyle(document.body).backgroundColor; }catch(_c){}
-      if(fromBg){
-        document.documentElement.style.setProperty('transition', 'background-color 1.4s ease', 'important');
-        document.body.style.setProperty('transition', 'background-color 1.4s ease', 'important');
-        document.documentElement.style.setProperty('background-color', fromBg, 'important');
-        document.body.style.setProperty('background-color', fromBg, 'important');
-        // force reflow so the browser registers the start color before the end color
-        void document.body.offsetWidth;
-      }
       document.documentElement.setAttribute('data-theme', t);
-      document.documentElement.style.setProperty('background-color', toBg, 'important');
-      document.body.style.setProperty('background-color', toBg, 'important');
-      // After fade, drop inline so CSS theme rules keep owning the color
-      clearTimeout(window._themeBgFadeClear);
-      window._themeBgFadeClear = setTimeout(function(){
-        try{
-          document.documentElement.style.removeProperty('background-color');
-          document.body.style.removeProperty('background-color');
-        }catch(_r){}
-      }, 1500);
+      // Clear any leftover inline washes from older builds
+      document.documentElement.style.removeProperty('background-color');
+      document.body.style.removeProperty('background-color');
+      if(t === 'light'){
+        document.documentElement.style.setProperty('background-color', toBg, 'important');
+        document.body.style.setProperty('background-color', toBg, 'important');
+      }
     }catch(_fade){
       document.documentElement.setAttribute('data-theme', t);
     }
