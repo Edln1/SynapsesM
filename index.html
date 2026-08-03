@@ -1003,6 +1003,13 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   transform:scale(1) translateY(0);
   transition:opacity .4s cubic-bezier(0.22,1,0.36,1) .06s,transform .42s cubic-bezier(0.22,1,0.36,1) .06s,visibility 0s linear 0s;
 }
+/* Unset Pulse (city/topics setup) is taller and covers the fingerprint — hide scanner while that sheet is open */
+body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+  height:0!important;margin:0!important;min-height:0!important;overflow:hidden!important;
+  transform:scale(.94) translateY(4px);
+  transition:opacity .28s cubic-bezier(0.4,0,0.2,1),transform .3s cubic-bezier(0.4,0,0.2,1),height .3s ease,margin .3s ease,visibility 0s linear .3s;
+}
 /* Pulse — right of Notes */
 #bnavPulseBtn{display:none;position:fixed;bottom:0;left:48px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:none;padding:0;}
 @media (hover:hover) and (pointer:fine){
@@ -23869,6 +23876,8 @@ function goNotes() {
     var chips = document.getElementById('synPulseTopicChips');
     if(!setup) return;
     if(panel) panel.classList.add('pp-needs-setup');
+    /* Setup card is taller than normal Pulse — hide fingerprint so it doesn't sit under the form */
+    try { document.body.classList.add('pulse-setup-open'); } catch(eFp){}
     setup.hidden = false;
     if(cancel) cancel.hidden = !_setupEditing;
     var prefs = _loadPrefs();
@@ -23892,6 +23901,7 @@ function goNotes() {
     var setup = document.getElementById('synPulseSetup');
     if(panel) panel.classList.remove('pp-needs-setup');
     if(setup) setup.hidden = true;
+    try { document.body.classList.remove('pulse-setup-open'); } catch(eFp){}
     _setupEditing = false;
   }
   function _readSetupForm(){
@@ -24538,6 +24548,7 @@ function goNotes() {
     _open = false;
     try { localStorage.setItem(OPEN_KEY, '0'); } catch(ePC){}
     _setPulseLift(false); /* ask-me settles as sheet slides down */
+    try { document.body.classList.remove('pulse-setup-open'); } catch(eFp){}
     if(panel){
       panel.classList.remove('open');
       panel.classList.remove('pp-settled');
@@ -31531,6 +31542,22 @@ function _neuInjectDownloadInterceptor(frame){
     }
     window._synBotEntranceReady = _synBotEntranceReady;
     window._tinyBotSync = function(){
+      /* Live tour/film owns the canvas — never apply BR-corner or toggle-off hide
+         (that fought hideGuideBot/releaseGuideBot and blinked the character). */
+      try {
+        var rootLive0 = document.getElementById('synTourRoot');
+        var tourUiOn0 = !!(rootLive0 && rootLive0.classList.contains('on') && rootLive0.style.display !== 'none');
+        if (window.__synTourActive && tourUiOn0) {
+          /* Respect intentional pre-hatch hide (in UFO); otherwise keep guide visible */
+          if (canvas.getAttribute('data-myth-hidden') === '1') {
+            canvas.style.opacity = '0';
+          } else if (_tourMode) {
+            canvas.style.opacity = '1';
+            canvas.style.visibility = 'visible';
+          }
+          return;
+        }
+      } catch (eTourOwn) {}
       /* User turned SynBot off — stay fully hidden (do not re-show on recover) */
       if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) {
         shown = false;
@@ -31695,7 +31722,9 @@ function _neuInjectDownloadInterceptor(frame){
     });
     splashMo.observe(document.body, {childList:true, subtree:false});
     // Safety net: always try to float BR bot if still hidden after load
+    // Skip entirely during live tour film (would fight hideGuideBot → blink)
     setTimeout(function(){
+      if(window.__synTourActive) return;
       if(!_tourMode && canvas.style.opacity==='0' && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
@@ -31703,6 +31732,7 @@ function _neuInjectDownloadInterceptor(frame){
       }
     }, 2500);
     setTimeout(function(){
+      if(window.__synTourActive) return;
       if(!_tourMode && (canvas.style.opacity==='0' || !canvas.style.opacity) && _synBotAllowed()
         && !document.getElementById('appSplash') && !document.getElementById('cyberGreeting')){
         shown = true;
@@ -31719,7 +31749,7 @@ function _neuInjectDownloadInterceptor(frame){
        authority over opacity while it's live. Forcing a value here caused
        the bot to visibly snap/flicker whenever this tooltip's class changed
        for any unrelated reason mid-film. */
-    if(_tourMode || (window.__synTourActive && window.__synBotStoryReleased)){
+    if(_tourMode || window.__synTourActive || (typeof window._synTourFilmLive === 'function' && window._synTourFilmLive())){
       return;
     }
     if(_rtip.classList.contains('rt-visible')){
@@ -33711,19 +33741,30 @@ function _applySynBotVisualState(){
   var btn  = document.getElementById('synBotToggleBtn');
   var icon = document.getElementById('synBotToggleIcon');
   window._synBotEnabled = !!_synBotEnabled;
+  var filmLive = false;
+  try {
+    filmLive = !!(typeof window._synTourFilmLive === 'function' && window._synTourFilmLive())
+      || !!(window.__synTourActive && document.getElementById('synTourRoot')
+        && document.getElementById('synTourRoot').classList.contains('on')
+        && document.getElementById('synTourRoot').style.display !== 'none');
+  } catch (eF) { filmLive = !!window.__synTourActive; }
   if(_synBotEnabled){
     if(btn)  { btn.style.opacity='1'; btn.title='Hide nav tooltips'; }
     if(icon)   icon.innerHTML = _iconON;
-    var _tinyCanvasOn = document.getElementById('tinyBotCanvas');
-    if(_tinyCanvasOn){
-      if(_tinyCanvasOn._resume) _tinyCanvasOn._resume();
-      if(_tinyCanvasOn._bringIn) _tinyCanvasOn._bringIn();
+    /* Don't _bringIn during film — that hard-resets the purple guide */
+    if (!filmLive) {
+      var _tinyCanvasOn = document.getElementById('tinyBotCanvas');
+      if(_tinyCanvasOn){
+        if(_tinyCanvasOn._resume) _tinyCanvasOn._resume();
+        if(_tinyCanvasOn._bringIn) _tinyCanvasOn._bringIn();
+      }
+      if(typeof window._tinyBotSync === 'function') window._tinyBotSync();
     }
-    if(typeof window._tinyBotSync === 'function') window._tinyBotSync();
   } else {
     if(btn)  { btn.style.opacity='0.35'; btn.title='Show nav tooltips'; }
     if(icon)   icon.innerHTML = _iconOFF;
-    /* Fully kill every SynBot surface so bottom-right taps do nothing */
+    /* Fully kill every SynBot surface so bottom-right taps do nothing —
+       but leave tinyBotCanvas alone while the planet film/tour owns it */
     var tooltip = document.getElementById('robotTooltip');
     if(tooltip){
       tooltip.classList.add('rt-hidden');
@@ -33732,12 +33773,14 @@ function _applySynBotVisualState(){
       tooltip.style.visibility = 'hidden';
       tooltip.style.pointerEvents = 'none';
     }
-    var tinyCanvas = document.getElementById('tinyBotCanvas');
-    if(tinyCanvas){
-      tinyCanvas.style.opacity = '0';
-      tinyCanvas.style.visibility = 'hidden';
-      tinyCanvas.style.pointerEvents = 'none';
-      if(tinyCanvas._pause) tinyCanvas._pause();
+    if (!filmLive) {
+      var tinyCanvas = document.getElementById('tinyBotCanvas');
+      if(tinyCanvas){
+        tinyCanvas.style.opacity = '0';
+        tinyCanvas.style.visibility = 'hidden';
+        tinyCanvas.style.pointerEvents = 'none';
+        if(tinyCanvas._pause) tinyCanvas._pause();
+      }
     }
     var chat = document.getElementById('synBotChat');
     if(chat){
@@ -33770,8 +33813,16 @@ if(document.readyState==='complete'||document.readyState==='interactive') setTim
     /* Only block recovery when the demo UI is actually visible */
     return _tourUiActuallyOn() && !!window.__synTourActive;
   }
+  /* Expose so other SynBot paths (sync/tooltip/safety) respect the film */
+  window._synTourFilmLive = _tourIsLive;
   function _synBotRecover(reason){
     try {
+      /* Live planet film / product tour owns tinyBotCanvas — never force-hide
+         or "recover" the guide mid-story. (SynBot toggle OFF was doing this
+         every 2s on first run → character blink in/out for the whole film;
+         replay via chat worked because SynBot was usually already on.) */
+      if (_tourIsLive()) return;
+
       /* Toggle is off — never force the bot visible, no matter the reason
          (window focus after a native file picker, popup interaction, etc.) */
       if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) {
@@ -33783,8 +33834,6 @@ if(document.readyState==='complete'||document.readyState==='interactive') setTim
         } catch(eOff){}
         return;
       }
-      /* Live tour UI: leave purple guide alone */
-      if (_tourIsLive()) return;
       try {
         var choice = document.getElementById('synTourChoice');
         if (choice && choice.classList.contains('show') && _tourUiActuallyOn()) return;
