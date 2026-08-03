@@ -3356,13 +3356,16 @@ html.android-status-blend #imageGenTemplateRow{
 html.android-status-blend #studioCommunityScroll{
   padding-top:calc(72px + var(--android-status-inset))!important;
 }
-/* Centered speech-to-speech mic: keep below status strip when top bar is collapsed */
-html.android-status-blend #topNavVoiceBtn.tnv-centered{
-  top:calc(50% + (var(--android-status-inset) * 0.5))!important;
-}
-html.android-status-blend body.topbar-hidden #topNavVoiceBtn.tnv-centered{
-  top:calc(var(--android-status-inset) + 28px)!important;
-  transform:translate(-50%,0)!important;
+/*
+  Centered STS mic lives inside .top-bar with top:50%. After status-blend the
+  bar is taller (status pad on top), so 50% of the FULL bar is lower than the
+  icon row — mic looks “a bit below” sun/moon. Pin it to the control-row center
+  only: statusInset + half of the original ~60px chrome (~30px).
+*/
+html.android-status-blend .top-bar:not(.hidden) #topNavVoiceBtn.tnv-centered{
+  top:calc(var(--android-status-inset) + 30px)!important;
+  left:50%!important;
+  transform:translate(-50%,-50%)!important;
 }
 </style>
 <script>
@@ -27865,15 +27868,20 @@ function _tnvEscapeAboveModal(){
   btn.style.transition = 'none';
   document.body.appendChild(btn);
   btn.style.position = 'fixed';
-  // Keep speech bubble below status icons (overlay Android); don't pin into notification bar
-  var statusPad = 0;
+  // Prefer original on-screen Y. Only when Studio (or similar) header would
+  // cover the mic, park it just under that header — do not shift center-mode
+  // on the main top bar.
+  var topY = r.top;
   try{
-    var cs = getComputedStyle(document.documentElement).getPropertyValue('--android-status-inset').trim();
-    if(cs) statusPad = parseFloat(cs) || 0;
-    if(!statusPad && document.documentElement.classList.contains('android-status-blend')) statusPad = 28;
-  }catch(_sp){}
-  var minTop = statusPad + 10;
-  btn.style.top = Math.max(r.top, minTop) + 'px';
+    var studioBar = document.getElementById('studioTopBar');
+    var modal = document.getElementById('imageGenModal');
+    var studioOpen = modal && modal.style.display === 'flex';
+    if(studioOpen && studioBar){
+      var sb = studioBar.getBoundingClientRect();
+      if(sb.bottom > 0) topY = Math.max(topY, sb.bottom + 10);
+    }
+  }catch(_st){}
+  btn.style.top = topY + 'px';
   btn.style.left = r.left + 'px';
   btn.style.right = 'auto';
   btn.style.bottom = 'auto';
