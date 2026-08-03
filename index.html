@@ -5465,11 +5465,11 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
 
     <!-- Bottom input bar — floats over the full-screen grid like the header does up top -->
-    <div style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);">
-      <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
-      <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:none;border:none;">
+      <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:none;background:none;color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
+      <div style="flex:1;display:flex;align-items:center;gap:6px;background:none;border:none;padding:6px 6px 6px 14px;min-width:0;">
         <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
-        <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
+        <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:none;border:none;color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
       </div>
     </div>
   </div>
@@ -7389,7 +7389,7 @@ async function submitImageGen(){
         card.style.cssText = 'position:relative;overflow:hidden;background:var(--surface);';
         var img = document.createElement('img');
         img.src = src;
-        img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
+        img.style.cssText = 'width:100%;display:block;aspect-ratio:3/4;object-fit:cover;';
         var dl = document.createElement('button');
         dl.innerHTML = '⬇';
         dl.title = 'Download';
@@ -7556,7 +7556,7 @@ async function renderImageGenDefaultFeed(){
     var img = document.createElement('img');
     img.src = it.src;
     img.loading = 'lazy';
-    img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
+    img.style.cssText = 'width:100%;display:block;aspect-ratio:3/4;object-fit:cover;';
     cell.appendChild(img);
     cell.onclick = function(){ reuseHistoryImage(it); };
     resultsEl.appendChild(cell);
