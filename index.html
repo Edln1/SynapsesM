@@ -7484,6 +7484,8 @@ function openImageGenModal(){
   modal.style.display = 'flex';
   void modal.offsetWidth; // force reflow so the transition below actually animates
   modal.style.transition = 'opacity .4s ease';
+  // Studio: transparent status bar so header blends under the notification strip
+  try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(true); }catch(_s){}
   // STS mic flies to Studio icon cluster in the same open animation
   if(typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
   requestAnimationFrame(function(){ modal.style.opacity = '1'; });
@@ -7492,11 +7494,14 @@ function closeImageGenModal(){
   var modal = document.getElementById('imageGenModal');
   modal.style.transition = 'opacity .3s ease';
   modal.style.opacity = '0';
+  // Glide STS home while Studio fades out (not a snap)
+  if(typeof window._tnvReturnFromModal === 'function') window._tnvReturnFromModal();
+  // Restore main-app status bar chrome
+  try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(false); }catch(_s){}
   setTimeout(function(){
     modal.style.display = 'none';
     document.getElementById('imageGenSettingsSheet').style.display = 'none';
     clearImageGenRef();
-    if(typeof window._tnvReturnFromModal === 'function') window._tnvReturnFromModal();
   }, 300);
 }
 
@@ -28073,51 +28078,121 @@ function _tnvEscapeAboveModal(){
     requestAnimationFrame(flyToStudioIcons);
   });
 }
+/**
+ * Studio → home/front: FLIP-glide mic from studio park back to center or top-actions.
+ * Does not change target placement rules — only animates the return.
+ */
 function _tnvReturnFromModal(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || !_tnvEscaped) return;
+  var first = btn.getBoundingClientRect();
+  var wasCentered = _tnvEscapeWasCentered;
   _tnvEscaped = false;
+
+  // Keep fixed at current studio spot for FLIP start
+  if(btn.parentNode !== document.body) document.body.appendChild(btn);
   btn.style.transition = 'none';
-  var home = _tnvEscapeHomeParent;
-  if(home){
-    if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
-    else home.appendChild(btn);
-  }
-  btn.style.position = '';
-  btn.style.top = '';
-  btn.style.left = '';
-  btn.style.right = '';
-  btn.style.bottom = '';
-  btn.style.transform = '';
-  btn.style.margin = '';
-  btn.style.zIndex = '';
-  btn.style.opacity = '';
-  btn.style.removeProperty('top');
-  if(_tnvEscapeWasCentered){
-    // Stay on body + true viewport center under camera
-    if(btn.parentNode !== document.body) document.body.appendChild(btn);
-    btn.classList.add('tnv-centered');
-    try{
-      if(window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
-        var rowCy;
-        var titleEl = document.getElementById('topTitle');
-        if(titleEl && titleEl.getBoundingClientRect().height > 4){
-          var tr = titleEl.getBoundingClientRect();
-          rowCy = tr.top + tr.height / 2 - 2;
-        } else {
-          var actions = document.querySelector('.top-bar .top-actions');
-          var row = actions ? actions.getBoundingClientRect() : null;
-          rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
-        }
-        btn.style.setProperty('position', 'fixed', 'important');
-        btn.style.setProperty('left', '50%', 'important');
-        btn.style.setProperty('top', rowCy + 'px', 'important');
-        btn.style.zIndex = '100050';
-        btn.style.transform = 'translate(-50%,-50%)';
-      }
-    }catch(_re){}
-  }
+  btn.style.position = 'fixed';
+  btn.style.left = first.left + 'px';
+  btn.style.top = first.top + 'px';
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.transform = 'none';
+  btn.style.zIndex = '100050';
+  btn.style.opacity = '1';
   void btn.offsetWidth;
+
+  var targetLeft, targetTop, useCenter = false;
+  if(wasCentered && window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
+    useCenter = true;
+    var rowCy;
+    try{
+      var titleEl = document.getElementById('topTitle');
+      if(titleEl && titleEl.getBoundingClientRect().height > 4){
+        var tr = titleEl.getBoundingClientRect();
+        rowCy = tr.top + tr.height / 2 - 2;
+      } else {
+        var actions = document.querySelector('.top-bar .top-actions');
+        var row = actions ? actions.getBoundingClientRect() : null;
+        rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
+      }
+    }catch(_y){ rowCy = window.innerHeight * 0.06; }
+    targetLeft = window.innerWidth / 2 - first.width / 2;
+    targetTop = rowCy - first.height / 2;
+  } else {
+    // Land back in top-actions (measure after re-insert)
+    var home = _tnvEscapeHomeParent || document.querySelector('.top-bar .top-actions');
+    btn.classList.remove('tnv-centered');
+    _tnvClearCenteredInline();
+    if(home){
+      if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
+      else home.appendChild(btn);
+    }
+    // Temporarily clear fixed so we can measure docked slot, then re-fix for glide
+    btn.style.position = '';
+    btn.style.left = '';
+    btn.style.top = '';
+    btn.style.transform = '';
+    void btn.offsetWidth;
+    var lastDock = btn.getBoundingClientRect();
+    targetLeft = lastDock.left;
+    targetTop = lastDock.top;
+    // Put back to body fixed at first for animation
+    document.body.appendChild(btn);
+    btn.style.position = 'fixed';
+    btn.style.left = first.left + 'px';
+    btn.style.top = first.top + 'px';
+    btn.style.zIndex = '100050';
+    void btn.offsetWidth;
+  }
+
+  btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1)';
+  btn.style.left = Math.round(targetLeft) + 'px';
+  btn.style.top = Math.round(targetTop) + 'px';
+  _tnvTrackToastDuring(450);
+
+  function finishReturn(){
+    if(useCenter){
+      btn.classList.add('tnv-centered');
+      _tnvCentered = true;
+      btn.style.setProperty('position', 'fixed', 'important');
+      btn.style.setProperty('left', '50%', 'important');
+      btn.style.setProperty('top', (targetTop + first.height / 2) + 'px', 'important');
+      btn.style.zIndex = '100050';
+      btn.style.transform = 'translate(-50%,-50%)';
+      btn.style.transition = '';
+    } else {
+      btn.classList.remove('tnv-centered');
+      _tnvCentered = false;
+      _tnvClearCenteredInline();
+      btn.style.transition = 'none';
+      btn.style.position = '';
+      btn.style.left = '';
+      btn.style.top = '';
+      btn.style.right = '';
+      btn.style.bottom = '';
+      btn.style.transform = '';
+      btn.style.margin = '';
+      btn.style.zIndex = '';
+      btn.style.opacity = '';
+      var home2 = _tnvEscapeHomeParent || document.querySelector('.top-bar .top-actions');
+      if(home2){
+        if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home2) home2.insertBefore(btn, _tnvEscapeHomeNextSibling);
+        else home2.appendChild(btn);
+      }
+    }
+  }
+  var done = false;
+  function onEnd(e){
+    if(e && e.target !== btn) return;
+    if(done) return;
+    done = true;
+    btn.removeEventListener('transitionend', onEnd);
+    finishReturn();
+  }
+  btn.addEventListener('transitionend', onEnd);
+  setTimeout(onEnd, 480);
 }
 window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
 window._tnvReturnFromModal = _tnvReturnFromModal;
@@ -28233,14 +28308,21 @@ function toggleDayNight(){
   _syncAndroidStatusBarForTheme(next);
 }
 /**
- * Status bar = same band as top header (proper working glass).
- * Sun: dark #0a0a0e (matches rgba(10,10,14,0.42) header) + light icons
- * Moon: white + dark icons
- * Scrim only — no native top pad (avoids huge margin).
+ * Main app status bar chrome.
+ * Sun: dark #0a0a0e matching top-bar glass. Moon: white + dark icons.
+ * Studio uses transparent (see _setAndroidStatusBarStudio).
  */
 function _syncAndroidStatusBarForTheme(t){
   try{
     if(!/Android/i.test(navigator.userAgent||'')) return;
+    // If Studio is open, keep transparent blend — don't override
+    try{
+      var ig = document.getElementById('imageGenModal');
+      if(ig && (ig.style.display === 'flex' || ig.style.display === 'block')){
+        _setAndroidStatusBarStudio(true);
+        return;
+      }
+    }catch(_ig){}
     var isMoon = (t === 'purple');
     var color = isMoon ? '#FFFFFF' : '#0a0a0e';
     var style = isMoon ? 'dark' : 'light';
@@ -28256,6 +28338,28 @@ function _syncAndroidStatusBarForTheme(t){
     }catch(_m){}
   }catch(e){}
 }
+/** Studio open: transparent status bar so Studio header blends under icons again. */
+function _setAndroidStatusBarStudio(on){
+  try{
+    if(!/Android/i.test(navigator.userAgent||'')) return;
+    if(on){
+      if(typeof median !== 'undefined' && median.statusbar && typeof median.statusbar.set === 'function'){
+        median.statusbar.set({ style: 'light', color: '#00000000' });
+      }
+      if(typeof gonative !== 'undefined' && gonative.statusbar && typeof gonative.statusbar.set === 'function'){
+        gonative.statusbar.set({ style: 'light', color: '#00000000' });
+      }
+      try{
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if(meta) meta.setAttribute('content', '#000000');
+      }catch(_m){}
+    } else {
+      var t = localStorage.getItem('_appTheme') || 'easyview';
+      _syncAndroidStatusBarForTheme(t);
+    }
+  }catch(e){}
+}
+window._setAndroidStatusBarStudio = _setAndroidStatusBarStudio;
 function _syncDayNightToggle(t){
   var wrap  = document.getElementById('dayNightToggle');
   var left  = document.getElementById('dnt-left');
