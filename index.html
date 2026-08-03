@@ -3319,6 +3319,14 @@ html.android-status-blend .top-bar{
   -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
   border-bottom:1px solid rgba(255,255,255,0.08)!important;
 }
+/* Home / chat empty only: no divider under top bar above “What's on your mind?” */
+.main:has(#sec-welcome.active) .top-bar,
+body:has(#sec-welcome.active) .top-bar,
+.main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+  border-bottom-color:transparent!important;
+  border-bottom-width:0!important;
+}
 /* Do not restyle #dayNightToggle — size/margin unchanged */
 html.android-status-blend #dayNightToggle{
   margin:0!important;
