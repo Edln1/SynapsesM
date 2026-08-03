@@ -2387,16 +2387,16 @@ to{opacity:0;transform:translateX(-40px);}}
    speech-to-speech stays live and the rest of the top bar is collapsed.
    Position itself (the glide) is driven by JS via inline transform/opacity —
    this just establishes the positioning context. */
-/* Centered STS mic: horizontal center of top-bar; vertical top set by JS to match
-   the right-side icon row (same Y as docked mic). transform not !important so FLIP works. */
+/* Centered STS mic: fixed to the VIEWPORT so left:50% is true screen center
+   (under the front camera), not “middle of the top-bar box” which can be offset. */
 #topNavVoiceBtn.tnv-centered{
-  position:absolute!important;
+  position:fixed!important;
   left:50%!important;
   right:auto!important;
   bottom:auto!important;
   margin:0!important;
   transform:translate(-50%,-50%);
-  z-index:5;
+  z-index:100050;
   pointer-events:auto!important;
 }
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
@@ -5568,7 +5568,7 @@ window.getWebAudioNode = getWebAudioNode;
       <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
-      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
+      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Clear studio history" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🗑</button>
     </div>
   </div>
 
@@ -7458,7 +7458,48 @@ function toggleImageGenSettingsSheet(){
   sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
 }
 
+/** Clear studio image cache + grid — always asks first so history isn’t wiped by accident */
 function resetImageGenStudio(){
+  showStudioClearHistoryConfirm();
+}
+
+function showStudioClearHistoryConfirm(){
+  var existing = document.getElementById('studioClearHistoryModal');
+  if(existing) existing.remove();
+  var ov = document.createElement('div');
+  ov.id = 'studioClearHistoryModal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px;';
+  ov.innerHTML =
+    '<div role="dialog" aria-modal="true" style="width:min(360px,100%);background:rgba(18,16,28,0.96);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:22px 20px 18px;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:DM Sans,sans-serif;">' +
+      '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#e8e6f5;margin-bottom:8px;">Clear studio history?</div>' +
+      '<div style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.55);margin-bottom:18px;">This deletes all saved generated images on this device (local cache). You can’t undo this.</div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button type="button" id="studioClearCancel" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>' +
+        '<button type="button" id="studioClearConfirm" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(232,93,150,0.45);background:rgba(232,93,150,0.18);color:#ffb3c9;font-size:13px;font-weight:600;cursor:pointer;">Clear history</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  function close(){ try{ ov.remove(); }catch(e){} }
+  ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+  var cancel = document.getElementById('studioClearCancel');
+  var conf = document.getElementById('studioClearConfirm');
+  if(cancel) cancel.onclick = close;
+  if(conf) conf.onclick = function(){
+    close();
+    clearStudioImageHistoryAndUi();
+  };
+}
+
+function clearStudioImageHistoryAndUi(){
+  try{ clearStudioImageCache(); }catch(e){}
+  // Also wipe guest legacy key if present
+  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
+  // Best-effort remote clear for signed-in users
+  try{
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+      _supabase.from('generated_images').delete().eq('user_id', currentUser.id).then(function(){}).catch(function(){});
+    }
+  }catch(e3){}
   document.getElementById('imageGenPrompt').value = '';
   document.getElementById('imageGenResults').innerHTML = '';
   document.getElementById('imageGenResults').style.display = 'none';
@@ -7470,16 +7511,17 @@ function resetImageGenStudio(){
   document.getElementById('imageGenAspect').value = 'square';
   document.getElementById('imageGenCount').value = '4';
   clearImageGenRef();
+  _imageGenFeedLoaded = false;
   renderImageGenDefaultFeed();
+  if(typeof showToast === 'function') showToast('Studio history cleared');
 }
 
 function openImageGenModal(){
   closeMobileMore();
   renderImageGenTemplates();
   switchStudioTab('generate');
-  if(document.getElementById('imageGenResults').style.display !== 'grid'){
-    renderImageGenDefaultFeed();
-  }
+  // Always restore from local (and account) cache so reloads don’t empty the grid
+  renderImageGenDefaultFeed();
   var modal = document.getElementById('imageGenModal');
   modal.style.transition = 'none';
   modal.style.opacity = '0';
@@ -7620,11 +7662,10 @@ function downloadGeneratedImage(dataUrl, filename){
   a.remove();
 }
 
-// ── Generated-image history — signed-in users sync to Supabase (account +
-// storage bucket), guests keep a capped history in this browser's localStorage
-// so images aren't lost when they exit the app or reload the page. ─────────
-var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history';
-var GUEST_IMAGE_HISTORY_MAX = 24; // data URLs are heavy — cap so localStorage doesn't overflow
+// ── Studio image history: always local cache (survives reset) + optional cloud ─
+var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history'; // legacy
+var STUDIO_IMAGE_CACHE_KEY = 'synapses_studio_image_cache_v1';
+var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use 🗑 to clear; no 100-image pileups
 
 function _dataUrlToBlob(dataUrl){
   var parts = dataUrl.split(',');
@@ -7637,9 +7678,46 @@ function _dataUrlToBlob(dataUrl){
   return new Blob([u8], {type: mime});
 }
 
+function _readStudioImageCache(){
+  var hist = [];
+  try{ hist = JSON.parse(localStorage.getItem(STUDIO_IMAGE_CACHE_KEY) || '[]'); }catch(e){ hist = []; }
+  if(!hist || !hist.length){
+    try{
+      var legacy = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]');
+      if(legacy && legacy.length){ hist = legacy; _writeStudioImageCache(hist); }
+    }catch(e2){}
+  }
+  return Array.isArray(hist) ? hist : [];
+}
+
+function _writeStudioImageCache(hist){
+  if(!Array.isArray(hist)) hist = [];
+  if(hist.length > STUDIO_IMAGE_CACHE_MAX) hist = hist.slice(0, STUDIO_IMAGE_CACHE_MAX);
+  try{
+    localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist));
+    return true;
+  }catch(e){
+    hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
+    try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist)); return true; }catch(e2){
+      try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist.slice(0, 4))); return true; }catch(e3){ return false; }
+    }
+  }
+}
+
+function clearStudioImageCache(){
+  try{ localStorage.removeItem(STUDIO_IMAGE_CACHE_KEY); }catch(e){}
+  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
+}
+
 function saveGeneratedImageToHistory(src, meta){
   try{
-    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined'){
+    meta = meta || {};
+    // Always local first so app reset still shows images
+    var hist = _readStudioImageCache();
+    hist.unshift({ src: src, prompt: meta.prompt || '', model: meta.model || '', aspect: meta.aspect || '', ts: Date.now() });
+    _writeStudioImageCache(hist);
+
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
       if(/^data:/.test(src)){
         var blob = _dataUrlToBlob(src);
         var ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
@@ -7647,7 +7725,15 @@ function saveGeneratedImageToHistory(src, meta){
         _supabase.storage.from('generated-images').upload(path, blob, {contentType: blob.type}).then(function(r){
           if(r.error){ console.error('Image storage upload error:', r.error); return; }
           var pub = _supabase.storage.from('generated-images').getPublicUrl(path);
-          _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: pub.data.publicUrl, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
+          var url = pub && pub.data && pub.data.publicUrl;
+          if(url){
+            try{
+              var h2 = _readStudioImageCache();
+              for(var i = 0; i < h2.length; i++){ if(h2[i].src === src){ h2[i].src = url; break; } }
+              _writeStudioImageCache(h2);
+            }catch(_u){}
+          }
+          _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: url || src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
             if(r2.error) console.error('generated_images insert error:', r2.error.message);
           });
         });
@@ -7656,32 +7742,34 @@ function saveGeneratedImageToHistory(src, meta){
           if(r2.error) console.error('generated_images insert error:', r2.error.message);
         });
       }
-    } else {
-      var hist = [];
-      try{ hist = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]'); }catch(e){}
-      hist.unshift({src: src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect, ts: Date.now()});
-      if(hist.length > GUEST_IMAGE_HISTORY_MAX) hist = hist.slice(0, GUEST_IMAGE_HISTORY_MAX);
-      try{
-        localStorage.setItem(GUEST_IMAGE_HISTORY_KEY, JSON.stringify(hist));
-      }catch(e){
-        // storage full — drop the older half and retry once
-        hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
-        try{ localStorage.setItem(GUEST_IMAGE_HISTORY_KEY, JSON.stringify(hist)); }catch(e2){}
-      }
     }
   }catch(e){ console.error('saveGeneratedImageToHistory error:', e); }
 }
 
 async function loadImageGenHistory(){
   try{
-    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined'){
-      var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
-      if(r.error){ console.error('load image history error:', r.error.message); return []; }
-      return (r.data || []).map(function(row){ return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect}; });
+    var local = _readStudioImageCache();
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+      try{
+        var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
+        if(!r.error && r.data && r.data.length){
+          var remote = r.data.map(function(row){
+            return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect, ts: row.created_at ? Date.parse(row.created_at) : 0};
+          });
+          var seen = {};
+          var merged = [];
+          local.concat(remote).forEach(function(it){
+            if(!it || !it.src || seen[it.src]) return;
+            seen[it.src] = 1;
+            merged.push(it);
+          });
+          if(merged.length > STUDIO_IMAGE_CACHE_MAX) merged = merged.slice(0, STUDIO_IMAGE_CACHE_MAX);
+          if(merged.length) _writeStudioImageCache(merged);
+          return merged;
+        }
+      }catch(er){ console.error('load remote image history:', er); }
     }
-    var hist = [];
-    try{ hist = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]'); }catch(e){}
-    return hist;
+    return local;
   }catch(e){ console.error('loadImageGenHistory error:', e); return []; }
 }
 
@@ -27800,58 +27888,75 @@ function _tnvGlideToCenter(){
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
   /*
-    Align Y exactly with the NORMAL docked STS row.
-    When the top bar is collapsed, .top-actions has transform:translateY(-16px),
-    so getBoundingClientRect is 16px too high — undo that so center matches
-    the visible right-side icon row, not the faded-up one.
+    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%,
+    not “middle of .top-bar” (bar can be offset by layout/padding).
+    Vertical: optical mid of #topTitle / icon row.
   */
   var rowCy = first.top + first.height / 2;
   try{
-    var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
-    if(barHidden) rowCy += 16;
-  }catch(_h){}
-  // Prefer live mid of top-actions, corrected for hide transform
-  try{
-    var actions = document.querySelector('.top-bar .top-actions');
-    if(actions){
-      var row = actions.getBoundingClientRect();
-      if(row.height > 8){
-        var acy = row.top + row.height / 2;
-        if(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden')) acy += 16;
-        rowCy = acy;
+    var titleEl = document.getElementById('topTitle');
+    if(titleEl && titleEl.getBoundingClientRect().height > 4){
+      var tr = titleEl.getBoundingClientRect();
+      rowCy = tr.top + tr.height / 2;
+    } else {
+      var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
+      if(barHidden) rowCy += 16;
+      var actions = document.querySelector('.top-bar .top-actions');
+      if(actions){
+        var row = actions.getBoundingClientRect();
+        if(row.height > 8){
+          var acy = row.top + row.height / 2;
+          if(barHidden) acy += 16;
+          rowCy = acy - 3;
+        }
       }
     }
   }catch(_r){}
+  rowCy -= 2;
   _tnvHomeParent = btn.parentNode;
   _tnvHomeNextSibling = btn.nextSibling;
-  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
+  // Body + fixed = left:50% is screen center (camera), independent of top-bar box
+  document.body.appendChild(btn);
   btn.classList.add('tnv-centered');
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
   btn.style.transition = 'none';
-  var barRect = bar.getBoundingClientRect();
-  // Absolute top inside .top-bar — same vertical center as normal right-side STS
-  var topInBar = rowCy - barRect.top;
-  btn.style.setProperty('top', topInBar + 'px', 'important');
-  btn.style.left = '50%';
+  btn.style.setProperty('position', 'fixed', 'important');
+  btn.style.setProperty('left', '50%', 'important');
+  btn.style.setProperty('top', rowCy + 'px', 'important');
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.zIndex = '100050';
   btn.style.transform = 'translate(-50%,-50%)';
   var last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
   var dy = first.top - last.top;
   btn.style.opacity = '0';
   btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
-  void btn.offsetWidth; // flush layout so the "from" state actually paints
+  void btn.offsetWidth;
   btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
   _tnvTrackToastDuring(500);
-  /* After glide, keep pure center transform (no scale residue) */
   btn.addEventListener('transitionend', function _centerSettle(e){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     if(!_tnvCentered) return;
     btn.style.transition = '';
     btn.style.transform = 'translate(-50%,-50%)';
   }, {once:true});
+}
+
+function _tnvClearCenteredInline(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn) return;
+  btn.style.removeProperty('position');
+  btn.style.removeProperty('top');
+  btn.style.removeProperty('left');
+  btn.style.removeProperty('right');
+  btn.style.removeProperty('bottom');
+  btn.style.removeProperty('margin');
+  btn.style.removeProperty('z-index');
 }
 
 function _tnvGlideHome(){
@@ -27861,7 +27966,7 @@ function _tnvGlideHome(){
   btn.classList.remove('tnv-centered');
   btn.style.transition = 'none';
   btn.style.transform = 'none';
-  btn.style.removeProperty('top');
+  _tnvClearCenteredInline();
   var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
   if(home){
     if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -27884,12 +27989,12 @@ function _tnvGlideHome(){
     btn.style.transform = '';
     btn.style.opacity = '';
   }, {once:true});
-  /* Safety: clear residual transform if transitionend never fires */
   setTimeout(function(){
     if(!_tnvCentered && btn && !btn.classList.contains('tnv-centered')){
       btn.style.transition = '';
       btn.style.transform = '';
       btn.style.opacity = '';
+      _tnvClearCenteredInline();
     }
   }, 500);
 }
@@ -27913,6 +28018,7 @@ function _tnvSendAway(){
     btn.style.transition = 'none';
     btn.style.transform = '';
     btn.style.opacity = '';
+    _tnvClearCenteredInline();
     var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
     if(home){
       if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -27954,12 +28060,12 @@ function _tnvEscapeAboveModal(){
   _tnvEscapeWasCentered = btn.classList.contains('tnv-centered');
   if(_tnvEscapeWasCentered){
     btn.classList.remove('tnv-centered');
-    btn.style.removeProperty('top');
+    _tnvClearCenteredInline();
   }
   _tnvEscaped = true;
 
   // Pin at current screen position on body (fixed), then fly to studio icons
-  document.body.appendChild(btn);
+  if(btn.parentNode !== document.body) document.body.appendChild(btn);
   btn.style.transition = 'none';
   btn.style.position = 'fixed';
   btn.style.left = first.left + 'px';
@@ -28021,19 +28127,26 @@ function _tnvReturnFromModal(){
   btn.style.opacity = '';
   btn.style.removeProperty('top');
   if(_tnvEscapeWasCentered){
+    // Stay on body + true viewport center under camera
+    if(btn.parentNode !== document.body) document.body.appendChild(btn);
     btn.classList.add('tnv-centered');
-    // Re-apply row-aligned center (same Y as normal docked STS)
     try{
       if(window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
-        var bar = document.querySelector('.top-bar');
-        var actions = document.querySelector('.top-bar .top-actions');
-        if(bar && actions){
-          var row = actions.getBoundingClientRect();
-          var barRect = bar.getBoundingClientRect();
-          var rowCy = row.top + row.height / 2 + 16; // undo hide translateY(-16px)
-          btn.style.setProperty('top', (rowCy - barRect.top) + 'px', 'important');
-          btn.style.transform = 'translate(-50%,-50%)';
+        var rowCy;
+        var titleEl = document.getElementById('topTitle');
+        if(titleEl && titleEl.getBoundingClientRect().height > 4){
+          var tr = titleEl.getBoundingClientRect();
+          rowCy = tr.top + tr.height / 2 - 2;
+        } else {
+          var actions = document.querySelector('.top-bar .top-actions');
+          var row = actions ? actions.getBoundingClientRect() : null;
+          rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
         }
+        btn.style.setProperty('position', 'fixed', 'important');
+        btn.style.setProperty('left', '50%', 'important');
+        btn.style.setProperty('top', rowCy + 'px', 'important');
+        btn.style.zIndex = '100050';
+        btn.style.transform = 'translate(-50%,-50%)';
       }
     }catch(_re){}
   }
