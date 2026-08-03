@@ -5374,14 +5374,14 @@ window.getWebAudioNode = getWebAudioNode;
   </div>
 
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-  <div style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
+  <div style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 10px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
     <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
-      <button id="studioHistoryGlassBtn" onclick="openImageGenHistory()" title="Your generated images" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
+      <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
       <button onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
@@ -5391,25 +5391,32 @@ window.getWebAudioNode = getWebAudioNode;
   <!-- ══════════════════════════════════════════════════════════════════════
        GENERATE TAB
   ══════════════════════════════════════════════════════════════════════ -->
-  <div id="studioGenerateView" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+  <div id="studioGenerateView" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">
 
-    <!-- Template chips (horizontal scroll) -->
-    <div id="imageGenTemplateRow" style="display:flex;gap:10px;overflow-x:auto;padding:2px 14px 14px;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+    <!-- Scrollable column: template chips + results all live in ONE scroller now, so the
+         style-template row scrolls away with the grid instead of staying pinned. The
+         floating header (top) and input bar (bottom) sit outside this scroller as
+         absolutely-positioned overlays, so the 2-col grid runs edge-to-edge/full-screen
+         and scrolls fully behind both of them. Top/bottom padding here just keeps the
+         FIRST/LAST row clear of the bars at rest — everything still scrolls underneath. -->
+    <div id="imageGenScrollCol" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:calc(58px + env(safe-area-inset-top));padding-bottom:calc(66px + env(safe-area-inset-bottom));">
 
-    <!-- Error banner -->
-    <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;flex-shrink:0;"></div>
+      <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
+           full-screen; toggled by the 4-square button up top. Scrolls away with the grid. -->
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:2px 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
 
-    <!-- Edit note (shown only when a reference photo is attached) -->
-    <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:0 14px 10px;flex-shrink:0;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
+      <!-- Error banner -->
+      <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
 
-    <!-- Results area (scrollable) -->
-    <div style="flex:1;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;">
+      <!-- Edit note (shown only when a reference photo is attached) -->
+      <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:0 14px 10px;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
+
       <div id="imageGenEmptyState" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;"></div>
       <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr;gap:10px;padding:2px 14px 16px;"></div>
     </div>
 
     <!-- Settings sheet (slides up over the input bar) -->
-    <div id="imageGenSettingsSheet" style="display:none;flex-shrink:0;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+    <div id="imageGenSettingsSheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Generation settings</div>
         <button onclick="toggleImageGenSettingsSheet()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
@@ -5448,7 +5455,7 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
 
     <!-- History sheet — past generations, synced to account (or local for guests) -->
-    <div id="imageGenHistorySheet" style="display:none;flex-shrink:0;max-height:46vh;overflow-y:auto;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+    <div id="imageGenHistorySheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;max-height:46vh;overflow-y:auto;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Your generations</div>
         <button onclick="closeImageGenHistory()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
@@ -5456,8 +5463,8 @@ window.getWebAudioNode = getWebAudioNode;
       <div id="imageGenHistoryGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
     </div>
 
-    <!-- Bottom input bar -->
-    <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);">
+    <!-- Bottom input bar — floats over the full-screen grid like the header does up top -->
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);">
       <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
       <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
         <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
@@ -7235,6 +7242,20 @@ function applyImageGenTemplate(t){
   var len = promptEl.value.length;
   try{ promptEl.setSelectionRange(len, len); }catch(e){}
   document.getElementById('imageGenSettingsSheet').style.display = 'none';
+}
+
+function toggleImageGenTemplateRow(){
+  var row = document.getElementById('imageGenTemplateRow');
+  var btn = document.getElementById('studioHistoryGlassBtn');
+  if(!row) return;
+  renderImageGenTemplates(); // idempotent — builds the chips once, then just toggles visibility
+  var showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  if(btn){
+    btn.style.background = showing ? 'rgba(255,255,255,0.05)' : 'rgba(124,106,247,0.22)';
+    btn.style.borderColor = showing ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.5)';
+    btn.style.color = showing ? 'var(--muted)' : '#fff';
+  }
 }
 
 function toggleImageGenSettingsSheet(){
