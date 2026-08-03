@@ -3293,6 +3293,82 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #ncmdLaunchBtn,#ncmdLauncher{display:none!important;}
 .quick-actions{display:none!important;}
 </style>
+<!-- Android overlay status bar: push MAIN app below icons; Studio stays edge-to-edge -->
+<style id="androidStatusPadCSS">
+html.android-status-pad{
+  --android-status-pad:48px;
+}
+/*
+  body is display:flex; height:100vh. With border-box, padding-top shrinks the
+  flex area so top chrome sits BELOW the transparent notification bar.
+  #imageGenModal is position:fixed (viewport) → ignores body pad → Studio stays tight.
+*/
+html.android-status-pad body{
+  padding-top:var(--android-status-pad)!important;
+  box-sizing:border-box!important;
+  height:100vh!important;
+  max-height:100vh!important;
+  background:#000!important;
+}
+html.android-status-pad .top-bar{
+  max-height:none!important;
+  overflow:visible!important;
+}
+html.android-status-pad #imageGenModal{
+  top:0!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  height:100%!important;
+  max-height:none!important;
+  padding-top:0!important;
+  margin-top:0!important;
+}
+</style>
+<script>
+(function(){
+  try{
+    var ua = navigator.userAgent || '';
+    // Any Android phone/app WebView (modern Chrome WV often omits "; wv)")
+    if(!/Android/i.test(ua)) return;
+    document.documentElement.classList.add('android-status-pad');
+
+    function applyPad(){
+      var envH = 0;
+      try{
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top,0px);margin:0;padding:0;border:0;';
+        document.documentElement.appendChild(probe);
+        envH = probe.getBoundingClientRect().height || 0;
+        if(probe.parentNode) probe.parentNode.removeChild(probe);
+      }catch(e){}
+      // 48px floor ≈ status bar on most phones when env() is 0 under overlay
+      var pad = Math.max(Math.round(envH), 48);
+      document.documentElement.style.setProperty('--android-status-pad', pad + 'px');
+      document.documentElement.classList.add('android-status-pad');
+      // Inline !important so page media-queries cannot win
+      if(document.body){
+        document.body.classList.add('android-status-pad');
+        document.body.style.setProperty('padding-top', pad + 'px', 'important');
+        document.body.style.setProperty('box-sizing', 'border-box', 'important');
+        document.body.style.setProperty('height', '100vh', 'important');
+        document.body.style.setProperty('max-height', '100vh', 'important');
+      }
+    }
+    applyPad();
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', applyPad);
+    }
+    window.addEventListener('load', applyPad);
+    window.addEventListener('resize', applyPad);
+    try{ if(window.visualViewport) window.visualViewport.addEventListener('resize', applyPad); }catch(e2){}
+    // Median injects CSS/JS late — re-stamp pad
+    setTimeout(applyPad, 200);
+    setTimeout(applyPad, 800);
+    setTimeout(applyPad, 2000);
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
 <script>try{window._supabase=(typeof supabase!=='undefined')?supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL'):null;}catch(e){console.warn('Supabase init failed (CDN may be slow/blocked) — continuing without sync:',e);window._supabase=null;}</script>
