@@ -2811,11 +2811,24 @@ body.voice-live .syn-fp-icon{
 @media (max-width:768px){
   .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 }
-@media (min-width:769px){
-  #imageGenScrollCol{padding-top:calc(72px + env(safe-area-inset-top, 0px));padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+/* Studio scroll clearance under floating header — keep tight (was huge empty black) */
+#imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top, 0px));padding-bottom:calc(66px + env(safe-area-inset-bottom, 0px));}
+#imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top, 0px));}
+/* Style chips row sits just under header — only header height, not double-pad */
+#imageGenTemplateRow{padding-top:calc(54px + env(safe-area-inset-top, 0px))!important;padding-bottom:10px!important;}
+/* When styles row is open, scroll col itself needs no top pad (row owns clearance) */
+#imageGenScrollCol:not(.igRowHidden){padding-top:0!important;}
+/* Community: transparent studio header (blend like home), hide style/reset icons */
+#imageGenModal.studio-tab-community #studioTopBar{
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border-bottom:none!important;
+  box-shadow:none!important;
 }
-@media (max-width:768px){
-  #imageGenScrollCol.igRowHidden{padding-top:calc(72px + env(safe-area-inset-top, 0px));}
+#imageGenModal.studio-tab-community #studioHistoryGlassBtn,
+#imageGenModal.studio-tab-community #studioResetBtn{
+  display:none!important;
 }
 </style>
 <style>
@@ -3370,15 +3383,22 @@ html.android-status-blend #studioTopBar{
   padding-left:14px!important;
   padding-right:14px!important;
 }
-html.android-status-blend #imageGenScrollCol,
 html.android-status-blend #imageGenScrollCol.igRowHidden{
-  padding-top:calc(72px + var(--android-status-inset))!important;
+  padding-top:calc(54px + var(--android-status-inset))!important;
+}
+html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
+  padding-top:0!important;
 }
 html.android-status-blend #imageGenTemplateRow{
-  padding-top:calc(72px + var(--android-status-inset))!important;
+  padding-top:calc(50px + var(--android-status-inset))!important;
 }
 html.android-status-blend #studioCommunityScroll{
-  padding-top:calc(72px + var(--android-status-inset))!important;
+  padding-top:calc(54px + var(--android-status-inset))!important;
+}
+html.android-status-blend #imageGenModal.studio-tab-community #studioTopBar{
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
 }
 /* Centered mic top is set in JS (_tnvGlideToCenter) — same Y as right-side icons. */
 </style>
@@ -5548,7 +5568,7 @@ window.getWebAudioNode = getWebAudioNode;
       <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
-      <button onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
+      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Start over" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⟲</button>
     </div>
   </div>
 
@@ -5568,7 +5588,7 @@ window.getWebAudioNode = getWebAudioNode;
       <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
            full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
            Has its own top clearance since the scroll column itself has none. -->
-      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(72px + env(safe-area-inset-top, 0px)) 14px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
 
       <!-- Error banner -->
       <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
@@ -5646,7 +5666,7 @@ window.getWebAudioNode = getWebAudioNode;
        (same socialPosts data, same Supabase `posts` table + `posts` bucket)
   ══════════════════════════════════════════════════════════════════════ -->
   <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;background:transparent;">
-    <div id="studioCommunityScroll" style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(72px + env(safe-area-inset-top, 0px)) 14px 16px;position:relative;z-index:1;">
+    <div id="studioCommunityScroll" style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 16px;position:relative;z-index:1;">
 
       <!-- Header — small button opens the Posts column, EXACT same width/min-width/
            padding/overflow toggle + transition as the old matchConnectCol/toggleMatchConnect. -->
@@ -7840,9 +7860,12 @@ function initStudioBeamsCanvas(){
 
 function switchStudioTab(tab){
   var glassBtn = document.getElementById('studioCommunityGlassBtn');
+  var styleBtn = document.getElementById('studioHistoryGlassBtn');
+  var resetBtn = document.getElementById('studioResetBtn');
   var genView = document.getElementById('studioGenerateView');
   var comView = document.getElementById('studioCommunityView');
   var bgLayer = document.getElementById('studioBgLayer');
+  var modal = document.getElementById('imageGenModal');
   // Toggle: clicking the glass button while already on community goes back to generate.
   if(tab === 'community' && comView.style.display === 'flex'){
     tab = 'generate';
@@ -7852,6 +7875,24 @@ function switchStudioTab(tab){
     comView.style.display = 'flex';
     comView.style.opacity = '0';
     comView.style.transition = 'opacity .45s ease';
+    if(modal) modal.classList.add('studio-tab-community');
+    // Style templates + reset do nothing on community — hide so they don’t confuse
+    if(styleBtn) styleBtn.style.display = 'none';
+    if(resetBtn) resetBtn.style.display = 'none';
+    // Close style row if it was open on generate
+    try{
+      var trow = document.getElementById('imageGenTemplateRow');
+      if(trow && trow.style.display === 'flex'){
+        trow.style.display = 'none';
+        var sc = document.getElementById('imageGenScrollCol');
+        if(sc) sc.classList.add('igRowHidden');
+        if(styleBtn){
+          styleBtn.style.background = 'rgba(255,255,255,0.05)';
+          styleBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+          styleBtn.style.color = 'var(--muted)';
+        }
+      }
+    }catch(_tr){}
     if(glassBtn){
       glassBtn.style.background = 'rgba(124,106,247,0.2)';
       glassBtn.style.borderColor = 'rgba(124,106,247,0.5)';
@@ -7872,6 +7913,9 @@ function switchStudioTab(tab){
   } else {
     if(bgLayer) bgLayer.style.opacity = '0';
     comView.style.opacity = '0';
+    if(modal) modal.classList.remove('studio-tab-community');
+    if(styleBtn) styleBtn.style.display = '';
+    if(resetBtn) resetBtn.style.display = '';
     if(glassBtn){
       glassBtn.style.background = 'rgba(255,255,255,0.05)';
       glassBtn.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -27755,14 +27799,27 @@ function _tnvGlideToCenter(){
   if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
-  // Keep exact Y of the docked right-side STS (same row); only fly X to center
+  /*
+    Align Y exactly with the NORMAL docked STS row.
+    When the top bar is collapsed, .top-actions has transform:translateY(-16px),
+    so getBoundingClientRect is 16px too high — undo that so center matches
+    the visible right-side icon row, not the faded-up one.
+  */
   var rowCy = first.top + first.height / 2;
+  try{
+    var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
+    if(barHidden) rowCy += 16;
+  }catch(_h){}
+  // Prefer live mid of top-actions, corrected for hide transform
   try{
     var actions = document.querySelector('.top-bar .top-actions');
     if(actions){
       var row = actions.getBoundingClientRect();
-      // Prefer full actions row mid if still laid out (bar not fully gone)
-      if(row.height > 8) rowCy = row.top + row.height / 2;
+      if(row.height > 8){
+        var acy = row.top + row.height / 2;
+        if(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden')) acy += 16;
+        rowCy = acy;
+      }
     }
   }catch(_r){}
   _tnvHomeParent = btn.parentNode;
@@ -27773,7 +27830,7 @@ function _tnvGlideToCenter(){
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
   btn.style.transition = 'none';
   var barRect = bar.getBoundingClientRect();
-  // Absolute top inside .top-bar so mic Y matches the icon row exactly
+  // Absolute top inside .top-bar — same vertical center as normal right-side STS
   var topInBar = rowCy - barRect.top;
   btn.style.setProperty('top', topInBar + 'px', 'important');
   btn.style.left = '50%';
@@ -27918,17 +27975,21 @@ function _tnvEscapeAboveModal(){
   var _flyTries = 0;
   function flyToStudioIcons(){
     if(!_tnvEscaped || !btn) return;
-    var cluster = document.getElementById('studioTopBarActions') || document.getElementById('studioTopBar');
     var modal = document.getElementById('imageGenModal');
     if(!modal || modal.style.display === 'none') return;
-    var target = cluster ? cluster.getBoundingClientRect() : null;
+    // Leftmost of the 3 Studio icons (community) — park STS just to its LEFT
+    var leftIcon = document.getElementById('studioCommunityGlassBtn')
+      || (document.getElementById('studioTopBarActions') && document.getElementById('studioTopBarActions').querySelector('button'));
+    var target = leftIcon ? leftIcon.getBoundingClientRect() : null;
     if(!target || target.width < 4){
       if(_flyTries++ < 12) requestAnimationFrame(flyToStudioIcons);
       return;
     }
-    // Sit on the 3-icon row — center of that cluster (same vertical line as icons)
-    var tx = target.left + target.width / 2 - first.width / 2;
+    var gap = 8;
+    var tx = target.left - first.width - gap;
     var ty = target.top + target.height / 2 - first.height / 2;
+    // Keep on-screen if needed (narrow phones)
+    if(tx < 8) tx = 8;
     btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1)';
     btn.style.left = Math.round(tx) + 'px';
     btn.style.top = Math.round(ty) + 'px';
@@ -27961,7 +28022,7 @@ function _tnvReturnFromModal(){
   btn.style.removeProperty('top');
   if(_tnvEscapeWasCentered){
     btn.classList.add('tnv-centered');
-    // Re-apply row-aligned center if still in STS + bar collapsed
+    // Re-apply row-aligned center (same Y as normal docked STS)
     try{
       if(window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
         var bar = document.querySelector('.top-bar');
@@ -27969,7 +28030,7 @@ function _tnvReturnFromModal(){
         if(bar && actions){
           var row = actions.getBoundingClientRect();
           var barRect = bar.getBoundingClientRect();
-          var rowCy = row.top + row.height / 2;
+          var rowCy = row.top + row.height / 2 + 16; // undo hide translateY(-16px)
           btn.style.setProperty('top', (rowCy - barRect.top) + 'px', 'important');
           btn.style.transform = 'translate(-50%,-50%)';
         }
