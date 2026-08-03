@@ -2781,6 +2781,12 @@ body.voice-live .syn-fp-icon{
 @media (max-width:768px){
   .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 }
+@media (min-width:769px){
+  #imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top));padding-bottom:calc(66px + env(safe-area-inset-bottom));}
+}
+@media (max-width:768px){
+  #imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top));}
+}
 </style>
 <style>
 /* Invisible overlay blocking the rightmost 8px */
@@ -5403,7 +5409,7 @@ window.getWebAudioNode = getWebAudioNode;
          absolutely-positioned overlays, so the 2-col grid runs edge-to-edge/full-screen
          and scrolls fully behind both of them. Top/bottom padding here just keeps the
          FIRST/LAST row clear of the bars at rest — everything still scrolls underneath. -->
-    <div id="imageGenScrollCol" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div id="imageGenScrollCol" class="igRowHidden" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
       <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
            full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
@@ -7255,10 +7261,15 @@ function applyImageGenTemplate(t){
 function toggleImageGenTemplateRow(){
   var row = document.getElementById('imageGenTemplateRow');
   var btn = document.getElementById('studioHistoryGlassBtn');
+  var scrollCol = document.getElementById('imageGenScrollCol');
   if(!row) return;
   renderImageGenTemplates(); // idempotent — builds the chips once, then just toggles visibility
   var showing = row.style.display === 'flex';
   row.style.display = showing ? 'none' : 'flex';
+  // When the row is hidden, the scroll column needs its own header clearance
+  // (mobile-only CSS) so the grid starts below the header instead of behind it.
+  // When the row is visible, it provides that clearance itself.
+  if(scrollCol) scrollCol.classList.toggle('igRowHidden', showing);
   if(btn){
     btn.style.background = showing ? 'rgba(255,255,255,0.05)' : 'rgba(124,106,247,0.22)';
     btn.style.borderColor = showing ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.5)';
