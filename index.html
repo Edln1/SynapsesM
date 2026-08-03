@@ -2898,7 +2898,16 @@ body.voice-live .syn-fp-icon{
         localStorage.setItem('synapses_topbar_hidden', '1');   // top-right icons hidden
         localStorage.setItem('synapses_synbot_enabled', '0');  // SynBot off
         localStorage.setItem('synapses_pulse_open_v1', '0');   // Pulse closed
+        localStorage.setItem('synapses_rel_enabled', 'false'); // Ava relationship bond OFF until user turns it on
         localStorage.setItem(FLAG, '1');
+      } catch(e) {}
+    })();
+    /* Also: if bond key never set (older installs without the flag path), default off once */
+    (function _defaultRelBondOffIfUnset(){
+      try {
+        if (localStorage.getItem('synapses_rel_enabled') == null) {
+          localStorage.setItem('synapses_rel_enabled', 'false');
+        }
       } catch(e) {}
     })();
     // Global error handler — prevent silent crashes after hours of use
@@ -14363,6 +14372,19 @@ function _fpEndHold(e){
   _fpCancelHold(early);
 }
 
+/** Cache fingerprint Y while pad is visible (askbar-off) — used when pad collapses on open */
+function _cacheFingerprintSlotTop(){
+  try{
+    var sec = document.getElementById('sec-chat');
+    var fp = document.getElementById('synFingerprint');
+    if(!sec || !fp) return;
+    var fr = fp.getBoundingClientRect();
+    var secRect = sec.getBoundingClientRect();
+    if(fr.height > 8 && secRect.height > 8){
+      window._fpSlotTop = fr.top - secRect.top;
+    }
+  }catch(_e){}
+}
 /** Place Ask bar where the fingerprint pad sits (replace, not stack under) */
 function _positionAskBarAtFingerprint(){
   var sec = document.getElementById('sec-chat');
@@ -14381,9 +14403,10 @@ function _positionAskBarAtFingerprint(){
   }
   if(!window._askBarOpen){
     area.style.removeProperty('top');
+    _cacheFingerprintSlotTop();
     return;
   }
-  /* Measure fingerprint slot before CSS collapses it, or fall back to subtitle */
+  /* Prefer live fingerprint (before collapse), then cached slot, then subtitle — never a stale low 360 */
   var fp = document.getElementById('synFingerprint');
   var anchor = document.querySelector('#chatEmptyState .syn-sub') || document.querySelector('#chatEmptyState .syn-greeting');
   var secRect = sec.getBoundingClientRect();
@@ -14393,18 +14416,23 @@ function _positionAskBarAtFingerprint(){
     if(fr.height > 8){
       topPx = fr.top - secRect.top;
       window._fpSlotTop = topPx;
-    } else if(typeof window._fpSlotTop === 'number'){
-      topPx = window._fpSlotTop;
     }
+  }
+  if(topPx == null && typeof window._fpSlotTop === 'number' && isFinite(window._fpSlotTop) && window._fpSlotTop > 40){
+    topPx = window._fpSlotTop;
   }
   if(topPx == null && anchor){
     var ar = anchor.getBoundingClientRect();
-    topPx = ar.bottom - secRect.top + 12;
-    window._fpSlotTop = topPx;
+    if(ar.height > 2){
+      topPx = ar.bottom - secRect.top + 12;
+    }
   }
   if(topPx == null) topPx = 360;
+  /* Clamp: don't sit too low (keyboard/safe-area glitches) or too high under header */
+  var maxTop = Math.max(120, (secRect.height || window.innerHeight || 640) * 0.62);
+  topPx = Math.max(80, Math.min(Math.round(topPx), Math.round(maxTop)));
   /* Override CSS top:360px!important rules */
-  area.style.setProperty('top', Math.max(80, Math.round(topPx)) + 'px', 'important');
+  area.style.setProperty('top', topPx + 'px', 'important');
   area.style.setProperty('bottom', 'auto', 'important');
   area.style.setProperty('left', '16px', 'important');
   area.style.setProperty('right', '16px', 'important');
@@ -14412,6 +14440,7 @@ function _positionAskBarAtFingerprint(){
   area.style.setProperty('z-index', '6', 'important');
 }
 window._positionAskBarAtFingerprint = _positionAskBarAtFingerprint;
+window._cacheFingerprintSlotTop = _cacheFingerprintSlotTop;
 
 (function bootFingerprintPad(){
   function wire(){
@@ -14508,22 +14537,17 @@ function setAskBarVisible(on){
     }
     return;
   }
-  /* Cache fingerprint Y before hide so Ask can replace that slot */
+  /* Cache fingerprint Y BEFORE askbar-on collapses the pad (height → 0) */
   if(on){
-    try {
-      var fp0 = document.getElementById('synFingerprint');
-      var secR = sec.getBoundingClientRect();
-      if(fp0){
-        var fr0 = fp0.getBoundingClientRect();
-        if(fr0.height > 8) window._fpSlotTop = fr0.top - secR.top;
-      }
-    } catch(eM){}
+    try { _cacheFingerprintSlotTop(); } catch(eM){}
   }
   window._askBarOpen = !!on;
   if(on){
     sec.classList.remove('askbar-off');
     sec.classList.add('askbar-on');
     if(btn) btn.classList.add('active');
+    /* Position immediately with cached slot, then re-measure next frames */
+    if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
     requestAnimationFrame(function(){
       if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
       requestAnimationFrame(function(){
@@ -14532,7 +14556,6 @@ function setAskBarVisible(on){
     });
     setTimeout(function(){
       if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
-      /* Don't auto-focus — keyboard only opens when user taps the field */
     }, 120);
   } else {
     sec.classList.remove('askbar-on');
@@ -14542,23 +14565,34 @@ function setAskBarVisible(on){
     if(area){
       area.style.removeProperty('top');
     }
+    /* Re-cache pad slot once it's visible again */
+    requestAnimationFrame(function(){
+      try { _cacheFingerprintSlotTop(); } catch(_c){}
+    });
     try {
       var ib2 = document.getElementById('inputBox');
       if(ib2) ib2.blur();
     } catch(eB){}
   }
 }
-/* Keep Ask bar aligned to fingerprint slot on rotate / resize */
+/* Keep Ask bar aligned to fingerprint slot on rotate / resize; refresh cache when pad visible */
 (function(){
   var t;
   function onResize(){
     clearTimeout(t);
     t = setTimeout(function(){
+      if(!window._askBarOpen && typeof _cacheFingerprintSlotTop === 'function') _cacheFingerprintSlotTop();
       if(window._askBarOpen && typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
     }, 80);
   }
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
+  /* Warm cache after first paint so open never falls back to a low 360px */
+  function warm(){
+    try { if(typeof _cacheFingerprintSlotTop === 'function') _cacheFingerprintSlotTop(); } catch(_w){}
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(warm, 200); });
+  else setTimeout(warm, 200);
 })();
 function activateAskMe(){
   try {
@@ -19494,12 +19528,13 @@ html += (function(){
   var nextThresh = thresholds[Math.min(stage + 1, 5)] || thresholds[5];
   var prevThresh = thresholds[stage];
   var pct = stage >= 5 ? 100 : Math.min(100, Math.round(((turns - prevThresh) / (nextThresh - prevThresh)) * 100));
-  var relEnabled = localStorage.getItem('synapses_rel_enabled') !== 'false';
+  /* Opt-in only: missing/null key = Off (never default On) */
+  var relEnabled = localStorage.getItem('synapses_rel_enabled') === 'true';
   return '<div class="section-card" style="margin-bottom:16px;"><div class="section-card-header"><h3>🫂 Relationship</h3>' +
     '<button onclick="event.stopPropagation();if(confirm(\'Reset relationship progress? This clears local bonding and companion memory.\')){localStorage.removeItem(\'synapses_relationship\');localStorage.removeItem(\'synapses_companion_memory\');this.textContent=\'✓\';var self=this;setTimeout(function(){self.textContent=\'↺\';},2000);}" title="Reset relationship progress" style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:none;border:none;color:rgba(160,165,220,0.35);font-size:14px;cursor:pointer;flex-shrink:0;transition:color 0.2s;padding:0;margin-left:auto;margin-right:6px;" onmouseover="this.style.color=\'rgba(255,120,120,0.8)\';" onmouseout="this.style.color=\'rgba(160,165,220,0.35)\';">↺</button>' +
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">' +
     '<span style="font-size:11px;color:rgba(160,165,220,0.5);">' + (relEnabled ? 'On' : 'Off') + '</span>' +
-    '<div onclick="var tog=this;var e=localStorage.getItem(\'synapses_rel_enabled\')!==\'false\';localStorage.setItem(\'synapses_rel_enabled\',e?\'false\':\'true\');tog.style.background=e?\'rgba(255,255,255,0.1)\':\'rgba(124,106,247,0.8)\';tog.children[0].style.left=e?\'3px\':\'18px\';tog.previousElementSibling.textContent=e?\'Off\':\'On\';" style="width:36px;height:20px;border-radius:99px;background:' + (relEnabled ? 'rgba(124,106,247,0.8)' : 'rgba(255,255,255,0.1)') + ';position:relative;cursor:pointer;transition:background 0.2s;">' +
+    '<div onclick="var tog=this;var e=localStorage.getItem(\'synapses_rel_enabled\')===\'true\';localStorage.setItem(\'synapses_rel_enabled\',e?\'false\':\'true\');tog.style.background=e?\'rgba(255,255,255,0.1)\':\'rgba(124,106,247,0.8)\';tog.children[0].style.left=e?\'3px\':\'18px\';tog.previousElementSibling.textContent=e?\'Off\':\'On\';" style="width:36px;height:20px;border-radius:99px;background:' + (relEnabled ? 'rgba(124,106,247,0.8)' : 'rgba(255,255,255,0.1)') + ';position:relative;cursor:pointer;transition:background 0.2s;">' +
     '<div style="position:absolute;top:3px;left:' + (relEnabled ? '18px' : '3px') + ';width:14px;height:14px;border-radius:50%;background:#fff;transition:left 0.2s;"></div>' +
     '</div>' +
     '</label>' +
@@ -36107,8 +36142,14 @@ async function _ttsPlayNext(genId) {
   // through. Clearing it here removes that window entirely rather than just
   // narrowing it.
   if (window._vmSpeakingDrainPoller) { clearInterval(window._vmSpeakingDrainPoller); window._vmSpeakingDrainPoller = null; }
-  // Record which view TTS is speaking from so back-to-chat pill knows where to go
-  if(typeof _currentViewId !== 'undefined' && _currentViewId) window._ttsSpeakingFromView = _currentViewId;
+  // Record source for "Back to chat" pill — STS always lives on chat/home
+  if (window._topNavVoiceActive) {
+    window._ttsSpeakingFromView = 'sec-chat';
+  } else if (typeof _currentViewId !== 'undefined' && _currentViewId) {
+    window._ttsSpeakingFromView = _currentViewId;
+  } else {
+    window._ttsSpeakingFromView = 'sec-chat';
+  }
   setBtnPurple();
   _startMicAnim();
 
@@ -36945,7 +36986,12 @@ function speakVoiceReply(text) {
     return Math.min(r.stage || 0, _relStages.length - 1);
   }
 
+  function _relBondEnabled() {
+    try { return localStorage.getItem('synapses_rel_enabled') === 'true'; } catch(e) { return false; }
+  }
+
   function _trackPersonalTurn(userText) {
+    if (!_relBondEnabled()) return;
     if (!_isPersonalMsg(userText)) return;
     var r = _loadRel();
     r.stage = r.stage || 0;
@@ -36962,7 +37008,8 @@ function speakVoiceReply(text) {
   }
 
   function _getRelPrompt() {
-    try { if (localStorage.getItem('synapses_rel_enabled') === 'false') return ''; } catch(e) {}
+    // Opt-in only — Off by default / when unset
+    if (!_relBondEnabled()) return '';
     var stage = _getRelStage();
     if (stage === 0) return '';
     return '\n\nRELATIONSHIP CONTEXT: ' + _relStages[stage].prompt;
@@ -38999,53 +39046,98 @@ function _ttsUpdateFloatingPill(viewId) {
   if (!btn) return;
   var _cvid = (typeof _currentViewId !== 'undefined' ? _currentViewId : null);
   var curView = viewId || _cvid;
-  var audioActive = _vmSpeaking || (_actx && _playbackTime && _actx.currentTime < _playbackTime);
-  // Record source view when audio starts
-  if (audioActive && curView && !window._ttsSpeakingFromView) {
-    window._ttsSpeakingFromView = curView;
+  var audioActive = !!(
+    (typeof _vmSpeaking !== 'undefined' && _vmSpeaking) ||
+    (_actx && _playbackTime && _actx.currentTime < _playbackTime)
+  );
+  var stsLive = !!(window._topNavVoiceActive || window._fpIsSpeechLive && window._fpIsSpeechLive());
+
+  /*
+   * Bug: STS live → leave to Notes while Ava speaks → come back to home/chat
+   * still showed "Back to chat". Cause: if source wasn't locked when speech
+   * started, navigating to Notes assigned _ttsSpeakingFromView = notes, so
+   * returning to sec-chat looked "off source" and the pill reappeared.
+   *
+   * Rules:
+   *  - Never re-bind source to the page you navigated TO mid-speech.
+   *  - STS always sources from sec-chat (home/chat).
+   *  - Missing source while audio is active → default sec-chat, not curView.
+   */
+  if (stsLive) {
+    window._ttsSpeakingFromView = 'sec-chat';
+  } else if (!audioActive) {
+    window._ttsSpeakingFromView = null;
+  } else if (!window._ttsSpeakingFromView) {
+    // Only set once when speech is already active but source never recorded
+    window._ttsSpeakingFromView = 'sec-chat';
   }
-  // Clear source when audio truly stops
-  if (!audioActive) window._ttsSpeakingFromView = null;
+
   var sourceView = window._ttsSpeakingFromView || 'sec-chat';
-  var onSourceView = (curView === sourceView);
+  var onSourceView = (curView === sourceView) || (curView === 'sec-chat' && sourceView === 'sec-chat');
+  // On chat/home, never show the pill (including after STS round-trip)
+  if (curView === 'sec-chat') onSourceView = true;
+
+  function _hidePill(fade) {
+    if (!btn) return;
+    if (fade) {
+      btn.style.transition = 'opacity 0.35s';
+      btn.style.opacity = '0';
+      setTimeout(function() {
+        if (btn) {
+          btn.style.display = 'none';
+          btn.style.opacity = '1';
+          btn.style.transition = '';
+        }
+      }, 360);
+    } else {
+      btn.style.display = 'none';
+      btn.style.opacity = '1';
+      btn.style.transition = '';
+    }
+  }
+  function _showPill() {
+    if (!btn) return;
+    btn.style.opacity = '1';
+    btn.style.transition = '';
+    btn.style.display = 'flex';
+  }
+
   // Start poller if audio active and not already polling
   if (audioActive && !window._ttsPillPoller) {
     var _pillMissCount = 0;
     window._ttsPillPoller = setInterval(function() {
-      var stillActive = !!(((typeof _vmSpeaking !== 'undefined') && _vmSpeaking) || (_actx && _playbackTime && _actx.currentTime < (_playbackTime + 0.3)));
+      var stillActive = !!(
+        ((typeof _vmSpeaking !== 'undefined') && _vmSpeaking) ||
+        (_actx && _playbackTime && _actx.currentTime < (_playbackTime + 0.3))
+      );
       var cv = (typeof _currentViewId !== 'undefined' ? _currentViewId : null);
+      var sts = !!(window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive()));
+      if (sts) window._ttsSpeakingFromView = 'sec-chat';
       var sv = window._ttsSpeakingFromView || 'sec-chat';
-      var onSrc = (cv === sv);
+      var onSrc = (cv === sv) || (cv === 'sec-chat');
       if (!stillActive) {
         _pillMissCount++;
-        // Require 6 consecutive inactive checks (~300ms) before hiding — prevents flicker
         if (_pillMissCount < 6) return;
-        // Audio truly done — fade out pill
-        btn.style.transition = 'opacity 0.5s';
-        btn.style.opacity = '0';
-        setTimeout(function() { btn.style.display = 'none'; btn.style.opacity = '1'; btn.style.transition = ''; }, 500);
+        _hidePill(true);
         clearInterval(window._ttsPillPoller);
         window._ttsPillPoller = null;
         window._ttsSpeakingFromView = null;
       } else {
         _pillMissCount = 0;
-        if (onSrc) {
-          btn.style.display = 'none';
-        } else {
-          btn.style.display = 'flex';
-        }
+        if (onSrc) _hidePill(false);
+        else _showPill();
       }
     }, 50);
   }
-  // Immediate show/hide for non-poller cases
-  if (!audioActive) {
-    btn.style.display = 'none';
-  } else if (!onSourceView) {
-    btn.style.display = 'flex';
+
+  // Immediate show/hide
+  if (!audioActive || onSourceView) {
+    _hidePill(false);
   } else {
-    btn.style.display = 'none';
+    _showPill();
   }
 }
+window._ttsUpdateFloatingPill = _ttsUpdateFloatingPill;
 </script>
 
 <script>
