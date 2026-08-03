@@ -28294,13 +28294,76 @@ window._tnvGlideToCenter = _tnvGlideToCenter;
 // center — can out-stack the modal from within). While speech-to-speech is
 // live, we pull the button out to document.body, pin it in place with
 // position:fixed at its exact current on-screen coordinates, and raise its
-// z-index above the modal. No FLIP glide, no animation — it's already visually
-// in that spot, so this is just a same-frame snap, not a move. Reversed the
-// same way (instant, no transition) once the modal closes.
+// z-index above the modal. FLIP-fly to studio icons on open; reverse on close.
+// Guard: every target is viewport-clamped so a bad measure (hidden top-bar dock,
+// zero rect, race) can never animate the mic off-screen.
 var _tnvEscaped = false;
 var _tnvEscapeHomeParent = null;
 var _tnvEscapeHomeNextSibling = null;
 var _tnvEscapeWasCentered = false;
+var _tnvParkTimers = [];
+var _tnvReturnLock = false;
+
+/** True if rect looks like a real on-screen layout box (not 0×0 / NaN / way off). */
+function _tnvRectUsable(r, minSize){
+  minSize = minSize == null ? 4 : minSize;
+  if(!r) return false;
+  if(!isFinite(r.left) || !isFinite(r.top) || !isFinite(r.width) || !isFinite(r.height)) return false;
+  if(r.width < minSize || r.height < minSize) return false;
+  var vw = window.innerWidth || 360;
+  var vh = window.innerHeight || 640;
+  // Center of box must sit roughly on the viewport (allow small overscan)
+  var cx = r.left + r.width / 2;
+  var cy = r.top + r.height / 2;
+  if(cx < -40 || cy < -40 || cx > vw + 40 || cy > vh + 40) return false;
+  return true;
+}
+
+/** Clamp fixed top-left so a W×H box stays fully on-screen with a small pad. */
+function _tnvClampXY(x, y, w, h){
+  var pad = 8;
+  var vw = window.innerWidth || 360;
+  var vh = window.innerHeight || 640;
+  w = Math.max(1, w || 28);
+  h = Math.max(1, h || 28);
+  if(!isFinite(x)) x = (vw - w) / 2;
+  if(!isFinite(y)) y = Math.max(pad, vh * 0.06);
+  x = Math.max(pad, Math.min(x, vw - w - pad));
+  y = Math.max(pad, Math.min(y, vh - h - pad));
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+/** Safe mid-header / camera-center home for live STS when bar is collapsed. */
+function _tnvSafeCenterHome(btnW, btnH){
+  btnW = btnW || 28;
+  btnH = btnH || 28;
+  var rowCy = (window.innerHeight || 640) * 0.06;
+  try{
+    var titleEl = document.getElementById('topTitle');
+    var tr = titleEl ? titleEl.getBoundingClientRect() : null;
+    if(_tnvRectUsable(tr, 4)){
+      rowCy = tr.top + tr.height / 2 - 2;
+    } else {
+      var actions = document.querySelector('.top-bar .top-actions');
+      var row = actions ? actions.getBoundingClientRect() : null;
+      if(_tnvRectUsable(row, 8)){
+        var barHidden = !!(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN)
+          || !!(document.querySelector('.top-bar.hidden') || document.body.classList.contains('topbar-hidden'));
+        rowCy = row.top + row.height / 2 + (barHidden ? 13 : 0);
+      }
+    }
+  }catch(_e){}
+  var left = (window.innerWidth || 360) / 2 - btnW / 2;
+  var top = rowCy - btnH / 2;
+  return _tnvClampXY(left, top, btnW, btnH);
+}
+
+function _tnvClearParkTimers(){
+  while(_tnvParkTimers.length){
+    try{ clearTimeout(_tnvParkTimers.pop()); }catch(_t){}
+  }
+}
+
 /**
  * While STS is live and Studio opens: lift mic above the modal and FLIP-fly it
  * to the Studio header's 3-icon cluster (same row as community / templates / reset).
@@ -28309,6 +28372,9 @@ function _tnvEscapeAboveModal(){
   if(!window._topNavVoiceActive) return;
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || _tnvEscaped) return;
+  _tnvClearParkTimers();
+  _tnvReturnLock = false;
+
   var first = btn.getBoundingClientRect();
   _tnvEscapeHomeParent = btn.parentNode;
   _tnvEscapeHomeNextSibling = btn.nextSibling;
@@ -28319,12 +28385,22 @@ function _tnvEscapeAboveModal(){
   }
   _tnvEscaped = true;
 
-  // Pin at current screen position on body (fixed), then fly to studio icons
+  // If start rect is unusable (hidden dock / mid-transition), pin from safe center
+  var startW = (first && first.width > 4) ? first.width : 28;
+  var startH = (first && first.height > 4) ? first.height : 28;
+  var start;
+  if(_tnvRectUsable(first, 4)){
+    start = _tnvClampXY(first.left, first.top, startW, startH);
+  } else {
+    start = _tnvSafeCenterHome(startW, startH);
+  }
+
+  // Pin at safe screen position on body (fixed), then fly to studio icons
   if(btn.parentNode !== document.body) document.body.appendChild(btn);
   btn.style.transition = 'none';
   btn.style.position = 'fixed';
-  btn.style.left = first.left + 'px';
-  btn.style.top = first.top + 'px';
+  btn.style.left = start.x + 'px';
+  btn.style.top = start.y + 'px';
   btn.style.right = 'auto';
   btn.style.bottom = 'auto';
   btn.style.margin = '0';
@@ -28335,7 +28411,7 @@ function _tnvEscapeAboveModal(){
 
   var _flyTries = 0;
   function _tnvParkBesideStudioIcons(animate){
-    if(!_tnvEscaped || !btn) return false;
+    if(!_tnvEscaped || !btn || _tnvReturnLock) return false;
     var modal = document.getElementById('imageGenModal');
     if(!modal || modal.style.display === 'none') return false;
     // Leftmost of the 3 Studio icons (community) — park STS just to its LEFT
@@ -28343,16 +28419,17 @@ function _tnvEscapeAboveModal(){
     var leftIcon = document.getElementById('studioCommunityGlassBtn')
       || (actions && actions.querySelector('button'));
     var target = leftIcon ? leftIcon.getBoundingClientRect() : null;
-    if(!target || target.width < 4) return false;
+    if(!_tnvRectUsable(target, 4)) return false;
 
     // Match Studio icon size + gap exactly (all 3 buttons are 30×30, gap 8)
     var iconSize = Math.round(target.width) || 30;
+    if(iconSize < 20 || iconSize > 48) iconSize = 30;
     var gap = 8;
     if(actions){
       try{
         var cs = window.getComputedStyle(actions);
         var g = parseFloat(cs.gap || cs.columnGap || '');
-        if(isFinite(g) && g > 0) gap = g;
+        if(isFinite(g) && g > 0 && g < 40) gap = g;
       }catch(_g){}
     }
 
@@ -28366,31 +28443,37 @@ function _tnvEscapeAboveModal(){
     btn.setAttribute('data-tnv-studio-parked', '1');
 
     // Bottom-align with leftmost icon; equal gap to its left (same as icon↔icon)
-    var tx = target.left - iconSize - gap;
-    var ty = target.bottom - iconSize;
-    if(tx < 8) tx = 8;
-    tx = Math.round(tx);
-    ty = Math.round(ty);
+    var rawX = target.left - iconSize - gap;
+    var rawY = target.bottom - iconSize;
+    var clamped = _tnvClampXY(rawX, rawY, iconSize, iconSize);
 
     if(animate){
       btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1), width .42s cubic-bezier(0.22,1,0.36,1), height .42s cubic-bezier(0.22,1,0.36,1)';
     } else {
       btn.style.transition = 'none';
     }
-    btn.style.left = tx + 'px';
-    btn.style.top = ty + 'px';
+    btn.style.left = clamped.x + 'px';
+    btn.style.top = clamped.y + 'px';
     if(animate) _tnvTrackToastDuring(450);
     return true;
   }
   function flyToStudioIcons(){
-    if(!_tnvEscaped || !btn) return;
+    if(!_tnvEscaped || !btn || _tnvReturnLock) return;
     if(!_tnvParkBesideStudioIcons(true)){
-      if(_flyTries++ < 12) requestAnimationFrame(flyToStudioIcons);
+      if(_flyTries++ < 20) requestAnimationFrame(flyToStudioIcons);
+      else {
+        // Last resort: stay at safe start, never disappear
+        var safe = _tnvSafeCenterHome(30, 30);
+        btn.style.width = '30px';
+        btn.style.height = '30px';
+        btn.style.left = safe.x + 'px';
+        btn.style.top = safe.y + 'px';
+      }
       return;
     }
     // Re-snap after layout/safe-area settles so it never sits 1–2px off
-    setTimeout(function(){ if(_tnvEscaped) _tnvParkBesideStudioIcons(false); }, 80);
-    setTimeout(function(){ if(_tnvEscaped) _tnvParkBesideStudioIcons(false); }, 320);
+    _tnvParkTimers.push(setTimeout(function(){ if(_tnvEscaped && !_tnvReturnLock) _tnvParkBesideStudioIcons(false); }, 80));
+    _tnvParkTimers.push(setTimeout(function(){ if(_tnvEscaped && !_tnvReturnLock) _tnvParkBesideStudioIcons(false); }, 320));
   }
   // Same beat as Studio open: fly while modal fades in
   requestAnimationFrame(function(){
@@ -28399,31 +28482,37 @@ function _tnvEscapeAboveModal(){
 }
 /**
  * Studio → home/front: FLIP-glide mic from studio park back to center or top-actions.
- * Does not change target placement rules — only animates the return.
+ * Clamps destination so dock measures under a collapsed bar can't fling mic off-screen.
  */
 function _tnvClearStudioParkSize(btn){
   if(!btn) return;
   try{ btn.removeAttribute('data-tnv-studio-parked'); }catch(_a){}
   // Restore home mic size (28×28) after Studio park (30×30)
-  btn.style.width = '';
-  btn.style.height = '';
-  // Keep default inline size from markup if style cleared fully
-  if(!btn.style.width) btn.style.width = '28px';
-  if(!btn.style.height) btn.style.height = '28px';
+  btn.style.width = '28px';
+  btn.style.height = '28px';
 }
 function _tnvReturnFromModal(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || !_tnvEscaped) return;
+  _tnvClearParkTimers();
+  _tnvReturnLock = true;
+
   var first = btn.getBoundingClientRect();
   var wasCentered = _tnvEscapeWasCentered;
   _tnvEscaped = false;
 
-  // Keep fixed at current studio spot for FLIP start (still studio 30×30 size)
+  var startW = (first && first.width > 4) ? first.width : 30;
+  var startH = (first && first.height > 4) ? first.height : 30;
+  var startPos = _tnvRectUsable(first, 4)
+    ? _tnvClampXY(first.left, first.top, startW, startH)
+    : _tnvSafeCenterHome(startW, startH);
+
+  // Keep fixed at current studio spot for FLIP start
   if(btn.parentNode !== document.body) document.body.appendChild(btn);
   btn.style.transition = 'none';
   btn.style.position = 'fixed';
-  btn.style.left = first.left + 'px';
-  btn.style.top = first.top + 'px';
+  btn.style.left = startPos.x + 'px';
+  btn.style.top = startPos.y + 'px';
   btn.style.right = 'auto';
   btn.style.bottom = 'auto';
   btn.style.margin = '0';
@@ -28432,35 +28521,30 @@ function _tnvReturnFromModal(){
   btn.style.opacity = '1';
   void btn.offsetWidth;
 
-  var targetLeft, targetTop, useCenter = false;
-  if(wasCentered && window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
-    useCenter = true;
-    _tnvClearStudioParkSize(btn); // center home uses 28×28 mic size
-    var homeH = btn.getBoundingClientRect().height || 28;
-    var homeW = btn.getBoundingClientRect().width || 28;
-    var rowCy;
-    try{
-      var titleEl = document.getElementById('topTitle');
-      if(titleEl && titleEl.getBoundingClientRect().height > 4){
-        var tr = titleEl.getBoundingClientRect();
-        rowCy = tr.top + tr.height / 2 - 2;
-      } else {
-        var actions = document.querySelector('.top-bar .top-actions');
-        var row = actions ? actions.getBoundingClientRect() : null;
-        rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
-      }
-    }catch(_y){ rowCy = window.innerHeight * 0.06; }
-    targetLeft = window.innerWidth / 2 - homeW / 2;
-    targetTop = rowCy - homeH / 2;
+  var barHidden = !!(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN)
+    || !!(document.querySelector('.top-bar.hidden') || document.body.classList.contains('topbar-hidden'));
+  // Live STS + collapsed bar → always return to center (dock is off-screen / opacity 0)
+  var useCenter = !!(window._topNavVoiceActive && (wasCentered || barHidden));
+
+  var targetLeft, targetTop, homeW = 28, homeH = 28;
+  _tnvClearStudioParkSize(btn);
+  homeW = 28;
+  homeH = 28;
+
+  if(useCenter){
+    var safe = _tnvSafeCenterHome(homeW, homeH);
+    targetLeft = safe.x;
+    targetTop = safe.y;
   } else {
     // Land back in top-actions (measure after re-insert)
-    var home = _tnvEscapeHomeParent || document.querySelector('.top-bar .top-actions');
+    var home = document.querySelector('.top-bar .top-actions') || _tnvEscapeHomeParent;
     btn.classList.remove('tnv-centered');
     _tnvClearCenteredInline();
-    _tnvClearStudioParkSize(btn); // measure dock at real 28×28 home size
-    if(home){
-      if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
-      else home.appendChild(btn);
+    if(home && home !== document.body){
+      try{
+        if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
+        else home.appendChild(btn);
+      }catch(_h){}
     }
     // Temporarily clear fixed so we can measure docked slot, then re-fix for glide
     btn.style.position = '';
@@ -28469,33 +28553,52 @@ function _tnvReturnFromModal(){
     btn.style.transform = '';
     void btn.offsetWidth;
     var lastDock = btn.getBoundingClientRect();
-    targetLeft = lastDock.left;
-    targetTop = lastDock.top;
-    // Put back to body fixed at first for animation
+    if(_tnvRectUsable(lastDock, 4)){
+      var dock = _tnvClampXY(lastDock.left, lastDock.top, lastDock.width || homeW, lastDock.height || homeH);
+      targetLeft = dock.x;
+      targetTop = dock.y;
+    } else {
+      // Dock unusable (hidden/off-screen) → center instead of flying into the void
+      useCenter = true;
+      var safe2 = _tnvSafeCenterHome(homeW, homeH);
+      targetLeft = safe2.x;
+      targetTop = safe2.y;
+    }
+    // Put back to body fixed at start for animation
     document.body.appendChild(btn);
     btn.style.position = 'fixed';
-    btn.style.left = first.left + 'px';
-    btn.style.top = first.top + 'px';
+    btn.style.left = startPos.x + 'px';
+    btn.style.top = startPos.y + 'px';
     btn.style.zIndex = '100050';
     void btn.offsetWidth;
   }
 
+  // Final clamp before animating
+  var end = _tnvClampXY(targetLeft, targetTop, homeW, homeH);
+  targetLeft = end.x;
+  targetTop = end.y;
+
   btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1)';
-  btn.style.left = Math.round(targetLeft) + 'px';
-  btn.style.top = Math.round(targetTop) + 'px';
+  btn.style.left = targetLeft + 'px';
+  btn.style.top = targetTop + 'px';
   _tnvTrackToastDuring(450);
 
   function finishReturn(){
     _tnvClearStudioParkSize(btn);
-    if(useCenter){
+    _tnvReturnLock = false;
+    if(useCenter && window._topNavVoiceActive){
       btn.classList.add('tnv-centered');
       _tnvCentered = true;
+      var cy = targetTop + homeH / 2;
+      // Keep final center inside viewport
+      var safeCy = _tnvClampXY((window.innerWidth || 360) / 2 - homeW / 2, cy - homeH / 2, homeW, homeH);
       btn.style.setProperty('position', 'fixed', 'important');
       btn.style.setProperty('left', '50%', 'important');
-      btn.style.setProperty('top', (targetTop + first.height / 2) + 'px', 'important');
+      btn.style.setProperty('top', (safeCy.y + homeH / 2) + 'px', 'important');
       btn.style.zIndex = '100050';
       btn.style.transform = 'translate(-50%,-50%)';
       btn.style.transition = '';
+      try{ localStorage.setItem('synapses_tnv_centered','1'); }catch(_ls){}
     } else {
       btn.classList.remove('tnv-centered');
       _tnvCentered = false;
@@ -28510,11 +28613,14 @@ function _tnvReturnFromModal(){
       btn.style.margin = '';
       btn.style.zIndex = '';
       btn.style.opacity = '';
-      var home2 = _tnvEscapeHomeParent || document.querySelector('.top-bar .top-actions');
-      if(home2){
-        if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home2) home2.insertBefore(btn, _tnvEscapeHomeNextSibling);
-        else home2.appendChild(btn);
+      var home2 = document.querySelector('.top-bar .top-actions') || _tnvEscapeHomeParent;
+      if(home2 && home2 !== document.body){
+        try{
+          if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home2) home2.insertBefore(btn, _tnvEscapeHomeNextSibling);
+          else home2.appendChild(btn);
+        }catch(_h2){}
       }
+      try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(_ls2){}
     }
   }
   var done = false;
