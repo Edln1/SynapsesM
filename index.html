@@ -3242,25 +3242,36 @@ body.voice-live .syn-fp-icon{
 </style>
 <style id="robotTooltipCSS">
 #robotTooltip{position:fixed;bottom:24px;right:24px;z-index:88888;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;transition:opacity .25s ease,transform .25s ease;}
-#robotTooltip.rt-hidden{opacity:0;transform:translateY(12px);}
-#robotTooltip.rt-visible{opacity:1;transform:translateY(0);}
-#rtBubble{background:transparent;border:none;border-radius:0;padding:11px 15px 14px 15px;max-width:210px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.15);position:relative;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);overflow:visible;}
+/* Hidden = not hittable (visibility:hidden). Opacity alone still left a dead
+   click target in the corner that opened chat with no fly-in, and stacked with
+   the fly canvas as a "clone" robot. */
+#robotTooltip.rt-hidden{
+  opacity:0;
+  transform:translateY(12px);
+  visibility:hidden;
+  pointer-events:none!important;
+}
+#robotTooltip.rt-hidden #rtRobot,
+#robotTooltip.rt-hidden #rtBubble{
+  pointer-events:none!important;
+}
+#robotTooltip.rt-visible{
+  opacity:1;
+  transform:translateY(0);
+  visibility:visible;
+}
+#rtBubble{background:transparent;border:none;border-radius:0;padding:11px 15px 14px 15px;max-width:210px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.15);position:relative;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);overflow:visible;pointer-events:none;}
 #rtBubble::after{content:none;}
 #rtBubbleOutline{position:absolute;top:-1px;left:-1px;pointer-events:none;z-index:5;}
 #rtLabel{font-size:9px;letter-spacing:.18em;color:rgba(124,106,247,0.75);text-transform:uppercase;font-weight:700;margin-bottom:4px;font-family:Syne,sans-serif;}
 #rtText{font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.55;font-family:DM Sans,sans-serif;}
 #rtRobot{width:72px;height:72px;animation:rtBob 2.2s ease-in-out infinite;cursor:pointer;pointer-events:none;}
-/* Only the actually-landed robot (after the fly-in animation finishes and
-   doShowRobot() adds rt-visible) can be clicked. Before that it still sits
-   at its fixed bottom-right rest position but invisible (opacity:0 from
-   .rt-hidden) — without this, that invisible-but-still-clickable hit area
-   let taps near the corner open the chat instantly, skipping the fly-in
-   animation, and collided with the separate flying-canvas animation to
-   look like a duplicate robot. */
-#robotTooltip.rt-visible #rtRobot{pointer-events:auto;}
+/* Only the landed robot after fly-in (rt-visible) is clickable — never the hidden / mid-fly one. */
+#robotTooltip.rt-visible:not(.rt-hidden) #rtRobot{pointer-events:auto;}
 @keyframes rtBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
 #tinyBotCanvas{position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:0;transition:opacity .4s ease;}
-#tinyBotCanvas:hover{opacity:0;}
+/* Fly canvas is created in JS with pointer-events:none — never a chat hit target. */
+/* Do not force opacity:0 on hover — that fought the fly-in and looked like a vanishing clone. */
 </style>
 <style id="minimalBlackUI">
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
@@ -30047,7 +30058,29 @@ function _neuInjectDownloadInterceptor(frame){
   draw();
 
   canvas._pause  = function(){ _paused = true;  r.trailPoints = []; };
-  canvas._resume = function(){ _paused = false; };
+  canvas._resume = function(){
+    _paused = false;
+    /* Undo hard-hide used during fly-in so mini bot can paint again */
+    try {
+      if (canvas.style.visibility === 'hidden' && parseFloat(canvas.style.opacity || '0') === 0) {
+        /* leave opacity to caller (_bringIn / schedule) — only clear visibility trap */
+      }
+      if (canvas.getAttribute('data-fly-hidden') === '1') {
+        canvas.style.visibility = '';
+        canvas.removeAttribute('data-fly-hidden');
+      }
+    } catch (eR) {}
+  };
+  /** Instantly unpaint mini bot (used at fly-in start so it never doubles with fly canvas) */
+  canvas._hardHideForFly = function(){
+    _paused = true;
+    r.trailPoints = [];
+    canvas.style.transition = 'none';
+    canvas.style.opacity = '0';
+    canvas.style.visibility = 'hidden';
+    canvas.setAttribute('data-fly-hidden', '1');
+    try { ctx.clearRect(0, 0, W, H); } catch (eC) {}
+  };
   canvas._r = r;  // expose robot state for external positioning
   canvas._scheduleExit = function(){
     if(_tourMode || window.__synTourActive) return;
@@ -30590,12 +30623,28 @@ function _neuInjectDownloadInterceptor(frame){
   function doShowRobot(){
     document.getElementById('rtLabel').textContent = 'SYN-BOT // guide';
     document.getElementById('rtText').textContent = 'hi! click me to chat — i can navigate, explain features, or just vibe 👾';
-    // Snap in instantly (no fade) so the fly→robot transition is seamless
+    // Snap in after fly canvas is gone — clear any inline hide styles that fight CSS
     tooltip.style.transition = 'none';
-    tooltip.classList.remove('rt-hidden'); setTimeout(_drawRtBubbleOutline,10);
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
+    tooltip.classList.remove('rt-hidden');
     tooltip.classList.add('rt-visible');
+    // Block OPENING chat briefly (summon ghost-click) — but enable hit-target + cursor NOW
+    // so user already hovering the land spot gets pointer without needing a mouse wiggle
+    _synBotLandCooldownUntil = Date.now() + 420;
+    _synBotUnlockRobotClicks();
+    // After layout paints the landed SVG, re-hit-test under the stationary cursor
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        _synBotResyncPointerUnderCursor();
+      });
+    });
+    // Second pass after any outline/size settle
+    setTimeout(function(){ _synBotResyncPointerUnderCursor(); }, 50);
+    setTimeout(function(){ _synBotResyncPointerUnderCursor(); }, 430);
+    setTimeout(_drawRtBubbleOutline, 10);
     // Re-enable transition after a frame so hover hide/show still animates
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){ tooltip.style.transition = ''; }); });
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tooltip) tooltip.style.transition = ''; }); });
     var arm = document.getElementById('rtWaveArm');
     if(arm){
       // Clone and replace — guaranteed restart regardless of previous animation state
@@ -30608,9 +30657,153 @@ function _neuInjectDownloadInterceptor(frame){
   var _flyCanvas    = null;
   var _flyCancelled = false;
   var _flySession   = 0;  // incremented each hover so stale frames self-discard
+  var _flyInProgress = false; // prevents mousemove from restarting fly (clone bug)
+  var _flyOutProgress = false; // zoom-out back to mini — also blocks chat open
+  var _synBotLandCooldownUntil = 0; // ignore open-clicks for a beat after land (ghost click)
+
+  /** Always prefer live localStorage so disable works even if var order is weird */
+  function _synBotIsOn(){
+    try {
+      if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
+      if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
+      var v = localStorage.getItem('synapses_synbot_enabled');
+      if (v === null) return false;
+      return v === '1';
+    } catch (e) { return false; }
+  }
+  /** Bot must be visibly expanded before corner taps open chat */
+  function _synBotIsExpanded(){
+    var tip = document.getElementById('robotTooltip');
+    return !!(tip && tip.classList.contains('rt-visible') && !tip.classList.contains('rt-hidden'));
+  }
+  /** True while any fly canvas animation is active (in or out) */
+  function _synBotIsFlying(){
+    return !!(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode));
+  }
+  /** Only open chat after full land + cooldown — never mid-fly / mid-mini roam */
+  function _synBotCanOpenChat(){
+    if(!_synBotIsOn()) return false;
+    if(_synBotIsFlying()) return false;
+    if(Date.now() < _synBotLandCooldownUntil) return false;
+    return _synBotIsExpanded();
+  }
+  function _synBotLockRobotClicks(){
+    if(robot){
+      try{
+        robot.style.pointerEvents = 'none';
+        robot.style.cursor = 'default';
+      }catch(_e){}
+    }
+    if(tooltip){
+      try{
+        tooltip.style.pointerEvents = 'none';
+      }catch(_e2){}
+    }
+  }
+  function _synBotUnlockRobotClicks(){
+    /* Landed robot is the hit target — set explicitly so cursor works without a mousemove */
+    if(robot && tooltip && tooltip.classList.contains('rt-visible') && !tooltip.classList.contains('rt-hidden')){
+      try{
+        robot.style.pointerEvents = 'auto';
+        robot.style.cursor = 'pointer';
+      }catch(_e){}
+    } else if(robot){
+      try{
+        robot.style.pointerEvents = '';
+        robot.style.cursor = '';
+      }catch(_e2){}
+    }
+    if(tooltip){
+      try{ tooltip.style.pointerEvents = ''; }catch(_e3){}
+    }
+  }
+  /** True if last known mouse is over the landed robot glyph / tooltip box */
+  function _synBotMouseOverLanded(){
+    if(!tooltip || !tooltip.classList.contains('rt-visible')) return false;
+    if(_mouseX < 0 || _mouseY < 0) return false;
+    try{
+      if(robot){
+        var rr = robot.getBoundingClientRect();
+        if(rr.width > 0 && _mouseX >= rr.left && _mouseX <= rr.right && _mouseY >= rr.top && _mouseY <= rr.bottom){
+          return true;
+        }
+      }
+      var tr = tooltip.getBoundingClientRect();
+      if(tr.width > 0 && _mouseX >= tr.left && _mouseX <= tr.right && _mouseY >= tr.top && _mouseY <= tr.bottom){
+        return true;
+      }
+    }catch(_e){}
+    return false;
+  }
+  /**
+   * After land, the browser keeps the old cursor until the pointer moves — even if the
+   * enlarged robot is already under the mouse. Re-hit-test and force pointer state.
+   */
+  function _synBotResyncPointerUnderCursor(){
+    if(_synBotIsFlying()) return;
+    if(!_synBotIsExpanded()) return;
+    _synBotUnlockRobotClicks();
+    if(!_synBotMouseOverLanded()) return;
+    _overRobot = true;
+    if(robot){
+      try{
+        robot.style.pointerEvents = 'auto';
+        robot.style.cursor = 'pointer';
+      }catch(_e){}
+    }
+    // Nudge hit-testing: browsers often won't update cursor on a stationary pointer
+    // after pointer-events flip unless something under the point changes.
+    try{
+      if(robot){
+        var prev = robot.style.transform || '';
+        robot.style.transform = (prev ? prev + ' ' : '') + 'translateZ(0)';
+        // force reflow
+        void robot.offsetWidth;
+        robot.style.transform = prev;
+      }
+    }catch(_e2){}
+    try{
+      // Synthetic mousemove at last known coords so our hover state + browser cursor refresh
+      var ev = new MouseEvent('mousemove', {
+        bubbles: true,
+        cancelable: true,
+        clientX: _mouseX,
+        clientY: _mouseY,
+        view: window
+      });
+      (robot || tooltip || document).dispatchEvent(ev);
+      document.dispatchEvent(ev);
+    }catch(_e3){}
+    // Direct cursor on documentElement as last resort while over landed bot
+    try{
+      if(robot && robot.style.cursor === 'pointer'){
+        // only set if elementFromPoint actually sees the robot (or we know we're over it)
+        var topEl = document.elementFromPoint(_mouseX, _mouseY);
+        if(topEl && (topEl === robot || (robot.contains && robot.contains(topEl)) || (tooltip && tooltip.contains(topEl)))){
+          // browser should already show pointer; nothing else needed
+        } else if(robot){
+          // Robot may still be under another transparent layer — keep PE auto; cursor already set on robot
+        }
+      }
+    }catch(_e4){}
+  }
+  function _synBotForceChatClosed(){
+    if(!chat) return;
+    chat.style.display = 'none';
+    chat.style.pointerEvents = 'none';
+  }
+  // expose for other scripts / debugging
+  try{
+    window._synBotIsFlying = _synBotIsFlying;
+    window._synBotCanOpenChat = _synBotCanOpenChat;
+  }catch(_w){}
 
   function showRobot(){
     if(!tooltip) return;
+    /* Already landed — do nothing */
+    if(tooltip.classList.contains('rt-visible')) return;
+    /* Fly already running — do NOT cancel/restart (that spawned a second robot / clone) */
+    if(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode)) return;
     /* Disabled during real tour — unstick purple leftover when UI is off */
     try {
       var rootTour = document.getElementById('synTourRoot');
@@ -30645,51 +30838,57 @@ function _neuInjectDownloadInterceptor(frame){
     if(document.getElementById('cyberGreeting')) return;
     var am = document.getElementById('authModal');
     if(am && am.style.display !== 'none') return;
-    if(tooltip.classList.contains('rt-visible')) return;
     var chatPanel = document.getElementById('synBotChat');
-    // If chat is open, make the bot visible again so user can see/click it
-    if(chatPanel && chatPanel.style.display !== 'none'){
-      tooltip.style.transition = 'none';
-      tooltip.style.opacity = '';
-      tooltip.style.visibility = '';
+    // If chat is open, show landed robot only (no second fly) so user can close via robot
+    if(chatPanel && chatPanel.style.display === 'flex'){
+      doShowRobot();
       return;
     }
 
-    // Cancel any in-progress fly
-    if(_flyCanvas && _flyCanvas.parentNode){
-      _flyCanvas.parentNode.removeChild(_flyCanvas);
-      _flyCanvas = null;
-    }
     _flyCancelled = false;
+    _flyInProgress = true;
+    _flyOutProgress = false;
     var mySession = ++_flySession;  // this fly's unique ID
+
+    // Keep landed SVG fully hidden during fly — only ONE robot (the fly canvas) is drawn
+    // NEVER leave a clickable hit-target open while the fly canvas is the real robot
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
+    tooltip.classList.add('rt-hidden');
+    tooltip.classList.remove('rt-visible');
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
 
     var tinyCanvas = document.getElementById('tinyBotCanvas');
 
-    // Freeze and hide tiny canvas so fly canvas takes over seamlessly
-    if(tinyCanvas){
-      if(tinyCanvas._pause) tinyCanvas._pause();
-      tinyCanvas.style.transition = 'none';
-      tinyCanvas.style.opacity = '0';
-    }
-
-    // Target = center of where big robot SVG sits (bottom:24px right:24px, svg 72px)
+    // Capture start pos WHILE mini is still on screen, then hard-hide it BEFORE
+    // creating the fly canvas — otherwise mini + fly occupy the same pixel for
+    // a frame (the "clone right before it flies" flash).
     var targetX = window.innerWidth  - 24 - 36;
     var targetY = window.innerHeight - 24 - 36;
-
-    // Start = actual current position AND size of the tiny robot on screen
     var startX, startY, startS;
     if(tinyCanvas && tinyCanvas._getRobotScreenPos){
       var pos = tinyCanvas._getRobotScreenPos();
       startX = pos.x;
       startY = pos.y;
-      startS = pos.size;
+      startS = pos.size || 10;
     } else {
       startX = window.innerWidth  - 90;
       startY = window.innerHeight - 90;
       startS = 10;
     }
+    if(tinyCanvas){
+      if(tinyCanvas._hardHideForFly) tinyCanvas._hardHideForFly();
+      else {
+        if(tinyCanvas._pause) tinyCanvas._pause();
+        tinyCanvas.style.transition = 'none';
+        tinyCanvas.style.opacity = '0';
+        tinyCanvas.style.visibility = 'hidden';
+      }
+    }
 
     var fly = document.createElement('canvas');
+    // z above tinyBotCanvas (88886); pointer-events none so no ghost clicks
     fly.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:88889;';
     fly.width  = window.innerWidth;
     fly.height = window.innerHeight;
@@ -30901,14 +31100,26 @@ function _neuInjectDownloadInterceptor(frame){
       if(prog >= 1){
         if(fly.parentNode) fly.parentNode.removeChild(fly);
         _flyCanvas = null;
-        if(!_flyCancelled){
-          // Successful landing — hide tiny canvas, show big robot
+        _flyInProgress = false;
+        if(!_flyCancelled && mySession === _flySession){
+          // Keep tiny hard-hidden; only land the SVG after fly canvas is gone
           var tc = document.getElementById('tinyBotCanvas');
-          if(tc){ tc.style.transition='none'; tc.style.opacity='0'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tc) tc.style.transition=''; }); }); }
-          doShowRobot();
+          if(tc){
+            if(tc._hardHideForFly) tc._hardHideForFly();
+            else { tc.style.transition='none'; tc.style.opacity='0'; tc.style.visibility='hidden'; }
+          }
+          requestAnimationFrame(function(){
+            if(_flyCancelled || mySession !== _flySession) return;
+            doShowRobot();
+          });
         } else {
-          var tc = document.getElementById('tinyBotCanvas');
-          if(tc){ if(tc._resume) tc._resume(); if(tc._bringIn) tc._bringIn(); }
+          var tc2 = document.getElementById('tinyBotCanvas');
+          if(tc2){
+            if(tc2._resume) tc2._resume();
+            tc2.style.visibility = '';
+            tc2.removeAttribute('data-fly-hidden');
+            if(tc2._bringIn) tc2._bringIn();
+          }
         }
         return;
       }
@@ -30926,23 +31137,33 @@ function _neuInjectDownloadInterceptor(frame){
     if(to && chat && (to === chat || chat.contains(to))) return;
     if(chat && chat.style.display === 'flex') return;
 
+    var wasLanded = tooltip.classList.contains('rt-visible');
+    var wasFlying = !!(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode));
+
     // Cancel any in-progress fly-in animation
     if(_flyCanvas && _flyCanvas.parentNode){
       _flyCanvas.parentNode.removeChild(_flyCanvas);
       _flyCanvas = null;
     }
     _flyCancelled = true;
+    _flyInProgress = false;
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
 
-    if(tooltip.classList.contains('rt-visible')){
-      // Instantly kill the SVG tooltip so only canvas robot is seen during zoom-out
-      tooltip.style.transition = 'none';
-      tooltip.classList.add('rt-hidden');
-      tooltip.classList.remove('rt-visible');
-      requestAnimationFrame(function(){ requestAnimationFrame(function(){ tooltip.style.transition = ''; }); });
+    // Always drop rt-visible so an invisible robot cannot receive clicks
+    tooltip.style.transition = 'none';
+    tooltip.classList.add('rt-hidden');
+    tooltip.classList.remove('rt-visible');
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tooltip) tooltip.style.transition = ''; }); });
+
+    if(wasLanded){
+      // Zoom landed SVG back to the mini canvas bot
       playZoomOut();
     } else {
-      tooltip.classList.add('rt-hidden');
-      tooltip.classList.remove('rt-visible');
+      // Mid-fly cancel or already hidden — just resume mini bot
+      _flyOutProgress = false;
       var tinyCanvas = document.getElementById('tinyBotCanvas');
       if(tinyCanvas){ if(tinyCanvas._resume) tinyCanvas._resume(); if(tinyCanvas._bringIn) tinyCanvas._bringIn(); }
     }
@@ -30967,11 +31188,17 @@ function _neuInjectDownloadInterceptor(frame){
       targetS = 8;
     }
 
+    _flyOutProgress = true;
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
+
     var fly = document.createElement('canvas');
+    // pointer-events none — zoom-out canvas must never open chat
     fly.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:88889;';
     fly.width  = window.innerWidth;
     fly.height = window.innerHeight;
     document.body.appendChild(fly);
+    _flyCanvas = fly;
     var fc = fly.getContext('2d');
 
     var DURATION = 500;
@@ -31043,7 +31270,9 @@ function _neuInjectDownloadInterceptor(frame){
       }
 
       if(prog>=1){
-        fly.parentNode.removeChild(fly);
+        if(fly.parentNode) fly.parentNode.removeChild(fly);
+        if(_flyCanvas === fly) _flyCanvas = null;
+        _flyOutProgress = false;
         if(tinyCanvas){
           // Resume flying from exactly where the animation ended
           if(tinyCanvas._resume) tinyCanvas._resume();
@@ -31060,25 +31289,10 @@ function _neuInjectDownloadInterceptor(frame){
   }
 
   // Track mouse position relative to the tiny robot's actual drawn position
+  // (declared early-ish via use in _synBotResyncPointerUnderCursor; init here)
   var _mouseX = -999, _mouseY = -999;
   var _nearRobot = false;
   var _overRobot = false;
-
-  /** Always prefer live localStorage so disable works even if var order is weird */
-  function _synBotIsOn(){
-    try {
-      if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
-      if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
-      var v = localStorage.getItem('synapses_synbot_enabled');
-      if (v === null) return false;
-      return v === '1';
-    } catch (e) { return false; }
-  }
-  /** Bot must be visibly expanded before corner taps open chat */
-  function _synBotIsExpanded(){
-    var tip = document.getElementById('robotTooltip');
-    return !!(tip && tip.classList.contains('rt-visible'));
-  }
 
   document.addEventListener('mousemove', function(e){
     _mouseX = e.clientX; _mouseY = e.clientY;
@@ -31088,6 +31302,17 @@ function _neuInjectDownloadInterceptor(frame){
       _nearRobot = false;
       _overRobot = false;
       return;
+    }
+
+    // Landed bot under a stationary cursor: keep pointer cursor sticky without a wiggle
+    if(_synBotIsExpanded() && !_synBotIsFlying() && _synBotMouseOverLanded()){
+      _overRobot = true;
+      if(robot){
+        try{
+          robot.style.pointerEvents = 'auto';
+          robot.style.cursor = 'pointer';
+        }catch(_c){}
+      }
     }
 
     var tc = document.getElementById('tinyBotCanvas');
@@ -31110,62 +31335,88 @@ function _neuInjectDownloadInterceptor(frame){
     var dy = _mouseY - pos.y;
     var dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Within 60px of corner area — bring mini bot in
-    var cornerDx = window.innerWidth  - _mouseX;
-    var cornerDy = window.innerHeight - _mouseY;
-    var nearCorner = cornerDx < 160 && cornerDy < 160;
+    // Only the mini-bot sprite itself (tight), NOT empty corner space
+    var botR = Math.max(12, (pos.size || 10) * 1.15);
+    // Slightly larger zone just to fade the mini in (still not whole corner)
+    var bringInR = Math.max(28, (pos.size || 10) * 2.2);
 
-    if(nearCorner && !_nearRobot){
-      _nearRobot = true;
-      if(tc._bringIn) tc._bringIn();
-    } else if(!nearCorner && _nearRobot){
-      _nearRobot = false;
-    }
-
-    // Within generous radius of the robot sprite — trigger big robot
-    var hitRadius = (pos.size || 10) * 3.5;
-
-    // Also stay active if cursor is near the big robot tooltip area (bottom-right)
+    // Stay active if cursor is over the landed big robot (not padded empty space)
     var tooltipEl = document.getElementById('robotTooltip');
     var nearTooltip = false;
     if(tooltipEl && tooltipEl.classList.contains('rt-visible')){
       var tr = tooltipEl.getBoundingClientRect();
-      // Generous padding around the tooltip
-      nearTooltip = _mouseX >= tr.left - 40 && _mouseX <= tr.right  + 40
-                 && _mouseY >= tr.top  - 40 && _mouseY <= tr.bottom + 40;
+      nearTooltip = _mouseX >= tr.left && _mouseX <= tr.right
+                 && _mouseY >= tr.top  && _mouseY <= tr.bottom;
     }
 
-    if((dist < hitRadius || nearTooltip) && !_overRobot){
+    // Bring mini bot in when cursor is near the sprite — not a giant empty corner pad
+    var aboutToFly = dist < botR;
+    if(dist < bringInR && !_nearRobot){
+      _nearRobot = true;
+      if(!_synBotIsFlying() && !aboutToFly && !(tooltipEl && tooltipEl.classList.contains('rt-visible'))){
+        if(tc._bringIn) tc._bringIn();
+      }
+    } else if(dist >= bringInR + 8 && _nearRobot){
+      _nearRobot = false;
+    }
+
+    // Hover fly-up ONLY when pointer is on the mini sprite (or landed big bot) —
+    // empty space next to it must NOT zoom.
+    if((dist < botR || nearTooltip) && !_overRobot){
       _overRobot = true;
-      showRobot();
-    } else if(dist >= hitRadius + 12 && !nearTooltip && _overRobot){
+      if(!_synBotIsFlying()) showRobot();
+    } else if(dist >= botR + 6 && !nearTooltip && _overRobot){
       _overRobot = false;
       // Don't hide if chat panel is open — bot stays visible as the close target
       if(!chat || chat.style.display !== 'flex') hideRobot();
     }
   });
 
-  // Click robot glyph toggles chat — NEVER open from empty bottom-right corner taps
+  // Click landed robot glyph toggles chat — NEVER open from empty corner / mid-fly / cooldown
   function toggleChat(e){
     if(e){ try{ e.stopPropagation(); e.preventDefault(); }catch(_e){} }
     if(!chat) return;
     if(!_synBotIsOn()){
-      chat.style.display = 'none';
-      chat.style.pointerEvents = 'none';
+      _synBotForceChatClosed();
       if(tooltip){
         tooltip.classList.add('rt-hidden');
         tooltip.classList.remove('rt-visible');
-        tooltip.style.opacity = '0';
-        tooltip.style.visibility = 'hidden';
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
       }
       return;
     }
+    // Absolute: while flying (mini roam fly-in, or zoom-out) never open chat
+    if(_synBotIsFlying()){
+      return;
+    }
     if(chat.style.display === 'flex'){
+      // Close chat — keep landed robot visible so user can re-open
       chat.style.display = 'none';
       chat.style.pointerEvents = 'none';
-      if(tooltip){ tooltip.style.transition=''; tooltip.style.opacity=''; tooltip.style.visibility=''; }
+      if(tooltip){
+        tooltip.style.transition = '';
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
+        if(!tooltip.classList.contains('rt-visible')) doShowRobot();
+      }
     } else {
-      if(tooltip){ tooltip.style.transition='none'; tooltip.style.opacity='0'; tooltip.style.visibility='hidden'; }
+      // OPEN chat only when fully landed + past land cooldown (blocks ghost mouseup)
+      if(!_synBotCanOpenChat()){
+        // Not ready — start fly-in if idle, but never open panel
+        if(!_synBotIsExpanded() && !_synBotIsFlying()) showRobot();
+        return;
+      }
+      // Hide landed SVG while chat is open (avoids "clone" next to panel) but drop rt-visible
+      // so the corner is NOT clickable as an invisible robot
+      if(tooltip){
+        tooltip.style.transition = 'none';
+        tooltip.classList.add('rt-hidden');
+        tooltip.classList.remove('rt-visible');
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
+      }
+      _synBotLockRobotClicks();
       try{
         var _s = JSON.parse(localStorage.getItem('synapses_synbot_size') || 'null');
         if(_s){
@@ -31194,12 +31445,24 @@ function _neuInjectDownloadInterceptor(frame){
     }
   }
 
-  /* ONLY open chat by clicking the expanded robot SVG — never from document corner hit-tests.
-     Hit-testing itself is gated by CSS (#robotTooltip.rt-visible #rtRobot) so a tap can't
-     land on it before the fly-in animation has actually finished. */
+  /* ONLY open chat by clicking the expanded robot SVG after fly-in finished. */
   if(robot){
     robot.style.cursor = 'pointer';
-    robot.addEventListener('click', toggleChat);
+    // Default locked; unlocked only after land cooldown in doShowRobot
+    robot.style.pointerEvents = 'none';
+    robot.addEventListener('click', function(e){
+      // Extra hard gate — never toggle open unless can-open is true (close still allowed via path above)
+      if(chat && chat.style.display === 'flex'){
+        toggleChat(e);
+        return;
+      }
+      if(!_synBotCanOpenChat()){
+        if(e){ try{ e.stopPropagation(); e.preventDefault(); }catch(_e){} }
+        if(!_synBotIsFlying() && !_synBotIsExpanded()) showRobot();
+        return;
+      }
+      toggleChat(e);
+    });
   }
   if(tooltip){
     tooltip.style.pointerEvents = 'none';
@@ -31208,6 +31471,15 @@ function _neuInjectDownloadInterceptor(frame){
     chat.addEventListener('click', function(e){ e.stopPropagation(); });
     /* Ensure inputs inside panel always work */
     chat.style.pointerEvents = chat.style.display === 'flex' ? 'auto' : 'none';
+    // Belt-and-suspenders: if anything sets display:flex while flying, snap it shut
+    try{
+      new MutationObserver(function(){
+        if(_synBotIsFlying() && chat.style.display === 'flex'){
+          chat.style.display = 'none';
+          chat.style.pointerEvents = 'none';
+        }
+      }).observe(chat, {attributes:true, attributeFilter:['style']});
+    }catch(_mo){}
   }
 
   /* Close only — never open — on document click */
@@ -31221,22 +31493,33 @@ function _neuInjectDownloadInterceptor(frame){
     hideRobot();
   }, true);
 
-  /* Kill ghost opens: bottom-right taps must NEVER open the panel by coordinate hit-test */
+  /* Mini-bot click: fly-in only when the click is ON the mini sprite — not empty corner space.
+     Chat still only opens after land via #rtRobot. */
   document.addEventListener('click', function(e){
     if(!_synBotIsOn()){
-      if(chat){ chat.style.display='none'; chat.style.pointerEvents='none'; }
+      _synBotForceChatClosed();
       return;
     }
-    /* Only bring mini-bot closer — do not open chat from corner */
-    var tcIdle = document.getElementById('tinyBotCanvas');
-    if(!tcIdle || !tcIdle._getRobotScreenPos) return;
+    // Mid fly-in / zoom-out: ignore (do not open chat, do not restart fly)
+    if(_synBotIsFlying()){
+      return;
+    }
     if(chat && chat.contains(e.target)) return;
     if(robot && (e.target === robot || robot.contains(e.target))) return;
+    if(chat && chat.style.display === 'flex') return;
+    var tcIdle = document.getElementById('tinyBotCanvas');
+    if(!tcIdle || !tcIdle._getRobotScreenPos) return;
+    // Ignore if mini canvas is fully hidden / not on screen
+    try{
+      var op = parseFloat(tcIdle.style.opacity || '0');
+      if(op < 0.05 || tcIdle.style.visibility === 'hidden') return;
+    }catch(_op){}
     var pIdle = tcIdle._getRobotScreenPos();
     var dIdle = Math.hypot(e.clientX - pIdle.x, e.clientY - pIdle.y);
-    if(dIdle < (pIdle.size || 10) * 4){
-      if(tcIdle._bringIn) tcIdle._bringIn();
-      /* Do NOT call showRobot/toggleChat here — that caused ghost uninteractive panels */
+    // Tight hit on the drawn bot only (was: size*4 OR entire 160px corner — too loose)
+    var clickR = Math.max(14, (pIdle.size || 10) * 1.25);
+    if(dIdle <= clickR){
+      if(!_synBotIsExpanded() && !_synBotIsFlying()) showRobot();
     }
   }, true);
 
