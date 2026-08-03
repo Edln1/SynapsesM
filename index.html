@@ -9055,86 +9055,142 @@ function notifyNotesWidget(email) {
   } catch (e) {}
 }
 
-// Supabase is source of truth — rebuild local list from remote (picks up widget adds + deletes)
-function syncWhatsAppNotes(email, silent) {
+// Supabase is source of truth — rebuild local list from remote (picks up widget adds + deletes).
+// Disk I/O guard: full pulls are throttled. Realtime is primary; poll is a rare backup only.
+var _notesSyncInFlight = false;
+var _notesLastSyncAt = 0;
+var _NOTES_SYNC_MIN_MS = 90000;   /* min gap between full pulls (unless force) */
+var _NOTES_POLL_MS = 5 * 60 * 1000; /* backup poll every 5 min (was 45s — burned Disk I/O) */
+var _notesRealtimeDebounce = null;
+
+function syncWhatsAppNotes(email, silent, force) {
   if (!email || !window._supabase) return;
-  window._supabase.from('notes').select('*').eq('user_email', email.toLowerCase()).order('created_at', {ascending: false}).then(function(res) {
-    if (res.error) { console.error('sync error', res.error); return; }
-    if (!res.data) return;
-    var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    // Full replace with remote so deleted rows disappear everywhere
-    var remoteNotes = res.data.map(function(n) {
-      var d = new Date(n.created_at);
-      var rawBody = (n.body||'');
-      var cat = parseNoteCat(rawBody);
-      var body = stripNoteCatMarker(rawBody).trim();
-      return {
-        title: (n.title||'').trim() || body.substring(0,40) || 'Untitled',
-        body: body,
-        tags: n.tags || (cat && cat !== 'General' ? [cat] : []),
-        date: mon[d.getMonth()] + ' ' + d.getDate(),
-        colorIdx: n.colorIdx || 4,
-        _supabaseId: n.id,
-        _category: cat,
-        _fromCloud: true
-      };
-    });
-    userNotes = remoteNotes;
-    try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
-    if (typeof renderNotes === 'function') renderNotes();
-    if (typeof renderStickyNotes === 'function') setTimeout(function(){ renderStickyNotes(true); }, 200);
-    if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') {
-      try { _nbLoad(); _nbRenderAll(); } catch (eNb) {}
+  var now = Date.now();
+  if (_notesSyncInFlight) return;
+  if (!force && _notesLastSyncAt && (now - _notesLastSyncAt) < _NOTES_SYNC_MIN_MS) return;
+  _notesSyncInFlight = true;
+  _notesLastSyncAt = now;
+  /* Only columns we use — avoids select * I/O bloat */
+  window._supabase.from('notes')
+    .select('id,title,body,tags,created_at,colorIdx')
+    .eq('user_email', email.toLowerCase())
+    .order('created_at', {ascending: false})
+    .then(function(res) {
+    _notesSyncInFlight = false;
+    if (res.error) {
+      /* Older schemas may lack colorIdx — one retry with * only on real failure */
+      if (res.error.code === '42703' || (res.error.message && res.error.message.indexOf('colorIdx') !== -1)) {
+        window._supabase.from('notes').select('*').eq('user_email', email.toLowerCase()).order('created_at', {ascending: false}).then(function(res2) {
+          if (!res2.error && res2.data) _applyRemoteNotes(res2.data);
+        });
+      } else {
+        console.error('sync error', res.error);
+      }
+      return;
     }
-    // Do NOT notify widget on every sync/poll — that spammed custom-scheme intents
-  });
+    if (!res.data) return;
+    _applyRemoteNotes(res.data);
+  }, function(){ _notesSyncInFlight = false; });
 }
 
-// Realtime: any INSERT / UPDATE / DELETE on notes → re-sync HTML list (widget has its own poll)
+function _applyRemoteNotes(data) {
+  if (!data) return;
+  var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Full replace with remote so deleted rows disappear everywhere
+  var remoteNotes = data.map(function(n) {
+    var d = new Date(n.created_at);
+    var rawBody = (n.body||'');
+    var cat = parseNoteCat(rawBody);
+    var body = stripNoteCatMarker(rawBody).trim();
+    return {
+      title: (n.title||'').trim() || body.substring(0,40) || 'Untitled',
+      body: body,
+      tags: n.tags || (cat && cat !== 'General' ? [cat] : []),
+      date: mon[d.getMonth()] + ' ' + d.getDate(),
+      colorIdx: n.colorIdx || 4,
+      _supabaseId: n.id,
+      _category: cat,
+      _fromCloud: true
+    };
+  });
+  userNotes = remoteNotes;
+  try { localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); } catch(e) {}
+  if (typeof renderNotes === 'function') renderNotes();
+  if (typeof renderStickyNotes === 'function') setTimeout(function(){ renderStickyNotes(true); }, 200);
+  if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') {
+    try { _nbLoad(); _nbRenderAll(); } catch (eNb) {}
+  }
+  // Do NOT notify widget on every sync/poll — that spammed custom-scheme intents
+}
+
+// Realtime: primary path. Debounced full pull so bursts of writes ≠ N full table reads.
+// Backup poll is rare (5 min) and only while the tab is visible.
 function startWhatsAppNotePolling(email) {
-  if (window._waNotesChannel) { window._waNotesChannel.unsubscribe(); window._waNotesChannel = null; }
   if (!window._supabase || !email) return;
-  window._waNotesChannel = window._supabase
-    .channel('notes-sync-' + email.replace(/[^a-z0-9]/gi,'_'))
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'notes',
-      filter: 'user_email=eq.' + email.toLowerCase()
-    }, function(payload) {
-      syncWhatsAppNotes(email, true);
-      // One throttled poke so widget picks up cloud changes (app-only)
-      notifyNotesWidget(email);
-    })
-    .subscribe();
-  // Lightweight poll for HTML list only — no widget notify (avoids toast loops)
+  var em = email.toLowerCase();
+  /* Reuse channel if already subscribed for this user */
+  if (window._waNotesChannel && window._waNotesEmail === em) {
+    /* still ensure poll timer exists */
+  } else {
+    if (window._waNotesChannel) {
+      try { window._waNotesChannel.unsubscribe(); } catch (eU) {}
+      window._waNotesChannel = null;
+    }
+    window._waNotesEmail = em;
+    window._waNotesChannel = window._supabase
+      .channel('notes-sync-' + em.replace(/[^a-z0-9]/gi,'_'))
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notes',
+        filter: 'user_email=eq.' + em
+      }, function() {
+        /* Coalesce rapid changes into one pull */
+        if (_notesRealtimeDebounce) clearTimeout(_notesRealtimeDebounce);
+        _notesRealtimeDebounce = setTimeout(function() {
+          _notesRealtimeDebounce = null;
+          syncWhatsAppNotes(email, true, true);
+          try { notifyNotesWidget(email); } catch (eN) {}
+        }, 2000);
+      })
+      .subscribe();
+  }
   if (window._notesPollTimer) clearInterval(window._notesPollTimer);
   window._notesPollTimer = setInterval(function() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
     if (currentUser && currentUser.email && !currentUser.isGuest) {
-      syncWhatsAppNotes(currentUser.email, true);
+      /* force:false → respects min gap; rarely hits if realtime is healthy */
+      syncWhatsAppNotes(currentUser.email, true, false);
     }
-  }, 45000);
+  }, _NOTES_POLL_MS);
 }
-// Realtime sockets (and setInterval polls) get suspended while the app/WebView is backgrounded.
-// So a note deleted from the widget while the app was backgrounded sits invisible until the
-// stale connection happens to wake up. Force an immediate resync + fresh channel on foreground.
+// Foreground: soft resync only if we've been away a while (not on every focus flap).
 (function(){
   var _lastResumeSync = 0;
+  var _hiddenAt = 0;
   document.addEventListener('visibilitychange', function(){
-    if(document.visibilityState !== 'visible') return;
+    if(document.visibilityState === 'hidden'){
+      _hiddenAt = Date.now();
+      return;
+    }
     if(!(currentUser && currentUser.email && !currentUser.isGuest)) return;
     var now = Date.now();
-    if(now - _lastResumeSync < 3000) return; // debounce rapid tab-switch flapping
+    if(now - _lastResumeSync < 60000) return; /* at most once per minute on resume */
+    var awayMs = _hiddenAt ? (now - _hiddenAt) : 0;
     _lastResumeSync = now;
-    syncWhatsAppNotes(currentUser.email, true);          // pull latest immediately, don't wait for the 45s poll
-    startWhatsAppNotePolling(currentUser.email);          // re-subscribe in case the realtime socket died in background
+    /* Only full pull if away > 2 min or never synced this session */
+    if (awayMs > 120000 || !_notesLastSyncAt) {
+      syncWhatsAppNotes(currentUser.email, true, true);
+    }
+    startWhatsAppNotePolling(currentUser.email);
   });
   window.addEventListener('focus', function(){
     if(!(currentUser && currentUser.email && !currentUser.isGuest)) return;
     var now = Date.now();
-    if(now - _lastResumeSync < 3000) return;
+    if(now - _lastResumeSync < 60000) return;
     _lastResumeSync = now;
-    syncWhatsAppNotes(currentUser.email, true);
+    /* focus alone: soft sync (throttled), re-ensure channel */
+    syncWhatsAppNotes(currentUser.email, true, false);
     startWhatsAppNotePolling(currentUser.email);
   });
 })();
@@ -18040,7 +18096,7 @@ async function sendMessage(){
       if(typeof renderNotes==='function') renderNotes();
       if(typeof renderStickyNotes==='function') setTimeout(function(){renderStickyNotes(true);},100);
       if(typeof _nbLoad==='function' && typeof _nbRenderAll==='function'){ try{ _nbLoad(); _nbRenderAll(); }catch(eNb){} }
-      // Persist to Supabase — syncWhatsAppNotes() full-replaces userNotes on its 45s poll
+      // Persist to Supabase — syncWhatsAppNotes() full-replaces userNotes on rare poll / realtime
       // / realtime trigger, so a note that only lives in localStorage gets silently wiped.
       if(window._supabase && currentUser && currentUser.email && !currentUser.isGuest){
         window._supabase.from('notes').insert({user_email:currentUser.email.toLowerCase(),title:_ccNote.title,body:_ccNote.body})
@@ -37887,7 +37943,7 @@ function speakVoiceReply(text) {
             if (typeof _nbLoad === 'function' && typeof _nbRenderAll === 'function') { try { _nbLoad(); _nbRenderAll(); } catch(eNb){} }
           }, 150);
           // Persist to Supabase — syncWhatsAppNotes() treats the DB as source of truth
-          // and full-replaces userNotes on its 45s poll / realtime trigger, so a note
+          // and full-replaces userNotes on throttled poll / realtime, so a note
           // that only lives in localStorage gets silently wiped without this.
           if (window._supabase && currentUser && currentUser.email && !currentUser.isGuest) {
             window._supabase.from('notes').insert({ user_email: currentUser.email.toLowerCase(), title: _vnNote.title, body: _vnNote.body })
@@ -42291,11 +42347,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   };
 
   /**
-   * Product-tour demos: temporarily turn features ON so spotlights land on real UI
-   * (Ask bar / top icons are off by default). Never permanently rewrite user prefs
-   * (silent ask + visual-only top bar). Restored in tourDemoCleanup().
+   * Product-tour demos: flip features on only for measurement — never leave old
+   * top-bar dyn icons expanded (those look like legacy junk mid-tour).
    */
-  var _tourDemo = { pulseOpen: false, topForced: false };
+  var _tourDemo = { pulseOpen: false, studioOpen: false, bnavForced: false };
 
   function tourDemoEmptyHome() {
     try {
@@ -42303,11 +42358,45 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       var es = document.getElementById('chatEmptyState');
       if (es) { es.classList.remove('hidden'); es._manualHide = false; }
       try { if (typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility(); } catch (eS) {}
+      /* Keep top bar COLLAPSED — expanding it reveals topBarDynBtns (old icons) */
+      try {
+        var bar = document.querySelector('.top-bar');
+        if (bar) bar.classList.add('hidden');
+        document.body.classList.add('topbar-hidden');
+        try { if (typeof TOP_BAR_HIDDEN !== 'undefined') TOP_BAR_HIDDEN = true; } catch (eT) {}
+        var dyn = document.getElementById('topBarDynBtns');
+        if (dyn) dyn.style.visibility = 'hidden';
+      } catch (eTop) {}
+    } catch (e) {}
+  }
+  /** Show only the bottom icons we tour — never the Call button (wrong target) */
+  function tourDemoBnavShow() {
+    try {
+      document.body.classList.add('bottom-nav');
+      _tourDemo.bnavForced = true;
+      var show = ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn'];
+      var hide = ['bnavCallBtn'];
+      show.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.style.setProperty('display', 'flex', 'important');
+          el.style.visibility = 'visible';
+          el.style.opacity = '1';
+        }
+      });
+      hide.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.style.setProperty('display', 'none', 'important');
+          el.classList.remove('has-call', 'cs-unread');
+        }
+      });
     } catch (e) {}
   }
   function tourDemoAskOn() {
     try {
       tourDemoEmptyHome();
+      tourDemoBnavShow();
       if (typeof setAskBarVisible === 'function') setAskBarVisible(true, { silent: true });
       else {
         var sec = document.getElementById('sec-chat');
@@ -42324,63 +42413,59 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
     } catch (e) {}
   }
-  function tourDemoTopBarShow() {
-    try {
-      var bar = document.querySelector('.top-bar');
-      var btn = document.getElementById('topBarToggle');
-      var htb = document.querySelector('.hub-tab-bar');
-      if (bar) bar.classList.remove('hidden');
-      document.body.classList.remove('topbar-hidden');
-      if (btn) { btn.innerHTML = '▲'; btn.title = 'Hide top icons'; }
-      if (htb) htb.style.display = '';
-      try { if (typeof TOP_BAR_HIDDEN !== 'undefined') TOP_BAR_HIDDEN = false; } catch (eT) {}
-      _tourDemo.topForced = true;
-    } catch (e) {}
-  }
-  function tourDemoTopBarRestore() {
-    try {
-      var pref = null;
-      try { pref = localStorage.getItem('synapses_topbar_hidden'); } catch (eP) {}
-      var hide = (pref === null || pref === undefined) ? true : (pref === '1');
-      var bar = document.querySelector('.top-bar');
-      var btn = document.getElementById('topBarToggle');
-      var htb = document.querySelector('.hub-tab-bar');
-      try { if (typeof TOP_BAR_HIDDEN !== 'undefined') TOP_BAR_HIDDEN = hide; } catch (eT) {}
-      if (hide) {
-        if (bar) bar.classList.add('hidden');
-        document.body.classList.add('topbar-hidden');
-        if (btn) { btn.innerHTML = '▼'; btn.title = 'Show top icons'; }
-        if (htb) htb.style.display = 'none';
-      } else {
-        if (bar) bar.classList.remove('hidden');
-        document.body.classList.remove('topbar-hidden');
-        if (btn) { btn.innerHTML = '▲'; btn.title = 'Hide top icons'; }
-      }
-      _tourDemo.topForced = false;
-    } catch (e) {}
-  }
-  function tourDemoPulseOn() {
-    try {
-      if (typeof window.openSynPulse === 'function') window.openSynPulse();
-      _tourDemo.pulseOpen = true;
-    } catch (e) {}
-  }
   function tourDemoPulseOff() {
     try {
       if (typeof window.closeSynPulse === 'function') window.closeSynPulse();
     } catch (e) {}
     _tourDemo.pulseOpen = false;
   }
+  function tourDemoStudioOff() {
+    try {
+      if (typeof closeImageGenModal === 'function') closeImageGenModal();
+      else {
+        var m = document.getElementById('imageGenModal');
+        if (m) m.style.display = 'none';
+      }
+    } catch (e) {}
+    _tourDemo.studioOpen = false;
+  }
   function tourDemoCleanup() {
     try {
-      /* Restore Ask to saved user pref (default off) */
       var wantAsk = false;
       try { wantAsk = localStorage.getItem('synapses_askbar_open') === '1'; } catch (eA) {}
       if (typeof setAskBarVisible === 'function') setAskBarVisible(!!wantAsk, { silent: true });
-      else if (wantAsk) tourDemoAskOn(); else tourDemoAskOff();
+      else if (!wantAsk) tourDemoAskOff();
     } catch (e1) {}
-    try { tourDemoTopBarRestore(); } catch (e2) {}
-    try { if (_tourDemo.pulseOpen) tourDemoPulseOff(); } catch (e3) {}
+    try { tourDemoPulseOff(); } catch (e2) {}
+    try { tourDemoStudioOff(); } catch (e3) {}
+    try {
+      var dyn = document.getElementById('topBarDynBtns');
+      if (dyn) dyn.style.visibility = '';
+      var call = document.getElementById('bnavCallBtn');
+      if (call) call.style.removeProperty('display');
+      ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.style.removeProperty('display');
+      });
+    } catch (e4) {}
+    try {
+      /* Restore top bar from user pref without flashing dyn icons during tour */
+      var pref = null;
+      try { pref = localStorage.getItem('synapses_topbar_hidden'); } catch (eP) {}
+      var hide = (pref === null || pref === undefined) ? true : (pref === '1');
+      var bar = document.querySelector('.top-bar');
+      var tbtn = document.getElementById('topBarToggle');
+      try { if (typeof TOP_BAR_HIDDEN !== 'undefined') TOP_BAR_HIDDEN = hide; } catch (eT) {}
+      if (hide) {
+        if (bar) bar.classList.add('hidden');
+        document.body.classList.add('topbar-hidden');
+        if (tbtn) { tbtn.innerHTML = '▼'; tbtn.title = 'Show top icons'; }
+      } else {
+        if (bar) bar.classList.remove('hidden');
+        document.body.classList.remove('topbar-hidden');
+        if (tbtn) { tbtn.innerHTML = '▲'; tbtn.title = 'Hide top icons'; }
+      }
+    } catch (e5) {}
   }
 
   var STEPS = [
@@ -42402,100 +42487,22 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     {
       id: 'fp',
       mode: 'spotlight',
-      sel: '#synFingerprint, #synFpPad',
+      sel: '#synFpPad',
       view: 'sec-chat',
       title: 'Speech-to-speech',
-      body: 'Hold the fingerprint on home to go live with Ava — voice in, voice out. Not dictation.',
+      body: 'Hold this fingerprint on home to talk with Ava out loud — voice in, voice out.',
       cta: 'Next',
       pulse: true,
       magic: true,
-      holePad: 14,
-      enter: function () {
-        tourDemoEmptyHome();
-        tourDemoAskOff(); /* pad only shows when Ask is closed */
-      }
-    },
-    {
-      id: 'chat',
-      mode: 'spotlight',
-      /* Tour forces Ask open so the real bar is on screen (default is off) */
-      sel: '#sec-chat .input-wrapper, #inputBox, #sec-chat .input-area',
-      view: 'sec-chat',
-      title: 'Ask me anything',
-      body: 'Tap Ask (bottom bar) anytime to open this bar — type a question and send. Closed by default so home stays clean.',
-      cta: 'Next',
-      magic: true,
-      cardPlace: 'bottom',
-      holeMax: 920,
-      holeMaxH: 86,
-      holePad: 12,
-      enter: function () {
-        tourDemoEmptyHome();
-        tourDemoAskOn();
-      }
-    },
-    {
-      id: 'voice',
-      mode: 'spotlight',
-      sel: '#topNavVoiceBtn',
-      view: 'sec-chat',
-      title: 'Top-bar voice mic',
-      body: 'Show top icons (▼/▲) — the green mic is another way into speech-to-speech when icons are visible.',
-      cta: 'Next',
-      pulse: true,
-      magic: true,
-      enter: function () {
-        tourDemoEmptyHome();
-        tourDemoTopBarShow(); /* icons hidden by default */
-      }
-    },
-    {
-      id: 'topicons',
-      mode: 'spotlight',
-      sel: '#topBarToggle',
-      view: 'sec-chat',
-      title: 'Top icons toggle',
-      body: 'Tap this arrow anytime to hide or show the top-right tools. Starts collapsed on a fresh install.',
-      cta: 'Next',
-      magic: true,
-      enter: function () {
-        tourDemoTopBarShow();
-      }
-    },
-    {
-      id: 'pulse',
-      mode: 'spotlight',
-      sel: '#bnavPulseBtn, #synPulsePanel.open, #synPulsePanel',
-      view: 'sec-chat',
-      title: 'Pulse',
-      body: 'Live meetups, news & jobs for your city. Open it here — first time asks for a quick setup.',
-      cta: 'Next',
-      magic: true,
+      tight: true,
       holePad: 10,
+      holeMax: 88,
+      holeMaxH: 88,
       enter: function () {
         tourDemoEmptyHome();
-        tourDemoPulseOn();
-      },
-      leave: function () {
+        tourDemoBnavShow();
+        tourDemoAskOff();
         tourDemoPulseOff();
-      }
-    },
-    {
-      id: 'notes',
-      mode: 'spotlight',
-      sel: '#bnavNotesBtn',
-      view: 'sec-chat',
-      title: 'My Notes',
-      body: 'Your notebooks live here — capture ideas from chat or write freeform anytime.',
-      cta: 'Next',
-      magic: true,
-      enter: function () {
-        tourDemoEmptyHome();
-        try {
-          var nb = document.getElementById('bnavNotesBtn');
-          if (nb) { nb.style.display = 'flex'; }
-          document.body.classList.add('bottom-nav');
-        } catch (e) {}
       }
     },
     {
@@ -42504,42 +42511,127 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       sel: '#bnavAskBtn',
       view: 'sec-chat',
       title: 'Ask toggle',
-      body: 'This bottom icon turns Ask me anything on and off. Home stays empty until you want the bar.',
+      body: 'This paper-plane icon opens and closes Ask me anything. Call is a different button — this one is only for Ask.',
       cta: 'Next',
       magic: true,
+      tight: true,
+      holePad: 8,
+      holeMax: 52,
+      holeMaxH: 52,
       enter: function () {
         tourDemoEmptyHome();
+        tourDemoBnavShow();
         tourDemoAskOff();
-        try {
-          var ab = document.getElementById('bnavAskBtn');
-          if (ab) ab.style.display = 'flex';
-          document.body.classList.add('bottom-nav');
-        } catch (e) {}
+        tourDemoPulseOff();
       }
     },
     {
-      id: 'input',
+      id: 'chat',
       mode: 'spotlight',
-      sel: '#sec-chat .input-wrapper, #inputBox',
+      sel: '#sec-chat.askbar-on .input-wrapper, #sec-chat.askbar-on #inputBox',
       view: 'sec-chat',
-      title: 'Your move',
-      body: 'Type here or hold the fingerprint to talk. Guest works — no wall before the magic.',
-      cta: 'Finish',
+      title: 'Ask me anything',
+      body: 'Type a question here and send. We open the bar for this step — on a normal day it stays closed until you toggle Ask.',
+      cta: 'Next',
       magic: true,
-      holeMax: 920,
-      holeMaxH: 86,
-      holePad: 12,
       cardPlace: 'bottom',
+      holeMax: 920,
+      holeMaxH: 72,
+      holePad: 10,
+      settleMs: 900,
       enter: function () {
         tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoPulseOff();
         tourDemoAskOn();
+      }
+    },
+    {
+      id: 'notes',
+      mode: 'spotlight',
+      sel: '#bnavNotesBtn',
+      view: 'sec-chat',
+      title: 'My Notes',
+      body: 'Notebooks live here — capture ideas from chat or write freeform.',
+      cta: 'Next',
+      magic: true,
+      tight: true,
+      holePad: 8,
+      holeMax: 56,
+      holeMaxH: 56,
+      enter: function () {
+        tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoAskOff();
+        tourDemoPulseOff();
+      }
+    },
+    {
+      id: 'pulse',
+      mode: 'spotlight',
+      sel: '#bnavPulseBtn',
+      view: 'sec-chat',
+      title: 'Pulse',
+      body: 'Meetups, news & jobs for your city. Tap this waveform icon to open Pulse (setup once, then it sticks).',
+      cta: 'Next',
+      magic: true,
+      tight: true,
+      holePad: 8,
+      holeMax: 52,
+      holeMaxH: 52,
+      enter: function () {
+        tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoAskOff();
+        /* Do not open the tall panel here — only ring the icon so position stays correct */
+        tourDemoPulseOff();
+      }
+    },
+    {
+      id: 'studio',
+      mode: 'spotlight',
+      sel: '#bnavImageGenBtn',
+      view: 'sec-chat',
+      title: 'Studio',
+      body: 'Create images here — open Studio, pick a style, generate, and save. Your creative desk.',
+      cta: 'Next',
+      magic: true,
+      tight: true,
+      holePad: 8,
+      holeMax: 52,
+      holeMaxH: 52,
+      enter: function () {
+        tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoAskOff();
+        tourDemoPulseOff();
+      }
+    },
+    {
+      id: 'topicons',
+      mode: 'spotlight',
+      sel: '#topBarToggle',
+      view: 'sec-chat',
+      title: 'Top icons toggle',
+      body: 'This arrow (next to window controls) shows or hides the top-right tools. Starts collapsed so home stays clean.',
+      cta: 'Next',
+      magic: true,
+      tight: true,
+      holePad: 6,
+      holeMax: 40,
+      holeMaxH: 40,
+      enter: function () {
+        tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoAskOff();
+        /* Leave top bar hidden so we only highlight the arrow — not old dyn icons */
       }
     },
     {
       id: 'done',
       mode: 'center',
       title: "You're in",
-      body: 'Try one thing: hold the fingerprint for voice, or open Ask and say hi. Have fun.',
+      body: 'Try the fingerprint for voice, Ask for text, or Studio for images. Have fun.',
       cta: 'Start talking',
       secondary: "I'll explore",
       enter: function () {
@@ -46040,7 +46132,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function placeHole(r, step) {
     var hole = $('synTourHole');
     if (!hole) return;
-    if (!r || !(r.width > 8) || !(r.height > 8)) {
+    if (!r || !(r.width > 6) || !(r.height > 6)) {
       /* No valid target yet — hide ring (never leave a box floating over empty UI) */
       hole.classList.remove('show', 'pulse');
       hole.style.left = '-9999px';
@@ -46052,22 +46144,32 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var pad = (step && step.holePad != null) ? step.holePad : 10;
     var maxW = (step && step.holeMax) ? step.holeMax : Math.min(innerWidth - 24, 420);
     var maxH = (step && step.holeMaxH) ? step.holeMaxH : 160;
-    /* Hug the real target — min size only slightly larger than the control itself */
-    var minW = Math.min(120, Math.max(40, r.width + pad * 2));
-    var minH = Math.min(56, Math.max(36, r.height + pad * 2));
-    var w = Math.min(maxW, Math.max(r.width + pad * 2, minW));
-    var h = Math.min(maxH, Math.max(r.height + pad * 2, minH));
+    var w, h;
+    if (step && step.tight) {
+      /* Icon buttons: ring hugs the control — no huge min-width that drifts left onto Call */
+      w = Math.min(maxW, Math.max(r.width + pad * 2, 44));
+      h = Math.min(maxH, Math.max(r.height + pad * 2, 44));
+      /* Prefer square ring centered on the icon */
+      var side = Math.max(w, h);
+      w = Math.min(maxW, side);
+      h = Math.min(maxH, side);
+    } else {
+      var minW = Math.min(120, Math.max(40, r.width + pad * 2));
+      var minH = Math.min(56, Math.max(36, r.height + pad * 2));
+      w = Math.min(maxW, Math.max(r.width + pad * 2, minW));
+      h = Math.min(maxH, Math.max(r.height + pad * 2, minH));
+    }
     var cx = r.left + r.width / 2;
     var cy = r.top + r.height / 2;
-    var left = Math.max(6, Math.min(innerWidth - w - 6, cx - w / 2));
-    var top = Math.max(6, Math.min(innerHeight - h - 6, cy - h / 2));
+    var left = Math.max(4, Math.min(innerWidth - w - 4, cx - w / 2));
+    var top = Math.max(4, Math.min(innerHeight - h - 4, cy - h / 2));
     hole.style.left = left + 'px';
     hole.style.top = top + 'px';
     hole.style.width = w + 'px';
     hole.style.height = h + 'px';
-    hole.style.borderRadius = (h < 100 ? '16px' : '18px');
+    hole.style.borderRadius = (step && step.tight) ? '14px' : (h < 100 ? '16px' : '18px');
     hole.classList.add('show');
-    spawnBurst(cx, cy, 14, [C.purp, 'rgba(196,181,253,0.85)']);
+    spawnBurst(cx, cy, 10, [C.purp, 'rgba(196,181,253,0.85)']);
   }
 
   function placeBot(r) {
@@ -46961,9 +47063,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         $('synTourCenter').style.display = 'none';
         clearVideoCardStyles(card);
         card.style.display = 'block';
-        /* Hide ring until we have a real on-screen target (no empty-space frame) */
+        /* Hide ring until target is real (Ask open anim / bnav force display) */
         placeHole(null);
-        /* Artificially toggle the feature on so the hole lands on real UI */
         try {
           if (typeof step.enter === 'function') step.enter();
         } catch (eEnt) {}
@@ -46973,15 +47074,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         $('synTourNext').textContent = step.cta || 'Next';
         $('synTourSec').style.display = 'none';
         reflowTextAnims(card);
-        /* Re-measure after layout settles (Ask open / top bar expand / Pulse open) */
+        var settle = (step.settleMs != null) ? step.settleMs : 480;
         function remeasureSpot() {
           if (!state.open || STEPS[state.i] !== step) return;
           ensureChat();
           try { if (typeof step.enter === 'function') step.enter(); } catch (eE3) {}
+          /* Prefer exact first selector when multiple (e.g. only Ask, never Call) */
           var hit2 = rectFor(step.sel);
           if (hit2 && hit2.r) {
             placeHole(hit2.r, step);
             if (step.pulse) hole.classList.add('pulse');
+            else hole.classList.remove('pulse');
             placeBot(hit2.r);
             placeCard(hit2.r, step);
           } else {
@@ -46990,15 +47093,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           }
           revealTourCard();
         }
-        /* Wait for toggle/layout paint before first measure */
         requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            remeasureSpot();
-          });
+          requestAnimationFrame(remeasureSpot);
         });
-        setTimeout(remeasureSpot, 160);
-        setTimeout(remeasureSpot, 400);
-        setTimeout(remeasureSpot, 700);
+        setTimeout(remeasureSpot, Math.min(220, settle));
+        setTimeout(remeasureSpot, settle);
+        setTimeout(remeasureSpot, settle + 280);
         setTimeout(revealTourCard, 80);
       }
       try {
