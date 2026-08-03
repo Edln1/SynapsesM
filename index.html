@@ -3265,9 +3265,14 @@ body.voice-live .syn-fp-icon{
 #rtBubbleOutline{position:absolute;top:-1px;left:-1px;pointer-events:none;z-index:5;}
 #rtLabel{font-size:9px;letter-spacing:.18em;color:rgba(124,106,247,0.75);text-transform:uppercase;font-weight:700;margin-bottom:4px;font-family:Syne,sans-serif;}
 #rtText{font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.55;font-family:DM Sans,sans-serif;}
-#rtRobot{width:72px;height:72px;animation:rtBob 2.2s ease-in-out infinite;cursor:pointer;pointer-events:none;}
-/* Only the landed robot after fly-in (rt-visible) is clickable — never the hidden / mid-fly one. */
-#robotTooltip.rt-visible:not(.rt-hidden) #rtRobot{pointer-events:auto;}
+#rtRobot{width:72px;height:72px;animation:rtBob 2.2s ease-in-out infinite;cursor:pointer;pointer-events:none;box-sizing:content-box;}
+/* Only the landed robot after fly-in (rt-visible) is clickable — never the hidden / mid-fly one.
+   Extra padding grows the hitbox a little without making empty corner space clickable. */
+#robotTooltip.rt-visible:not(.rt-hidden) #rtRobot{
+  pointer-events:auto;
+  padding:16px;
+  margin:-16px;
+}
 @keyframes rtBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
 #tinyBotCanvas{position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:0;transition:opacity .4s ease;}
 /* Fly canvas is created in JS with pointer-events:none — never a chat hit target. */
@@ -31335,18 +31340,20 @@ function _neuInjectDownloadInterceptor(frame){
     var dy = _mouseY - pos.y;
     var dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Only the mini-bot sprite itself (tight), NOT empty corner space
-    var botR = Math.max(12, (pos.size || 10) * 1.15);
-    // Slightly larger zone just to fade the mini in (still not whole corner)
-    var bringInR = Math.max(28, (pos.size || 10) * 2.2);
+    // Mini-bot hitbox: a bit larger than the drawn sprite (easier tap), not whole corner
+    var botR = Math.max(22, (pos.size || 10) * 2.1);
+    // Slightly larger zone just to fade the mini in
+    var bringInR = Math.max(36, (pos.size || 10) * 2.8);
 
-    // Stay active if cursor is over the landed big robot (not padded empty space)
+    // Stay active if cursor is over the landed big robot (small pad around glyph)
     var tooltipEl = document.getElementById('robotTooltip');
     var nearTooltip = false;
     if(tooltipEl && tooltipEl.classList.contains('rt-visible')){
-      var tr = tooltipEl.getBoundingClientRect();
-      nearTooltip = _mouseX >= tr.left && _mouseX <= tr.right
-                 && _mouseY >= tr.top  && _mouseY <= tr.bottom;
+      var rrHit = document.getElementById('rtRobot');
+      var tr = (rrHit || tooltipEl).getBoundingClientRect();
+      var pad = 18; // soft hit pad around enlarged robot — not empty-corner huge
+      nearTooltip = _mouseX >= tr.left - pad && _mouseX <= tr.right  + pad
+                 && _mouseY >= tr.top  - pad && _mouseY <= tr.bottom + pad;
     }
 
     // Bring mini bot in when cursor is near the sprite — not a giant empty corner pad
@@ -31516,8 +31523,8 @@ function _neuInjectDownloadInterceptor(frame){
     }catch(_op){}
     var pIdle = tcIdle._getRobotScreenPos();
     var dIdle = Math.hypot(e.clientX - pIdle.x, e.clientY - pIdle.y);
-    // Tight hit on the drawn bot only (was: size*4 OR entire 160px corner — too loose)
-    var clickR = Math.max(14, (pIdle.size || 10) * 1.25);
+    // Slightly forgiving hit on mini bot (was mosquito-tight; still not whole corner)
+    var clickR = Math.max(24, (pIdle.size || 10) * 2.2);
     if(dIdle <= clickR){
       if(!_synBotIsExpanded() && !_synBotIsFlying()) showRobot();
     }
