@@ -5,7 +5,7 @@
   <meta name="theme-color" content="#000000">
   <style>html,body{background:#000000 !important;}</style>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -659,6 +659,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .role-card .rl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
 .role-card .rd{font-size:11px;color:#6b6b8a;margin-top:3px;}
 @media(max-width:768px){
+  #imageGenResults{grid-template-columns:1fr 1fr!important;}
   /* ── Auth modal ── */
   .modal-overlay#authModal{align-items:flex-start!important;padding:0!important;}
   #authModalInner{flex-direction:column!important;width:100vw!important;max-width:100vw!important;max-height:100vh!important;height:100vh!important;border-radius:0!important;overflow-y:auto!important;border:none!important;}
@@ -680,9 +681,10 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   html,body{overflow-x:hidden!important;max-width:100vw!important;}
 
   /* Desktop window chrome (minimize/maximize/close) has no place on mobile,
-     but keep the little toggle arrow — pin it to the very top-right corner
-     so it still lets people collapse the top-right icon cluster. */
+     but keep the little toggle arrow — pin it to the top-right of the APP
+     (below notification bar on Android via html.android-status-blend #winStrip). */
   #winStrip{display:flex!important;top:0!important;right:0!important;background:transparent!important;}
+  html.android-status-blend #winStrip{top:var(--android-status-inset, 28px)!important;}
   #winStrip #etbMin,#winStrip #etbMax,#winStrip #etbClose{display:none!important;}
   #winStrip #topBarToggle{display:flex!important;width:16px!important;height:24px!important;font-size:7px!important;}
   .top-actions{padding-right:8px!important;}
@@ -711,6 +713,23 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
+  /* DAY (sun / easyview) only: home top bar clear-blends into wallpaper.
+     MOON (dark / purple): keep classic glass overlay + divider (old layout). */
+  html[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
+  html[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
+  html[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+  html[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+  html.android-status-blend[data-theme="easyview"] .main:has(#sec-welcome.active) .top-bar,
+  html.android-status-blend[data-theme="easyview"] body:has(#sec-welcome.active) .top-bar,
+  html.android-status-blend[data-theme="easyview"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+  html.android-status-blend[data-theme="easyview"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    border-bottom-color:transparent!important;
+    border-bottom-width:0!important;
+    box-shadow:none!important;
+  }
 
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1878,8 +1897,9 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .applicant-name{font-size:13.5px;font-weight:600;margin-bottom:2px;}
 .applicant-email{font-size:12px;color:var(--muted);}
 #sec-chat,#sec-coach{overflow:hidden;}
-/* ── Beams Background ── */
-#chatBeamsWrap{display:none;}
+/* ── Beams Background (re-enabled, now properly positioned as an overlay) ── */
+#chatBeamsWrap{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+#chatBeamsCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
 #chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
@@ -1914,7 +1934,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-composer textarea:focus{border-color:var(--accent);}
 .feed-composer-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .feed-cat-select{flex:1;background:#000000;border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;cursor:pointer;min-width:160px;}
-.feed-post-btn{padding:9px 20px;background:rgba(99,102,241,0.13);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(99,102,241,0.3);border-radius:8px;color:rgba(255,255,255,0.9);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.feed-post-btn{padding:9px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .feed-post-btn:hover{opacity:.88;}
 .post-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;animation:fadeUp .3s ease;}
 .post-card:hover{border-color:rgba(124,106,247,0.2);}
@@ -1944,7 +1964,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:14px;scrollbar-width:none;padding-bottom:2px;}
 .feed-filter{padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10.5px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .feed-filter:hover{border-color:var(--accent);color:var(--text);}
-.feed-filter.active{background:var(--accent);border-color:var(--accent);color:white;}
+.feed-filter.active{background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(255,255,255,0.22);color:var(--text);}
 .match-card{background:rgba(255,255,255,0.012);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;transition:all .2s;box-shadow:none;}
 .match-card:hover{background:rgba(255,255,255,0.025);border-color:rgba(255,255,255,0.09);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
 .match-score-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;border:2px solid;}
@@ -1963,12 +1983,12 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .feed-composer textarea:focus{border-color:var(--accent);}
 .feed-composer-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .feed-cat-select{flex:1;background:rgba(255,255,255,0.012);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12.5px;outline:none;cursor:pointer;min-width:160px;}
-.feed-post-btn{padding:9px 20px;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .2s;}
+.feed-post-btn{padding:9px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
 .feed-post-btn:hover{opacity:.88;}
 .feed-filter-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;margin-bottom:14px;scrollbar-width:none;padding-bottom:2px;}
 .feed-filter{padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:10.5px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
 .feed-filter:hover{border-color:var(--accent);color:var(--text);}
-.feed-filter.active{background:var(--accent);border-color:var(--accent);color:white;}
+.feed-filter.active{background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-color:rgba(255,255,255,0.22);color:var(--text);}
 .post-card{background:rgba(255,255,255,0.012);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:11px 13px;margin-bottom:7px;transition:all .2s;}
 .post-card:hover{background:rgba(255,255,255,0.025);border-color:rgba(255,255,255,0.09);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
 .post-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px;}
@@ -2110,6 +2130,10 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 *::-webkit-scrollbar-button{display:none;width:0;height:0;}
 *::-webkit-scrollbar-thumb{background:rgba(124,106,247,0.22);border-radius:10px;}
 *::-webkit-scrollbar-thumb:hover{background:rgba(124,106,247,0.22);}
+#imageGenModal *::-webkit-scrollbar-thumb{background:transparent;}
+#imageGenModal *::-webkit-scrollbar-thumb:hover{background:transparent;}
+#imageGenModal{scrollbar-width:none;}
+#imageGenModal *{scrollbar-width:none;}
 
 #toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px) scale(0.96);background:rgba(18,16,28,0.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .22s ease,transform .28s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);max-width:min(320px,calc(100vw - 40px));text-align:center;line-height:1.35;letter-spacing:0.01em;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
@@ -2355,17 +2379,16 @@ to{opacity:0;transform:translateX(-40px);}}
    speech-to-speech stays live and the rest of the top bar is collapsed.
    Position itself (the glide) is driven by JS via inline transform/opacity —
    this just establishes the positioning context. */
-/* Center of top-bar: top/left 50% needs -50% transform or it sits down-right of true center.
-   transform is NOT !important so glide JS can temporarily override it. */
+/* Centered STS mic: fixed to the VIEWPORT so left:50% is true screen center
+   (under the front camera), not “middle of the top-bar box” which can be offset. */
 #topNavVoiceBtn.tnv-centered{
-  position:absolute!important;
-  top:50%!important;
+  position:fixed!important;
   left:50%!important;
   right:auto!important;
   bottom:auto!important;
   margin:0!important;
   transform:translate(-50%,-50%);
-  z-index:5;
+  z-index:100050;
   pointer-events:auto!important;
 }
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
@@ -2776,6 +2799,29 @@ body.voice-live .syn-fp-icon{
 .sf-text{font-size:11px;line-height:1.55;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sf-actions{display:flex;align-items:center;gap:8px;padding:6px 9px 7px;border-top:1px solid rgba(255,255,255,0.04);margin-top:auto;}
 .sf-actions button{background:none;border:none;cursor:pointer;font-size:10.5px;display:flex;align-items:center;gap:3px;padding:0;transition:color .15s;}
+.studioBottomBar{border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);}
+@media (max-width:768px){
+  .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
+}
+/* Studio scroll clearance under floating header — keep tight (was huge empty black) */
+#imageGenScrollCol{padding-top:calc(58px + env(safe-area-inset-top, 0px));padding-bottom:calc(66px + env(safe-area-inset-bottom, 0px));}
+#imageGenScrollCol.igRowHidden{padding-top:calc(58px + env(safe-area-inset-top, 0px));}
+/* Style chips row sits just under header — only header height, not double-pad */
+#imageGenTemplateRow{padding-top:calc(54px + env(safe-area-inset-top, 0px))!important;padding-bottom:10px!important;}
+/* When styles row is open, scroll col itself needs no top pad (row owns clearance) */
+#imageGenScrollCol:not(.igRowHidden){padding-top:0!important;}
+/* Community: transparent studio header (blend like home), hide style/reset icons */
+#imageGenModal.studio-tab-community #studioTopBar{
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border-bottom:none!important;
+  box-shadow:none!important;
+}
+#imageGenModal.studio-tab-community #studioHistoryGlassBtn,
+#imageGenModal.studio-tab-community #studioResetBtn{
+  display:none!important;
+}
 </style>
 <style>
 /* Invisible overlay blocking the rightmost 8px */
@@ -3226,24 +3272,47 @@ body.voice-live .syn-fp-icon{
 </style>
 <style id="robotTooltipCSS">
 #robotTooltip{position:fixed;bottom:24px;right:24px;z-index:88888;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;transition:opacity .25s ease,transform .25s ease;}
-#robotTooltip.rt-hidden{opacity:0;transform:translateY(12px);}
-#robotTooltip.rt-visible{opacity:1;transform:translateY(0);}
-#rtBubble{background:transparent;border:none;border-radius:0;padding:11px 15px 14px 15px;max-width:210px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.15);position:relative;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);overflow:visible;}
+/* Hidden = not hittable (visibility:hidden). Opacity alone still left a dead
+   click target in the corner that opened chat with no fly-in, and stacked with
+   the fly canvas as a "clone" robot. */
+#robotTooltip.rt-hidden{
+  opacity:0;
+  transform:translateY(12px);
+  visibility:hidden;
+  pointer-events:none!important;
+}
+#robotTooltip.rt-hidden #rtRobot,
+#robotTooltip.rt-hidden #rtBubble{
+  pointer-events:none!important;
+}
+#robotTooltip.rt-visible{
+  opacity:1;
+  transform:translateY(0);
+  visibility:visible;
+}
+#rtBubble{background:transparent;border:none;border-radius:0;padding:11px 15px 14px 15px;max-width:210px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.15);position:relative;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);overflow:visible;pointer-events:none;}
 #rtBubble::after{content:none;}
 #rtBubbleOutline{position:absolute;top:-1px;left:-1px;pointer-events:none;z-index:5;}
 #rtLabel{font-size:9px;letter-spacing:.18em;color:rgba(124,106,247,0.75);text-transform:uppercase;font-weight:700;margin-bottom:4px;font-family:Syne,sans-serif;}
 #rtText{font-size:11.5px;color:rgba(255,255,255,0.8);line-height:1.55;font-family:DM Sans,sans-serif;}
-#rtRobot{width:72px;height:72px;animation:rtBob 2.2s ease-in-out infinite;cursor:pointer;}
+#rtRobot{width:72px;height:72px;animation:rtBob 2.2s ease-in-out infinite;cursor:pointer;pointer-events:none;box-sizing:content-box;}
+/* Only the landed robot after fly-in (rt-visible) is clickable — never the hidden / mid-fly one.
+   Extra padding grows the hitbox a little without making empty corner space clickable. */
+#robotTooltip.rt-visible:not(.rt-hidden) #rtRobot{
+  pointer-events:auto;
+  padding:16px;
+  margin:-16px;
+}
 @keyframes rtBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
 #tinyBotCanvas{position:fixed;bottom:0;right:0;width:180px;height:180px;pointer-events:none;z-index:88886;opacity:0;transition:opacity .4s ease;}
-#tinyBotCanvas:hover{opacity:0;}
+/* Fly canvas is created in JS with pointer-events:none — never a chat hit target. */
+/* Do not force opacity:0 on hover — that fought the fly-in and looked like a vanishing clone. */
 </style>
 <style id="minimalBlackUI">
 /* Bare-bones ChatGPT/Grok-style pass: kill the bottom icon rail and every decorative
    background animation, brighten the remaining chat-screen text to white. */
 #bottomNavBar{display:none!important;}
 #chatFlowCanvas,#flowCanvas,#jobsFlowCanvas,#roomFlowCanvas{opacity:0;transition:opacity 1.4s ease;}
-#chatBeamsWrap{display:none!important;}
 html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
@@ -3254,6 +3323,150 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #ncmdLaunchBtn,#ncmdLauncher{display:none!important;}
 .quick-actions{display:none!important;}
 </style>
+<!-- Android: Studio-style status bar blend for main chrome (try-it pass).
+     Overlay WebView = edge-to-edge; only .top-bar / .sidebar pad content under icons.
+     Do NOT pad body (that pushed the whole app too low). -->
+<style id="androidStatusBlendCSS">
+html.android-status-blend{
+  --android-status-inset:28px;
+}
+/* Main top bar: glass under transparent notification bar (same idea as Studio header).
+   ONLY extra pad is on top (status inset). Bottom/side spacing matches original mobile
+   bar so sun/moon (#dayNightToggle) gap under the buttons stays the same. */
+html.android-status-blend .top-bar{
+  /* original mobile was padding:8px 12px + min-height:60 (border-box) → ~44px content row */
+  padding-top:calc(var(--android-status-inset) + 8px)!important;
+  padding-bottom:8px!important;
+  padding-left:12px!important;
+  padding-right:12px!important;
+  max-height:none!important;
+  /* keep same content-row height as before: inset + original 60px bar */
+  min-height:calc(var(--android-status-inset) + 60px)!important;
+  overflow:visible!important;
+  background:rgba(10,10,14,0.42)!important;
+  backdrop-filter:blur(16px) saturate(150%)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(150%)!important;
+  border-bottom:1px solid rgba(255,255,255,0.08)!important;
+}
+/* ── MOON / dark (purple): classic “old layout” header for comparison ──
+   Restore pre-experiment glass tint + divider + tighter classic margins.
+   Wallpaper / page background is NOT changed. */
+html.android-status-blend[data-theme="purple"] .top-bar,
+html[data-theme="purple"].android-status-blend .top-bar{
+  /* classic frosted header (old shade) */
+  background:rgba(15,15,26,0.55)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+  border-bottom:1px solid rgba(255,255,255,0.08)!important;
+  /* classic mobile chrome under white status strip */
+  padding-top:calc(var(--android-status-inset) + 8px)!important;
+  padding-bottom:8px!important;
+  padding-left:12px!important;
+  padding-right:12px!important;
+  min-height:calc(var(--android-status-inset) + 56px)!important;
+  max-height:none!important;
+  overflow:visible!important;
+  box-shadow:none!important;
+}
+/* Moon: ALWAYS keep the separator line (including home) */
+html[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
+html[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
+html[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+html[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+html.android-status-blend[data-theme="purple"] .main:has(#sec-welcome.active) .top-bar,
+html.android-status-blend[data-theme="purple"] body:has(#sec-welcome.active) .top-bar,
+html.android-status-blend[data-theme="purple"] .main:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar,
+html.android-status-blend[data-theme="purple"] body:has(#sec-chat.active #chatEmptyState:not(.hidden)) .top-bar{
+  background:rgba(15,15,26,0.55)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+  border-bottom:1px solid rgba(255,255,255,0.08)!important;
+  border-bottom-width:1px!important;
+  border-bottom-color:rgba(255,255,255,0.08)!important;
+  box-shadow:none!important;
+}
+/* Do not restyle #dayNightToggle — size/margin unchanged */
+html.android-status-blend #dayNightToggle{
+  margin:0!important;
+}
+/* Sidebar continues under bar so the strip doesn’t look cut off */
+html.android-status-blend .sidebar{
+  padding-top:var(--android-status-inset)!important;
+  box-sizing:border-box!important;
+}
+/* Floating history control: clear the status icons */
+html.android-status-blend #chatHistoryPanel{
+  top:calc(12px + var(--android-status-inset))!important;
+}
+/* Tiny ▲ (and win strip) — sit at top of APP chrome, NOT inside the notification bar */
+html.android-status-blend #winStrip{
+  top:var(--android-status-inset)!important;
+}
+html.android-status-blend #etbDragZoneL{
+  top:var(--android-status-inset)!important;
+}
+/* Studio: more top air so header + speech-to-speech bubble clear status icons */
+html.android-status-blend #studioTopBar{
+  padding-top:calc(var(--android-status-inset) + 18px)!important;
+  padding-bottom:12px!important;
+  padding-left:14px!important;
+  padding-right:14px!important;
+}
+html.android-status-blend #imageGenScrollCol.igRowHidden{
+  padding-top:calc(54px + var(--android-status-inset))!important;
+}
+html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
+  padding-top:0!important;
+}
+html.android-status-blend #imageGenTemplateRow{
+  padding-top:calc(50px + var(--android-status-inset))!important;
+}
+html.android-status-blend #studioCommunityScroll{
+  padding-top:calc(54px + var(--android-status-inset))!important;
+}
+html.android-status-blend #imageGenModal.studio-tab-community #studioTopBar{
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+/* Centered mic top is set in JS (_tnvGlideToCenter) — same Y as right-side icons. */
+</style>
+<script>
+(function(){
+  try{
+    if(!/Android/i.test(navigator.userAgent||'')) return;
+    document.documentElement.classList.add('android-status-blend');
+
+    function applyInset(){
+      var envH = 0;
+      try{
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top,0px);margin:0;padding:0;border:0;';
+        document.documentElement.appendChild(probe);
+        envH = probe.getBoundingClientRect().height || 0;
+        if(probe.parentNode) probe.parentNode.removeChild(probe);
+      }catch(e){}
+      // Exact safe-area when WebView reports it; modest floor when overlay reports 0
+      var inset = Math.max(Math.round(envH), 28);
+      document.documentElement.style.setProperty('--android-status-inset', inset + 'px');
+      document.documentElement.classList.add('android-status-blend');
+      // Clear any old experiment that padded the whole body
+      if(document.body){
+        document.body.classList.remove('android-status-pad');
+        document.body.style.removeProperty('padding-top');
+      }
+      document.documentElement.classList.remove('android-status-pad');
+    }
+    applyInset();
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyInset);
+    window.addEventListener('load', applyInset);
+    window.addEventListener('resize', applyInset);
+    try{ if(window.visualViewport) window.visualViewport.addEventListener('resize', applyInset); }catch(e2){}
+    setTimeout(applyInset, 300);
+    setTimeout(applyInset, 1000);
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
 <script>try{window._supabase=(typeof supabase!=='undefined')?supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL'):null;}catch(e){console.warn('Supabase init failed (CDN may be slow/blocked) — continuing without sync:',e);window._supabase=null;}</script>
@@ -5361,54 +5574,201 @@ window.getWebAudioNode = getWebAudioNode;
 </div>
 
 <!-- Create Image modal — text-to-image generation, opened from the bottom nav -->
-<div id="imageGenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
-  <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:20px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:20px 18px 22px;box-sizing:border-box;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#d4d0ee;">Create Image</div>
-      <button onclick="closeImageGenModal()" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;">×</button>
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Describe what you want to see and generate it as an image.</div>
+<div id="imageGenModal" style="display:none;position:fixed;inset:0;background:#000;z-index:500;flex-direction:column;">
 
-    <!-- Reference photo — "make an image like this but ___" / "next scene of this" -->
-    <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
-        <img id="imageGenRefPreview" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
-        <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+  <!-- Background layers — sit at modal level (not inside studioCommunityView) so they
+       extend behind the top bar too. Hidden/faded on Generate tab, faded in on Community. -->
+  <div id="studioBgLayer" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .6s ease;">
+    <canvas id="studioFlowCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+    <div id="studioBeamsWrap" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;">
+      <canvas id="studioBeamsCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(99,102,241,.08) 0%,transparent 70%);pointer-events:none;"></div>
+    </div>
+  </div>
+
+  <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+  <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
+    <button onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">‹</button>
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#d4d0ee;letter-spacing:.2px;">Studio</div>
+    <div id="studioTopBarActions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </button>
+      <button id="studioHistoryGlassBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </button>
+      <button id="studioResetBtn" onclick="resetImageGenStudio()" title="Clear studio history" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🗑</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       GENERATE TAB
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="studioGenerateView" style="position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;">
+
+    <!-- Scrollable column: template chips + results all live in ONE scroller now, so the
+         style-template row scrolls away with the grid instead of staying pinned. The
+         floating header (top) and input bar (bottom) sit outside this scroller as
+         absolutely-positioned overlays, so the 2-col grid runs edge-to-edge/full-screen
+         and scrolls fully behind both of them. Top/bottom padding here just keeps the
+         FIRST/LAST row clear of the bars at rest — everything still scrolls underneath. -->
+    <div id="imageGenScrollCol" class="igRowHidden" style="position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+      <!-- Template chips (horizontal scroll) — hidden by default so the results grid runs
+           full-screen; toggled by the 4-square button up top. Scrolls away with the grid.
+           Has its own top clearance since the scroll column itself has none. -->
+      <div id="imageGenTemplateRow" style="display:none;gap:10px;overflow-x:auto;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+
+      <!-- Error banner -->
+      <div id="imageGenError" style="display:none;margin:0 14px 10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
+
+      <!-- Edit note (shown only when a reference photo is attached) -->
+      <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:0 14px 10px;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
+
+      <div id="imageGenEmptyState" style="display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;"></div>
+      <div id="imageGenResults" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:3px;padding:0;"></div>
+    </div>
+
+    <!-- Settings sheet (slides up over the input bar) -->
+    <div id="imageGenSettingsSheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Generation settings</div>
+        <button onclick="toggleImageGenSettingsSheet()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
       </div>
-      <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--surface);border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
-        📎 <span id="imageGenRefLabelText">Attach a reference photo (optional) — describe the change below</span>
-        <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
-      </label>
+
+      <!-- Reference photo attach -->
+      <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
+          <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
+          <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+        </div>
+        <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
+          📎 <span id="imageGenRefLabelText">Attach a reference photo (optional)</span>
+          <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
+        </label>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="flux" style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
+          <option value="dreamshaper" selected style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
+          <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
+          <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
+        </select>
+        <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="square" style="background:#17171a;color:#f2f2f5;">Square</option>
+          <option value="portrait" style="background:#17171a;color:#f2f2f5;">Portrait</option>
+          <option value="landscape" style="background:#17171a;color:#f2f2f5;">Landscape</option>
+        </select>
+        <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+          <option value="1" style="background:#17171a;color:#f2f2f5;">1 image</option>
+          <option value="2" style="background:#17171a;color:#f2f2f5;">2 images</option>
+          <option value="4" selected style="background:#17171a;color:#f2f2f5;">4 images</option>
+        </select>
+      </div>
     </div>
 
-    <textarea id="imageGenPrompt" placeholder="A cozy cabin in a snowy forest at night, warm lights in the windows..." rows="3" style="width:100%;box-sizing:border-box;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;resize:vertical;margin-bottom:12px;outline:none;"></textarea>
-
-    <div id="imageGenEditNote" style="display:none;font-size:11.5px;color:var(--muted);margin:-6px 0 12px;">Using Kontext (edit model) since a reference photo is attached — the model picker below is ignored for this generation.</div>
-
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-      <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-        <option value="flux" selected>Flux 1 — 0.002 pollen</option>
-        <option value="dreamshaper">DreamShaper 8 — 0.0001 pollen</option>
-        <option value="klein">Flux.2 Klein — 0.005 pollen</option>
-        <option value="gpt-image-2">GPT Image 2 — ~0.04 pollen</option>
-      </select>
-      <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-        <option value="square">Square</option>
-        <option value="portrait">Portrait</option>
-        <option value="landscape">Landscape</option>
-      </select>
-      <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
-        <option value="1">1 image</option>
-        <option value="2">2 images</option>
-        <option value="4" selected>4 images</option>
-      </select>
+    <!-- History sheet — past generations, synced to account (or local for guests) -->
+    <div id="imageGenHistorySheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;max-height:46vh;overflow-y:auto;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Your generations</div>
+        <button onclick="closeImageGenHistory()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
+      </div>
+      <div id="imageGenHistoryGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
     </div>
 
-    <button id="imageGenSubmitBtn" onclick="submitImageGen()" style="width:100%;padding:13px;background:rgba(124,106,247,0.16);border:1px solid rgba(124,106,247,0.4);border-radius:12px;color:rgba(255,255,255,0.95);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Generate</button>
+    <!-- Bottom input bar — floats over the full-screen grid like the header does up top.
+         Bar-level frosted background is desktop-only (.studioBottomBar CSS media query);
+         on mobile it's fully transparent so just the buttons float over the grid. The
+         buttons themselves keep their frosted glass look on both. -->
+    <div class="studioBottomBar" style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));">
+      <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
+      <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
+        <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
+        <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
+      </div>
+    </div>
+  </div>
 
-    <div id="imageGenError" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(232,93,150,0.1);border:1px solid rgba(232,93,150,0.3);border-radius:10px;color:#f5a8c4;font-size:12.5px;"></div>
+  <!-- ══════════════════════════════════════════════════════════════════════
+       COMMUNITY TAB — transplanted from the Builder Feed's photo/video gallery
+       (same socialPosts data, same Supabase `posts` table + `posts` bucket)
+  ══════════════════════════════════════════════════════════════════════ -->
+  <div id="studioCommunityView" style="display:none;flex-direction:row;flex:1;min-height:0;position:relative;overflow:hidden;background:transparent;">
+    <div id="studioCommunityScroll" style="flex:1;min-width:180px;overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch;padding:calc(54px + env(safe-area-inset-top, 0px)) 14px 16px;position:relative;z-index:1;">
 
-    <div id="imageGenResults" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;"></div>
+      <!-- Header — small button opens the Posts column, EXACT same width/min-width/
+           padding/overflow toggle + transition as the old matchConnectCol/toggleMatchConnect. -->
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin:4px 0 12px;color:var(--text);display:flex;align-items:center;gap:6px;">
+        🌐 Community Feed <span style="font-size:10px;font-weight:400;color:var(--muted);">all posts</span>
+        <div style="margin-left:auto;">
+          <button id="studioFeedToggleBtn" onclick="toggleStudioFeedPanel()" title="Show posts" style="width:32px;height:32px;flex-shrink:0;border-radius:9px;border:1px solid rgba(124,106,247,0.3);background:rgba(124,106,247,0.1);color:rgba(255,255,255,0.65);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Social composer -->
+
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:14px;">
+        <div style="display:flex;gap:9px;margin-bottom:9px;">
+          <div id="studioComposerAv" style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:white;font-size:12px;flex-shrink:0;">?</div>
+          <textarea id="studioSocialPostText" placeholder="Share a photo with the community…" style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;resize:none;height:56px;outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+        </div>
+        <div id="studioSocialMediaPreview" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:9px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <button onclick="document.getElementById('studioSocialMediaInput').click()" style="display:flex;align-items:center;gap:5px;padding:5px 10px;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11.5px;cursor:pointer;">📷 Photo/Video</button>
+          <input type="file" id="studioSocialMediaInput" accept="image/*,video/*" multiple style="display:none;" onchange="studioSocialHandleMedia(event)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button id="studioGridToggleBtn" onclick="toggleStudioSocialGrid()" title="Toggle grid layout" style="width:28px;height:28px;flex-shrink:0;border-radius:7px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.45);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+              <svg id="studioGridToggleIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg>
+            </button>
+            <button onclick="submitStudioSocialPost()" style="padding:6px 16px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;">Post →</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="studioSocialFeedList" style="display:grid;"></div>
+    </div>
+
+    <!-- Posts column — EXACT same collapsible mechanic as the old matchConnectCol:
+         width/min-width/padding/overflow toggled with the same transition, body+label+
+         close-button shown/hidden the same way. This is where Collab/Hiring/Launch/
+         Feedback/Skill posts (feedPosts) live — same data + `posts` table as the
+         Builder Feed's #feedList. -->
+    <div id="studioFeedCol" style="width:0;min-width:0;flex-shrink:0;overflow:hidden;padding:0;transition:width .25s ease,min-width .25s ease,padding .25s ease;position:relative;z-index:1;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div id="studioFeedLabel" style="overflow:hidden;transition:opacity .2s;display:none;">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:3px;">📝 Posts</div>
+          <div style="font-size:11px;color:var(--muted);">Collab, hiring, launches &amp; more.</div>
+        </div>
+        <button id="studioFeedCloseBtn" onclick="toggleStudioFeedPanel()" title="Hide Posts" style="display:none;width:22px;height:22px;background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:11px;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;padding:0;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✕</button>
+      </div>
+      <div id="studioFeedBody" style="display:none;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:10px;">
+          <textarea id="studioFeedPostText" placeholder="Share a project, look for a collaborator, or post a hiring opening…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;resize:none;height:56px;outline:none;margin-bottom:9px;transition:border-color .15s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select id="studioFeedPostCat" style="flex:1;min-width:0;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:7px 8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;outline:none;">
+              <option value="collab">🤝 Looking for Collaborator</option>
+              <option value="hiring">💼 Hiring</option>
+              <option value="launch">🚀 Project Launch</option>
+              <option value="feedback">💬 Idea Feedback</option>
+              <option value="skill">⚡ Offering Skill</option>
+            </select>
+            <button onclick="submitStudioFeedPost()" style="padding:7px 16px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;">Post →</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="feed-filter active" id="stf-all" onclick="filterFeed('all',this)">All</button>
+          <button class="feed-filter" id="stf-collab" onclick="filterFeed('collab',this)">Collab</button>
+          <button class="feed-filter" id="stf-hiring" onclick="filterFeed('hiring',this)">Hiring</button>
+          <button class="feed-filter" id="stf-launch" onclick="filterFeed('launch',this)">Launch</button>
+          <button class="feed-filter" id="stf-feedback" onclick="filterFeed('feedback',this)">Feedback</button>
+          <button class="feed-filter" id="stf-skill" onclick="filterFeed('skill',this)">Skill</button>
+        </div>
+        <div id="studioFeedList"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7061,17 +7421,156 @@ function closeNavCustomizer(){
   document.getElementById('navCustomizerModal').style.display='none';
 }
 
-// ── Create Image ──────────────────────────────────────────────────────────
+// ── Create Image (Studio) ───────────────────────────────────────────────────
 var imageGenRefDataUrl = null; // base64 data URL of attached reference photo, or null
+
+// Quick-start templates shown as horizontal chips at the top of the Studio,
+// mirroring the "Glossy Product Shot / Chibi / Object Remover" row style.
+// Each thumb is baked in directly (base64) — real generated art, not a runtime
+// fetch — so it's just there instantly, every load, no waiting.
+var IMAGE_GEN_TEMPLATES = [
+  { key:'fantasy',  label:'Fantasy Portrait', prompt:'A cinematic fantasy portrait of ', thumb:'data:image/jpeg;base64,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' },
+  { key:'cyberpunk',label:'Cyberpunk',        prompt:'A neon-lit cyberpunk cityscape scene of ', thumb:'data:image/jpeg;base64,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' },
+  { key:'anime',    label:'Anime Style',      prompt:'A vibrant anime-style illustration of ', thumb:'data:image/jpeg;base64,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' },
+  { key:'retro',    label:'Retro Film',       prompt:'A grainy retro 35mm film photo of ', thumb:'data:image/jpeg;base64,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' }
+];
+
+function renderImageGenTemplates(){
+  var row = document.getElementById('imageGenTemplateRow');
+  if(!row || row.childElementCount) return; // render once
+  IMAGE_GEN_TEMPLATES.forEach(function(t){
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.title = t.label;
+    chip.style.cssText = 'flex-shrink:0;width:78px;display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:none;cursor:pointer;padding:0;';
+    chip.innerHTML =
+      '<img src="'+t.thumb+'" style="width:64px;height:64px;border-radius:14px;object-fit:cover;display:block;box-shadow:0 4px 14px rgba(0,0,0,0.25);" />' +
+      '<span style="font-family:\'DM Sans\',sans-serif;font-size:10.5px;font-weight:600;color:var(--text);line-height:1.2;text-align:center;">'+t.label+'</span>';
+    chip.onclick = function(){ applyImageGenTemplate(t); };
+    row.appendChild(chip);
+  });
+}
+
+function applyImageGenTemplate(t){
+  var promptEl = document.getElementById('imageGenPrompt');
+  promptEl.value = t.prompt;
+  promptEl.focus();
+  // Cursor at the end so the person can just keep typing the subject.
+  var len = promptEl.value.length;
+  try{ promptEl.setSelectionRange(len, len); }catch(e){}
+  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+}
+
+function toggleImageGenTemplateRow(){
+  var row = document.getElementById('imageGenTemplateRow');
+  var btn = document.getElementById('studioHistoryGlassBtn');
+  var scrollCol = document.getElementById('imageGenScrollCol');
+  if(!row) return;
+  renderImageGenTemplates(); // idempotent — builds the chips once, then just toggles visibility
+  var showing = row.style.display === 'flex';
+  row.style.display = showing ? 'none' : 'flex';
+  // When the row is hidden, the scroll column needs its own header clearance
+  // (mobile-only CSS) so the grid starts below the header instead of behind it.
+  // When the row is visible, it provides that clearance itself.
+  if(scrollCol) scrollCol.classList.toggle('igRowHidden', showing);
+  if(btn){
+    btn.style.background = showing ? 'rgba(255,255,255,0.05)' : 'rgba(124,106,247,0.22)';
+    btn.style.borderColor = showing ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.5)';
+    btn.style.color = showing ? 'var(--muted)' : '#fff';
+  }
+}
+
+function toggleImageGenSettingsSheet(){
+  var sheet = document.getElementById('imageGenSettingsSheet');
+  var histSheet = document.getElementById('imageGenHistorySheet');
+  if(histSheet) histSheet.style.display = 'none';
+  sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
+}
+
+/** Clear studio image cache + grid — always asks first so history isn’t wiped by accident */
+function resetImageGenStudio(){
+  showStudioClearHistoryConfirm();
+}
+
+function showStudioClearHistoryConfirm(){
+  var existing = document.getElementById('studioClearHistoryModal');
+  if(existing) existing.remove();
+  var ov = document.createElement('div');
+  ov.id = 'studioClearHistoryModal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px;';
+  ov.innerHTML =
+    '<div role="dialog" aria-modal="true" style="width:min(360px,100%);background:rgba(18,16,28,0.96);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:22px 20px 18px;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:DM Sans,sans-serif;">' +
+      '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#e8e6f5;margin-bottom:8px;">Clear studio history?</div>' +
+      '<div style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.55);margin-bottom:18px;">This deletes all saved generated images on this device (local cache). You can’t undo this.</div>' +
+      '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+        '<button type="button" id="studioClearCancel" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>' +
+        '<button type="button" id="studioClearConfirm" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(232,93,150,0.45);background:rgba(232,93,150,0.18);color:#ffb3c9;font-size:13px;font-weight:600;cursor:pointer;">Clear history</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  function close(){ try{ ov.remove(); }catch(e){} }
+  ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+  var cancel = document.getElementById('studioClearCancel');
+  var conf = document.getElementById('studioClearConfirm');
+  if(cancel) cancel.onclick = close;
+  if(conf) conf.onclick = function(){
+    close();
+    clearStudioImageHistoryAndUi();
+  };
+}
+
+function clearStudioImageHistoryAndUi(){
+  try{ clearStudioImageCache(); }catch(e){}
+  // Also wipe guest legacy key if present
+  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
+  // Best-effort remote clear for signed-in users
+  try{
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+      _supabase.from('generated_images').delete().eq('user_id', currentUser.id).then(function(){}).catch(function(){});
+    }
+  }catch(e3){}
+  document.getElementById('imageGenPrompt').value = '';
+  document.getElementById('imageGenResults').innerHTML = '';
+  document.getElementById('imageGenResults').style.display = 'none';
+  document.getElementById('imageGenEmptyState').style.display = 'none';
+  document.getElementById('imageGenError').style.display = 'none';
+  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  closeImageGenHistory();
+  document.getElementById('imageGenModel').value = 'dreamshaper';
+  document.getElementById('imageGenAspect').value = 'square';
+  document.getElementById('imageGenCount').value = '4';
+  clearImageGenRef();
+  _imageGenFeedLoaded = false;
+  renderImageGenDefaultFeed();
+  if(typeof showToast === 'function') showToast('Studio history cleared');
+}
 
 function openImageGenModal(){
   closeMobileMore();
-  document.getElementById('imageGenModal').style.display='flex';
-  setTimeout(function(){ document.getElementById('imageGenPrompt').focus(); }, 50);
+  renderImageGenTemplates();
+  switchStudioTab('generate');
+  // Always restore from local (and account) cache so reloads don’t empty the grid
+  renderImageGenDefaultFeed();
+  var modal = document.getElementById('imageGenModal');
+  modal.style.transition = 'none';
+  modal.style.opacity = '0';
+  modal.style.display = 'flex';
+  void modal.offsetWidth; // force reflow so the transition below actually animates
+  modal.style.transition = 'opacity .4s ease';
+  // STS mic flies to Studio icon cluster in the same open animation
+  if(typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
+  requestAnimationFrame(function(){ modal.style.opacity = '1'; });
 }
 function closeImageGenModal(){
-  document.getElementById('imageGenModal').style.display='none';
-  clearImageGenRef();
+  var modal = document.getElementById('imageGenModal');
+  modal.style.transition = 'opacity .3s ease';
+  modal.style.opacity = '0';
+  setTimeout(function(){
+    modal.style.display = 'none';
+    document.getElementById('imageGenSettingsSheet').style.display = 'none';
+    clearImageGenRef();
+    if(typeof window._tnvReturnFromModal === 'function') window._tnvReturnFromModal();
+  }, 300);
 }
 
 function handleImageGenRefSelect(event){
@@ -7107,7 +7606,7 @@ function clearImageGenRef(){
   imageGenRefDataUrl = null;
   document.getElementById('imageGenRefInput').value = '';
   document.getElementById('imageGenRefPreviewWrap').style.display = 'none';
-  document.getElementById('imageGenRefLabelText').textContent = 'Attach a reference photo (optional) — describe the change below';
+  document.getElementById('imageGenRefLabelText').textContent = 'Attach a reference photo (optional)';
   document.getElementById('imageGenEditNote').style.display = 'none';
   document.getElementById('imageGenPrompt').placeholder = 'A cozy cabin in a snowy forest at night, warm lights in the windows...';
 }
@@ -7127,10 +7626,14 @@ async function submitImageGen(){
   var aspect = document.getElementById('imageGenAspect').value;
   var count = document.getElementById('imageGenCount').value;
   var model = document.getElementById('imageGenModel').value;
-  var origLabel = btn.textContent;
+  var origLabel = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Generating…';
-  resultsEl.innerHTML = '';
+  btn.innerHTML = '<span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>';
+  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  // Don't wipe what's already on screen — new images join the top of the
+  // same feed instead of replacing the previous batch.
+  document.getElementById('imageGenEmptyState').style.display = 'none';
+  resultsEl.style.display = 'grid';
   try{
     var uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : (localStorage.getItem('synapses_anon_id') || '');
     var res = await fetch(GROQ_PROXY + '/generate-image', {
@@ -7143,31 +7646,39 @@ async function submitImageGen(){
       throw new Error(data.error || 'Image generation failed.');
     }
     var images = data.images || [];
-    images.forEach(function(src, i){
-      var card = document.createElement('div');
-      card.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:var(--surface);border:1px solid var(--border);';
-      var img = document.createElement('img');
-      img.src = src;
-      img.style.cssText = 'width:100%;display:block;aspect-ratio:1/1;object-fit:cover;';
-      var dl = document.createElement('button');
-      dl.innerHTML = '⬇';
-      dl.title = 'Download';
-      dl.style.cssText = 'position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-      dl.onclick = function(){ downloadGeneratedImage(src, 'synapses-image-' + (i + 1) + '.jpg'); };
-      card.appendChild(img);
-      card.appendChild(dl);
-      resultsEl.appendChild(card);
-    });
+    // Prepend in original order so image 1 ends up top-left of the new batch.
+    for(var i = images.length - 1; i >= 0; i--){
+      (function(src, i){
+        var card = document.createElement('div');
+        card.style.cssText = 'position:relative;overflow:hidden;background:var(--surface);';
+        var img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'width:100%;display:block;aspect-ratio:3/4;object-fit:cover;';
+        var dl = document.createElement('button');
+        dl.innerHTML = '⬇';
+        dl.title = 'Download';
+        dl.style.cssText = 'position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        dl.onclick = function(){ downloadGeneratedImage(src, 'synapses-image-' + (i + 1) + '.jpg'); };
+        card.appendChild(img);
+        card.appendChild(dl);
+        resultsEl.insertBefore(card, resultsEl.firstChild);
+        // Persist so the image survives a page reload / app exit — synced to the
+        // account when signed in, kept in this browser's storage for guests.
+        saveGeneratedImageToHistory(src, { prompt: prompt, model: model, aspect: aspect });
+      })(images[i], i);
+    }
     if(!images.length){
       errEl.textContent = 'No images came back — try again.';
       errEl.style.display = 'block';
+      if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
     }
   }catch(e){
     errEl.textContent = e.message || 'Something went wrong.';
     errEl.style.display = 'block';
+    if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
   }finally{
     btn.disabled = false;
-    btn.textContent = origLabel;
+    btn.innerHTML = origLabel;
   }
 }
 
@@ -7179,7 +7690,546 @@ function downloadGeneratedImage(dataUrl, filename){
   a.click();
   a.remove();
 }
+
+// ── Studio image history: always local cache (survives reset) + optional cloud ─
+var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history'; // legacy
+var STUDIO_IMAGE_CACHE_KEY = 'synapses_studio_image_cache_v1';
+var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use 🗑 to clear; no 100-image pileups
+
+function _dataUrlToBlob(dataUrl){
+  var parts = dataUrl.split(',');
+  var mimeMatch = parts[0].match(/:(.*?);/);
+  var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  var bstr = atob(parts[1]);
+  var n = bstr.length;
+  var u8 = new Uint8Array(n);
+  while(n--){ u8[n] = bstr.charCodeAt(n); }
+  return new Blob([u8], {type: mime});
+}
+
+function _readStudioImageCache(){
+  var hist = [];
+  try{ hist = JSON.parse(localStorage.getItem(STUDIO_IMAGE_CACHE_KEY) || '[]'); }catch(e){ hist = []; }
+  if(!hist || !hist.length){
+    try{
+      var legacy = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]');
+      if(legacy && legacy.length){ hist = legacy; _writeStudioImageCache(hist); }
+    }catch(e2){}
+  }
+  return Array.isArray(hist) ? hist : [];
+}
+
+function _writeStudioImageCache(hist){
+  if(!Array.isArray(hist)) hist = [];
+  if(hist.length > STUDIO_IMAGE_CACHE_MAX) hist = hist.slice(0, STUDIO_IMAGE_CACHE_MAX);
+  try{
+    localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist));
+    return true;
+  }catch(e){
+    hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
+    try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist)); return true; }catch(e2){
+      try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist.slice(0, 4))); return true; }catch(e3){ return false; }
+    }
+  }
+}
+
+function clearStudioImageCache(){
+  try{ localStorage.removeItem(STUDIO_IMAGE_CACHE_KEY); }catch(e){}
+  try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
+}
+
+function saveGeneratedImageToHistory(src, meta){
+  try{
+    meta = meta || {};
+    // Always local first so app reset still shows images
+    var hist = _readStudioImageCache();
+    hist.unshift({ src: src, prompt: meta.prompt || '', model: meta.model || '', aspect: meta.aspect || '', ts: Date.now() });
+    _writeStudioImageCache(hist);
+
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+      if(/^data:/.test(src)){
+        var blob = _dataUrlToBlob(src);
+        var ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
+        var path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
+        _supabase.storage.from('generated-images').upload(path, blob, {contentType: blob.type}).then(function(r){
+          if(r.error){ console.error('Image storage upload error:', r.error); return; }
+          var pub = _supabase.storage.from('generated-images').getPublicUrl(path);
+          var url = pub && pub.data && pub.data.publicUrl;
+          if(url){
+            try{
+              var h2 = _readStudioImageCache();
+              for(var i = 0; i < h2.length; i++){ if(h2[i].src === src){ h2[i].src = url; break; } }
+              _writeStudioImageCache(h2);
+            }catch(_u){}
+          }
+          _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: url || src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
+            if(r2.error) console.error('generated_images insert error:', r2.error.message);
+          });
+        });
+      } else {
+        _supabase.from('generated_images').insert({user_id: currentUser.id, user_email: currentUser.email, image_url: src, prompt: meta.prompt, model: meta.model, aspect: meta.aspect}).then(function(r2){
+          if(r2.error) console.error('generated_images insert error:', r2.error.message);
+        });
+      }
+    }
+  }catch(e){ console.error('saveGeneratedImageToHistory error:', e); }
+}
+
+async function loadImageGenHistory(){
+  try{
+    var local = _readStudioImageCache();
+    if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
+      try{
+        var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
+        if(!r.error && r.data && r.data.length){
+          var remote = r.data.map(function(row){
+            return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect, ts: row.created_at ? Date.parse(row.created_at) : 0};
+          });
+          var seen = {};
+          var merged = [];
+          local.concat(remote).forEach(function(it){
+            if(!it || !it.src || seen[it.src]) return;
+            seen[it.src] = 1;
+            merged.push(it);
+          });
+          if(merged.length > STUDIO_IMAGE_CACHE_MAX) merged = merged.slice(0, STUDIO_IMAGE_CACHE_MAX);
+          if(merged.length) _writeStudioImageCache(merged);
+          return merged;
+        }
+      }catch(er){ console.error('load remote image history:', er); }
+    }
+    return local;
+  }catch(e){ console.error('loadImageGenHistory error:', e); return []; }
+}
+
+function renderImageGenHistory(items){
+  var grid = document.getElementById('imageGenHistoryGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  if(!items.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:24px 0;">Nothing generated yet — your images will show up here.</div>';
+    return;
+  }
+  items.forEach(function(it){
+    var cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface);aspect-ratio:1/1;';
+    var img = document.createElement('img');
+    img.src = it.src;
+    img.loading = 'lazy';
+    img.title = it.prompt || '';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;';
+    img.onclick = function(){ reuseHistoryImage(it); };
+    var dl = document.createElement('button');
+    dl.innerHTML = '⬇';
+    dl.title = 'Download';
+    dl.style.cssText = 'position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:6px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+    dl.onclick = function(e){ e.stopPropagation(); downloadGeneratedImage(it.src, 'synapses-image.jpg'); };
+    cell.appendChild(img);
+    cell.appendChild(dl);
+    grid.appendChild(cell);
+  });
+}
+
+function reuseHistoryImage(it){
+  document.getElementById('imageGenPrompt').value = it.prompt || '';
+  closeImageGenHistory();
+  showToast('Prompt loaded — tap ↑ to generate it again.');
+}
+
+// Fills the persistent feed with the person's own past generations, so
+// Studio never opens to an empty box and nothing ever disappears — every
+// new generation joins the top of this same feed instead of replacing it.
+var _imageGenFeedLoaded = false;
+async function renderImageGenDefaultFeed(){
+  var resultsEl = document.getElementById('imageGenResults');
+  var emptyEl = document.getElementById('imageGenEmptyState');
+  if(!resultsEl) return;
+  var items = await loadImageGenHistory();
+  _imageGenFeedLoaded = true;
+  if(!items.length){
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    if(emptyEl){
+      emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
+      emptyEl.innerHTML = '<div style="font-size:13px;">Nothing generated yet.</div><div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
+    }
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+  resultsEl.style.display = 'grid';
+  resultsEl.innerHTML = '';
+  items.forEach(function(it){
+    var cell = document.createElement('button');
+    cell.type = 'button';
+    cell.title = it.prompt || '';
+    cell.style.cssText = 'position:relative;border:none;padding:0;margin:0;cursor:pointer;overflow:hidden;background:var(--surface);';
+    var img = document.createElement('img');
+    img.src = it.src;
+    img.loading = 'lazy';
+    img.style.cssText = 'width:100%;display:block;aspect-ratio:3/4;object-fit:cover;';
+    cell.appendChild(img);
+    cell.onclick = function(){ reuseHistoryImage(it); };
+    resultsEl.appendChild(cell);
+  });
+}
+
+async function openImageGenHistory(){
+  var settingsSheet = document.getElementById('imageGenSettingsSheet');
+  if(settingsSheet) settingsSheet.style.display = 'none';
+  var sheet = document.getElementById('imageGenHistorySheet');
+  var grid = document.getElementById('imageGenHistoryGrid');
+  if(grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:16px 0;">Loading…</div>';
+  sheet.style.display = 'block';
+  var items = await loadImageGenHistory();
+  renderImageGenHistory(items);
+}
+function closeImageGenHistory(){
+  var sheet = document.getElementById('imageGenHistorySheet');
+  if(sheet) sheet.style.display = 'none';
+}
 // ── End Create Image ──────────────────────────────────────────────────────
+
+// ── Studio tabs ──────────────────────────────────────────────────────────
+// Small toggle button that opens the Posts column (Collab/Hiring/Launch/Feedback/Skill
+// feed) inside Studio's Community tab — this is a direct port of the old
+// matchConnectCol/toggleMatchConnect mechanic on desktop (same width/min-width/padding/
+// overflow toggle). On mobile it becomes a full-screen takeover with a back button instead
+// of squeezing into a 280px column, since that left almost nothing for the feed itself.
+var _studioFeedVisible = false;
+function toggleStudioFeedPanel(){
+  _studioFeedVisible = !_studioFeedVisible;
+  var col      = document.getElementById('studioFeedCol');
+  var body     = document.getElementById('studioFeedBody');
+  var label    = document.getElementById('studioFeedLabel');
+  var closeBtn = document.getElementById('studioFeedCloseBtn');
+  var openBtn  = document.getElementById('studioFeedToggleBtn');
+  if(!col) return;
+  var isMobile = window.innerWidth <= 768;
+
+  if(!_studioFeedVisible){
+    if(isMobile){
+      col.style.transform = 'translateX(100%)';
+      setTimeout(function(){
+        col.style.display='none'; col.style.position=''; col.style.inset='';
+        col.style.width='0'; col.style.height=''; col.style.zIndex='';
+        col.style.background=''; col.style.overflow='hidden'; col.style.transform='';
+        col.style.transition=''; col.style.minWidth='0'; col.style.padding='0';
+      }, 280);
+    } else {
+      col.style.width='0'; col.style.minWidth='0'; col.style.padding='0'; col.style.overflow='hidden';
+    }
+    if(body)     body.style.display='none';
+    if(label)    label.style.display='none';
+    if(closeBtn) closeBtn.style.display='none';
+    if(openBtn){ openBtn.style.background='rgba(124,106,247,0.1)'; openBtn.style.borderColor='rgba(124,106,247,0.3)'; openBtn.style.color='rgba(255,255,255,0.65)'; openBtn.title='Show posts'; }
+  } else {
+    if(isMobile){
+      col.style.transition='none';
+      col.style.display='block';
+      col.style.position='fixed';
+      col.style.inset='0';
+      col.style.width='100%';
+      col.style.minWidth='0';
+      col.style.height='100%';
+      col.style.padding='calc(18px + max(env(safe-area-inset-top, 0px), var(--android-status-inset, 0px))) 16px 16px';
+      col.style.background='#000';
+      col.style.zIndex='50';
+      col.style.overflow='auto';
+      col.style.transform='translateX(100%)';
+      void col.offsetWidth; // force reflow so the transition below actually animates
+      col.style.transition='transform .3s cubic-bezier(0.22,1,0.36,1)';
+      requestAnimationFrame(function(){ col.style.transform='translateX(0)'; });
+      if(closeBtn){
+        closeBtn.style.width='34px'; closeBtn.style.height='34px'; closeBtn.style.borderRadius='50%';
+        closeBtn.style.background='rgba(255,255,255,0.06)'; closeBtn.style.border='none';
+        closeBtn.style.fontSize='16px'; closeBtn.title='Back';
+      }
+    } else {
+      col.style.width='280px'; col.style.minWidth='180px'; col.style.padding='18px 16px'; col.style.overflow='';
+    }
+    if(body)     body.style.display='';
+    if(label)    label.style.display='';
+    if(closeBtn) closeBtn.style.display='flex';
+    if(openBtn){ openBtn.style.background='rgba(124,106,247,0.22)'; openBtn.style.borderColor='rgba(124,106,247,0.6)'; openBtn.style.color='#fff'; openBtn.title='Hide posts'; }
+    renderFeed();
+  }
+}
+
+// EXACT port of the home "What's on your mind?" chat screen's particle
+// engine (#chatFlowCanvas IIFE) — same physics, same attractor/drag
+// interaction, same fade logic — just retargeted at the Studio canvas/container.
+var _studioFlowInited = false;
+function initStudioFlowCanvas(){
+  if(_studioFlowInited) return;
+  _studioFlowInited = true;
+  var canvas=document.getElementById('studioFlowCanvas'),bgBox=document.getElementById('imageGenModal'),container=document.getElementById('studioCommunityView');if(!canvas||!container||!bgBox)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0,chatFade=null;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;this.fadeA=1;}function init(){w=canvas.width=bgBox.offsetWidth||window.innerWidth;h=canvas.height=bgBox.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?38:56;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());chatFade=document.body.classList.contains('pulse-open')?0:1;}function draw(now){now=now||performance.now();if(container.style.display==='none'||document.hidden){setTimeout(function(){requestAnimationFrame(draw);},document.hidden?600:200);return;}if(isMobile&&lastT&&(now-lastT)<48){requestAnimationFrame(draw);return;}if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);var _pulseOpen=document.body.classList.contains('pulse-open');var _fadeTgt=_pulseOpen?0:1;if(chatFade===undefined||chatFade===null)chatFade=1;chatFade+=(_fadeTgt-chatFade)*Math.min(1,0.07*dt);if(Math.abs(_fadeTgt-chatFade)<0.01)chatFade=_fadeTgt;particles.forEach(function(p,idx){p.fadeA=idx<20?1:chatFade;});particles.forEach(function(p,idx){var fadeMul=p.fadeA;var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));if(fadeMul<=0.01)return;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha*fadeMul;ctx.fill();});ctx.lineWidth=.6;particles.forEach(function(p,i){var fi=p.fadeA;if(fi<=0.01)return;particles.slice(i+1).forEach(function(q){var fq=q.fadeA;if(fq<=0.01)return;var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.globalAlpha=.12*Math.min(fi,fq);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){if(container.style.display==='none')return;canvas.style.width=(bgBox.offsetWidth||window.innerWidth)+'px';canvas.style.height=(bgBox.offsetHeight||window.innerHeight)+'px';});setTimeout(function(){init();draw();},50);
+}
+
+// EXACT port of the home chat screen's "Chat Beams Background" engine
+// (#chatBeamsCanvas — rising diagonal blurred light beams) — same physics,
+// same blur/gradient rendering, just retargeted at the Studio canvas/container.
+var _studioBeamsInited = false;
+function initStudioBeamsCanvas(){
+  if(_studioBeamsInited) return;
+  _studioBeamsInited = true;
+  var canvas=document.getElementById('studioBeamsCanvas');var bgBox=document.getElementById('imageGenModal');var container=document.getElementById('studioCommunityView');if(!canvas||!container||!bgBox)return;var ctx=canvas.getContext('2d');var beams=[];var BEAM_COUNT=22;function createBeam(w,h){var angle=-35+Math.random()*10;return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}function resize(){var dpr=window.devicePixelRatio||1;var w=bgBox.offsetWidth,h=bgBox.offsetHeight;if(!w||!h)return;canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});}function resetBeam(beam,i,total,w,h){var col=i%3,spacing=w/3;beam.y=h+100;beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.5;beam.width=80+Math.random()*80;beam.speed=0.5+Math.random()*0.4;beam.hue=190+(i*70)/total;beam.opacity=0.18+Math.random()*0.1;return beam;}function drawBeam(beam,w,h){ctx.save();ctx.translate(beam.x,beam.y);ctx.rotate(beam.angle*Math.PI/180);var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);var g=ctx.createLinearGradient(0,0,0,beam.length);g.addColorStop(0,'hsla('+beam.hue+',85%,65%,0)');g.addColorStop(0.1,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(0.4,'hsla('+beam.hue+',85%,65%,'+op+')');g.addColorStop(0.6,'hsla('+beam.hue+',85%,65%,'+op+')');g.addColorStop(0.9,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(1,'hsla('+beam.hue+',85%,65%,0)');ctx.fillStyle=g;ctx.fillRect(-beam.width/2,0,beam.width,beam.length);ctx.restore();}var _beamLast=0;function animate(ts){if(container.style.display==='none'){requestAnimationFrame(animate);return;}if(ts-_beamLast<32){requestAnimationFrame(animate);return;}_beamLast=ts;var w=bgBox.offsetWidth,h=bgBox.offsetHeight;ctx.clearRect(0,0,w,h);ctx.filter='blur(35px)';var total=beams.length;beams.forEach(function(beam,i){beam.y-=beam.speed;beam.pulse+=beam.pulseSpeed;if(beam.y+beam.length<-100)resetBeam(beam,i,total,w,h);drawBeam(beam,w,h);});ctx.filter='none';requestAnimationFrame(animate);}window.addEventListener('resize',function(){if(container.style.display==='none')return;canvas.style.width=bgBox.offsetWidth+'px';canvas.style.height=bgBox.offsetHeight+'px';});setTimeout(function(){resize();animate();},50);
+}
+
+function switchStudioTab(tab){
+  var glassBtn = document.getElementById('studioCommunityGlassBtn');
+  var styleBtn = document.getElementById('studioHistoryGlassBtn');
+  var resetBtn = document.getElementById('studioResetBtn');
+  var genView = document.getElementById('studioGenerateView');
+  var comView = document.getElementById('studioCommunityView');
+  var bgLayer = document.getElementById('studioBgLayer');
+  var modal = document.getElementById('imageGenModal');
+  // Toggle: clicking the glass button while already on community goes back to generate.
+  if(tab === 'community' && comView.style.display === 'flex'){
+    tab = 'generate';
+  }
+  if(tab === 'community'){
+    genView.style.display = 'none';
+    comView.style.display = 'flex';
+    comView.style.opacity = '0';
+    comView.style.transition = 'opacity .45s ease';
+    if(modal) modal.classList.add('studio-tab-community');
+    // Style templates + reset do nothing on community — hide so they don’t confuse
+    if(styleBtn) styleBtn.style.display = 'none';
+    if(resetBtn) resetBtn.style.display = 'none';
+    // Close style row if it was open on generate
+    try{
+      var trow = document.getElementById('imageGenTemplateRow');
+      if(trow && trow.style.display === 'flex'){
+        trow.style.display = 'none';
+        var sc = document.getElementById('imageGenScrollCol');
+        if(sc) sc.classList.add('igRowHidden');
+        if(styleBtn){
+          styleBtn.style.background = 'rgba(255,255,255,0.05)';
+          styleBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+          styleBtn.style.color = 'var(--muted)';
+        }
+      }
+    }catch(_tr){}
+    if(glassBtn){
+      glassBtn.style.background = 'rgba(124,106,247,0.2)';
+      glassBtn.style.borderColor = 'rgba(124,106,247,0.5)';
+      glassBtn.style.color = '#fff';
+    }
+    renderStudioSocialFeed();
+    if(typeof renderFeed==='function') renderFeed();
+    if(typeof initStudioFlowCanvas==='function') initStudioFlowCanvas();
+    if(typeof initStudioBeamsCanvas==='function') initStudioBeamsCanvas();
+    // Fade the shared background layer and the feed itself in gently, next frame
+    // (so the display:flex/opacity:0 above has actually painted first).
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        if(bgLayer) bgLayer.style.opacity = '1';
+        comView.style.opacity = '1';
+      });
+    });
+  } else {
+    if(bgLayer) bgLayer.style.opacity = '0';
+    comView.style.opacity = '0';
+    if(modal) modal.classList.remove('studio-tab-community');
+    if(styleBtn) styleBtn.style.display = '';
+    if(resetBtn) resetBtn.style.display = '';
+    if(glassBtn){
+      glassBtn.style.background = 'rgba(255,255,255,0.05)';
+      glassBtn.style.borderColor = 'rgba(255,255,255,0.1)';
+      glassBtn.style.color = 'var(--muted)';
+    }
+    setTimeout(function(){
+      comView.style.display = 'none';
+      genView.style.display = 'flex';
+    }, 240);
+  }
+}
+
+// ── Studio · Community tab ──────────────────────────────────────────────────
+// Transplanted from the Builder Feed's photo/video gallery (#communityFeedCol).
+// Reuses the same `socialPosts` array, the same `posts` Supabase table, and
+// the same `posts` storage bucket — this is the SAME feed, just mounted here
+// too, so a post made from either place shows up in both.
+var _studioSocialMediaFiles = [];
+var _studioSocialGridSize = 1;
+
+function studioSocialHandleMedia(e){
+  var files = Array.from(e.target.files);
+  _studioSocialMediaFiles = _studioSocialMediaFiles.concat(files).slice(0, 9);
+  _studioRenderMediaPreview();
+  e.target.value = '';
+}
+function studioSocialRemoveMedia(i){
+  _studioSocialMediaFiles.splice(i, 1);
+  _studioRenderMediaPreview();
+}
+function _studioRenderMediaPreview(){
+  var preview = document.getElementById('studioSocialMediaPreview');
+  if(!preview) return;
+  if(!_studioSocialMediaFiles.length){ preview.style.display = 'none'; preview.innerHTML = ''; return; }
+  preview.style.display = 'flex';
+  preview.innerHTML = _studioSocialMediaFiles.map(function(f, i){
+    var url = URL.createObjectURL(f);
+    var isVideo = f.type.startsWith('video');
+    return '<div style="position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;flex-shrink:0;">' +
+      (isVideo
+        ? '<video src="'+url+'" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;">▶</div>'
+        : '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;">') +
+      '<button onclick="studioSocialRemoveMedia('+i+')" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.6);border:none;color:white;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleStudioSocialGrid(){
+  _studioSocialGridSize = (_studioSocialGridSize + 1) % 3;
+  var list = document.getElementById('studioSocialFeedList');
+  var btn  = document.getElementById('studioGridToggleBtn');
+  var icon = document.getElementById('studioGridToggleIcon');
+  if(!list) return;
+  var cols = [3,4,5][_studioSocialGridSize];
+  var gap  = ['6px','4px','3px'][_studioSocialGridSize];
+  list.style.gridTemplateColumns = 'repeat('+cols+',1fr)';
+  list.style.gap = gap;
+  var active = _studioSocialGridSize > 0;
+  if(btn){ btn.style.background=active?'rgba(124,106,247,0.15)':'rgba(255,255,255,0.04)'; btn.style.borderColor=active?'rgba(124,106,247,0.4)':'rgba(255,255,255,0.1)'; btn.style.color=active?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.45)'; }
+  var r3='<rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/>';
+  var r4='<rect x="2" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="2" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="7.5" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="13" width="3.5" height="3.5" rx="0.7"/><rect x="2" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="7.5" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="13" y="18.5" width="3.5" height="3.5" rx="0.7"/><rect x="18.5" y="18.5" width="3.5" height="3.5" rx="0.7"/>';
+  var r5='<rect x="1" y="1" width="3" height="3" rx="0.6"/><rect x="5.5" y="1" width="3" height="3" rx="0.6"/><rect x="10" y="1" width="3" height="3" rx="0.6"/><rect x="14.5" y="1" width="3" height="3" rx="0.6"/><rect x="19" y="1" width="3" height="3" rx="0.6"/><rect x="1" y="5.5" width="3" height="3" rx="0.6"/><rect x="5.5" y="5.5" width="3" height="3" rx="0.6"/><rect x="10" y="5.5" width="3" height="3" rx="0.6"/><rect x="14.5" y="5.5" width="3" height="3" rx="0.6"/><rect x="19" y="5.5" width="3" height="3" rx="0.6"/><rect x="1" y="10" width="3" height="3" rx="0.6"/><rect x="5.5" y="10" width="3" height="3" rx="0.6"/><rect x="10" y="10" width="3" height="3" rx="0.6"/><rect x="14.5" y="10" width="3" height="3" rx="0.6"/><rect x="19" y="10" width="3" height="3" rx="0.6"/><rect x="1" y="14.5" width="3" height="3" rx="0.6"/><rect x="5.5" y="14.5" width="3" height="3" rx="0.6"/><rect x="10" y="14.5" width="3" height="3" rx="0.6"/><rect x="14.5" y="14.5" width="3" height="3" rx="0.6"/><rect x="19" y="14.5" width="3" height="3" rx="0.6"/>';
+  if(icon) icon.innerHTML = [r3,r4,r5][_studioSocialGridSize];
+  var tiles = list.querySelectorAll('.sf-tile');
+  tiles.forEach(function(t, i){
+    t.classList.remove('grid-resizing');
+    void t.offsetWidth;
+    t.style.animationDelay = (i * 28) + 'ms';
+    t.classList.add('grid-resizing');
+    t.addEventListener('animationend', function(){ t.classList.remove('grid-resizing'); t.style.animationDelay=''; }, {once:true});
+  });
+}
+
+function renderStudioSocialFeed(){
+  var list = document.getElementById('studioSocialFeedList');
+  if(!list) return;
+  if(!window._studioSocialGridInit){
+    window._studioSocialGridInit = true;
+    list.style.gridTemplateColumns = 'repeat(4,1fr)';
+    list.style.gap = '4px';
+  }
+  var av = document.getElementById('studioComposerAv');
+  if(av && currentUser){
+    if(currentUser.avatar){
+      av.textContent = '';
+      av.style.background = currentUser.color;
+      av.style.backgroundImage = 'url('+currentUser.avatar+')';
+      av.style.backgroundSize = 'cover';
+      av.style.backgroundPosition = 'center';
+    } else {
+      av.textContent = currentUser.initial;
+      av.style.background = currentUser.color;
+      av.style.backgroundImage = '';
+    }
+  }
+  if(!socialPosts.length){ list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;grid-column:1/-1;">No posts yet. Say something!</div>'; return; }
+  var mediaPosts = socialPosts.filter(function(p){ return p.media && p.media.length > 0; });
+  if(!mediaPosts.length){ list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;grid-column:1/-1;">No photo or video posts yet.</div>'; return; }
+  list.innerHTML = mediaPosts.map(function(p){
+    var liked = currentUser && p.likedBy.has(currentUser.email);
+    var m = p.media[0];
+    var thumbHtml = m.type === 'video'
+      ? '<video src="'+m.url+'" autoplay muted loop playsinline class="sf-thumb-video"></video>'
+      : '<img src="'+m.url+'" class="sf-thumb" loading="lazy">';
+    var avStyle = 'background:'+p.color+';';
+    if(p.avatar) avStyle += 'background-image:url('+p.avatar+');background-size:cover;background-position:center;';
+    var textHtml = esc(p.text).replace(/\n/g, '<br>');
+    return '<div class="sf-tile">' +
+      thumbHtml +
+      '<div class="sf-body">' +
+        '<div class="sf-author" onclick="showMiniProfile(\''+p.email+'\',\''+p.name+'\',\''+p.color+'\',\''+p.initial+'\')" style="cursor:pointer;">' +
+          '<div class="sf-av" style="'+avStyle+'">'+getUserAvatarContent(p.email, p.initial)+'</div>' +
+          '<div style="min-width:0;flex:1;">' +
+            '<div class="sf-name">'+esc(p.name)+'</div>' +
+            '<div class="sf-time">'+p.time+'</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sf-text">'+textHtml+'</div>' +
+      '</div>' +
+      '<div class="sf-actions">' +
+        '<button onclick="likeSocialPost(\''+p.id+'\')" style="color:'+(liked?'#e85d96':'var(--muted)')+';">'+(liked?'❤️':'🤍')+' '+p.likes+'</button>' +
+        '<button onclick="toggleStudioSocialComments(\''+p.id+'\')" style="color:var(--muted);">💬 '+p.comments.length+'</button>' +
+        (currentUser && p.email === currentUser.email ? '<button onclick="deleteSocialPost(\''+p.id+'\')" style="color:rgba(232,93,150,0.7);margin-left:auto;">🗑</button>' : '') +
+      '</div>' +
+      '<div id="stsc_'+p.id+'" style="display:none;padding:0 9px 9px;">' +
+        p.comments.map(function(c){ return '<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>'; }).join('') +
+        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="stsci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;outline:none;" onkeydown="if(event.key===\'Enter\'){addStudioSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addStudioSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;cursor:pointer;">→</button></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleStudioSocialComments(id){
+  var el = document.getElementById('stsc_'+id);
+  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function addStudioSocialComment(id){
+  if(!currentUser) return;
+  var inp = document.getElementById('stsci_'+id);
+  if(!inp || !inp.value.trim()) return;
+  var p = socialPosts.find(function(x){ return x.id === id; });
+  if(!p) return;
+  p.comments.push({name: currentUser.name, color: currentUser.color, initial: currentUser.initial, text: inp.value.trim()});
+  inp.value = '';
+  renderStudioSocialFeed();
+  if(typeof renderSocialFeed === 'function') renderSocialFeed();
+  setTimeout(function(){ var el = document.getElementById('stsc_'+id); if(el) el.style.display = 'block'; }, 0);
+}
+
+function submitStudioSocialPost(){
+  if(!currentUser){ showToast('Sign in to post.'); return; }
+  var text = document.getElementById('studioSocialPostText').value.trim();
+  var files = _studioSocialMediaFiles.slice();
+  if(!text && files.length === 0){ showToast('Write something or add a photo.'); return; }
+  var base64Promises = files.map(function(f){
+    return new Promise(function(res){
+      var reader = new FileReader();
+      var mediaType = f.type.startsWith('video') ? 'video' : 'image';
+      reader.onload = function(ev){ res({url: ev.target.result, type: mediaType, file: f}); };
+      reader.readAsDataURL(f);
+    });
+  });
+  Promise.all(base64Promises).then(function(localMedia){
+    var tempId = 'sp_'+Date.now();
+    var localUrls = localMedia.map(function(m){ return {url: m.url, type: m.type}; });
+    document.getElementById('studioSocialPostText').value = '';
+    _studioSocialMediaFiles = [];
+    _studioRenderMediaPreview();
+    if(localUrls.length){
+      socialPosts.unshift({id: tempId, email: currentUser.email, name: currentUser.name, color: currentUser.color, initial: currentUser.initial, text: text, time: 'just now', likes: 0, likedBy: new Set(), comments: [], card: null, media: localUrls});
+      renderStudioSocialFeed();
+      if(typeof renderSocialFeed === 'function') renderSocialFeed();
+    }
+    showToast('Posted!');
+    if(localMedia.length > 0){
+      var uploadPromises = localMedia.map(function(m, i){
+        var ext = m.file.name.split('.').pop() || 'jpg';
+        var path = currentUser.id+'/post_'+tempId+'_'+i+'.'+ext;
+        return _supabase.storage.from('posts').upload(path, m.file, {contentType: m.file.type}).then(function(r){
+          if(r.error){ console.error('Storage upload error:', r.error); return {url: m.url, type: m.type}; }
+          var pub = _supabase.storage.from('posts').getPublicUrl(path);
+          return {url: pub.data.publicUrl, type: m.type};
+        });
+      });
+      Promise.all(uploadPromises).then(function(finalUrls){
+        _supabase.from('posts').insert({user_id: currentUser.id, user_email: currentUser.email, user_name: currentUser.name, user_color: currentUser.color, user_avatar: currentUser.avatar || null, content: text, type: 'social', media_urls: finalUrls, likes: [], liked_by: [], comments: [], applies: []}).then(function(r){
+          if(r.error) console.error('Post save error:', r.error.message);
+        });
+      });
+    } else if(text) {
+      _supabase.from('posts').insert({user_id: currentUser.id, user_email: currentUser.email, user_name: currentUser.name, user_color: currentUser.color, user_avatar: currentUser.avatar || null, content: text, type: 'social', media_urls: [], likes: [], liked_by: [], comments: [], applies: []}).then(function(r){
+        if(r.error) console.error('Post save error:', r.error.message);
+      });
+    }
+  });
+}
+// ── End Studio · Community tab ──────────────────────────────────────────────
 
 function renderCustomizerPanels(){
   var atBottom = document.body.classList.contains('bottom-nav');
@@ -17577,19 +18627,25 @@ function _buildFeedFromRaw(data,profileMap,coverMap){
     _feedLoaded=true;_feedFetching=false;
 }
 function timeAgo(ts){var d=new Date(ts),n=new Date(),s=Math.floor((n-d)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
-function submitPost(){if(!currentUser){showToast('⚠️ Sign in to post.');return;}var text=document.getElementById('feedPostText').value.trim(),cat=document.getElementById('feedPostCat').value;if(!text){showToast('⚠️ Write something first.');return;}
+function _submitFeedPostCore(textElId,catElId){
+  if(!currentUser){showToast('⚠️ Sign in to post.');return;}
+  var textEl=document.getElementById(textElId),catEl=document.getElementById(catElId);
+  var text=textEl.value.trim(),cat=catEl.value;
+  if(!text){showToast('⚠️ Write something first.');return;}
+  textEl.value='';
   var useVideo=getPostMediaPref()==='video';
   var coverVid=useVideo?(currentUser.coverVideo||null):null;
   var tempId='fp_tmp_'+Date.now();
   feedPosts.unshift({id:tempId,email:currentUser.email,name:currentUser.name,color:currentUser.color,initial:currentUser.initial,avatar:currentUser.avatar||null,coverVideo:coverVid,cat:cat,text:text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]});
-  document.getElementById('feedPostText').value='';
   renderFeed();
   showToast('🚀 Posted!');
   _supabase.from('posts').insert({user_id:currentUser.id,user_email:currentUser.email,user_name:currentUser.name,user_color:currentUser.color,user_avatar:currentUser.avatar||null,user_cover_video:coverVid,content:text,type:cat,likes:[],liked_by:[],comments:[],applies:[]}).then(function(r){
     if(r.error){showToast('⚠️ Failed to post.');feedPosts=feedPosts.filter(function(p){return p.id!==tempId;});renderFeed();return;}
-    if(r.data&&r.data[0]){var real=r.data[0];feedPosts=feedPosts.map(function(p){return p.id===tempId?{id:real.id,email:p.email,name:p.name,color:p.color,initial:p.initial,avatar:p.avatar,coverVideo:p.coverVideo,cat:p.cat,text:p.text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]}:p;});}
+    if(r.data&&r.data[0]){var real=r.data[0];feedPosts=feedPosts.map(function(p){return p.id===tempId?{id:real.id,email:p.email,name:p.name,color:p.color,initial:p.initial,avatar:p.avatar,coverVideo:p.coverVideo,cat:p.cat,text:p.text,time:'just now',reactions:0,comments:[],reactedBy:new Set(),savedBy:new Set(),applies:[]}:p;});renderFeed();}
   });
 }
+function submitPost(){ _submitFeedPostCore('feedPostText','feedPostCat'); }
+function submitStudioFeedPost(){ _submitFeedPostCore('studioFeedPostText','studioFeedPostCat'); }
 
 function seedSocialPosts(){
   if(socialPosts.length)return;
@@ -17657,6 +18713,7 @@ function seedSocialPosts(){
   });
 }
 function renderSocialFeed(){
+  if(document.getElementById('studioSocialFeedList')) renderStudioSocialFeed();
   var list=document.getElementById('socialFeedList');if(!list)return;
   if(!window._socialGridInit){
     window._socialGridInit=true;
@@ -17918,6 +18975,10 @@ function filterFeed(cat,btn){
   var filterMap={'all':'ff-all','collab':'ff-collab','hiring':'ff-hiring','launch':'ff-launch','feedback':'ff-feedback','skill':'ff-skill'};
   var filterId=filterMap[cat];
   if(filterId){var fb=document.getElementById(filterId);if(fb)fb.classList.add('active');}
+  // Sync the Studio Community tab's copy of the filter chips too
+  var stfMap={'all':'stf-all','collab':'stf-collab','hiring':'stf-hiring','launch':'stf-launch','feedback':'stf-feedback','skill':'stf-skill'};
+  var stfId=stfMap[cat];
+  if(stfId){var sfb=document.getElementById(stfId);if(sfb)sfb.classList.add('active');}
   renderFeed();
 }
 function renderFeed(){
@@ -17950,10 +19011,13 @@ function renderFeed(){
   var tt=document.getElementById('trendingTags');
   if(tt){var tags=['#AI','#OpenSource','#React','#Collab','#LLM','#Startup','#RemoteWork'];tt.innerHTML=tags.map(function(t){return'<span onclick="document.getElementById(\'feedPostText\').value+=\''+t+' \';document.getElementById(\'feedPostText\').focus();" style="display:inline-block;padding:4px 10px;border-radius:100px;background:rgba(124,106,247,0.1);border:1px solid rgba(124,106,247,0.2);color:rgba(255,255,255,0.65);font-size:11px;font-family:\'DM Sans\',sans-serif;margin:0 4px 6px 0;cursor:pointer;transition:all .15s;" onmouseover="this.style.background=\'rgba(124,106,247,0.2)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.1)\'">'+t+'</span>';}).join('');}
   // Posts
-  var list=document.getElementById('feedList');if(!list)return;
+  var list=document.getElementById('feedList');
   var posts=feedFilter==='all'?feedPosts:feedPosts.filter(function(p){return p.cat===feedFilter;});
-  if(!posts.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No posts yet. Be the first!</div>';return;}
-  list.innerHTML=posts.map(buildPostHTML).join('');
+  var _feedHtml=posts.length?posts.map(buildPostHTML).join(''):'<div style="text-align:center;padding:40px;color:var(--muted)">No posts yet. Be the first!</div>';
+  if(list)list.innerHTML=_feedHtml;
+  // Mirror into the Studio Community tab's Posts section (same feedPosts data/filter)
+  var stuList=document.getElementById('studioFeedList');
+  if(stuList)stuList.innerHTML=posts.length?posts.map(buildPostHTML).join(''):'<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;">No posts yet. Be the first!</div>';
 }
 
 function reactPost(id){if(!currentUser)return;var p=feedPosts.find(function(x){return x.id===id;});if(!p)return;var liked=p.reactedBy.has(currentUser.email);liked?p.reactedBy.delete(currentUser.email):p.reactedBy.add(currentUser.email);p.reactions=p.reactedBy.size;_supabase.from('posts').update({likes:p.reactions,liked_by:[...p.reactedBy]}).eq('id',id).then(function(){renderFeed();});
@@ -26852,33 +27916,76 @@ function _tnvGlideToCenter(){
   if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
+  /*
+    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%,
+    not “middle of .top-bar” (bar can be offset by layout/padding).
+    Vertical: optical mid of #topTitle / icon row.
+  */
+  var rowCy = first.top + first.height / 2;
+  try{
+    var titleEl = document.getElementById('topTitle');
+    if(titleEl && titleEl.getBoundingClientRect().height > 4){
+      var tr = titleEl.getBoundingClientRect();
+      rowCy = tr.top + tr.height / 2;
+    } else {
+      var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
+      if(barHidden) rowCy += 16;
+      var actions = document.querySelector('.top-bar .top-actions');
+      if(actions){
+        var row = actions.getBoundingClientRect();
+        if(row.height > 8){
+          var acy = row.top + row.height / 2;
+          if(barHidden) acy += 16;
+          rowCy = acy - 3;
+        }
+      }
+    }
+  }catch(_r){}
+  rowCy -= 2;
   _tnvHomeParent = btn.parentNode;
   _tnvHomeNextSibling = btn.nextSibling;
-  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
+  // Body + fixed = left:50% is screen center (camera), independent of top-bar box
+  document.body.appendChild(btn);
   btn.classList.add('tnv-centered');
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
-  var last = btn.getBoundingClientRect();
-  /* last is already centered via CSS translate(-50%,-50%) — measure without it for FLIP */
   btn.style.transition = 'none';
+  btn.style.setProperty('position', 'fixed', 'important');
+  btn.style.setProperty('left', '50%', 'important');
+  btn.style.setProperty('top', rowCy + 'px', 'important');
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.zIndex = '100050';
   btn.style.transform = 'translate(-50%,-50%)';
-  last = btn.getBoundingClientRect();
+  var last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
   var dy = first.top - last.top;
   btn.style.opacity = '0';
   btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
-  void btn.offsetWidth; // flush layout so the "from" state actually paints
+  void btn.offsetWidth;
   btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
   _tnvTrackToastDuring(500);
-  /* After glide, keep pure center transform (no scale residue) */
   btn.addEventListener('transitionend', function _centerSettle(e){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     if(!_tnvCentered) return;
     btn.style.transition = '';
     btn.style.transform = 'translate(-50%,-50%)';
   }, {once:true});
+}
+
+function _tnvClearCenteredInline(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn) return;
+  btn.style.removeProperty('position');
+  btn.style.removeProperty('top');
+  btn.style.removeProperty('left');
+  btn.style.removeProperty('right');
+  btn.style.removeProperty('bottom');
+  btn.style.removeProperty('margin');
+  btn.style.removeProperty('z-index');
 }
 
 function _tnvGlideHome(){
@@ -26888,6 +27995,7 @@ function _tnvGlideHome(){
   btn.classList.remove('tnv-centered');
   btn.style.transition = 'none';
   btn.style.transform = 'none';
+  _tnvClearCenteredInline();
   var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
   if(home){
     if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -26910,12 +28018,12 @@ function _tnvGlideHome(){
     btn.style.transform = '';
     btn.style.opacity = '';
   }, {once:true});
-  /* Safety: clear residual transform if transitionend never fires */
   setTimeout(function(){
     if(!_tnvCentered && btn && !btn.classList.contains('tnv-centered')){
       btn.style.transition = '';
       btn.style.transform = '';
       btn.style.opacity = '';
+      _tnvClearCenteredInline();
     }
   }, 500);
 }
@@ -26939,6 +28047,7 @@ function _tnvSendAway(){
     btn.style.transition = 'none';
     btn.style.transform = '';
     btn.style.opacity = '';
+    _tnvClearCenteredInline();
     var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
     if(home){
       if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -26951,6 +28060,129 @@ function _tnvSendAway(){
 window._tnvSendAway = _tnvSendAway;
 window._tnvGlideHome = _tnvGlideHome;
 window._tnvGlideToCenter = _tnvGlideToCenter;
+
+// ── Keep the active mic visible over full-screen overlays (Studio / Community) ──
+// The Studio modal (#imageGenModal) is a position:fixed, z-index:500 layer that
+// sits above <main> (which is itself z-index:1, so nothing inside it — including
+// the mic, wherever it currently lives: docked in .top-actions or glided to
+// center — can out-stack the modal from within). While speech-to-speech is
+// live, we pull the button out to document.body, pin it in place with
+// position:fixed at its exact current on-screen coordinates, and raise its
+// z-index above the modal. No FLIP glide, no animation — it's already visually
+// in that spot, so this is just a same-frame snap, not a move. Reversed the
+// same way (instant, no transition) once the modal closes.
+var _tnvEscaped = false;
+var _tnvEscapeHomeParent = null;
+var _tnvEscapeHomeNextSibling = null;
+var _tnvEscapeWasCentered = false;
+/**
+ * While STS is live and Studio opens: lift mic above the modal and FLIP-fly it
+ * to the Studio header's 3-icon cluster (same row as community / templates / reset).
+ */
+function _tnvEscapeAboveModal(){
+  if(!window._topNavVoiceActive) return;
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || _tnvEscaped) return;
+  var first = btn.getBoundingClientRect();
+  _tnvEscapeHomeParent = btn.parentNode;
+  _tnvEscapeHomeNextSibling = btn.nextSibling;
+  _tnvEscapeWasCentered = btn.classList.contains('tnv-centered');
+  if(_tnvEscapeWasCentered){
+    btn.classList.remove('tnv-centered');
+    _tnvClearCenteredInline();
+  }
+  _tnvEscaped = true;
+
+  // Pin at current screen position on body (fixed), then fly to studio icons
+  if(btn.parentNode !== document.body) document.body.appendChild(btn);
+  btn.style.transition = 'none';
+  btn.style.position = 'fixed';
+  btn.style.left = first.left + 'px';
+  btn.style.top = first.top + 'px';
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.transform = 'none';
+  btn.style.zIndex = '600'; // above #imageGenModal (500)
+  btn.style.opacity = '1';
+  void btn.offsetWidth;
+
+  var _flyTries = 0;
+  function flyToStudioIcons(){
+    if(!_tnvEscaped || !btn) return;
+    var modal = document.getElementById('imageGenModal');
+    if(!modal || modal.style.display === 'none') return;
+    // Leftmost of the 3 Studio icons (community) — park STS just to its LEFT
+    var leftIcon = document.getElementById('studioCommunityGlassBtn')
+      || (document.getElementById('studioTopBarActions') && document.getElementById('studioTopBarActions').querySelector('button'));
+    var target = leftIcon ? leftIcon.getBoundingClientRect() : null;
+    if(!target || target.width < 4){
+      if(_flyTries++ < 12) requestAnimationFrame(flyToStudioIcons);
+      return;
+    }
+    var gap = 8;
+    var tx = target.left - first.width - gap;
+    var ty = target.top + target.height / 2 - first.height / 2;
+    // Keep on-screen if needed (narrow phones)
+    if(tx < 8) tx = 8;
+    btn.style.transition = 'left .42s cubic-bezier(0.22,1,0.36,1), top .42s cubic-bezier(0.22,1,0.36,1)';
+    btn.style.left = Math.round(tx) + 'px';
+    btn.style.top = Math.round(ty) + 'px';
+    _tnvTrackToastDuring(450);
+  }
+  // Same beat as Studio open: fly while modal fades in
+  requestAnimationFrame(function(){
+    requestAnimationFrame(flyToStudioIcons);
+  });
+}
+function _tnvReturnFromModal(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || !_tnvEscaped) return;
+  _tnvEscaped = false;
+  btn.style.transition = 'none';
+  var home = _tnvEscapeHomeParent;
+  if(home){
+    if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
+    else home.appendChild(btn);
+  }
+  btn.style.position = '';
+  btn.style.top = '';
+  btn.style.left = '';
+  btn.style.right = '';
+  btn.style.bottom = '';
+  btn.style.transform = '';
+  btn.style.margin = '';
+  btn.style.zIndex = '';
+  btn.style.opacity = '';
+  btn.style.removeProperty('top');
+  if(_tnvEscapeWasCentered){
+    // Stay on body + true viewport center under camera
+    if(btn.parentNode !== document.body) document.body.appendChild(btn);
+    btn.classList.add('tnv-centered');
+    try{
+      if(window._topNavVoiceActive && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
+        var rowCy;
+        var titleEl = document.getElementById('topTitle');
+        if(titleEl && titleEl.getBoundingClientRect().height > 4){
+          var tr = titleEl.getBoundingClientRect();
+          rowCy = tr.top + tr.height / 2 - 2;
+        } else {
+          var actions = document.querySelector('.top-bar .top-actions');
+          var row = actions ? actions.getBoundingClientRect() : null;
+          rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : (window.innerHeight * 0.06);
+        }
+        btn.style.setProperty('position', 'fixed', 'important');
+        btn.style.setProperty('left', '50%', 'important');
+        btn.style.setProperty('top', rowCy + 'px', 'important');
+        btn.style.zIndex = '100050';
+        btn.style.transform = 'translate(-50%,-50%)';
+      }
+    }catch(_re){}
+  }
+  void btn.offsetWidth;
+}
+window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
+window._tnvReturnFromModal = _tnvReturnFromModal;
 
 function toggleTopBar(){
   TOP_BAR_HIDDEN = !TOP_BAR_HIDDEN;
@@ -27060,6 +28292,34 @@ function toggleDayNight(){
   var next = (cur === 'easyview') ? 'purple' : 'easyview';
   window._applyTheme(next);
   _syncDayNightToggle(next);
+  _syncAndroidStatusBarForTheme(next);
+}
+/**
+ * Moon/dark (purple): WHITE status bar + DARK icons (clock/wifi same dark color).
+ * Day/sun (easyview): transparent overlay (blend experiment).
+ * Median style: "dark" = dark content/icons on light bar (see JSBridge luma helper).
+ * Does not change app wallpaper / page background.
+ */
+function _syncAndroidStatusBarForTheme(t){
+  try{
+    if(!/Android/i.test(navigator.userAgent||'')) return;
+    var isMoon = (t === 'purple'); // moon = dark theme
+    var color = isMoon ? '#FFFFFF' : '#00000000';
+    // Median: light bg → style "dark" (dark icons). Dark/transparent → style "light".
+    var style = isMoon ? 'dark' : 'light';
+    if(typeof median !== 'undefined' && median.statusbar && typeof median.statusbar.set === 'function'){
+      median.statusbar.set({ style: style, color: color });
+    }
+    if(typeof gonative !== 'undefined' && gonative.statusbar && typeof gonative.statusbar.set === 'function'){
+      gonative.statusbar.set({ style: style, color: color });
+    }
+    // theme-color meta (some WebViews tint the system bar from this)
+    try{
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute('content', isMoon ? '#FFFFFF' : '#000000');
+    }catch(_m){}
+    document.documentElement.setAttribute('data-status-chrome', isMoon ? 'classic-white' : 'overlay');
+  }catch(e){}
 }
 function _syncDayNightToggle(t){
   var wrap  = document.getElementById('dayNightToggle');
@@ -27071,7 +28331,7 @@ function _syncDayNightToggle(t){
 
   var moonSVG = '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
   var sunWhite= '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-  var sunDim  = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  var sunDim  = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
   var moonDim = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 
   if(t === 'easyview'){
@@ -27093,9 +28353,17 @@ function _syncDayNightToggle(t){
     right.style.background = 'transparent';
     right.innerHTML        = sunDim;
   }
+  _syncAndroidStatusBarForTheme(t);
 }
 // init toggle state on load
-(function(){ _syncDayNightToggle(localStorage.getItem('_appTheme')||'easyview'); })();
+(function(){
+  var t = localStorage.getItem('_appTheme')||'easyview';
+  window._syncDayNightToggle = _syncDayNightToggle;
+  window._syncAndroidStatusBarForTheme = _syncAndroidStatusBarForTheme;
+  _syncDayNightToggle(t);
+  setTimeout(function(){ _syncAndroidStatusBarForTheme(t); }, 400);
+  setTimeout(function(){ _syncAndroidStatusBarForTheme(t); }, 1200);
+})();
 
 // ── Chrome border-radius repaint fix ─────────────────────────────────
 // Chrome bug: border-radius on small GPU-composited elements renders
@@ -28556,6 +29824,7 @@ function _openNeutralinoWebview(url){
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
+    else if(window._syncAndroidStatusBarForTheme) window._syncAndroidStatusBarForTheme(t);
     if(t==='easyview'){
       // Canvases sit at 0x0 while hidden (display:none), so re-measure and
       // reinit whichever ones now have visible dimensions in sun mode.
@@ -28571,6 +29840,9 @@ function _openNeutralinoWebview(url){
   window._applyTheme = applyTheme;
   window._getThemes  = function(){ return THEMES; };
   window._curTheme   = function(){ return localStorage.getItem('_appTheme')||'easyview'; };
+  // Expose day/night helpers so theme card can sync status chrome
+  if(typeof _syncDayNightToggle === 'function') window._syncDayNightToggle = _syncDayNightToggle;
+  if(typeof _syncAndroidStatusBarForTheme === 'function') window._syncAndroidStatusBarForTheme = _syncAndroidStatusBarForTheme;
 
   function patchIosLanding(){
     var t = localStorage.getItem('_appTheme')||'easyview';
@@ -29222,7 +30494,29 @@ function _neuInjectDownloadInterceptor(frame){
   draw();
 
   canvas._pause  = function(){ _paused = true;  r.trailPoints = []; };
-  canvas._resume = function(){ _paused = false; };
+  canvas._resume = function(){
+    _paused = false;
+    /* Undo hard-hide used during fly-in so mini bot can paint again */
+    try {
+      if (canvas.style.visibility === 'hidden' && parseFloat(canvas.style.opacity || '0') === 0) {
+        /* leave opacity to caller (_bringIn / schedule) — only clear visibility trap */
+      }
+      if (canvas.getAttribute('data-fly-hidden') === '1') {
+        canvas.style.visibility = '';
+        canvas.removeAttribute('data-fly-hidden');
+      }
+    } catch (eR) {}
+  };
+  /** Instantly unpaint mini bot (used at fly-in start so it never doubles with fly canvas) */
+  canvas._hardHideForFly = function(){
+    _paused = true;
+    r.trailPoints = [];
+    canvas.style.transition = 'none';
+    canvas.style.opacity = '0';
+    canvas.style.visibility = 'hidden';
+    canvas.setAttribute('data-fly-hidden', '1');
+    try { ctx.clearRect(0, 0, W, H); } catch (eC) {}
+  };
   canvas._r = r;  // expose robot state for external positioning
   canvas._scheduleExit = function(){
     if(_tourMode || window.__synTourActive) return;
@@ -29765,12 +31059,28 @@ function _neuInjectDownloadInterceptor(frame){
   function doShowRobot(){
     document.getElementById('rtLabel').textContent = 'SYN-BOT // guide';
     document.getElementById('rtText').textContent = 'hi! click me to chat — i can navigate, explain features, or just vibe 👾';
-    // Snap in instantly (no fade) so the fly→robot transition is seamless
+    // Snap in after fly canvas is gone — clear any inline hide styles that fight CSS
     tooltip.style.transition = 'none';
-    tooltip.classList.remove('rt-hidden'); setTimeout(_drawRtBubbleOutline,10);
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
+    tooltip.classList.remove('rt-hidden');
     tooltip.classList.add('rt-visible');
+    // Block OPENING chat briefly (summon ghost-click) — but enable hit-target + cursor NOW
+    // so user already hovering the land spot gets pointer without needing a mouse wiggle
+    _synBotLandCooldownUntil = Date.now() + 420;
+    _synBotUnlockRobotClicks();
+    // After layout paints the landed SVG, re-hit-test under the stationary cursor
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        _synBotResyncPointerUnderCursor();
+      });
+    });
+    // Second pass after any outline/size settle
+    setTimeout(function(){ _synBotResyncPointerUnderCursor(); }, 50);
+    setTimeout(function(){ _synBotResyncPointerUnderCursor(); }, 430);
+    setTimeout(_drawRtBubbleOutline, 10);
     // Re-enable transition after a frame so hover hide/show still animates
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){ tooltip.style.transition = ''; }); });
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tooltip) tooltip.style.transition = ''; }); });
     var arm = document.getElementById('rtWaveArm');
     if(arm){
       // Clone and replace — guaranteed restart regardless of previous animation state
@@ -29783,9 +31093,153 @@ function _neuInjectDownloadInterceptor(frame){
   var _flyCanvas    = null;
   var _flyCancelled = false;
   var _flySession   = 0;  // incremented each hover so stale frames self-discard
+  var _flyInProgress = false; // prevents mousemove from restarting fly (clone bug)
+  var _flyOutProgress = false; // zoom-out back to mini — also blocks chat open
+  var _synBotLandCooldownUntil = 0; // ignore open-clicks for a beat after land (ghost click)
+
+  /** Always prefer live localStorage so disable works even if var order is weird */
+  function _synBotIsOn(){
+    try {
+      if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
+      if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
+      var v = localStorage.getItem('synapses_synbot_enabled');
+      if (v === null) return false;
+      return v === '1';
+    } catch (e) { return false; }
+  }
+  /** Bot must be visibly expanded before corner taps open chat */
+  function _synBotIsExpanded(){
+    var tip = document.getElementById('robotTooltip');
+    return !!(tip && tip.classList.contains('rt-visible') && !tip.classList.contains('rt-hidden'));
+  }
+  /** True while any fly canvas animation is active (in or out) */
+  function _synBotIsFlying(){
+    return !!(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode));
+  }
+  /** Only open chat after full land + cooldown — never mid-fly / mid-mini roam */
+  function _synBotCanOpenChat(){
+    if(!_synBotIsOn()) return false;
+    if(_synBotIsFlying()) return false;
+    if(Date.now() < _synBotLandCooldownUntil) return false;
+    return _synBotIsExpanded();
+  }
+  function _synBotLockRobotClicks(){
+    if(robot){
+      try{
+        robot.style.pointerEvents = 'none';
+        robot.style.cursor = 'default';
+      }catch(_e){}
+    }
+    if(tooltip){
+      try{
+        tooltip.style.pointerEvents = 'none';
+      }catch(_e2){}
+    }
+  }
+  function _synBotUnlockRobotClicks(){
+    /* Landed robot is the hit target — set explicitly so cursor works without a mousemove */
+    if(robot && tooltip && tooltip.classList.contains('rt-visible') && !tooltip.classList.contains('rt-hidden')){
+      try{
+        robot.style.pointerEvents = 'auto';
+        robot.style.cursor = 'pointer';
+      }catch(_e){}
+    } else if(robot){
+      try{
+        robot.style.pointerEvents = '';
+        robot.style.cursor = '';
+      }catch(_e2){}
+    }
+    if(tooltip){
+      try{ tooltip.style.pointerEvents = ''; }catch(_e3){}
+    }
+  }
+  /** True if last known mouse is over the landed robot glyph / tooltip box */
+  function _synBotMouseOverLanded(){
+    if(!tooltip || !tooltip.classList.contains('rt-visible')) return false;
+    if(_mouseX < 0 || _mouseY < 0) return false;
+    try{
+      if(robot){
+        var rr = robot.getBoundingClientRect();
+        if(rr.width > 0 && _mouseX >= rr.left && _mouseX <= rr.right && _mouseY >= rr.top && _mouseY <= rr.bottom){
+          return true;
+        }
+      }
+      var tr = tooltip.getBoundingClientRect();
+      if(tr.width > 0 && _mouseX >= tr.left && _mouseX <= tr.right && _mouseY >= tr.top && _mouseY <= tr.bottom){
+        return true;
+      }
+    }catch(_e){}
+    return false;
+  }
+  /**
+   * After land, the browser keeps the old cursor until the pointer moves — even if the
+   * enlarged robot is already under the mouse. Re-hit-test and force pointer state.
+   */
+  function _synBotResyncPointerUnderCursor(){
+    if(_synBotIsFlying()) return;
+    if(!_synBotIsExpanded()) return;
+    _synBotUnlockRobotClicks();
+    if(!_synBotMouseOverLanded()) return;
+    _overRobot = true;
+    if(robot){
+      try{
+        robot.style.pointerEvents = 'auto';
+        robot.style.cursor = 'pointer';
+      }catch(_e){}
+    }
+    // Nudge hit-testing: browsers often won't update cursor on a stationary pointer
+    // after pointer-events flip unless something under the point changes.
+    try{
+      if(robot){
+        var prev = robot.style.transform || '';
+        robot.style.transform = (prev ? prev + ' ' : '') + 'translateZ(0)';
+        // force reflow
+        void robot.offsetWidth;
+        robot.style.transform = prev;
+      }
+    }catch(_e2){}
+    try{
+      // Synthetic mousemove at last known coords so our hover state + browser cursor refresh
+      var ev = new MouseEvent('mousemove', {
+        bubbles: true,
+        cancelable: true,
+        clientX: _mouseX,
+        clientY: _mouseY,
+        view: window
+      });
+      (robot || tooltip || document).dispatchEvent(ev);
+      document.dispatchEvent(ev);
+    }catch(_e3){}
+    // Direct cursor on documentElement as last resort while over landed bot
+    try{
+      if(robot && robot.style.cursor === 'pointer'){
+        // only set if elementFromPoint actually sees the robot (or we know we're over it)
+        var topEl = document.elementFromPoint(_mouseX, _mouseY);
+        if(topEl && (topEl === robot || (robot.contains && robot.contains(topEl)) || (tooltip && tooltip.contains(topEl)))){
+          // browser should already show pointer; nothing else needed
+        } else if(robot){
+          // Robot may still be under another transparent layer — keep PE auto; cursor already set on robot
+        }
+      }
+    }catch(_e4){}
+  }
+  function _synBotForceChatClosed(){
+    if(!chat) return;
+    chat.style.display = 'none';
+    chat.style.pointerEvents = 'none';
+  }
+  // expose for other scripts / debugging
+  try{
+    window._synBotIsFlying = _synBotIsFlying;
+    window._synBotCanOpenChat = _synBotCanOpenChat;
+  }catch(_w){}
 
   function showRobot(){
     if(!tooltip) return;
+    /* Already landed — do nothing */
+    if(tooltip.classList.contains('rt-visible')) return;
+    /* Fly already running — do NOT cancel/restart (that spawned a second robot / clone) */
+    if(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode)) return;
     /* Disabled during real tour — unstick purple leftover when UI is off */
     try {
       var rootTour = document.getElementById('synTourRoot');
@@ -29820,51 +31274,57 @@ function _neuInjectDownloadInterceptor(frame){
     if(document.getElementById('cyberGreeting')) return;
     var am = document.getElementById('authModal');
     if(am && am.style.display !== 'none') return;
-    if(tooltip.classList.contains('rt-visible')) return;
     var chatPanel = document.getElementById('synBotChat');
-    // If chat is open, make the bot visible again so user can see/click it
-    if(chatPanel && chatPanel.style.display !== 'none'){
-      tooltip.style.transition = 'none';
-      tooltip.style.opacity = '';
-      tooltip.style.visibility = '';
+    // If chat is open, show landed robot only (no second fly) so user can close via robot
+    if(chatPanel && chatPanel.style.display === 'flex'){
+      doShowRobot();
       return;
     }
 
-    // Cancel any in-progress fly
-    if(_flyCanvas && _flyCanvas.parentNode){
-      _flyCanvas.parentNode.removeChild(_flyCanvas);
-      _flyCanvas = null;
-    }
     _flyCancelled = false;
+    _flyInProgress = true;
+    _flyOutProgress = false;
     var mySession = ++_flySession;  // this fly's unique ID
+
+    // Keep landed SVG fully hidden during fly — only ONE robot (the fly canvas) is drawn
+    // NEVER leave a clickable hit-target open while the fly canvas is the real robot
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
+    tooltip.classList.add('rt-hidden');
+    tooltip.classList.remove('rt-visible');
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
 
     var tinyCanvas = document.getElementById('tinyBotCanvas');
 
-    // Freeze and hide tiny canvas so fly canvas takes over seamlessly
-    if(tinyCanvas){
-      if(tinyCanvas._pause) tinyCanvas._pause();
-      tinyCanvas.style.transition = 'none';
-      tinyCanvas.style.opacity = '0';
-    }
-
-    // Target = center of where big robot SVG sits (bottom:24px right:24px, svg 72px)
+    // Capture start pos WHILE mini is still on screen, then hard-hide it BEFORE
+    // creating the fly canvas — otherwise mini + fly occupy the same pixel for
+    // a frame (the "clone right before it flies" flash).
     var targetX = window.innerWidth  - 24 - 36;
     var targetY = window.innerHeight - 24 - 36;
-
-    // Start = actual current position AND size of the tiny robot on screen
     var startX, startY, startS;
     if(tinyCanvas && tinyCanvas._getRobotScreenPos){
       var pos = tinyCanvas._getRobotScreenPos();
       startX = pos.x;
       startY = pos.y;
-      startS = pos.size;
+      startS = pos.size || 10;
     } else {
       startX = window.innerWidth  - 90;
       startY = window.innerHeight - 90;
       startS = 10;
     }
+    if(tinyCanvas){
+      if(tinyCanvas._hardHideForFly) tinyCanvas._hardHideForFly();
+      else {
+        if(tinyCanvas._pause) tinyCanvas._pause();
+        tinyCanvas.style.transition = 'none';
+        tinyCanvas.style.opacity = '0';
+        tinyCanvas.style.visibility = 'hidden';
+      }
+    }
 
     var fly = document.createElement('canvas');
+    // z above tinyBotCanvas (88886); pointer-events none so no ghost clicks
     fly.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:88889;';
     fly.width  = window.innerWidth;
     fly.height = window.innerHeight;
@@ -30076,14 +31536,26 @@ function _neuInjectDownloadInterceptor(frame){
       if(prog >= 1){
         if(fly.parentNode) fly.parentNode.removeChild(fly);
         _flyCanvas = null;
-        if(!_flyCancelled){
-          // Successful landing — hide tiny canvas, show big robot
+        _flyInProgress = false;
+        if(!_flyCancelled && mySession === _flySession){
+          // Keep tiny hard-hidden; only land the SVG after fly canvas is gone
           var tc = document.getElementById('tinyBotCanvas');
-          if(tc){ tc.style.transition='none'; tc.style.opacity='0'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tc) tc.style.transition=''; }); }); }
-          doShowRobot();
+          if(tc){
+            if(tc._hardHideForFly) tc._hardHideForFly();
+            else { tc.style.transition='none'; tc.style.opacity='0'; tc.style.visibility='hidden'; }
+          }
+          requestAnimationFrame(function(){
+            if(_flyCancelled || mySession !== _flySession) return;
+            doShowRobot();
+          });
         } else {
-          var tc = document.getElementById('tinyBotCanvas');
-          if(tc){ if(tc._resume) tc._resume(); if(tc._bringIn) tc._bringIn(); }
+          var tc2 = document.getElementById('tinyBotCanvas');
+          if(tc2){
+            if(tc2._resume) tc2._resume();
+            tc2.style.visibility = '';
+            tc2.removeAttribute('data-fly-hidden');
+            if(tc2._bringIn) tc2._bringIn();
+          }
         }
         return;
       }
@@ -30101,23 +31573,33 @@ function _neuInjectDownloadInterceptor(frame){
     if(to && chat && (to === chat || chat.contains(to))) return;
     if(chat && chat.style.display === 'flex') return;
 
+    var wasLanded = tooltip.classList.contains('rt-visible');
+    var wasFlying = !!(_flyInProgress || _flyOutProgress || (_flyCanvas && _flyCanvas.parentNode));
+
     // Cancel any in-progress fly-in animation
     if(_flyCanvas && _flyCanvas.parentNode){
       _flyCanvas.parentNode.removeChild(_flyCanvas);
       _flyCanvas = null;
     }
     _flyCancelled = true;
+    _flyInProgress = false;
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
 
-    if(tooltip.classList.contains('rt-visible')){
-      // Instantly kill the SVG tooltip so only canvas robot is seen during zoom-out
-      tooltip.style.transition = 'none';
-      tooltip.classList.add('rt-hidden');
-      tooltip.classList.remove('rt-visible');
-      requestAnimationFrame(function(){ requestAnimationFrame(function(){ tooltip.style.transition = ''; }); });
+    // Always drop rt-visible so an invisible robot cannot receive clicks
+    tooltip.style.transition = 'none';
+    tooltip.classList.add('rt-hidden');
+    tooltip.classList.remove('rt-visible');
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ if(tooltip) tooltip.style.transition = ''; }); });
+
+    if(wasLanded){
+      // Zoom landed SVG back to the mini canvas bot
       playZoomOut();
     } else {
-      tooltip.classList.add('rt-hidden');
-      tooltip.classList.remove('rt-visible');
+      // Mid-fly cancel or already hidden — just resume mini bot
+      _flyOutProgress = false;
       var tinyCanvas = document.getElementById('tinyBotCanvas');
       if(tinyCanvas){ if(tinyCanvas._resume) tinyCanvas._resume(); if(tinyCanvas._bringIn) tinyCanvas._bringIn(); }
     }
@@ -30142,11 +31624,17 @@ function _neuInjectDownloadInterceptor(frame){
       targetS = 8;
     }
 
+    _flyOutProgress = true;
+    _synBotForceChatClosed();
+    _synBotLockRobotClicks();
+
     var fly = document.createElement('canvas');
+    // pointer-events none — zoom-out canvas must never open chat
     fly.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:88889;';
     fly.width  = window.innerWidth;
     fly.height = window.innerHeight;
     document.body.appendChild(fly);
+    _flyCanvas = fly;
     var fc = fly.getContext('2d');
 
     var DURATION = 500;
@@ -30218,7 +31706,9 @@ function _neuInjectDownloadInterceptor(frame){
       }
 
       if(prog>=1){
-        fly.parentNode.removeChild(fly);
+        if(fly.parentNode) fly.parentNode.removeChild(fly);
+        if(_flyCanvas === fly) _flyCanvas = null;
+        _flyOutProgress = false;
         if(tinyCanvas){
           // Resume flying from exactly where the animation ended
           if(tinyCanvas._resume) tinyCanvas._resume();
@@ -30235,25 +31725,10 @@ function _neuInjectDownloadInterceptor(frame){
   }
 
   // Track mouse position relative to the tiny robot's actual drawn position
+  // (declared early-ish via use in _synBotResyncPointerUnderCursor; init here)
   var _mouseX = -999, _mouseY = -999;
   var _nearRobot = false;
   var _overRobot = false;
-
-  /** Always prefer live localStorage so disable works even if var order is weird */
-  function _synBotIsOn(){
-    try {
-      if (typeof window._synBotEnabled === 'boolean') return window._synBotEnabled;
-      if (typeof _synBotEnabled !== 'undefined') return !!_synBotEnabled;
-      var v = localStorage.getItem('synapses_synbot_enabled');
-      if (v === null) return false;
-      return v === '1';
-    } catch (e) { return false; }
-  }
-  /** Bot must be visibly expanded before corner taps open chat */
-  function _synBotIsExpanded(){
-    var tip = document.getElementById('robotTooltip');
-    return !!(tip && tip.classList.contains('rt-visible'));
-  }
 
   document.addEventListener('mousemove', function(e){
     _mouseX = e.clientX; _mouseY = e.clientY;
@@ -30263,6 +31738,17 @@ function _neuInjectDownloadInterceptor(frame){
       _nearRobot = false;
       _overRobot = false;
       return;
+    }
+
+    // Landed bot under a stationary cursor: keep pointer cursor sticky without a wiggle
+    if(_synBotIsExpanded() && !_synBotIsFlying() && _synBotMouseOverLanded()){
+      _overRobot = true;
+      if(robot){
+        try{
+          robot.style.pointerEvents = 'auto';
+          robot.style.cursor = 'pointer';
+        }catch(_c){}
+      }
     }
 
     var tc = document.getElementById('tinyBotCanvas');
@@ -30285,62 +31771,90 @@ function _neuInjectDownloadInterceptor(frame){
     var dy = _mouseY - pos.y;
     var dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Within 60px of corner area — bring mini bot in
-    var cornerDx = window.innerWidth  - _mouseX;
-    var cornerDy = window.innerHeight - _mouseY;
-    var nearCorner = cornerDx < 160 && cornerDy < 160;
+    // Mini-bot hitbox: a bit larger than the drawn sprite (easier tap), not whole corner
+    var botR = Math.max(22, (pos.size || 10) * 2.1);
+    // Slightly larger zone just to fade the mini in
+    var bringInR = Math.max(36, (pos.size || 10) * 2.8);
 
-    if(nearCorner && !_nearRobot){
-      _nearRobot = true;
-      if(tc._bringIn) tc._bringIn();
-    } else if(!nearCorner && _nearRobot){
-      _nearRobot = false;
-    }
-
-    // Within generous radius of the robot sprite — trigger big robot
-    var hitRadius = (pos.size || 10) * 3.5;
-
-    // Also stay active if cursor is near the big robot tooltip area (bottom-right)
+    // Stay active if cursor is over the landed big robot (small pad around glyph)
     var tooltipEl = document.getElementById('robotTooltip');
     var nearTooltip = false;
     if(tooltipEl && tooltipEl.classList.contains('rt-visible')){
-      var tr = tooltipEl.getBoundingClientRect();
-      // Generous padding around the tooltip
-      nearTooltip = _mouseX >= tr.left - 40 && _mouseX <= tr.right  + 40
-                 && _mouseY >= tr.top  - 40 && _mouseY <= tr.bottom + 40;
+      var rrHit = document.getElementById('rtRobot');
+      var tr = (rrHit || tooltipEl).getBoundingClientRect();
+      var pad = 18; // soft hit pad around enlarged robot — not empty-corner huge
+      nearTooltip = _mouseX >= tr.left - pad && _mouseX <= tr.right  + pad
+                 && _mouseY >= tr.top  - pad && _mouseY <= tr.bottom + pad;
     }
 
-    if((dist < hitRadius || nearTooltip) && !_overRobot){
+    // Bring mini bot in when cursor is near the sprite — not a giant empty corner pad
+    var aboutToFly = dist < botR;
+    if(dist < bringInR && !_nearRobot){
+      _nearRobot = true;
+      if(!_synBotIsFlying() && !aboutToFly && !(tooltipEl && tooltipEl.classList.contains('rt-visible'))){
+        if(tc._bringIn) tc._bringIn();
+      }
+    } else if(dist >= bringInR + 8 && _nearRobot){
+      _nearRobot = false;
+    }
+
+    // Hover fly-up ONLY when pointer is on the mini sprite (or landed big bot) —
+    // empty space next to it must NOT zoom.
+    if((dist < botR || nearTooltip) && !_overRobot){
       _overRobot = true;
-      showRobot();
-    } else if(dist >= hitRadius + 12 && !nearTooltip && _overRobot){
+      if(!_synBotIsFlying()) showRobot();
+    } else if(dist >= botR + 6 && !nearTooltip && _overRobot){
       _overRobot = false;
       // Don't hide if chat panel is open — bot stays visible as the close target
       if(!chat || chat.style.display !== 'flex') hideRobot();
     }
   });
 
-  // Click robot glyph toggles chat — NEVER open from empty bottom-right corner taps
+  // Click landed robot glyph toggles chat — NEVER open from empty corner / mid-fly / cooldown
   function toggleChat(e){
     if(e){ try{ e.stopPropagation(); e.preventDefault(); }catch(_e){} }
     if(!chat) return;
     if(!_synBotIsOn()){
-      chat.style.display = 'none';
-      chat.style.pointerEvents = 'none';
+      _synBotForceChatClosed();
       if(tooltip){
         tooltip.classList.add('rt-hidden');
         tooltip.classList.remove('rt-visible');
-        tooltip.style.opacity = '0';
-        tooltip.style.visibility = 'hidden';
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
       }
       return;
     }
+    // Absolute: while flying (mini roam fly-in, or zoom-out) never open chat
+    if(_synBotIsFlying()){
+      return;
+    }
     if(chat.style.display === 'flex'){
+      // Close chat — keep landed robot visible so user can re-open
       chat.style.display = 'none';
       chat.style.pointerEvents = 'none';
-      if(tooltip){ tooltip.style.transition=''; tooltip.style.opacity=''; tooltip.style.visibility=''; }
+      if(tooltip){
+        tooltip.style.transition = '';
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
+        if(!tooltip.classList.contains('rt-visible')) doShowRobot();
+      }
     } else {
-      if(tooltip){ tooltip.style.transition='none'; tooltip.style.opacity='0'; tooltip.style.visibility='hidden'; }
+      // OPEN chat only when fully landed + past land cooldown (blocks ghost mouseup)
+      if(!_synBotCanOpenChat()){
+        // Not ready — start fly-in if idle, but never open panel
+        if(!_synBotIsExpanded() && !_synBotIsFlying()) showRobot();
+        return;
+      }
+      // Hide landed SVG while chat is open (avoids "clone" next to panel) but drop rt-visible
+      // so the corner is NOT clickable as an invisible robot
+      if(tooltip){
+        tooltip.style.transition = 'none';
+        tooltip.classList.add('rt-hidden');
+        tooltip.classList.remove('rt-visible');
+        tooltip.style.opacity = '';
+        tooltip.style.visibility = '';
+      }
+      _synBotLockRobotClicks();
       try{
         var _s = JSON.parse(localStorage.getItem('synapses_synbot_size') || 'null');
         if(_s){
@@ -30369,20 +31883,41 @@ function _neuInjectDownloadInterceptor(frame){
     }
   }
 
-  /* ONLY open chat by clicking the expanded robot SVG — never from document corner hit-tests */
+  /* ONLY open chat by clicking the expanded robot SVG after fly-in finished. */
   if(robot){
-    robot.style.pointerEvents = 'auto';
     robot.style.cursor = 'pointer';
-    robot.addEventListener('click', toggleChat);
+    // Default locked; unlocked only after land cooldown in doShowRobot
+    robot.style.pointerEvents = 'none';
+    robot.addEventListener('click', function(e){
+      // Extra hard gate — never toggle open unless can-open is true (close still allowed via path above)
+      if(chat && chat.style.display === 'flex'){
+        toggleChat(e);
+        return;
+      }
+      if(!_synBotCanOpenChat()){
+        if(e){ try{ e.stopPropagation(); e.preventDefault(); }catch(_e){} }
+        if(!_synBotIsFlying() && !_synBotIsExpanded()) showRobot();
+        return;
+      }
+      toggleChat(e);
+    });
   }
   if(tooltip){
     tooltip.style.pointerEvents = 'none';
-    if(robot) robot.style.pointerEvents = 'auto';
   }
   if(chat){
     chat.addEventListener('click', function(e){ e.stopPropagation(); });
     /* Ensure inputs inside panel always work */
     chat.style.pointerEvents = chat.style.display === 'flex' ? 'auto' : 'none';
+    // Belt-and-suspenders: if anything sets display:flex while flying, snap it shut
+    try{
+      new MutationObserver(function(){
+        if(_synBotIsFlying() && chat.style.display === 'flex'){
+          chat.style.display = 'none';
+          chat.style.pointerEvents = 'none';
+        }
+      }).observe(chat, {attributes:true, attributeFilter:['style']});
+    }catch(_mo){}
   }
 
   /* Close only — never open — on document click */
@@ -30396,22 +31931,33 @@ function _neuInjectDownloadInterceptor(frame){
     hideRobot();
   }, true);
 
-  /* Kill ghost opens: bottom-right taps must NEVER open the panel by coordinate hit-test */
+  /* Mini-bot click: fly-in only when the click is ON the mini sprite — not empty corner space.
+     Chat still only opens after land via #rtRobot. */
   document.addEventListener('click', function(e){
     if(!_synBotIsOn()){
-      if(chat){ chat.style.display='none'; chat.style.pointerEvents='none'; }
+      _synBotForceChatClosed();
       return;
     }
-    /* Only bring mini-bot closer — do not open chat from corner */
-    var tcIdle = document.getElementById('tinyBotCanvas');
-    if(!tcIdle || !tcIdle._getRobotScreenPos) return;
+    // Mid fly-in / zoom-out: ignore (do not open chat, do not restart fly)
+    if(_synBotIsFlying()){
+      return;
+    }
     if(chat && chat.contains(e.target)) return;
     if(robot && (e.target === robot || robot.contains(e.target))) return;
+    if(chat && chat.style.display === 'flex') return;
+    var tcIdle = document.getElementById('tinyBotCanvas');
+    if(!tcIdle || !tcIdle._getRobotScreenPos) return;
+    // Ignore if mini canvas is fully hidden / not on screen
+    try{
+      var op = parseFloat(tcIdle.style.opacity || '0');
+      if(op < 0.05 || tcIdle.style.visibility === 'hidden') return;
+    }catch(_op){}
     var pIdle = tcIdle._getRobotScreenPos();
     var dIdle = Math.hypot(e.clientX - pIdle.x, e.clientY - pIdle.y);
-    if(dIdle < (pIdle.size || 10) * 4){
-      if(tcIdle._bringIn) tcIdle._bringIn();
-      /* Do NOT call showRobot/toggleChat here — that caused ghost uninteractive panels */
+    // Slightly forgiving hit on mini bot (was mosquito-tight; still not whole corner)
+    var clickR = Math.max(24, (pIdle.size || 10) * 2.2);
+    if(dIdle <= clickR){
+      if(!_synBotIsExpanded() && !_synBotIsFlying()) showRobot();
     }
   }, true);
 
@@ -34325,6 +35871,13 @@ function speakVoiceReply(text) {
       _tnvClearGlideTimer();
       _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
     }
+    // If voice just turned on (or off) while the Studio modal is already open,
+    // sync the mic's escape state immediately rather than waiting for the next
+    // openImageGenModal()/closeImageGenModal() call.
+    var _sIgm = document.getElementById('imageGenModal');
+    var _sIgmOpen = _sIgm && _sIgm.style.display === 'flex';
+    if(v && _sIgmOpen && typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
+    if(!v && typeof window._tnvReturnFromModal === 'function') window._tnvReturnFromModal();
   }
 
   // True while Ava's realistic avatar is connected and on screen. Used to
