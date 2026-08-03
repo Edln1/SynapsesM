@@ -2383,16 +2383,17 @@ to{opacity:0;transform:translateX(-40px);}}
    speech-to-speech stays live and the rest of the top bar is collapsed.
    Position itself (the glide) is driven by JS via inline transform/opacity —
    this just establishes the positioning context. */
-/* Centered STS mic: fixed to the VIEWPORT so left:50% is true screen center
-   (under the front camera), not “middle of the top-bar box” which can be offset. */
+/* Center of top-bar: top/left 50% needs -50% transform or it sits down-right of true center.
+   transform is NOT !important so glide JS can temporarily override it. */
 #topNavVoiceBtn.tnv-centered{
-  position:fixed!important;
+  position:absolute!important;
+  top:50%!important;
   left:50%!important;
   right:auto!important;
   bottom:auto!important;
   margin:0!important;
   transform:translate(-50%,-50%);
-  z-index:100050;
+  z-index:5;
   pointer-events:auto!important;
 }
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
@@ -28329,76 +28330,33 @@ function _tnvGlideToCenter(){
   if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
-  /*
-    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%,
-    not “middle of .top-bar” (bar can be offset by layout/padding).
-    Vertical: optical mid of #topTitle / icon row.
-  */
-  var rowCy = first.top + first.height / 2;
-  try{
-    var titleEl = document.getElementById('topTitle');
-    if(titleEl && titleEl.getBoundingClientRect().height > 4){
-      var tr = titleEl.getBoundingClientRect();
-      rowCy = tr.top + tr.height / 2;
-    } else {
-      var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
-      if(barHidden) rowCy += 16;
-      var actions = document.querySelector('.top-bar .top-actions');
-      if(actions){
-        var row = actions.getBoundingClientRect();
-        if(row.height > 8){
-          var acy = row.top + row.height / 2;
-          if(barHidden) acy += 16;
-          rowCy = acy - 3;
-        }
-      }
-    }
-  }catch(_r){}
-  rowCy -= 2;
   _tnvHomeParent = btn.parentNode;
   _tnvHomeNextSibling = btn.nextSibling;
-  // Body + fixed = left:50% is screen center (camera), independent of top-bar box
-  document.body.appendChild(btn);
+  bar.appendChild(btn); // reparent: escapes .top-actions' opacity entirely
   btn.classList.add('tnv-centered');
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
-  btn.style.transition = 'none';
-  btn.style.setProperty('position', 'fixed', 'important');
-  btn.style.setProperty('left', '50%', 'important');
-  btn.style.setProperty('top', rowCy + 'px', 'important');
-  btn.style.right = 'auto';
-  btn.style.bottom = 'auto';
-  btn.style.margin = '0';
-  btn.style.zIndex = '100050';
-  btn.style.transform = 'translate(-50%,-50%)';
   var last = btn.getBoundingClientRect();
+  /* last is already centered via CSS translate(-50%,-50%) — measure without it for FLIP */
+  btn.style.transition = 'none';
+  btn.style.transform = 'translate(-50%,-50%)';
+  last = btn.getBoundingClientRect();
   var dx = first.left - last.left;
   var dy = first.top - last.top;
   btn.style.opacity = '0';
   btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
-  void btn.offsetWidth;
+  void btn.offsetWidth; // flush layout so the "from" state actually paints
   btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
   btn.style.opacity = '1';
   btn.style.transform = 'translate(-50%,-50%) scale(1)';
   _tnvTrackToastDuring(500);
+  /* After glide, keep pure center transform (no scale residue) */
   btn.addEventListener('transitionend', function _centerSettle(e){
     if(e.target !== btn || e.propertyName !== 'transform') return;
     if(!_tnvCentered) return;
     btn.style.transition = '';
     btn.style.transform = 'translate(-50%,-50%)';
   }, {once:true});
-}
-
-function _tnvClearCenteredInline(){
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn) return;
-  btn.style.removeProperty('position');
-  btn.style.removeProperty('top');
-  btn.style.removeProperty('left');
-  btn.style.removeProperty('right');
-  btn.style.removeProperty('bottom');
-  btn.style.removeProperty('margin');
-  btn.style.removeProperty('z-index');
 }
 
 function _tnvGlideHome(){
@@ -28408,7 +28366,6 @@ function _tnvGlideHome(){
   btn.classList.remove('tnv-centered');
   btn.style.transition = 'none';
   btn.style.transform = 'none';
-  _tnvClearCenteredInline();
   var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
   if(home){
     if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -28431,12 +28388,12 @@ function _tnvGlideHome(){
     btn.style.transform = '';
     btn.style.opacity = '';
   }, {once:true});
+  /* Safety: clear residual transform if transitionend never fires */
   setTimeout(function(){
     if(!_tnvCentered && btn && !btn.classList.contains('tnv-centered')){
       btn.style.transition = '';
       btn.style.transform = '';
       btn.style.opacity = '';
-      _tnvClearCenteredInline();
     }
   }, 500);
 }
@@ -28446,37 +28403,6 @@ function _tnvSendAway(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn) return;
   _tnvClearGlideTimer();
-  /* Studio-parked: clear fixed styles quietly and dock — do NOT center-transform */
-  if(_tnvEscaped || btn.getAttribute('data-tnv-studio-parked') === '1'){
-    _tnvEscaped = false;
-    try{ btn.removeAttribute('data-tnv-studio-parked'); }catch(_a){}
-    btn.classList.remove('tnv-centered');
-    btn.style.transition = 'opacity .25s ease, transform .25s ease';
-    btn.style.transform = 'scale(0.85)';
-    btn.style.opacity = '0';
-    setTimeout(function(){
-      btn.style.transition = 'none';
-      btn.style.transform = '';
-      btn.style.opacity = '';
-      btn.style.width = '';
-      btn.style.height = '';
-      if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
-      btn.style.position = '';
-      btn.style.top = '';
-      btn.style.left = '';
-      btn.style.right = '';
-      btn.style.bottom = '';
-      btn.style.margin = '';
-      btn.style.zIndex = '';
-      var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
-      if(home){
-        try{ home.insertBefore(btn, home.firstChild); }catch(_h){ try{ home.appendChild(btn); }catch(_h2){} }
-      }
-      _tnvCentered = false;
-      try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e2){}
-    }, 260);
-    return;
-  }
   if(!_tnvCentered && !btn.classList.contains('tnv-centered')){
     try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e){}
     return;
@@ -28491,9 +28417,6 @@ function _tnvSendAway(){
     btn.style.transition = 'none';
     btn.style.transform = '';
     btn.style.opacity = '';
-    btn.style.width = '';
-    btn.style.height = '';
-    if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
     var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
     if(home){
       if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
@@ -28508,18 +28431,54 @@ window._tnvGlideHome = _tnvGlideHome;
 window._tnvGlideToCenter = _tnvGlideToCenter;
 
 // ── Keep the active mic visible over full-screen overlays (Studio / Community) ──
-// Simple pin above Studio (no size rewrite, no fly animation that squash the button).
-// Restore home by reparenting — same approach as proper working.html.
+// The Studio modal (#imageGenModal) is a position:fixed, z-index:500 layer that
+// sits above <main> (which is itself z-index:1, so nothing inside it — including
+// the mic, wherever it currently lives: docked in .top-actions or glided to
+// center — can out-stack the modal from within). While speech-to-speech is
+// live, we pull the button out to document.body, pin it in place with
+// position:fixed at its exact current on-screen coordinates, and raise its
+// z-index above the modal. No FLIP glide, no animation — it's already visually
+// in that spot, so this is just a same-frame snap, not a move. Reversed the
+// same way (instant, no transition) once the modal closes.
 var _tnvEscaped = false;
 var _tnvEscapeHomeParent = null;
 var _tnvEscapeHomeNextSibling = null;
 var _tnvEscapeWasCentered = false;
-
-function _tnvClearStudioInline(btn){
-  if(!btn) return;
-  try{ btn.removeAttribute('data-tnv-studio-parked'); }catch(_a){}
-  btn.style.width = '';
-  btn.style.height = '';
+function _tnvEscapeAboveModal(){
+  if(!window._topNavVoiceActive) return;
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || _tnvEscaped) return;
+  var r = btn.getBoundingClientRect();
+  _tnvEscapeHomeParent = btn.parentNode;
+  _tnvEscapeHomeNextSibling = btn.nextSibling;
+  _tnvEscapeWasCentered = btn.classList.contains('tnv-centered');
+  if(_tnvEscapeWasCentered) btn.classList.remove('tnv-centered'); // drop the !important top/left so inline fixed coords apply
+  _tnvEscaped = true;
+  var savedTransition = btn.style.transition;
+  btn.style.transition = 'none';
+  document.body.appendChild(btn);
+  btn.style.position = 'fixed';
+  btn.style.top = r.top + 'px';
+  btn.style.left = r.left + 'px';
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.transform = 'none';
+  btn.style.margin = '0';
+  btn.style.zIndex = '600'; // above #imageGenModal's z-index:500
+  void btn.offsetWidth;
+  btn.style.transition = savedTransition;
+}
+function _tnvReturnFromModal(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || !_tnvEscaped) return;
+  _tnvEscaped = false;
+  var savedTransition = btn.style.transition;
+  btn.style.transition = 'none';
+  var home = _tnvEscapeHomeParent;
+  if(home){
+    if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvEscapeHomeNextSibling);
+    else home.appendChild(btn);
+  }
   btn.style.position = '';
   btn.style.top = '';
   btn.style.left = '';
@@ -28528,97 +28487,9 @@ function _tnvClearStudioInline(btn){
   btn.style.transform = '';
   btn.style.margin = '';
   btn.style.zIndex = '';
-  btn.style.opacity = '';
-  btn.style.transition = '';
-  if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
-}
-
-function _tnvEscapeAboveModal(){
-  if(!window._topNavVoiceActive) return;
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn || _tnvEscaped) return;
-  var r = btn.getBoundingClientRect();
-  var actions = document.querySelector('.top-bar .top-actions');
-  _tnvEscapeHomeParent = actions || btn.parentNode;
-  _tnvEscapeHomeNextSibling = (actions && btn.parentNode === actions) ? btn.nextSibling : (actions ? actions.firstChild : btn.nextSibling);
-  _tnvEscapeWasCentered = !!(btn.classList.contains('tnv-centered') || _tnvCentered);
-  if(_tnvEscapeWasCentered){
-    btn.classList.remove('tnv-centered');
-    if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
-  }
-  _tnvCentered = false;
-  _tnvEscaped = true;
-  var savedTransition = btn.style.transition;
-  btn.style.transition = 'none';
-  document.body.appendChild(btn);
-  // Pin at exact visual box — do NOT rewrite width/height (egg/squash bug)
-  btn.style.position = 'fixed';
-  btn.style.top = r.top + 'px';
-  btn.style.left = r.left + 'px';
-  btn.style.right = 'auto';
-  btn.style.bottom = 'auto';
-  btn.style.transform = 'none';
-  btn.style.margin = '0';
-  btn.style.width = '';
-  btn.style.height = '';
-  btn.style.zIndex = '600';
-  btn.setAttribute('data-tnv-studio-parked', '1');
+  if(_tnvEscapeWasCentered) btn.classList.add('tnv-centered');
   void btn.offsetWidth;
   btn.style.transition = savedTransition;
-}
-
-function _tnvReturnFromModal(){
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn || !_tnvEscaped) return;
-  _tnvEscaped = false;
-  var wasCentered = _tnvEscapeWasCentered && window._topNavVoiceActive;
-  btn.style.transition = 'none';
-  _tnvClearStudioInline(btn);
-  // Always clear forced sizes so the mic is never "egg"/squashed
-  btn.style.width = '';
-  btn.style.height = '';
-  btn.style.minWidth = '';
-  btn.style.minHeight = '';
-  btn.style.maxWidth = '';
-  btn.style.maxHeight = '';
-
-  if(wasCentered){
-    // Snap back to true mid-header (same coords as glide-to-center), natural button size
-    var rowCy = (window.innerHeight || 640) * 0.06;
-    try{
-      var titleEl = document.getElementById('topTitle');
-      if(titleEl && titleEl.getBoundingClientRect().height > 4){
-        var tr = titleEl.getBoundingClientRect();
-        rowCy = tr.top + tr.height / 2 - 2;
-      }
-    }catch(_y){}
-    document.body.appendChild(btn);
-    btn.classList.add('tnv-centered');
-    _tnvCentered = true;
-    btn.style.setProperty('position', 'fixed', 'important');
-    btn.style.setProperty('left', '50%', 'important');
-    btn.style.setProperty('top', rowCy + 'px', 'important');
-    btn.style.right = 'auto';
-    btn.style.bottom = 'auto';
-    btn.style.margin = '0';
-    btn.style.zIndex = '100050';
-    btn.style.transform = 'translate(-50%,-50%)';
-    btn.style.width = '';
-    btn.style.height = '';
-    try{ localStorage.setItem('synapses_tnv_centered','1'); }catch(e){}
-  } else {
-    btn.classList.remove('tnv-centered');
-    _tnvCentered = false;
-    var home = document.querySelector('.top-bar .top-actions') || _tnvEscapeHomeParent;
-    if(home && home !== document.body){
-      try{ home.insertBefore(btn, home.firstChild); }catch(_h){
-        try{ home.appendChild(btn); }catch(_h2){}
-      }
-    }
-    try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e){}
-  }
-  void btn.offsetWidth;
-  btn.style.transition = '';
 }
 window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
 window._tnvReturnFromModal = _tnvReturnFromModal;
