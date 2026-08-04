@@ -8754,9 +8754,9 @@ function openStudioImageLightbox(src, meta){
 window.openStudioImageLightbox = openStudioImageLightbox;
 
 /**
- * Save Studio image to the device as a real file download.
- * - Always uses a Blob + <a download> (or native downloadFile with open:false)
- * - Never opens gallery / new-tab preview prompts
+ * Save Studio image to the device — silent file download only.
+ * Never calls native downloadImage / downloadFile (those open Gallery chooser).
+ * Never window.open / target=_blank.
  */
 function downloadGeneratedImage(src, filename){
   if(!src) return;
@@ -8766,45 +8766,84 @@ function downloadGeneratedImage(src, filename){
     if(typeof showToast === 'function') showToast(msg || 'Could not download image');
   }
 
-  function triggerBlobDownload(blob){
-    if(!blob || !blob.size){ failQuiet(); return; }
-    // Keep extension in sync with real mime when possible
+  function normalizeFilenameForBlob(blob){
     try{
-      var mime = (blob.type || '').toLowerCase();
+      var mime = (blob && blob.type || '').toLowerCase();
       if(mime.indexOf('png') >= 0 && !/\.png$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.png';
       else if((mime.indexOf('jpeg') >= 0 || mime.indexOf('jpg') >= 0) && !/\.jpe?g$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.jpg';
       else if(mime.indexOf('webp') >= 0 && !/\.webp$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.webp';
     }catch(_m){}
+    return filename;
+  }
+
+  function triggerBlobDownload(blob){
+    if(!blob || !blob.size){ failQuiet(); return; }
+    filename = normalizeFilenameForBlob(blob);
+
+    // 1) Chromium Save picker — user picks folder, no gallery open
+    if(typeof window.showSaveFilePicker === 'function'){
+      var accept = { 'image/jpeg': ['.jpg', '.jpeg'] };
+      var mimePick = (blob.type || 'image/jpeg').toLowerCase();
+      if(mimePick.indexOf('png') >= 0) accept = { 'image/png': ['.png'] };
+      else if(mimePick.indexOf('webp') >= 0) accept = { 'image/webp': ['.webp'] };
+      window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Image', accept: accept }]
+      }).then(function(handle){
+        return handle.createWritable().then(function(w){
+          return w.write(blob).then(function(){ return w.close(); });
+        });
+      }).then(function(){
+        if(typeof showToast === 'function') showToast('Saved');
+      }).catch(function(err){
+        if(err && err.name === 'AbortError') return; // cancelled
+        // fall through to anchor download
+        _anchorDownloadSilent(blob);
+      });
+      return;
+    }
+
+    _anchorDownloadSilent(blob);
+  }
+
+  function _anchorDownloadSilent(blob){
+    // Use generic binary type so Android WebView is less likely to
+    // auto-launch Gallery / "Open with" after the download finishes.
+    // Filename still ends in .jpg/.png so the file opens correctly later.
+    var payload = blob;
+    try{
+      payload = new Blob([blob], { type: 'application/octet-stream' });
+    }catch(_b){ payload = blob; }
 
     try{
-      var url = URL.createObjectURL(blob);
+      if(typeof navigator !== 'undefined' && navigator.msSaveOrOpenBlob){
+        navigator.msSaveOrOpenBlob(payload, filename);
+        if(typeof showToast === 'function') showToast('Downloaded');
+        return;
+      }
+    }catch(_ie){}
+
+    try{
+      var url = URL.createObjectURL(payload);
       var a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.rel = 'noopener';
-      // Do NOT set target=_blank — that opens/preview instead of saving
-      a.style.display = 'none';
+      a.type = 'application/octet-stream';
+      // critical: never target=_blank (opens / gallery intents)
+      a.removeAttribute('target');
+      a.style.cssText = 'display:none;position:fixed;left:-9999px;';
       document.body.appendChild(a);
-      a.click();
+      // Synchronous click in the same user-gesture turn when possible
+      a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       setTimeout(function(){
         try{ a.remove(); }catch(_a){}
         try{ URL.revokeObjectURL(url); }catch(_r){}
-      }, 2000);
+      }, 2500);
       if(typeof showToast === 'function') showToast('Downloaded');
-      return;
-    }catch(e){}
-
-    // Native shell: force file save without opening the image
-    try{
-      if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
-        // open:false — no gallery / preview prompt
-        median.share.downloadFile({ url: URL.createObjectURL(blob), filename: filename, open: false });
-        if(typeof showToast === 'function') showToast('Downloaded');
-        return;
-      }
-    }catch(_n){}
-
-    failQuiet();
+    }catch(e){
+      failQuiet();
+    }
   }
 
   function canvasFromImageUrl(url){
@@ -8842,25 +8881,13 @@ function downloadGeneratedImage(src, filename){
     return;
   }
 
-  // http(s) / relative — fetch as blob (required for cross-origin + download attr)
+  // http(s) — fetch as blob, then silent download (no native gallery bridges)
   fetch(src, { mode: 'cors', credentials: 'omit', cache: 'force-cache' }).then(function(r){
     if(!r.ok) throw new Error('fetch ' + r.status);
     return r.blob();
-  }).then(function(blob){
-    // Some CDNs return application/octet-stream — still fine for download
-    triggerBlobDownload(blob);
-  }).catch(function(){
-    // CORS-blocked: redraw via canvas when server sends ACAO *
+  }).then(triggerBlobDownload).catch(function(){
     canvasFromImageUrl(src).then(triggerBlobDownload).catch(function(){
-      // Last resort native file save (still no gallery open)
-      try{
-        if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
-          median.share.downloadFile({ url: src, filename: filename, open: false });
-          if(typeof showToast === 'function') showToast('Downloaded');
-          return;
-        }
-      }catch(_nf){}
-      failQuiet('Download blocked — try again or use a different image');
+      failQuiet('Download blocked — try again');
     });
   });
 }
