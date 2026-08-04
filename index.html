@@ -42572,6 +42572,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
+      cardPlace: 'mid',
       holePad: 6,
       holeMax: 44,
       holeMaxH: 44,
@@ -42614,6 +42615,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
+      cardPlace: 'mid',
       holePad: 6,
       holeMax: 44,
       holeMaxH: 44,
@@ -42635,6 +42637,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
+      cardPlace: 'mid',
       holePad: 6,
       holeMax: 44,
       holeMaxH: 44,
@@ -42657,6 +42660,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
+      cardPlace: 'mid',
       holePad: 6,
       holeMax: 44,
       holeMaxH: 44,
@@ -42685,6 +42689,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
+      cardPlace: 'mid',
       holePad: 6,
       holeMax: 44,
       holeMaxH: 44,
@@ -42705,10 +42710,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      iconCenter: true,
-      holePad: 2,
-      holeMax: 30,
-      holeMaxH: 30,
+      iconCenter: false,
+      cardPlace: 'side',
+      holePad: 3,
+      holeMin: 32,
+      holeMax: 34,
+      holeMaxH: 34,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42796,7 +42803,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '}',
 
       /* soft target ring — soft glass tones, no neon teal blast */
-      '#synTourHole{position:absolute;border-radius:18px;pointer-events:none;opacity:0;z-index:2;',
+      '#synTourHole{position:fixed;border-radius:18px;pointer-events:none;opacity:0;z-index:100060;',
       'background:transparent;',
       'box-shadow:0 0 0 1px rgba(255,255,255,0.22),0 0 0 6px rgba(124,106,247,0.12),0 0 28px 4px rgba(124,106,247,0.18),inset 0 0 28px rgba(196,181,253,0.04);',
       'transition:left .65s cubic-bezier(0.16,1,0.3,1),top .65s cubic-bezier(0.16,1,0.3,1),width .65s cubic-bezier(0.16,1,0.3,1),height .65s cubic-bezier(0.16,1,0.3,1),opacity .35s ease,border-radius .4s;}',
@@ -46255,7 +46262,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     if (step && (step.tight || step.iconCenter)) {
       /* Small square ring centered on the icon glyph — not the whole 48×52 hit box */
       var side = Math.ceil(Math.max(r.width, r.height) + pad * 2);
-      side = Math.max(36, Math.min(side, Math.min(maxW, maxH)));
+      var minSide = (step && step.holeMin != null) ? step.holeMin : 28;
+      side = Math.max(minSide, Math.min(side, Math.min(maxW, maxH)));
       w = side;
       h = side;
     } else {
@@ -46266,13 +46274,19 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
     var cx = r.left + r.width / 2;
     var cy = r.top + r.height / 2;
-    var left = Math.max(2, Math.min(innerWidth - w - 2, cx - w / 2));
-    var top = Math.max(2, Math.min(innerHeight - h - 2, cy - h / 2));
+    /* Exact center — allow partial off-screen clamp only on the ring edges */
+    var left = Math.round(cx - w / 2);
+    var top = Math.round(cy - h / 2);
+    left = Math.max(0, Math.min(innerWidth - w, left));
+    top = Math.max(0, Math.min(innerHeight - h, top));
+    hole.style.position = 'fixed';
     hole.style.left = left + 'px';
     hole.style.top = top + 'px';
     hole.style.width = w + 'px';
     hole.style.height = h + 'px';
-    hole.style.borderRadius = (step && (step.tight || step.iconCenter)) ? '12px' : (h < 100 ? '16px' : '18px');
+    hole.style.borderRadius = (step && (step.tight || step.iconCenter)) ? '50%' : (h < 100 ? '16px' : '18px');
+    /* Win strip is z-index 9999999 — ring must sit above it for topBarToggle */
+    hole.style.zIndex = (step && step.sel === '#topBarToggle') ? '10000001' : '';
     hole.classList.add('show');
     spawnBurst(cx, cy, 8, [C.purp, 'rgba(196,181,253,0.85)']);
   }
@@ -46309,47 +46323,69 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function placeCard(r, step) {
     var card = $('synTourCard');
     if (!card) return;
-    var w = Math.min(360, innerWidth - 28);
-    var ch = 210;
-    var left, top;
+    var w = Math.min(320, innerWidth - 28);
     var prefer = (step && step.cardPlace) || '';
     /* Keep visibility if already shown (remeasure must not hide Next forever) */
     var keepVisible = card.classList.contains('show');
 
-    if (prefer === 'bottom' && r) {
-      /* Sit just above Ask me anything / target — not buried under it */
-      left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
-      top = Math.max(16, r.top - ch - 14);
-      if (top + ch > r.top - 8) top = Math.max(16, r.top - ch - 14);
-      if (top < 12) {
-        /* Fallback: bottom of screen only if no room above */
-        top = Math.min(innerHeight - ch - 16, r.bottom + 14);
+    /* Measure real card height after content is set (avoid fixed 210 covering the ring) */
+    card.style.width = w + 'px';
+    card.style.visibility = 'hidden';
+    card.style.display = 'block';
+    card.style.left = '-9999px';
+    card.style.top = '0';
+    var ch = Math.max(140, card.offsetHeight || 180);
+    /* Bottom-nav icons: always float the card in mid-screen, clear of the icon row */
+    var nearBottom = r && (r.bottom > innerHeight - 100 || r.top > innerHeight * 0.72);
+    var nearTop = r && r.top < 56;
+    var left, top;
+
+    if (prefer === 'mid' || (nearBottom && prefer !== 'side')) {
+      left = Math.max(12, (innerWidth - w) / 2);
+      /* Sit in upper-middle so bottom icon + ring stay fully visible */
+      top = Math.max(56, Math.min(innerHeight * 0.28, (innerHeight - ch) / 2 - 40));
+      if (r && top + ch > r.top - 12) {
+        top = Math.max(48, r.top - ch - 20);
       }
+      if (top < 48) top = 48;
+    } else if (prefer === 'bottom' && r) {
+      left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
+      top = Math.max(16, r.top - ch - 18);
+      if (top + ch > r.top - 10) top = Math.max(16, r.top - ch - 18);
+      if (top < 12) top = Math.min(innerHeight - ch - 72, Math.max(48, r.bottom + 14));
     } else if (!r || prefer === 'bottom') {
       left = (innerWidth - w) / 2;
-      top = Math.max(24, innerHeight - ch - 28);
-    } else if (prefer === 'side') {
-      left = r.right + 16;
-      if (left + w > innerWidth - 12) left = Math.max(12, r.left - w - 16);
-      top = Math.max(16, Math.min(innerHeight - ch - 16, r.top));
+      top = Math.max(48, Math.min(innerHeight * 0.32, innerHeight - ch - 100));
+    } else if (prefer === 'side' || nearTop) {
+      /* Top-right toggle: card to the left / below, never over the control */
+      left = Math.max(12, Math.min(r.left - w - 12, innerWidth - w - 12));
+      if (left < 12 || left + w > r.left - 8) {
+        left = Math.max(12, (innerWidth - w) / 2);
+        top = Math.max(r.bottom + 14, 52);
+      } else {
+        top = Math.max(40, Math.min(innerHeight - ch - 16, r.top + r.height / 2 - ch / 2));
+      }
+      if (top + ch > innerHeight - 12) top = Math.max(40, innerHeight - ch - 16);
     } else {
       left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2));
       top = r.bottom + 16;
-      if (top + ch > innerHeight - 12) top = Math.max(16, r.top - ch - 12);
+      if (top + ch > innerHeight - 12) top = Math.max(16, r.top - ch - 16);
       if (top < 12) top = Math.max(16, innerHeight - ch - 24);
       var cardBottom = top + ch;
       var cardRight = left + w;
       var overlaps =
-        left < r.right && cardRight > r.left &&
-        top < r.bottom && cardBottom > r.top;
+        left < r.right + 8 && cardRight > r.left - 8 &&
+        top < r.bottom + 8 && cardBottom > r.top - 8;
       if (overlaps) {
-        top = Math.max(16, r.top - ch - 14);
-        if (top < 12) top = Math.max(16, innerHeight - ch - 28);
-        left = (innerWidth - w) / 2;
+        top = Math.max(16, r.top - ch - 16);
+        if (top < 12 || (top + ch > r.top - 8)) {
+          left = Math.max(12, (innerWidth - w) / 2);
+          top = Math.max(48, Math.min(innerHeight * 0.28, r.top - ch - 24));
+        }
       }
     }
-    card.style.left = left + 'px';
-    card.style.top = top + 'px';
+    card.style.left = Math.round(left) + 'px';
+    card.style.top = Math.round(top) + 'px';
     card.style.zIndex = '100070';
     card.style.pointerEvents = 'auto';
     if (keepVisible) {
