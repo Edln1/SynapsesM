@@ -9047,14 +9047,16 @@ function openStudioImageLightbox(src, meta){
 window.openStudioImageLightbox = openStudioImageLightbox;
 
 /**
- * Studio download — Median native only on Android (no Open-with sheet).
+ * Studio download — ACTUALLY save to device Photos / Downloads.
  *
- * Form-post / <a download> / octet-stream caused "Open with random apps".
- * Correct path in Median app:
- *   data URL → server temp HTTPS URL → median.share.downloadFile({ open: false })
- * That saves to Downloads silently (if Median "Downloads folder" is enabled).
- * Fallback: median.share.downloadImage → Photos (no multi-app chooser).
- * Desktop: normal <a download> / save dialog.
+ * Important: websites CANNOT reset Android "Always open with ChatGPT".
+ * That is a phone setting (Settings → Apps → ChatGPT → Clear defaults).
+ *
+ * On the Median Android shell we ONLY use native bridges:
+ *   1) median.share.downloadImage  → saves to Gallery/Photos (best for photos)
+ *   2) median.share.downloadFile({open:false}) → Downloads folder
+ * Never a.click / form-post / share sheet — those open ChatGPT or app pickers.
+ * Never toast "Saved" unless we actually invoked a native save API.
  */
 function downloadGeneratedImage(src, filename, imgEl){
   if(!src && !(imgEl && imgEl.src)) return;
@@ -9070,12 +9072,31 @@ function downloadGeneratedImage(src, filename, imgEl){
   function hasMedian(){
     try{ return typeof median !== 'undefined' && median && median.share; }catch(e){ return false; }
   }
+  function isAndroid(){
+    try{
+      if(typeof isMedianAndroidApp === 'function' && isMedianAndroidApp()) return true;
+      if(hasMedian()) return true;
+      return /Android/i.test(navigator.userAgent || '');
+    }catch(e){ return false; }
+  }
   function isMobile(){
     try{
-      if(hasMedian()) return true;
-      if(typeof isMedianAndroidApp === 'function' && isMedianAndroidApp()) return true;
-      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      if(isAndroid()) return true;
+      return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
     }catch(e){ return false; }
+  }
+
+  /** One-time tip if ChatGPT keeps stealing files (we cannot clear that from code) */
+  function tipClearChatGptDefault(){
+    try{
+      if(localStorage.getItem('synapses_tip_clear_chatgpt_default') === '1') return;
+      localStorage.setItem('synapses_tip_clear_chatgpt_default', '1');
+    }catch(e){}
+    setTimeout(function(){
+      if(typeof showToast === 'function'){
+        showToast('If ChatGPT opens the photo: Settings → Apps → ChatGPT → Open by default → Clear defaults');
+      }
+    }, 1600);
   }
 
   function dataUrlFromImg(img){
@@ -9119,7 +9140,7 @@ function downloadGeneratedImage(src, filename, imgEl){
         var b64 = (dataUrl.split(',')[1] || '');
         var bytes = Uint8Array.from(atob(b64), function(c){ return c.charCodeAt(0); });
         return Neutralino.filesystem.writeBinaryFile(savePath, bytes.buffer);
-      }).then(function(){ okToast('Saved'); }).catch(function(){ failToast('Save failed'); });
+      }).then(function(){ okToast('Saved to file'); }).catch(function(){ failToast('Save failed'); });
       return true;
     }catch(e){ return false; }
   }
@@ -9146,26 +9167,65 @@ function downloadGeneratedImage(src, filename, imgEl){
     }catch(e){ return false; }
   }
 
-  /** Median native only — no form post, no a.click, no share sheet */
+  /**
+   * Native Median save only. Prefer Photos (downloadImage) so the file
+   * lands in Gallery — NOT "open with ChatGPT".
+   * Returns true only if a native API was successfully invoked.
+   */
   function medianSaveHttps(url){
     if(!url || !hasMedian()) return false;
+    var share = median.share;
+
+    // 1) Photos / Gallery — correct API for images (no Open-with list)
     try{
-      if(typeof median.share.downloadFile === 'function'){
-        median.share.downloadFile({ url: url, open: false, filename: filename });
-        okToast('Saved to Downloads');
+      if(typeof share.downloadImage === 'function'){
+        var r1 = share.downloadImage({ url: url });
+        // Promise-style bridge
+        if(r1 && typeof r1.then === 'function'){
+          r1.then(function(){ okToast('Saved to Photos / Gallery'); })
+            .catch(function(){ failToast('Could not save to Photos'); tipClearChatGptDefault(); });
+          return true;
+        }
+        okToast('Saved to Photos / Gallery — open your Gallery app');
         return true;
       }
-    }catch(e1){}
+    }catch(e1){ console.warn('[Studio dl] downloadImage', e1); }
+
+    // 2) Downloads folder (must be enabled in app shell; open MUST be false)
     try{
-      if(typeof median.share.downloadImage === 'function'){
-        median.share.downloadImage({ url: url });
-        okToast('Saved to Photos');
+      if(typeof share.downloadFile === 'function'){
+        var r2 = share.downloadFile({ url: url, open: false, filename: filename });
+        if(r2 && typeof r2.then === 'function'){
+          r2.then(function(){ okToast('Saved to Downloads'); })
+            .catch(function(){ failToast('Download failed'); tipClearChatGptDefault(); });
+          return true;
+        }
+        okToast('Save requested — check Downloads / Files app');
+        tipClearChatGptDefault();
         return true;
       }
-    }catch(e2){}
+    }catch(e2){ console.warn('[Studio dl] downloadFile', e2); }
+
+    // 3) Legacy GoNative names
+    try{
+      if(typeof window.gonative_download_image === 'function'){
+        window.gonative_download_image(url);
+        okToast('Saved to Photos / Gallery');
+        return true;
+      }
+    }catch(e3){}
+    try{
+      if(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.downloadImage){
+        window.webkit.messageHandlers.downloadImage.postMessage({ url: url });
+        okToast('Saved to Photos / Gallery');
+        return true;
+      }
+    }catch(e4){}
+
     return false;
   }
 
+  /** Host image on server (public https) then native save — required for Median */
   function saveOnMobile(dataUrl){
     busyToast();
     fetch(proxyBase + '/studio-prepare-download', {
@@ -9179,11 +9239,15 @@ function downloadGeneratedImage(src, filename, imgEl){
       });
     }).then(function(j){
       var url = j.url || (proxyBase + '/studio-download/' + j.token);
+      if(!url) throw new Error('no url');
+      // Do NOT fetch the URL here — token is for Median native download only.
+      // A pre-fetch would steal the file / trigger wrong handlers.
       if(medianSaveHttps(url)) return;
-      failToast('Enable Downloads folder in Median app permissions');
+      failToast('Cannot save: app needs photo save bridge');
+      tipClearChatGptDefault();
     }).catch(function(err){
       console.error('[Studio download]', err);
-      failToast('Save failed — deploy latest server.js then retry');
+      failToast('Save failed — update server.js on Render, then retry');
     });
   }
 
@@ -9193,29 +9257,16 @@ function downloadGeneratedImage(src, filename, imgEl){
     if(!du){ failToast('Image not ready'); return; }
     if(tryNeutralino(du)) return;
     if(!isMobile() && tryDesktopAnchor(du)) return;
-    if(hasMedian()){
+
+    // Android / iOS WebView app — native only, never a.click (opens ChatGPT)
+    if(hasMedian() || isAndroid()){
       saveOnMobile(du);
       return;
     }
-    busyToast();
-    fetch(proxyBase + '/studio-prepare-download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl: du, filename: filename })
-    }).then(function(r){ return r.json(); }).then(function(j){
-      if(!j || !j.url) throw new Error('no url');
-      var a = document.createElement('a');
-      a.href = j.url;
-      a.download = filename;
-      a.rel = 'noopener';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function(){ try{ a.remove(); }catch(_e){} }, 1500);
-      okToast('Download started');
-    }).catch(function(){
-      failToast('Could not save on this browser');
-    });
+
+    // Mobile Safari etc. without Median: best-effort desktop-style only on non-Android
+    if(!isAndroid() && tryDesktopAnchor(du)) return;
+    failToast('Open in browser to download, or use the app build');
   }
 
   if(dataUrl){
@@ -9224,7 +9275,21 @@ function downloadGeneratedImage(src, filename, imgEl){
   }
 
   if(/^https?:/i.test(src)){
-    if(medianSaveHttps(src)) return;
+    // Already public URL — native save, never navigate / a.click on Android
+    if(isAndroid() || hasMedian()){
+      if(medianSaveHttps(src)) return;
+      // Re-host through our server so Content-Disposition is clean
+      busyToast();
+      fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){ return r.blob(); }).then(function(blob){
+        return new Promise(function(resolve, reject){
+          var fr = new FileReader();
+          fr.onload = function(){ resolve(fr.result); };
+          fr.onerror = reject;
+          fr.readAsDataURL(blob);
+        });
+      }).then(function(du){ go(du); }).catch(function(){ failToast('Could not save'); });
+      return;
+    }
     busyToast();
     fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){ return r.blob(); }).then(function(blob){
       return new Promise(function(resolve, reject){
@@ -9233,16 +9298,7 @@ function downloadGeneratedImage(src, filename, imgEl){
         fr.onerror = reject;
         fr.readAsDataURL(blob);
       });
-    }).then(function(du){ go(du); }).catch(function(){
-      var im = new Image();
-      im.crossOrigin = 'anonymous';
-      im.onload = function(){
-        var du = dataUrlFromImg(im);
-        if(du) go(du); else failToast('Could not save');
-      };
-      im.onerror = function(){ failToast('Could not save'); };
-      im.src = src;
-    });
+    }).then(function(du){ go(du); }).catch(function(){ failToast('Could not save'); });
     return;
   }
 
@@ -38790,17 +38846,104 @@ function speakVoiceReply(text) {
     // look like a 13s hang the moment the last buffer ends.
     if (audioPlaying) { _busySince = now; return; }
     // Threshold: STT + ensure-places(≤0.9s) + Tavily(5s) + Groq(6s) ≈ 12s. Cap place ensure so we stay under.
-    if (stuckMs > 14000) {
-      console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting');
+    // Offline / dead network: don't wait full 14s — unstick faster
+    var offlineNow = (typeof navigator !== 'undefined' && navigator.onLine === false);
+    var stuckLimit = offlineNow ? 4500 : 14000;
+    if (stuckMs > stuckLimit) {
+      console.warn('[Watchdog] _busy stuck for ' + stuckMs + 'ms — auto-resetting' + (offlineNow ? ' (offline)' : ''));
       _busy = false; _busySince = 0;
       _voiceTurnId++; // abandon stale turn
       _abortAllTurnRequests();
       try { if (_recorder && _recorder.state === 'recording') _recorder.stop(); } catch(e) {}
       _recorder = null;
       try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {}
-      if (_on) setTimeout(record, 300);
+      if (offlineNow) {
+        try { if (!_avatarLive()) toast('No connection — speech paused'); } catch(eT){}
+      } else if (_on) {
+        setTimeout(record, 300);
+      }
     }
   }, 1500);
+
+  // ── Network flip recovery (WiFi ↔ mobile data) ────────────────────────────
+  // Walking outside often switches radio without a clean offline event. In-flight
+  // STT/LLM/TTS hang on "One moment..." until the 14s watchdog. On any network
+  // loss/restore: abort the dead turn, drop mic tracks, reacquire, listen again.
+  var _stsWasOnline = (typeof navigator === 'undefined' || navigator.onLine !== false);
+  var _stsNetTimer = null;
+  var _stsNetLastRecover = 0;
+  function _stsNetworkRecover(reason) {
+    if (!_on) return;
+    var now = Date.now();
+    // Debounce rapid bounce (WiFi flapping)
+    if (now - _stsNetLastRecover < 1200 && reason !== 'offline') return;
+    _stsNetLastRecover = now;
+    console.warn('[STS] network recover:', reason);
+    _voiceTurnId++;
+    _abortAllTurnRequests();
+    _busy = false;
+    _busySince = 0;
+    try { if (_recorder && _recorder.state === 'recording') _recorder.stop(); } catch(e) {}
+    _recorder = null;
+    try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {}
+    try { if (typeof _wsClose === 'function') _wsClose(); } catch(e) {}
+    try { toastHide(); } catch(e) {}
+
+    if (reason === 'offline' || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      try { if (!_avatarLive()) toast('Connection dropped — will resume on data/WiFi'); } catch(eT){}
+      return;
+    }
+
+    try { if (!_avatarLive()) toast('Network changed — reconnecting voice…'); } catch(eT2){}
+    // Kill old mic stream (often dead after radio handoff)
+    try {
+      if (_stream) {
+        _stream.getTracks().forEach(function(t){ try { t.stop(); } catch(eT){} });
+      }
+    } catch(eS){}
+    _stream = null;
+    clearTimeout(_stsNetTimer);
+    _stsNetTimer = setTimeout(function() {
+      if (!_on) return;
+      if (_micTrackDead() || !_stream) _reacquireMic();
+      else { _busy = false; _busySince = 0; setTimeout(record, 200); }
+    }, 700);
+  }
+  try {
+    window.addEventListener('offline', function() {
+      _stsWasOnline = false;
+      _stsNetworkRecover('offline');
+    });
+    window.addEventListener('online', function() {
+      var was = _stsWasOnline;
+      _stsWasOnline = true;
+      if (!was) _stsNetworkRecover('online');
+    });
+    // Chrome/Android: type change WiFi↔cellular without full offline
+    if (navigator.connection && typeof navigator.connection.addEventListener === 'function') {
+      navigator.connection.addEventListener('change', function() {
+        if (!_on) return;
+        clearTimeout(_stsNetTimer);
+        _stsNetTimer = setTimeout(function() {
+          _stsNetworkRecover('connection-change');
+        }, 500);
+      });
+    }
+    // Tab back after background during handoff
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState !== 'visible' || !_on) return;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+      // If we were stuck busy or mic died while backgrounded, recover
+      if (_busy || _micTrackDead() || !_stream) {
+        clearTimeout(_stsNetTimer);
+        _stsNetTimer = setTimeout(function() {
+          _stsNetworkRecover('visible');
+        }, 400);
+      }
+    });
+  } catch(eNet) {}
+  try { window._stsNetworkRecover = _stsNetworkRecover; } catch(eExp) {}
+
   var _history = [];
   // One-shot flag: set true when Ava's last reply was a clarifying question about
   // a planning/schedule/routine request. When true, the NEXT user message skips the
