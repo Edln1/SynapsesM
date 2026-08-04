@@ -2944,6 +2944,22 @@ body.voice-live .syn-fp-icon{
 }
 /* Grab handle + sheet polish only matter on mobile */
 .ig-sheet-handle{display:none;}
+/* Settings sheet: Grok-style spring rise from bottom */
+#imageGenSettingsSheet{
+  will-change:transform,opacity;
+  transform:translate3d(0,112%,0);
+  opacity:0;
+  transition:transform .52s cubic-bezier(0.22, 1.28, 0.36, 1), opacity .22s ease;
+  pointer-events:none;
+}
+#imageGenSettingsSheet.ig-sheet-open{
+  transform:translate3d(0,0,0);
+  opacity:1;
+  pointer-events:auto;
+}
+#imageGenSettingsSheet.ig-sheet-instant{
+  transition:none!important;
+}
 @media(max-width:768px){
   .ig-set-desktop{display:none!important;}
   .ig-set-mobile{display:block;}
@@ -3133,6 +3149,301 @@ body.voice-live .syn-fp-icon{
   background:rgba(255,255,255,0.1);
   color:#fff;
   box-shadow:0 1px 0 rgba(255,255,255,0.06) inset;
+}
+
+/* ── Image ⇄ Video revolving-door control (settings sheet header) ── */
+.ig-sheet-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.ig-sheet-head-title{
+  font-family:'Syne',sans-serif;
+  font-size:13px;
+  font-weight:800;
+  color:#d4d0ee;
+  min-width:0;
+}
+.ig-sheet-head-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+}
+/* Revolving-door icon button — look preserved; only light “tappable” cues */
+.ig-revolving-btn{
+  position:relative;
+  width:38px;
+  height:38px;
+  padding:0;
+  border:none;
+  border-radius:12px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), transparent 55%),
+    linear-gradient(160deg, rgba(40,40,52,0.95), rgba(18,18,24,0.98));
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.1),
+    0 4px 14px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  perspective:900px;
+  overflow:visible;
+  flex-shrink:0;
+  transition:box-shadow .25s ease, transform .15s ease, filter .2s ease;
+}
+.ig-revolving-btn:hover{ filter:brightness(1.08); }
+/* Light press only on the frame — avoid scale() on the 3D door (makes flip look rushed) */
+.ig-revolving-btn:active{ filter:brightness(0.96); }
+.ig-revolving-btn.is-video{
+  box-shadow:
+    0 0 0 1px rgba(232,93,150,0.4),
+    0 0 18px rgba(232,93,150,0.22),
+    0 4px 14px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.ig-revolving-btn:not(.is-video){
+  box-shadow:
+    0 0 0 1px rgba(124,106,247,0.35),
+    0 0 16px rgba(124,106,247,0.18),
+    0 4px 14px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+/* Swap affordance badge (user preferred ⇄ — polish later) */
+.ig-rev-swap{
+  position:absolute;
+  right:-3px;
+  bottom:-3px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(18,18,24,0.95);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 1px 4px rgba(0,0,0,0.45);
+  z-index:4;
+  pointer-events:none;
+  color:rgba(230,225,255,0.85);
+}
+.ig-rev-swap svg{ width:9px; height:9px; display:block; }
+.ig-revolving-btn.is-video .ig-rev-swap{
+  border-color:rgba(232,93,150,0.4);
+  color:rgba(255,210,230,0.9);
+}
+/* Soft ring nudge when settings open (few pulses, then stop) */
+.ig-revolving-btn.ig-rev-nudge{
+  animation:igRevNudge 1.1s ease-out 2;
+}
+@keyframes igRevNudge{
+  0%,100%{ box-shadow:0 0 0 1px rgba(124,106,247,0.35), 0 0 16px rgba(124,106,247,0.18), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+  50%{ box-shadow:0 0 0 3px rgba(124,106,247,0.35), 0 0 22px rgba(124,106,247,0.35), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+.ig-revolving-btn.is-video.ig-rev-nudge{
+  animation-name:igRevNudgeVid;
+}
+@keyframes igRevNudgeVid{
+  0%,100%{ box-shadow:0 0 0 1px rgba(232,93,150,0.4), 0 0 18px rgba(232,93,150,0.22), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+  50%{ box-shadow:0 0 0 3px rgba(232,93,150,0.4), 0 0 24px rgba(232,93,150,0.35), 0 4px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+/* Door frame inset */
+.ig-rev-frame{
+  position:absolute;
+  inset:5px;
+  border-radius:8px;
+  overflow:hidden;
+  background:rgba(0,0,0,0.35);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06);
+  perspective:600px;
+}
+/* Door leaf: snappy start so flip leads the section swap (not the other way around) */
+.ig-rev-door{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  -webkit-transform-style:preserve-3d;
+  transition:transform .48s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change:transform;
+}
+.ig-revolving-btn.is-video .ig-rev-door{
+  transform:rotateY(180deg);
+}
+.ig-rev-wing{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  border-radius:7px;
+}
+.ig-rev-wing-img{
+  background:linear-gradient(145deg,rgba(124,106,247,0.45),rgba(80,70,160,0.55));
+  color:#f0ecff;
+}
+.ig-rev-wing-vid{
+  background:linear-gradient(145deg,rgba(232,93,150,0.5),rgba(140,60,120,0.55));
+  color:#ffe8f2;
+  transform:rotateY(180deg);
+}
+.ig-rev-wing svg{
+  width:16px;
+  height:16px;
+  display:block;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+.ig-sheet-close{
+  width:30px;height:30px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:50%;
+  color:var(--muted);
+  font-size:16px;
+  cursor:pointer;
+  line-height:1;
+  padding:0;
+  flex-shrink:0;
+}
+
+/*
+ * Settings stage height:
+ * PC/desktop — only the ACTIVE panel is in flow (display:none on the other),
+ * so the sheet hugs content like the OLD selects layout (no giant empty gap).
+ * Mobile — stacked grid keeps height stable when flipping Image ↔ Video.
+ */
+.ig-settings-stage{
+  position:relative;
+  perspective:1400px;
+  min-height:0;
+}
+.ig-settings-panel{
+  width:100%;
+  min-width:0;
+  transform-origin:center center;
+}
+/* Desktop / default: natural height from visible panel only */
+#igImageSettingsBody{
+  display:block;
+  position:relative;
+}
+#igVideoSettingsBody{
+  display:none;
+  position:relative;
+}
+#imageGenSettingsSheet.studio-gen-mode-video #igImageSettingsBody{
+  display:none;
+}
+#imageGenSettingsSheet.studio-gen-mode-video #igVideoSettingsBody{
+  display:block;
+}
+@media(max-width:768px){
+  .ig-settings-stage{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    /* Prevent sheet height jump when flipping modes on phone only */
+    min-height:min(52vh, 420px);
+  }
+  .ig-settings-panel{
+    grid-area:1 / 1;
+    transition:opacity .32s ease, transform .5s cubic-bezier(0.22, 1.2, 0.36, 1), visibility 0s linear 0s;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+  }
+  #igImageSettingsBody{
+    display:block!important;
+    z-index:2;
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:rotateY(0deg) scale(1);
+  }
+  #igVideoSettingsBody{
+    display:flex!important;
+    flex-direction:column;
+    z-index:1;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transform:rotateY(-70deg) scale(0.98);
+  }
+  #imageGenSettingsSheet.studio-gen-mode-video #igImageSettingsBody{
+    display:block!important;
+    z-index:1;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transform:rotateY(70deg) scale(0.98);
+    transition:opacity .32s ease, transform .5s cubic-bezier(0.22, 1.2, 0.36, 1), visibility 0s linear .32s;
+  }
+  #imageGenSettingsSheet.studio-gen-mode-video #igVideoSettingsBody{
+    display:flex!important;
+    z-index:2;
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:rotateY(0deg) scale(1);
+  }
+  #igVideoSettingsBody .ig-video-soon{flex-shrink:0;}
+  #igVideoSettingsBody .ig-video-spacer{
+    flex:1;
+    min-height:24px;
+  }
+}
+.ig-video-soon{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px 14px 12px;
+  border-radius:14px;
+  border:1px solid rgba(232,93,150,0.22);
+  background:linear-gradient(160deg,rgba(232,93,150,0.1),rgba(124,106,247,0.06));
+  margin-bottom:14px;
+}
+.ig-video-soon-kicker{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(255,180,210,0.75);
+}
+.ig-video-soon-title{
+  font-family:'Syne',sans-serif;
+  font-size:14px;
+  font-weight:800;
+  color:#fff;
+  line-height:1.25;
+}
+.ig-video-soon-desc{
+  font-size:12px;
+  color:rgba(210,205,230,0.7);
+  line-height:1.4;
+}
+/* Bottom bar hint when video mode is armed */
+#studioGenerateView.studio-gen-mode-video #imageGenPrompt::placeholder{
+  color:rgba(255,180,210,0.45);
+}
+#studioGenerateView.studio-gen-mode-video .ig-mode-chip{
+  display:inline-flex;
+}
+.ig-mode-chip{
+  display:none;
+  align-items:center;
+  gap:4px;
+  flex-shrink:0;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:10.5px;
+  font-weight:700;
+  color:rgba(255,210,230,0.9);
+  background:rgba(232,93,150,0.16);
+  border:1px solid rgba(232,93,150,0.28);
 }
 </style>
 <style>
@@ -5927,110 +6238,194 @@ window.getWebAudioNode = getWebAudioNode;
     <!-- Settings sheet (slides up over the input bar) -->
     <div id="imageGenSettingsSheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
       <div class="ig-sheet-handle" aria-hidden="true"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Generation settings</div>
-        <button onclick="toggleImageGenSettingsSheet()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
-      </div>
-
-      <!-- Reference photo attach -->
-      <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
-          <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
-          <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+      <div class="ig-sheet-head">
+        <div class="ig-sheet-head-title" id="igSheetTitle">Image settings</div>
+        <div class="ig-sheet-head-right">
+          <!-- Revolving-door: Image ⇄ Video (same look + tiny swap cue) -->
+          <button type="button" id="igModeFlipBtn" class="ig-revolving-btn" onclick="toggleStudioGenMode()" title="Tap to switch Image / Video" aria-label="Switch between image and video settings">
+            <span class="ig-rev-frame" aria-hidden="true">
+              <span class="ig-rev-door">
+                <span class="ig-rev-wing ig-rev-wing-img">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
+                </span>
+                <span class="ig-rev-wing ig-rev-wing-vid">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.55-2.27A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.89L15 14"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+                </span>
+              </span>
+            </span>
+            <span class="ig-rev-swap" aria-hidden="true" title="Switch">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg>
+            </span>
+          </button>
+          <button type="button" class="ig-sheet-close" onclick="toggleImageGenSettingsSheet()" aria-label="Close settings">×</button>
         </div>
-        <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
-          📎 <span id="imageGenRefLabelText">Attach a reference photo (optional)</span>
-          <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
-        </label>
       </div>
 
-      <!-- Desktop / web: original selects (unchanged UX) -->
-      <div class="ig-set-desktop">
-        <select id="imageGenModel" onchange="syncImageGenPickersFromSelects()">
-          <option value="flux" style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
-          <option value="dreamshaper" selected style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
-          <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
-          <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
-        </select>
-        <select id="imageGenAspect" onchange="syncImageGenPickersFromSelects()">
-          <option value="square" style="background:#17171a;color:#f2f2f5;">Square</option>
-          <option value="portrait" style="background:#17171a;color:#f2f2f5;">Portrait</option>
-          <option value="landscape" style="background:#17171a;color:#f2f2f5;">Landscape</option>
-        </select>
-        <select id="imageGenCount" onchange="syncImageGenPickersFromSelects()">
-          <option value="1" style="background:#17171a;color:#f2f2f5;">1 image</option>
-          <option value="2" style="background:#17171a;color:#f2f2f5;">2 images</option>
-          <option value="4" selected style="background:#17171a;color:#f2f2f5;">4 images</option>
-        </select>
-      </div>
+      <div class="ig-settings-stage">
+        <!-- IMAGE settings (current) -->
+        <div id="igImageSettingsBody" class="ig-settings-panel">
+          <!-- Reference photo attach -->
+          <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
+              <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
+              <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+            </div>
+            <label id="imageGenRefLabel" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px dashed rgba(255,255,255,0.15);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;">
+              📎 <span id="imageGenRefLabelText">Attach a reference photo (optional)</span>
+              <input type="file" id="imageGenRefInput" accept="image/*" style="display:none;" onchange="handleImageGenRefSelect(event)" />
+            </label>
+          </div>
 
-      <!-- Mobile only: Runway/Higgsfield-inspired controls -->
-      <div class="ig-set-mobile">
-        <div class="ig-set-section">
-          <div class="ig-set-label">Model</div>
-          <div class="ig-model-list" role="listbox" aria-label="Image model">
-            <button type="button" class="ig-model-row-btn ig-on" data-ig="model" data-val="dreamshaper" onclick="selectImageGenOption('model','dreamshaper')" role="option" aria-selected="true">
-              <span class="ig-model-dot" aria-hidden="true"></span>
-              <span class="ig-model-meta">
-                <span class="ig-model-name">DreamShaper 8</span>
-                <span class="ig-model-desc">Fast · great everyday results</span>
-              </span>
-              <span class="ig-model-cost">0.0001</span>
-            </button>
-            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="flux" onclick="selectImageGenOption('model','flux')" role="option" aria-selected="false">
-              <span class="ig-model-dot" aria-hidden="true"></span>
-              <span class="ig-model-meta">
-                <span class="ig-model-name">Flux 1</span>
-                <span class="ig-model-desc">Sharp · photoreal detail</span>
-              </span>
-              <span class="ig-model-cost">0.002</span>
-            </button>
-            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="klein" onclick="selectImageGenOption('model','klein')" role="option" aria-selected="false">
-              <span class="ig-model-dot" aria-hidden="true"></span>
-              <span class="ig-model-meta">
-                <span class="ig-model-name">Flux.2 Klein</span>
-                <span class="ig-model-desc">Premium · max fidelity</span>
-              </span>
-              <span class="ig-model-cost">0.005</span>
-            </button>
-            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="gpt-image-2" onclick="selectImageGenOption('model','gpt-image-2')" role="option" aria-selected="false">
-              <span class="ig-model-dot" aria-hidden="true"></span>
-              <span class="ig-model-meta">
-                <span class="ig-model-name">GPT Image 2</span>
-                <span class="ig-model-desc">Text · creative control</span>
-              </span>
-              <span class="ig-model-cost">~0.04</span>
-            </button>
+          <!-- Desktop / web: original selects -->
+          <div class="ig-set-desktop">
+            <select id="imageGenModel" onchange="syncImageGenPickersFromSelects()">
+              <option value="flux" style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
+              <option value="dreamshaper" selected style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
+              <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
+              <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
+            </select>
+            <select id="imageGenAspect" onchange="syncImageGenPickersFromSelects()">
+              <option value="square" style="background:#17171a;color:#f2f2f5;">Square</option>
+              <option value="portrait" style="background:#17171a;color:#f2f2f5;">Portrait</option>
+              <option value="landscape" style="background:#17171a;color:#f2f2f5;">Landscape</option>
+            </select>
+            <select id="imageGenCount" onchange="syncImageGenPickersFromSelects()">
+              <option value="1" style="background:#17171a;color:#f2f2f5;">1 image</option>
+              <option value="2" style="background:#17171a;color:#f2f2f5;">2 images</option>
+              <option value="4" selected style="background:#17171a;color:#f2f2f5;">4 images</option>
+            </select>
+          </div>
+
+          <!-- Mobile only: visual pickers -->
+          <div class="ig-set-mobile">
+            <div class="ig-set-section">
+              <div class="ig-set-label">Model</div>
+              <div class="ig-model-list" role="listbox" aria-label="Image model">
+                <button type="button" class="ig-model-row-btn ig-on" data-ig="model" data-val="dreamshaper" onclick="selectImageGenOption('model','dreamshaper')" role="option" aria-selected="true">
+                  <span class="ig-model-dot" aria-hidden="true"></span>
+                  <span class="ig-model-meta">
+                    <span class="ig-model-name">DreamShaper 8</span>
+                    <span class="ig-model-desc">Fast · great everyday results</span>
+                  </span>
+                  <span class="ig-model-cost">0.0001</span>
+                </button>
+                <button type="button" class="ig-model-row-btn" data-ig="model" data-val="flux" onclick="selectImageGenOption('model','flux')" role="option" aria-selected="false">
+                  <span class="ig-model-dot" aria-hidden="true"></span>
+                  <span class="ig-model-meta">
+                    <span class="ig-model-name">Flux 1</span>
+                    <span class="ig-model-desc">Sharp · photoreal detail</span>
+                  </span>
+                  <span class="ig-model-cost">0.002</span>
+                </button>
+                <button type="button" class="ig-model-row-btn" data-ig="model" data-val="klein" onclick="selectImageGenOption('model','klein')" role="option" aria-selected="false">
+                  <span class="ig-model-dot" aria-hidden="true"></span>
+                  <span class="ig-model-meta">
+                    <span class="ig-model-name">Flux.2 Klein</span>
+                    <span class="ig-model-desc">Premium · max fidelity</span>
+                  </span>
+                  <span class="ig-model-cost">0.005</span>
+                </button>
+                <button type="button" class="ig-model-row-btn" data-ig="model" data-val="gpt-image-2" onclick="selectImageGenOption('model','gpt-image-2')" role="option" aria-selected="false">
+                  <span class="ig-model-dot" aria-hidden="true"></span>
+                  <span class="ig-model-meta">
+                    <span class="ig-model-name">GPT Image 2</span>
+                    <span class="ig-model-desc">Text · creative control</span>
+                  </span>
+                  <span class="ig-model-cost">~0.04</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Aspect ratio</div>
+              <div class="ig-aspect-row" role="listbox" aria-label="Aspect ratio">
+                <button type="button" class="ig-aspect-btn ig-on" data-ig="aspect" data-val="square" onclick="selectImageGenOption('aspect','square')" role="option" aria-selected="true">
+                  <span class="ig-aspect-shape sq" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">1:1</span>
+                  <span class="ig-aspect-sub">Square</span>
+                </button>
+                <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="portrait" onclick="selectImageGenOption('aspect','portrait')" role="option" aria-selected="false">
+                  <span class="ig-aspect-shape port" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">3:4</span>
+                  <span class="ig-aspect-sub">Portrait</span>
+                </button>
+                <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="landscape" onclick="selectImageGenOption('aspect','landscape')" role="option" aria-selected="false">
+                  <span class="ig-aspect-shape land" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">16:9</span>
+                  <span class="ig-aspect-sub">Landscape</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Variations</div>
+              <div class="ig-count-row" role="listbox" aria-label="Number of images">
+                <button type="button" class="ig-count-btn" data-ig="count" data-val="1" onclick="selectImageGenOption('count','1')" role="option" aria-selected="false">1</button>
+                <button type="button" class="ig-count-btn" data-ig="count" data-val="2" onclick="selectImageGenOption('count','2')" role="option" aria-selected="false">2</button>
+                <button type="button" class="ig-count-btn ig-on" data-ig="count" data-val="4" onclick="selectImageGenOption('count','4')" role="option" aria-selected="true">4</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="ig-set-section">
-          <div class="ig-set-label">Aspect ratio</div>
-          <div class="ig-aspect-row" role="listbox" aria-label="Aspect ratio">
-            <button type="button" class="ig-aspect-btn ig-on" data-ig="aspect" data-val="square" onclick="selectImageGenOption('aspect','square')" role="option" aria-selected="true">
-              <span class="ig-aspect-shape sq" aria-hidden="true"></span>
-              <span class="ig-aspect-ratio">1:1</span>
-              <span class="ig-aspect-sub">Square</span>
-            </button>
-            <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="portrait" onclick="selectImageGenOption('aspect','portrait')" role="option" aria-selected="false">
-              <span class="ig-aspect-shape port" aria-hidden="true"></span>
-              <span class="ig-aspect-ratio">3:4</span>
-              <span class="ig-aspect-sub">Portrait</span>
-            </button>
-            <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="landscape" onclick="selectImageGenOption('aspect','landscape')" role="option" aria-selected="false">
-              <span class="ig-aspect-shape land" aria-hidden="true"></span>
-              <span class="ig-aspect-ratio">16:9</span>
-              <span class="ig-aspect-sub">Landscape</span>
-            </button>
+        <!-- VIDEO settings — PC uses same select-row UX as image; mobile keeps visual pickers -->
+        <div id="igVideoSettingsBody" class="ig-settings-panel" aria-hidden="true">
+          <!-- Desktop / web: compact selects (mirror image settings) -->
+          <div class="ig-set-desktop">
+            <select id="videoGenModel" disabled title="Coming soon" style="opacity:0.72;cursor:not-allowed;">
+              <option value="" selected style="background:#17171a;color:#f2f2f5;">Video model — coming soon</option>
+            </select>
+            <select id="videoGenDuration" onchange="syncVideoGenPickersFromSelects()">
+              <option value="3" style="background:#17171a;color:#f2f2f5;">3 seconds</option>
+              <option value="5" selected style="background:#17171a;color:#f2f2f5;">5 seconds</option>
+              <option value="10" style="background:#17171a;color:#f2f2f5;">10 seconds</option>
+            </select>
+            <select id="videoGenAspect" onchange="syncVideoGenPickersFromSelects()">
+              <option value="portrait" style="background:#17171a;color:#f2f2f5;">9:16 Portrait</option>
+              <option value="landscape" selected style="background:#17171a;color:#f2f2f5;">16:9 Landscape</option>
+              <option value="square" style="background:#17171a;color:#f2f2f5;">1:1 Square</option>
+            </select>
           </div>
-        </div>
 
-        <div class="ig-set-section">
-          <div class="ig-set-label">Variations</div>
-          <div class="ig-count-row" role="listbox" aria-label="Number of images">
-            <button type="button" class="ig-count-btn" data-ig="count" data-val="1" onclick="selectImageGenOption('count','1')" role="option" aria-selected="false">1</button>
-            <button type="button" class="ig-count-btn" data-ig="count" data-val="2" onclick="selectImageGenOption('count','2')" role="option" aria-selected="false">2</button>
-            <button type="button" class="ig-count-btn ig-on" data-ig="count" data-val="4" onclick="selectImageGenOption('count','4')" role="option" aria-selected="true">4</button>
+          <!-- Mobile only: visual duration / frame pickers + soon card -->
+          <div class="ig-set-mobile">
+            <div class="ig-video-soon">
+              <div class="ig-video-soon-kicker">Coming soon</div>
+              <div class="ig-video-soon-title">Video generation</div>
+              <div class="ig-video-soon-desc">Settings below are ready for when video gen ships. Flip back to Image anytime.</div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Duration</div>
+              <div class="ig-count-row" role="listbox" aria-label="Video duration">
+                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="3" onclick="selectVideoGenOption('duration','3')" role="option" aria-selected="false">3s</button>
+                <button type="button" class="ig-count-btn ig-on" data-ig="vid-duration" data-val="5" onclick="selectVideoGenOption('duration','5')" role="option" aria-selected="true">5s</button>
+                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="10" onclick="selectVideoGenOption('duration','10')" role="option" aria-selected="false">10s</button>
+              </div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Aspect ratio</div>
+              <div class="ig-aspect-row" role="listbox" aria-label="Video aspect ratio">
+                <button type="button" class="ig-aspect-btn" data-ig="vid-aspect" data-val="portrait" onclick="selectVideoGenOption('aspect','portrait')" role="option" aria-selected="false">
+                  <span class="ig-aspect-shape port" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">9:16</span>
+                  <span class="ig-aspect-sub">Story</span>
+                </button>
+                <button type="button" class="ig-aspect-btn ig-on" data-ig="vid-aspect" data-val="landscape" onclick="selectVideoGenOption('aspect','landscape')" role="option" aria-selected="true">
+                  <span class="ig-aspect-shape land" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">16:9</span>
+                  <span class="ig-aspect-sub">Wide</span>
+                </button>
+                <button type="button" class="ig-aspect-btn" data-ig="vid-aspect" data-val="square" onclick="selectVideoGenOption('aspect','square')" role="option" aria-selected="false">
+                  <span class="ig-aspect-shape sq" aria-hidden="true"></span>
+                  <span class="ig-aspect-ratio">1:1</span>
+                  <span class="ig-aspect-sub">Square</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="ig-video-spacer" aria-hidden="true"></div>
           </div>
         </div>
       </div>
@@ -6052,6 +6447,7 @@ window.getWebAudioNode = getWebAudioNode;
     <div class="studioBottomBar" style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));">
       <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
       <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
+        <span class="ig-mode-chip" id="igVideoModeChip" aria-hidden="true">▶ Video</span>
         <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
         <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
       </div>
@@ -7826,7 +8222,8 @@ function applyImageGenTemplate(t){
   // Cursor at the end so the person can just keep typing the subject.
   var len = promptEl.value.length;
   try{ promptEl.setSelectionRange(len, len); }catch(e){}
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+  else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
 }
 
 function toggleImageGenTemplateRow(){
@@ -7851,12 +8248,136 @@ function toggleImageGenTemplateRow(){
   }
 }
 
-function toggleImageGenSettingsSheet(){
+/** Studio generate mode: 'image' (live) | 'video' (UI shell until gen ships) */
+var _studioGenMode = 'image';
+var _studioGenModePending = null; // target while door is mid-flip
+function getStudioGenMode(){
+  var m = _studioGenModePending != null ? _studioGenModePending : _studioGenMode;
+  return m === 'video' ? 'video' : 'image';
+}
+function toggleStudioGenMode(){
+  setStudioGenMode(getStudioGenMode() === 'video' ? 'image' : 'video');
+}
+function setStudioGenMode(mode){
+  var next = (mode === 'video') ? 'video' : 'image';
+  if(next === getStudioGenMode()) return;
+  var isVid = next === 'video';
+  var sheet = document.getElementById('imageGenSettingsSheet');
+  var genView = document.getElementById('studioGenerateView');
+  var flip = document.getElementById('igModeFlipBtn');
+  var title = document.getElementById('igSheetTitle');
+  var prompt = document.getElementById('imageGenPrompt');
+  var imgBody = document.getElementById('igImageSettingsBody');
+  var vidBody = document.getElementById('igVideoSettingsBody');
+
+  _studioGenModePending = next;
+
+  // Cancel any leftover delayed swap (from older timing)
+  if(setStudioGenMode._swapT){ clearTimeout(setStudioGenMode._swapT); setStudioGenMode._swapT = null; }
+
+  // Door + sections start together (same frame) so PC stays perfectly in sync
+  if(flip){
+    flip.classList.toggle('is-video', isVid);
+    flip.title = isVid ? 'Tap to switch to Image' : 'Tap to switch to Video';
+    flip.setAttribute('aria-label', isVid ? 'Switch to image settings' : 'Switch to video settings');
+  }
+  _studioGenMode = next;
+  _studioGenModePending = null;
+  if(sheet) sheet.classList.toggle('studio-gen-mode-video', isVid);
+  if(genView) genView.classList.toggle('studio-gen-mode-video', isVid);
+  if(title) title.textContent = isVid ? 'Video settings' : 'Image settings';
+  if(prompt) prompt.placeholder = isVid ? 'Describe a video…' : 'Type to imagine…';
+  if(imgBody) imgBody.setAttribute('aria-hidden', isVid ? 'true' : 'false');
+  if(vidBody) vidBody.setAttribute('aria-hidden', isVid ? 'false' : 'true');
+}
+function selectVideoGenOption(kind, value){
+  if(kind === 'duration'){
+    var d = document.getElementById('videoGenDuration');
+    if(d) d.value = value;
+    _paintImageGenPicker('vid-duration', value);
+  } else if(kind === 'aspect'){
+    var a = document.getElementById('videoGenAspect');
+    if(a) a.value = value;
+    _paintImageGenPicker('vid-aspect', value);
+  }
+}
+function syncVideoGenPickersFromSelects(){
+  var d = document.getElementById('videoGenDuration');
+  var a = document.getElementById('videoGenAspect');
+  if(d) _paintImageGenPicker('vid-duration', d.value);
+  if(a) _paintImageGenPicker('vid-aspect', a.value);
+}
+
+function _igSettingsSheetIsOpen(){
+  var sheet = document.getElementById('imageGenSettingsSheet');
+  return !!(sheet && sheet.style.display === 'block' && sheet.classList.contains('ig-sheet-open'));
+}
+function openImageGenSettingsSheet(){
   var sheet = document.getElementById('imageGenSettingsSheet');
   var histSheet = document.getElementById('imageGenHistorySheet');
+  if(!sheet) return;
   if(histSheet) histSheet.style.display = 'none';
-  sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
-  if(sheet.style.display === 'block') syncImageGenPickersFromSelects();
+  if(_igSettingsSheetIsOpen()){
+    if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
+    return;
+  }
+  // Start fully off-screen, then spring up (Grok-style bottom sheet)
+  sheet.classList.remove('ig-sheet-open');
+  sheet.classList.add('ig-sheet-instant');
+  sheet.style.display = 'block';
+  void sheet.offsetWidth;
+  sheet.classList.remove('ig-sheet-instant');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      sheet.classList.add('ig-sheet-open');
+      // Soft “this is tappable” nudge on the mode button — doesn’t change its design
+      var modeBtn = document.getElementById('igModeFlipBtn');
+      if(modeBtn){
+        modeBtn.classList.remove('ig-rev-nudge');
+        void modeBtn.offsetWidth;
+        modeBtn.classList.add('ig-rev-nudge');
+        clearTimeout(modeBtn._nudgeT);
+        modeBtn._nudgeT = setTimeout(function(){ modeBtn.classList.remove('ig-rev-nudge'); }, 2400);
+      }
+    });
+  });
+  if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
+  if(typeof syncVideoGenPickersFromSelects === 'function') syncVideoGenPickersFromSelects();
+}
+function closeImageGenSettingsSheet(instant){
+  var sheet = document.getElementById('imageGenSettingsSheet');
+  if(!sheet) return;
+  if(sheet.style.display === 'none'){
+    sheet.classList.remove('ig-sheet-open');
+    return;
+  }
+  if(instant){
+    sheet.classList.add('ig-sheet-instant');
+    sheet.classList.remove('ig-sheet-open');
+    sheet.style.display = 'none';
+    void sheet.offsetWidth;
+    sheet.classList.remove('ig-sheet-instant');
+    return;
+  }
+  sheet.classList.remove('ig-sheet-open');
+  var done = false;
+  function finish(){
+    if(done) return;
+    done = true;
+    try{ sheet.removeEventListener('transitionend', onEnd); }catch(_e){}
+    if(!sheet.classList.contains('ig-sheet-open')) sheet.style.display = 'none';
+  }
+  function onEnd(e){
+    if(e.target !== sheet) return;
+    if(e.propertyName && e.propertyName !== 'transform') return;
+    finish();
+  }
+  sheet.addEventListener('transitionend', onEnd);
+  setTimeout(finish, 560);
+}
+function toggleImageGenSettingsSheet(){
+  if(_igSettingsSheetIsOpen()) closeImageGenSettingsSheet();
+  else openImageGenSettingsSheet();
 }
 
 /** Mobile visual pickers write into the same <select>s the generator reads. Desktop keeps the selects. */
@@ -7982,7 +8503,8 @@ function clearStudioImageHistoryAndUi(){
   document.getElementById('imageGenResults').style.display = 'none';
   document.getElementById('imageGenEmptyState').style.display = 'none';
   document.getElementById('imageGenError').style.display = 'none';
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+  else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
   closeImageGenHistory();
   document.getElementById('imageGenModel').value = 'dreamshaper';
   document.getElementById('imageGenAspect').value = 'square';
@@ -8024,7 +8546,8 @@ function closeImageGenModal(){
   try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(false); }catch(_s){}
   setTimeout(function(){
     modal.style.display = 'none';
-    document.getElementById('imageGenSettingsSheet').style.display = 'none';
+    if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+    else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
     clearImageGenRef();
   }, 300);
 }
@@ -8079,13 +8602,23 @@ async function submitImageGen(){
     errEl.style.display = 'block';
     return;
   }
+  // Video mode is UI-only for now — keep path ready without calling image API
+  if(typeof getStudioGenMode === 'function' && getStudioGenMode() === 'video'){
+    if(typeof showToast === 'function') showToast('Video generation is coming soon');
+    else {
+      errEl.textContent = 'Video generation is coming soon — flip back to Image to generate photos.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
   var aspect = document.getElementById('imageGenAspect').value;
   var count = document.getElementById('imageGenCount').value;
   var model = document.getElementById('imageGenModel').value;
   var origLabel = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>';
-  document.getElementById('imageGenSettingsSheet').style.display = 'none';
+  if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+  else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
   // Don't wipe what's already on screen — new images join the top of the
   // same feed instead of replacing the previous batch.
   document.getElementById('imageGenEmptyState').style.display = 'none';
@@ -8490,8 +9023,11 @@ async function renderImageGenDefaultFeed(){
 }
 
 async function openImageGenHistory(){
-  var settingsSheet = document.getElementById('imageGenSettingsSheet');
-  if(settingsSheet) settingsSheet.style.display = 'none';
+  if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+  else {
+    var settingsSheet = document.getElementById('imageGenSettingsSheet');
+    if(settingsSheet) settingsSheet.style.display = 'none';
+  }
   var sheet = document.getElementById('imageGenHistorySheet');
   var grid = document.getElementById('imageGenHistoryGrid');
   if(grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;padding:16px 0;">Loading…</div>';
