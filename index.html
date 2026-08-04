@@ -19413,7 +19413,11 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
       // /classify, regardless of how time-sensitive the topic actually was. This gate
       // doesn't try to guess whether the topic needs a search — it just ensures these
       // messages reach the classifier, which decides based on the actual topic.
-      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|whats|wheres|where's|where is|when is|when are|when's|tell me|show me|find me|figure out|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet|what do you think about|what do you think of|your thoughts on|thoughts on|thoughts about|opinion on|your take on|what's your take)\b/i.test(_lu);
+      // NOTE: bare "tell me" / "show me" / "find me" / "figure out" removed — no topic
+      // signal on their own, were causing e.g. "tell me how ur doing today" to hit this
+      // gate (which defaults to BASIC/search on a classify timeout). Real topic words
+      // still catch "tell me the latest news" via "latest"/"news"/etc.
+      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|whats|wheres|where's|where is|when is|when are|when's|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet|what do you think about|what do you think of|your thoughts on|thoughts on|thoughts about|opinion on|your take on|what's your take)\b/i.test(_lu);
 
       /* FOLLOW-UP DETECTION:
        * A live search just happened → window._searchFollowUpBudget is armed (>0).
@@ -40664,7 +40668,13 @@ function speakVoiceReply(text) {
     var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
-    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
+    // NOTE: bare "tell me" / "show me" / "find me" / "figure out" were removed from this
+    // list — they carry zero topic signal on their own and were making messages like
+    // "tell me how ur doing today" match as a content keyword, which skips classify
+    // entirely in voice mode (minimal-blockers path) and fired a live search for a
+    // message that had nothing to look up. Real topic words below still catch
+    // "tell me the latest news" etc via "latest"/"news"/whatever the actual topic is.
+    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
     /* Explicit "I want live/current info" phrasing — same override used in text chat's
      * explicitLiveHint. Forces a search regardless of topic, since the user directly
      * signaled recency (this was the actual gap causing "best restaurants ... right now"
