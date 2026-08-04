@@ -1003,7 +1003,12 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   transform:scale(1) translateY(0);
   transition:opacity .4s cubic-bezier(0.22,1,0.36,1) .06s,transform .42s cubic-bezier(0.22,1,0.36,1) .06s,visibility 0s linear 0s;
 }
-/* Unset Pulse (city/topics setup) is taller and covers the fingerprint — hide scanner while that sheet is open */
+/* ONLY the tall “pick city / topics” Pulse (not set up yet) covers the fingerprint.
+   Must beat #sec-chat.askbar-off .syn-fp { opacity:1!important } specificity.
+   Once Pulse is set up, normal cards do NOT hide the fingerprint. */
+body.pulse-setup-open #sec-chat.askbar-off #chatEmptyState:not(.hidden) .syn-fp,
+body.pulse-setup-open #sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp,
+body.pulse-setup-open #sec-chat #chatEmptyState:not(.hidden) .syn-fp,
 body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
   height:0!important;margin:0!important;min-height:0!important;overflow:hidden!important;
@@ -2914,6 +2919,220 @@ body.voice-live .syn-fp-icon{
   font-size:15px;
   line-height:1;
   transform:translateY(-0.5px);
+}
+
+/* ── Studio generation settings (desktop keeps selects; mobile = pro gen-AI sheet) ── */
+.ig-set-mobile{display:none;}
+.ig-set-desktop{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.ig-set-desktop select{
+  flex:1;
+  min-width:110px;
+  padding:9px 10px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px;
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  outline:none;
+}
+/* Grab handle + sheet polish only matter on mobile */
+.ig-sheet-handle{display:none;}
+@media(max-width:768px){
+  .ig-set-desktop{display:none!important;}
+  .ig-set-mobile{display:block;}
+  .ig-sheet-handle{
+    display:block;
+    width:36px;height:4px;border-radius:99px;
+    background:rgba(255,255,255,0.18);
+    margin:0 auto 12px;
+  }
+  #imageGenSettingsSheet{
+    max-height:min(78vh,620px);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding-top:10px!important;
+    background:rgba(14,14,18,0.92)!important;
+    border-top:1px solid rgba(255,255,255,0.1)!important;
+  }
+}
+.ig-set-label{
+  font-family:'DM Sans',sans-serif;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:rgba(200,196,230,0.5);
+  margin:0 0 8px;
+}
+.ig-set-section{margin-bottom:16px;}
+.ig-set-section:last-child{margin-bottom:2px;}
+
+/* ── Model list (Runway/Higgsfield-style full-width rows) ── */
+.ig-model-list{
+  display:flex;
+  flex-direction:column;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  overflow:hidden;
+}
+.ig-model-row-btn{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  text-align:left;
+  padding:12px 12px;
+  border:none;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.ig-model-list .ig-model-row-btn:last-child{border-bottom:none;}
+.ig-model-row-btn:active{background:rgba(255,255,255,0.04);}
+.ig-model-row-btn.ig-on{
+  background:rgba(124,106,247,0.12);
+}
+.ig-model-dot{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid rgba(255,255,255,0.22);
+  display:flex;align-items:center;justify-content:center;
+  transition:border-color .15s, background .15s;
+}
+.ig-model-row-btn.ig-on .ig-model-dot{
+  border-color:rgba(167,154,255,0.9);
+  background:rgba(124,106,247,0.35);
+  box-shadow:inset 0 0 0 3px rgba(14,14,18,0.9), inset 0 0 0 7px rgba(167,154,255,0.95);
+}
+.ig-model-meta{flex:1;min-width:0;}
+.ig-model-name{
+  font-family:'Syne',sans-serif;
+  font-size:13.5px;
+  font-weight:700;
+  color:rgba(232,230,245,0.92);
+  line-height:1.2;
+  margin-bottom:2px;
+}
+.ig-model-row-btn.ig-on .ig-model-name{color:#fff;}
+.ig-model-desc{
+  font-size:11.5px;
+  color:rgba(170,168,200,0.62);
+  line-height:1.3;
+}
+.ig-model-cost{
+  flex-shrink:0;
+  font-size:11px;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  padding:5px 9px;
+  border-radius:999px;
+  background:rgba(0,0,0,0.35);
+  color:rgba(200,196,230,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+  white-space:nowrap;
+}
+.ig-model-row-btn.ig-on .ig-model-cost{
+  background:rgba(124,106,247,0.22);
+  border-color:rgba(124,106,247,0.3);
+  color:rgba(230,225,255,0.95);
+}
+
+/* ── Aspect ratio strip (icon + ratio label, like Runway / Higgsfield) ── */
+.ig-aspect-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+}
+.ig-aspect-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:76px;
+  padding:12px 6px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:rgba(190,188,220,0.7);
+  cursor:pointer;
+  transition:border-color .15s, background .15s, color .15s, box-shadow .15s;
+  font-family:'DM Sans',sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+.ig-aspect-btn:active{background:rgba(255,255,255,0.06);}
+.ig-aspect-btn.ig-on{
+  border-color:rgba(124,106,247,0.55);
+  background:rgba(124,106,247,0.12);
+  box-shadow:0 0 0 1px rgba(124,106,247,0.12);
+  color:#efeaff;
+}
+.ig-aspect-shape{
+  border:1.5px solid rgba(200,196,230,0.32);
+  border-radius:3px;
+  background:rgba(255,255,255,0.03);
+  transition:border-color .15s, background .15s, box-shadow .15s;
+}
+.ig-aspect-btn.ig-on .ig-aspect-shape{
+  border-color:rgba(167,154,255,0.85);
+  background:rgba(124,106,247,0.28);
+  box-shadow:0 0 12px rgba(124,106,247,0.22);
+}
+.ig-aspect-shape.sq{width:24px;height:24px;}
+.ig-aspect-shape.port{width:18px;height:28px;}
+.ig-aspect-shape.land{width:30px;height:17px;}
+.ig-aspect-ratio{
+  font-size:12.5px;
+  font-weight:700;
+  letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+}
+.ig-aspect-sub{
+  font-size:10px;
+  font-weight:500;
+  opacity:.55;
+  margin-top:-4px;
+}
+.ig-aspect-btn.ig-on .ig-aspect-sub{opacity:.7;}
+
+/* ── Variations segmented (Runway quantity control) ── */
+.ig-count-row{
+  display:flex;
+  gap:0;
+  padding:3px;
+  border-radius:12px;
+  background:rgba(0,0,0,0.35);
+  border:1px solid rgba(255,255,255,0.07);
+}
+.ig-count-btn{
+  flex:1;
+  padding:10px 6px;
+  border:none;
+  border-radius:10px;
+  background:transparent;
+  color:rgba(190,188,220,0.6);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .15s, color .15s, box-shadow .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.ig-count-btn.ig-on{
+  background:rgba(255,255,255,0.1);
+  color:#fff;
+  box-shadow:0 1px 0 rgba(255,255,255,0.06) inset;
 }
 </style>
 <style>
@@ -5707,13 +5926,14 @@ window.getWebAudioNode = getWebAudioNode;
 
     <!-- Settings sheet (slides up over the input bar) -->
     <div id="imageGenSettingsSheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(20,20,26,0.55);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border-top:1px solid rgba(255,255,255,0.08);border-radius:18px 18px 0 0;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+      <div class="ig-sheet-handle" aria-hidden="true"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#d4d0ee;">Generation settings</div>
         <button onclick="toggleImageGenSettingsSheet()" style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:4px;">×</button>
       </div>
 
       <!-- Reference photo attach -->
-      <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div id="imageGenRefRow" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
         <div id="imageGenRefPreviewWrap" style="display:none;position:relative;flex-shrink:0;">
           <img id="imageGenRefPreview" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block;" />
           <button type="button" onclick="clearImageGenRef()" title="Remove reference photo" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
@@ -5724,23 +5944,95 @@ window.getWebAudioNode = getWebAudioNode;
         </label>
       </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <select id="imageGenModel" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+      <!-- Desktop / web: original selects (unchanged UX) -->
+      <div class="ig-set-desktop">
+        <select id="imageGenModel" onchange="syncImageGenPickersFromSelects()">
           <option value="flux" style="background:#17171a;color:#f2f2f5;">Flux 1 — 0.002 pollen</option>
           <option value="dreamshaper" selected style="background:#17171a;color:#f2f2f5;">DreamShaper 8 — 0.0001 pollen</option>
           <option value="klein" style="background:#17171a;color:#f2f2f5;">Flux.2 Klein — 0.005 pollen</option>
           <option value="gpt-image-2" style="background:#17171a;color:#f2f2f5;">GPT Image 2 — ~0.04 pollen</option>
         </select>
-        <select id="imageGenAspect" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <select id="imageGenAspect" onchange="syncImageGenPickersFromSelects()">
           <option value="square" style="background:#17171a;color:#f2f2f5;">Square</option>
           <option value="portrait" style="background:#17171a;color:#f2f2f5;">Portrait</option>
           <option value="landscape" style="background:#17171a;color:#f2f2f5;">Landscape</option>
         </select>
-        <select id="imageGenCount" style="flex:1;min-width:110px;padding:9px 10px;background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+        <select id="imageGenCount" onchange="syncImageGenPickersFromSelects()">
           <option value="1" style="background:#17171a;color:#f2f2f5;">1 image</option>
           <option value="2" style="background:#17171a;color:#f2f2f5;">2 images</option>
           <option value="4" selected style="background:#17171a;color:#f2f2f5;">4 images</option>
         </select>
+      </div>
+
+      <!-- Mobile only: Runway/Higgsfield-inspired controls -->
+      <div class="ig-set-mobile">
+        <div class="ig-set-section">
+          <div class="ig-set-label">Model</div>
+          <div class="ig-model-list" role="listbox" aria-label="Image model">
+            <button type="button" class="ig-model-row-btn ig-on" data-ig="model" data-val="dreamshaper" onclick="selectImageGenOption('model','dreamshaper')" role="option" aria-selected="true">
+              <span class="ig-model-dot" aria-hidden="true"></span>
+              <span class="ig-model-meta">
+                <span class="ig-model-name">DreamShaper 8</span>
+                <span class="ig-model-desc">Fast · great everyday results</span>
+              </span>
+              <span class="ig-model-cost">0.0001</span>
+            </button>
+            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="flux" onclick="selectImageGenOption('model','flux')" role="option" aria-selected="false">
+              <span class="ig-model-dot" aria-hidden="true"></span>
+              <span class="ig-model-meta">
+                <span class="ig-model-name">Flux 1</span>
+                <span class="ig-model-desc">Sharp · photoreal detail</span>
+              </span>
+              <span class="ig-model-cost">0.002</span>
+            </button>
+            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="klein" onclick="selectImageGenOption('model','klein')" role="option" aria-selected="false">
+              <span class="ig-model-dot" aria-hidden="true"></span>
+              <span class="ig-model-meta">
+                <span class="ig-model-name">Flux.2 Klein</span>
+                <span class="ig-model-desc">Premium · max fidelity</span>
+              </span>
+              <span class="ig-model-cost">0.005</span>
+            </button>
+            <button type="button" class="ig-model-row-btn" data-ig="model" data-val="gpt-image-2" onclick="selectImageGenOption('model','gpt-image-2')" role="option" aria-selected="false">
+              <span class="ig-model-dot" aria-hidden="true"></span>
+              <span class="ig-model-meta">
+                <span class="ig-model-name">GPT Image 2</span>
+                <span class="ig-model-desc">Text · creative control</span>
+              </span>
+              <span class="ig-model-cost">~0.04</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ig-set-section">
+          <div class="ig-set-label">Aspect ratio</div>
+          <div class="ig-aspect-row" role="listbox" aria-label="Aspect ratio">
+            <button type="button" class="ig-aspect-btn ig-on" data-ig="aspect" data-val="square" onclick="selectImageGenOption('aspect','square')" role="option" aria-selected="true">
+              <span class="ig-aspect-shape sq" aria-hidden="true"></span>
+              <span class="ig-aspect-ratio">1:1</span>
+              <span class="ig-aspect-sub">Square</span>
+            </button>
+            <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="portrait" onclick="selectImageGenOption('aspect','portrait')" role="option" aria-selected="false">
+              <span class="ig-aspect-shape port" aria-hidden="true"></span>
+              <span class="ig-aspect-ratio">3:4</span>
+              <span class="ig-aspect-sub">Portrait</span>
+            </button>
+            <button type="button" class="ig-aspect-btn" data-ig="aspect" data-val="landscape" onclick="selectImageGenOption('aspect','landscape')" role="option" aria-selected="false">
+              <span class="ig-aspect-shape land" aria-hidden="true"></span>
+              <span class="ig-aspect-ratio">16:9</span>
+              <span class="ig-aspect-sub">Landscape</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ig-set-section">
+          <div class="ig-set-label">Variations</div>
+          <div class="ig-count-row" role="listbox" aria-label="Number of images">
+            <button type="button" class="ig-count-btn" data-ig="count" data-val="1" onclick="selectImageGenOption('count','1')" role="option" aria-selected="false">1</button>
+            <button type="button" class="ig-count-btn" data-ig="count" data-val="2" onclick="selectImageGenOption('count','2')" role="option" aria-selected="false">2</button>
+            <button type="button" class="ig-count-btn ig-on" data-ig="count" data-val="4" onclick="selectImageGenOption('count','4')" role="option" aria-selected="true">4</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -7564,6 +7856,31 @@ function toggleImageGenSettingsSheet(){
   var histSheet = document.getElementById('imageGenHistorySheet');
   if(histSheet) histSheet.style.display = 'none';
   sheet.style.display = (sheet.style.display === 'block') ? 'none' : 'block';
+  if(sheet.style.display === 'block') syncImageGenPickersFromSelects();
+}
+
+/** Mobile visual pickers write into the same <select>s the generator reads. Desktop keeps the selects. */
+function selectImageGenOption(kind, value){
+  var idMap = { model: 'imageGenModel', aspect: 'imageGenAspect', count: 'imageGenCount' };
+  var sel = document.getElementById(idMap[kind]);
+  if(sel) sel.value = value;
+  _paintImageGenPicker(kind, value);
+}
+function syncImageGenPickersFromSelects(){
+  var m = document.getElementById('imageGenModel');
+  var a = document.getElementById('imageGenAspect');
+  var c = document.getElementById('imageGenCount');
+  if(m) _paintImageGenPicker('model', m.value);
+  if(a) _paintImageGenPicker('aspect', a.value);
+  if(c) _paintImageGenPicker('count', c.value);
+}
+function _paintImageGenPicker(kind, value){
+  var nodes = document.querySelectorAll('[data-ig="'+kind+'"]');
+  for(var i=0;i<nodes.length;i++){
+    var on = nodes[i].getAttribute('data-val') === String(value);
+    nodes[i].classList.toggle('ig-on', on);
+    nodes[i].setAttribute('aria-selected', on ? 'true' : 'false');
+  }
 }
 
 /** Clear studio image cache + grid — always asks first so history isn’t wiped by accident */
@@ -7670,6 +7987,7 @@ function clearStudioImageHistoryAndUi(){
   document.getElementById('imageGenModel').value = 'dreamshaper';
   document.getElementById('imageGenAspect').value = 'square';
   document.getElementById('imageGenCount').value = '4';
+  if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
   clearImageGenRef();
   _imageGenFeedLoaded = false;
   renderImageGenDefaultFeed();
