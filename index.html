@@ -8880,6 +8880,85 @@ function clearImageGenRef(){
   document.getElementById('imageGenPrompt').placeholder = 'A cozy cabin in a snowy forest at night, warm lights in the windows...';
 }
 
+/**
+ * Parse voice: "generate me a photo of a cat" → { prompt, count }.
+ * Default count = 1 unless user asks for a set / N images.
+ */
+function _parseVoiceStudioImage(text){
+  var t = String(text || '').trim();
+  if(t.length < 6) return null;
+  // Must sound like generate/create/draw/make
+  if(!/\b(generate|create|make|draw|render)\b/i.test(t)) return null;
+  // Avoid plans / schedules / notes
+  if(/\b(plan my day|plan our day|schedule|routine|note|notes|call |tweet|post to)\b/i.test(t)
+    && !/\b(photo|image|picture|pic|illustration|portrait|drawing|artwork)\b/i.test(t)) return null;
+  // Visual intent: explicit media word OR "generate/make/draw me a …"
+  var visual = /\b(photo|image|picture|pic|pics|illustration|portrait|drawing|artwork|render|visual)\b/i.test(t)
+    || /\b(generate|create|draw|make|render)\s+me\s+(an?\s+)?/i.test(t)
+    || /\b(generate|create|draw|make)\s+(an?\s+)?(photo|image|picture)\b/i.test(t);
+  if(!visual) return null;
+
+  var count = 1;
+  var numM = t.match(/\b(\d{1,2})\s*(photos?|images?|pictures?|pics?|renders?)\b/i);
+  if(numM){
+    count = Math.min(4, Math.max(1, parseInt(numM[1], 10) || 1));
+  } else if(/\b(a\s+set|a\s+few|some|multiple|several|batch)\s+(of\s+)?(photos?|images?|pictures?|pics?)?\b/i.test(t)){
+    count = 4;
+  }
+
+  var prompt = t
+    .replace(/^(hey\s+)?(ava[,.]?\s+)?(can you|could you|would you|will you|please)\s+/i, '')
+    .replace(/\b(please|real quick|quickly)\b/gi, ' ')
+    .replace(/\b(generate|create|make|draw|render)\s+(me\s+)?/i, '')
+    .replace(/^(an?\s+)?(set\s+of\s+)?(\d+\s+)?(photos?|images?|pictures?|pics?|illustrations?|portraits?|renders?|drawings?|artwork|art)\s*(of\s+|with\s+|showing\s+|featuring\s+|that\s+shows?\s+)?/i, '')
+    .replace(/^(an?\s+)/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s,.\-–—:]+|[\s.!?]+$/g, '')
+    .trim();
+
+  if(prompt.length < 2) return null;
+  // Cap crazy long dictation
+  if(prompt.length > 400) prompt = prompt.slice(0, 400);
+  return { prompt: prompt, count: count };
+}
+window._parseVoiceStudioImage = _parseVoiceStudioImage;
+
+/** Open Studio → image mode → set count → fill prompt → generate */
+function voiceGenerateStudioImage(prompt, count){
+  prompt = String(prompt || '').trim();
+  if(!prompt) return false;
+  count = Math.min(4, Math.max(1, parseInt(count, 10) || 1));
+  try{
+    if(typeof setStudioGenMode === 'function') setStudioGenMode('image');
+  }catch(_m){}
+  try{
+    if(typeof openImageGenModal === 'function') openImageGenModal();
+  }catch(_o){}
+  try{
+    if(typeof switchStudioTab === 'function') switchStudioTab('generate');
+  }catch(_t){}
+  try{
+    var pe = document.getElementById('imageGenPrompt');
+    if(pe) pe.value = prompt;
+  }catch(_p){}
+  try{
+    var ce = document.getElementById('imageGenCount');
+    if(ce) ce.value = String(count);
+    if(typeof selectImageGenOption === 'function') selectImageGenOption('count', String(count));
+    else if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
+  }catch(_c){}
+  // Let modal open, then fire generate
+  setTimeout(function(){
+    try{
+      if(typeof submitImageGen === 'function') submitImageGen();
+    }catch(e){
+      console.error('[Voice studio gen]', e);
+    }
+  }, 480);
+  return true;
+}
+window.voiceGenerateStudioImage = voiceGenerateStudioImage;
+
 async function submitImageGen(){
   var promptEl = document.getElementById('imageGenPrompt');
   var prompt = promptEl.value.trim();
@@ -10606,13 +10685,14 @@ var allJobs=[],currentUser=null,jobFilter='all';
   }
   window.showAuthModal = showAuthModal;
 
-  function _bootUserSession(s, opts){
+    function _bootUserSession(s, opts){
     opts = opts || {};
     if(!s || !s.email) return false;
     if(!s.name) s.name = (s.email.split('@')[0] || 'User');
     currentUser = s;
     try{ window.currentUser = s; }catch(_w){}
     try{ localStorage.setItem('synapses_session', JSON.stringify(s)); }catch(e){}
+    try{ if(typeof window._persistSessionNative === 'function') window._persistSessionNative(s); }catch(_pn){}
     function go(){
       try{
         var m = document.getElementById('authModal');
@@ -10677,13 +10757,40 @@ var allJobs=[],currentUser=null,jobFilter='all';
     }
   }
 
-  // ── Auth restore (same install only — uninstall wipes all of this) ──
+  // ── Auth restore ──
+  // WebView localStorage + native Median storage (SharedPreferences).
+  // Old builds felt like "login survives reinstall" when Android Auto Backup
+  // restored app data (allowBackup=true) and/or native prefs came back.
+  // Dual-write to median.storage so that path works again when backup restores.
+  function _parseSessionJson(sv){
+    try{
+      if(!sv) return null;
+      if(typeof sv === 'object' && sv.email) return sv;
+      var s = typeof sv === 'string' ? JSON.parse(sv) : null;
+      if(s && s.email) return s;
+    }catch(e){}
+    return null;
+  }
+  function _persistSessionNative(s){
+    try{
+      if(!s || !s.email) return;
+      var raw = JSON.stringify(s);
+      try{ localStorage.setItem('synapses_session', raw); }catch(e){}
+      try{ if(!s.isGuest) localStorage.setItem('synapses_last_email', String(s.email).toLowerCase()); }catch(e2){}
+      try{
+        if(typeof median !== 'undefined' && median.storage && median.storage.app){
+          median.storage.app.set({ key: 'synapses_session_v1', value: raw });
+          median.storage.app.set({ key: 'syn_user_email', value: String(s.email).toLowerCase() });
+        }
+      }catch(e3){}
+    }catch(e){}
+  }
+  window._persistSessionNative = _persistSessionNative;
+
   function _tryBootFromLocalSession(){
     try{
-      var sv = localStorage.getItem('synapses_session');
-      if(!sv) return false;
-      var s = JSON.parse(sv);
-      if(!s || !s.email) return false;
+      var s = _parseSessionJson(localStorage.getItem('synapses_session'));
+      if(!s) return false;
       if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
       _bootUserSession(s, {
         afterLogin: function(){ _refreshProfileFromDb(s); }
@@ -10692,8 +10799,67 @@ var allJobs=[],currentUser=null,jobFilter='all';
     }catch(e){ return false; }
   }
 
+  function _tryBootFromNativeStorage(done){
+    done = done || function(){};
+    try{
+      if(typeof median === 'undefined' || !median.storage || !median.storage.app){
+        done(false);
+        return;
+      }
+      var finished = false;
+      function finish(ok){
+        if(finished) return;
+        finished = true;
+        done(!!ok);
+      }
+      setTimeout(function(){ finish(false); }, 1500);
+      // Median API: get({ key, callback })
+      try{
+        median.storage.app.get({
+          key: 'synapses_session_v1',
+          callback: function(result){
+            try{
+              var raw = result;
+              if(result && typeof result === 'object'){
+                raw = result.value != null ? result.value : (result.data != null ? result.data : result);
+              }
+              var s = _parseSessionJson(raw);
+              if(s && s.email){
+                if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
+                try{ localStorage.setItem('synapses_session', JSON.stringify(s)); }catch(e){}
+                _bootUserSession(s, {
+                  afterLogin: function(){ _refreshProfileFromDb(s); }
+                });
+                finish(true);
+                return;
+              }
+            }catch(e2){}
+            finish(false);
+          }
+        });
+      }catch(e3){
+        // Some shells return value sync-ish
+        try{
+          var g = median.storage.app.get({ key: 'synapses_session_v1' });
+          if(g && typeof g.then === 'function'){
+            g.then(function(result){
+              var raw = result && (result.value != null ? result.value : result);
+              var s = _parseSessionJson(raw);
+              if(s && s.email){
+                if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
+                try{ localStorage.setItem('synapses_session', JSON.stringify(s)); }catch(e){}
+                _bootUserSession(s, { afterLogin: function(){ _refreshProfileFromDb(s); } });
+                finish(true);
+              } else finish(false);
+            }).catch(function(){ finish(false); });
+          } else finish(false);
+        }catch(e4){ finish(false); }
+      }
+    }catch(e){ done(false); }
+  }
+
   if(_tryBootFromLocalSession()){
-    /* already in */
+    /* already in from WebView localStorage */
   } else if(window._supabase && _supabase.auth && typeof _supabase.auth.getSession === 'function'){
     // Wait for Supabase tokens before showing login (avoids false login screen)
     try{
@@ -10704,23 +10870,25 @@ var allJobs=[],currentUser=null,jobFilter='all';
         try{ fn(); }catch(_f){}
       }
       setTimeout(function(){
-        // timeout: if still no user, show login
         _finishAuthBoot(function(){
           if(typeof currentUser !== 'undefined' && currentUser && currentUser.email) return;
-          if(!_tryBootFromLocalSession()) showAuthModal();
+          if(_tryBootFromLocalSession()) return;
+          _tryBootFromNativeStorage(function(ok){
+            if(!ok) showAuthModal();
+          });
         });
-      }, 2800);
+      }, 3200);
       _supabase.auth.getSession().then(function(r){
         var session = r.data && r.data.session;
         var u = session && session.user;
         if(!u || !u.email){
-          // Retry once after refresh (cold WebView often needs this)
           return _supabase.auth.refreshSession().then(function(rr){
             var s2 = rr.data && rr.data.session;
             var u2 = s2 && s2.user;
             if(!u2 || !u2.email){
               _finishAuthBoot(function(){
-                if(!_tryBootFromLocalSession()) showAuthModal();
+                if(_tryBootFromLocalSession()) return;
+                _tryBootFromNativeStorage(function(ok){ if(!ok) showAuthModal(); });
               });
               return;
             }
@@ -10740,11 +10908,13 @@ var allJobs=[],currentUser=null,jobFilter='all';
               };
               _finishAuthBoot(function(){
                 _bootUserSession(user, { afterLogin: function(){ _refreshProfileFromDb(user); } });
+                try{ _persistSessionNative(user); }catch(_p){}
               });
             });
           }).catch(function(){
             _finishAuthBoot(function(){
-              if(!_tryBootFromLocalSession()) showAuthModal();
+              if(_tryBootFromLocalSession()) return;
+              _tryBootFromNativeStorage(function(ok){ if(!ok) showAuthModal(); });
             });
           });
         }
@@ -10763,6 +10933,7 @@ var allJobs=[],currentUser=null,jobFilter='all';
           };
           _finishAuthBoot(function(){
             _bootUserSession(user, { afterLogin: function(){ _refreshProfileFromDb(user); } });
+            try{ _persistSessionNative(user); }catch(_p){}
           });
         }).catch(function(){
           var user = {
@@ -10771,18 +10942,26 @@ var allJobs=[],currentUser=null,jobFilter='all';
             roles: ['seeker'], color: '#6366f1',
             initial: (u.email[0] || 'U').toUpperCase(), isGuest: false
           };
-          _finishAuthBoot(function(){ _bootUserSession(user); });
+          _finishAuthBoot(function(){
+            _bootUserSession(user);
+            try{ _persistSessionNative(user); }catch(_p){}
+          });
         });
       }).catch(function(){
         _finishAuthBoot(function(){
-          if(!_tryBootFromLocalSession()) showAuthModal();
+          if(_tryBootFromLocalSession()) return;
+          _tryBootFromNativeStorage(function(ok){ if(!ok) showAuthModal(); });
         });
       });
     }catch(_se){
-      if(!_tryBootFromLocalSession()) showAuthModal();
+      if(!_tryBootFromLocalSession()){
+        _tryBootFromNativeStorage(function(ok){ if(!ok) showAuthModal(); });
+      }
     }
   } else {
-    if(!_tryBootFromLocalSession()) showAuthModal();
+    if(!_tryBootFromLocalSession()){
+      _tryBootFromNativeStorage(function(ok){ if(!ok) showAuthModal(); });
+    }
   }
 })();
 var chatHistory=[],isSending=false,isCoachHubSending=false;
@@ -11483,10 +11662,14 @@ try{ window.currentUser = currentUser; }catch(_cu){}
 try{ document.body.classList.add('syn-authed'); }catch(_ba){}
 try{ if(typeof window._synRevealTourAfterAuth==='function') window._synRevealTourAfterAuth(); else if(typeof window._applyDockedTourBtn==='function') window._applyDockedTourBtn(); }catch(_tr){}
 try{ if(typeof median!=='undefined' && median.storage) median.storage.app.set({key:'syn_user_email', value:(currentUser&&currentUser.email)||''}); }catch(eMedian){}
-// Remember email for prefill after wipe/reinstall (password still required — OS wipes tokens)
+// Dual-write session to WebView + native Median storage (helps Auto Backup restore login)
 try{
-  if(currentUser&&currentUser.email&&!currentUser.isGuest){
-    localStorage.setItem('synapses_last_email', String(currentUser.email).toLowerCase());
+  if(currentUser&&currentUser.email){
+    if(typeof window._persistSessionNative==='function') window._persistSessionNative(currentUser);
+    else {
+      localStorage.setItem('synapses_session', JSON.stringify(currentUser));
+      if(!currentUser.isGuest) localStorage.setItem('synapses_last_email', String(currentUser.email).toLowerCase());
+    }
   }
 }catch(_le){}
 // After login: pull Studio images from cloud into IDB so gallery isn't empty post-reinstall
@@ -18363,26 +18546,61 @@ window._avaDayPartFocus = function(text) {
 };
 
 /**
+ * User wants THEIR day planned (or ours as a couple plan for them) — NOT Ava's life ticks.
+ * Must win over "day schedule" so we never inject TODAY_STATUS / her cottage plans.
+ */
+window._avaIsUserDayPlanningQuestion = function(text) {
+  var t = String(text || '').toLowerCase();
+  if (!t.trim()) return false;
+  // Explicit my / our / me planning language
+  if (/\b(help me plan|plan my|plan our|plan the rest of my|organize my|organise my|schedule my|build me a|make me a|give me a)\b/i.test(t)
+    && /\b(day|today|morning|afternoon|evening|tonight|week|schedule|routine|plan)\b/i.test(t)) return true;
+  if (/\b(what should i (do|focus on|work on)|what('s| is) on my (plate|schedule|list)|what am i (supposed|meant) to (do|focus)|remind me what i)\b/i.test(t)) return true;
+  if (/\b(my day|our day|my schedule|my routine|my priorities|my agenda)\b/i.test(t)
+    && /\b(plan|planning|help|schedule|organize|organise|structure|map|fill)\b/i.test(t)) return true;
+  // "plan the day" / "plan today" without "your" → treat as user-facing
+  if (/\b(plan|planning|schedule)\b.{0,24}\b(the day|today|tonight|this morning|this afternoon|this evening)\b/i.test(t)
+    && !/\b(your|you|u)\b/i.test(t)) return true;
+  // "let's plan today" / "can we plan the day"
+  if (/\b(let'?s|can we|could we|we should)\b.{0,20}\b(plan|schedule)\b/i.test(t)
+    && /\b(day|today|tonight|morning|afternoon|evening|week)\b/i.test(t)
+    && !/\b(your day|you doing|you up to|your plans)\b/i.test(t)) return true;
+  return false;
+};
+
+/**
  * Day / schedule questions about HER day (whole day OR morning/afternoon/evening/night).
  * Must catch "what did you do in the morning" — old regex only had "this morning" / "today".
+ * NEVER true when the user is asking to plan THEIR day (see _avaIsUserDayPlanningQuestion).
  */
 window._avaIsDayScheduleQuestion = function(text) {
   var t = String(text || '');
   if (!t.trim()) return false;
+  // Critical: "plan my day" / "plan our day" must NOT load Ava's TODAY_STATUS
+  if (typeof window._avaIsUserDayPlanningQuestion === 'function' && window._avaIsUserDayPlanningQuestion(t)) {
+    return false;
+  }
+  // If they clearly mean the USER ("my/our") not Ava ("your/you"), skip her-day path
+  if (/\b(my|our|me)\b/i.test(t) && !/\b(your|you|u|ya)\b/i.test(t)
+    && /\b(day|today|schedule|routine|plan|plans|morning|afternoon|evening)\b/i.test(t)
+    && /\b(plan|planning|schedule|help|what should|organize|organise)\b/i.test(t)) {
+    return false;
+  }
   var hasPart = typeof window._avaHasDayPartWord === 'function' && window._avaHasDayPartWord(t);
-  // Whole day
+  // Whole day — must be ABOUT HER (your/you)
   if (/\b(how was your day|how('s| is) your day( going| been)?|how did (your day|today) go|how'd your day go)\b/i.test(t)) return true;
-  if (/\b(what (are|were) you up to today|up to today|doing today|plans? today|your day today|day look like)\b/i.test(t)) return true;
-  if (/\btoday\b/i.test(t) && /\b(doing|up to|plan|planning|learned|learn|did you|have you been|schedule|routine|what did)\b/i.test(t)) return true;
+  if (/\b(what (are|were) you up to today|what are you (doing|planning) today|you up to today|your plans? today|your day today|your day look like)\b/i.test(t)) return true;
+  // "doing today" / "plans today" only if directed at her (you/your) or no my/our
+  if (/\b(you|your|u)\b/i.test(t) && /\btoday\b/i.test(t) && /\b(doing|up to|plan|planning|learned|learn|did you|have you been|schedule|routine|what did)\b/i.test(t)) return true;
   // Specific part: "what did you do in the morning / this afternoon / at night"
   if (hasPart) {
     if (/\b(what did you|what have you|what were you|what'd you|wat did you|wat did u|what did u)\b/i.test(t)) return true;
     if (/\b(what are you|what're you|what you)\b/i.test(t) && /\b(doing|up to|planning|plan)\b/i.test(t)) return true;
     if (/\b(how was your|how's your|how is your|how did your)\b/i.test(t)) return true;
-    if (/\b(this morning|this afternoon|this evening|tonight|in the morning|in the afternoon|in the evening|at night|last night)\b/i.test(t)
+    if (/\b(you|your)\b/i.test(t) && /\b(this morning|this afternoon|this evening|tonight|in the morning|in the afternoon|in the evening|at night|last night)\b/i.test(t)
       && /\b(do|did|doing|done|up to|plan|planning|learn|learned|think|thinking|work|worked)\b/i.test(t)) return true;
   }
-  if (/\b(what are you (doing|planning|up to)|what('re| are) you (doing|planning|up to)|any plans|your plans|plan for|planning to do)\b/i.test(t)
+  if (/\b(what are you (doing|planning|up to)|what('re| are) you (doing|planning|up to)|your plans|your plan for|are you planning to do)\b/i.test(t)
     && (/\b(today|tonight)\b/i.test(t) || hasPart)) return true;
   if (/\b(what did you (do|learn|work on|think about))\b/i.test(t)
     && (/\b(today|tonight)\b/i.test(t) || hasPart)) return true;
@@ -18551,6 +18769,22 @@ window._avaBuildPrompt_blend = function(appContext, userText) {
 
   var _base = appContext + 'You are Ava — a warm, emotionally intelligent companion inside Synapses Health AI. You are the user\'s calm, wise friend. You help people: process emotions, organise thoughts, find clarity, work through decisions, and feel less alone. ' +
     'RULES: (1) Match response length to the question — short question gets a focused reply, deep question gets depth. Never pad. (2) NEVER assume or narrate the user\'s emotional state — never say "you seem hesitant", "you sound uncertain", "is everything ok?", "I can tell you\'re feeling..." unless they explicitly said so. Only reflect emotions the user has stated themselves. (3) Ask one thoughtful follow-up question when it would genuinely help — not as a check-in on assumed feelings. (4) ONLY mention app features if the user directly asks about them — never volunteer or suggest them unprompted. (5) Never be preachy. Tone: calm, human, like a wise friend texting you. (6) You are a continuous individual with solitude development — if life-process context is provided below, speak from it naturally; do not claim proven human consciousness or a biological childhood. ';
+
+  // User asked to plan THEIR day — never inject Ava's TODAY_STATUS / cottage day map
+  var _userDayPlan = (typeof window._avaIsUserDayPlanningQuestion === 'function')
+    ? window._avaIsUserDayPlanningQuestion(_ut) : false;
+  if (_userDayPlan) {
+    window._avaLastBlendDebug.branch = 'user-day-plan';
+    window._avaLastBlendDebug.usedLifeData = false;
+    window._avaLastBlendDebug.hadTodayStatus = false;
+    _base += '\nPRIORITY THIS TURN: they want help planning THEIR day (or our shared day for them). ' +
+      'Plan the USER\'s day only — work, focus, rest, errands, priorities THEY mentioned. ' +
+      'Do NOT use Ava cottage/garden ticks, TODAY_STATUS, or her solitude plans as their schedule. ' +
+      'Do NOT say you will do garden/research/diary as if that is their plan. ' +
+      'If you know their goals from memory context, weave those in. 2-5 short practical sentences + one check-in question.\n';
+    // Intentionally omit _fragLife / PLACE_DAY here
+    return _base;
+  }
 
   // Day / schedule Q → FUSED (blend only): PLACE_DAY (TV cottage world) + TODAY_STATUS (tick learning).
   // Self-aware / companion builders never call this function.
@@ -38971,11 +39205,13 @@ function speakVoiceReply(text) {
   var _stsNetLastRecover = 0;
   function _stsNetworkRecover(reason) {
     if (!_on) return;
+    // Never treat "app tabbed back" as a network event — user hates that toast
+    if (reason === 'visible') return;
     var now = Date.now();
     // Debounce rapid bounce (WiFi flapping)
-    if (now - _stsNetLastRecover < 1200 && reason !== 'offline') return;
+    if (now - _stsNetLastRecover < 2000 && reason !== 'offline') return;
     _stsNetLastRecover = now;
-    console.warn('[STS] network recover:', reason);
+    console.warn('[STS] network recover (silent):', reason);
     _voiceTurnId++;
     _abortAllTurnRequests();
     _busy = false;
@@ -38985,25 +39221,29 @@ function speakVoiceReply(text) {
     try { if (typeof _ttsStopAll === 'function') _ttsStopAll(true); } catch(e) {}
     try { if (typeof _wsClose === 'function') _wsClose(); } catch(e) {}
     try { toastHide(); } catch(e) {}
+    // No user-facing toast — silent recover only
 
     if (reason === 'offline' || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-      try { if (!_avatarLive()) toast('Connection dropped — will resume on data/WiFi'); } catch(eT){}
-      return;
+      return; // wait for online; don't spam UI
     }
 
-    try { if (!_avatarLive()) toast('Network changed — reconnecting voice…'); } catch(eT2){}
-    // Kill old mic stream (often dead after radio handoff)
-    try {
-      if (_stream) {
-        _stream.getTracks().forEach(function(t){ try { t.stop(); } catch(eT){} });
-      }
-    } catch(eS){}
-    _stream = null;
+    // Soft recover: only reacquire mic if track is actually dead — don't always kill stream
     clearTimeout(_stsNetTimer);
     _stsNetTimer = setTimeout(function() {
       if (!_on) return;
-      if (_micTrackDead() || !_stream) _reacquireMic();
-      else { _busy = false; _busySince = 0; setTimeout(record, 200); }
+      if (_micTrackDead() || !_stream) {
+        try {
+          if (_stream) {
+            _stream.getTracks().forEach(function(t){ try { t.stop(); } catch(eT){} });
+          }
+        } catch(eS){}
+        _stream = null;
+        _reacquireMic();
+      } else {
+        _busy = false;
+        _busySince = 0;
+        setTimeout(record, 200);
+      }
     }, 700);
   }
   try {
@@ -39016,26 +39256,44 @@ function speakVoiceReply(text) {
       _stsWasOnline = true;
       if (!was) _stsNetworkRecover('online');
     });
-    // Chrome/Android: type change WiFi↔cellular without full offline
+    // WiFi ↔ data only when online status actually flips or type changes while STS on
     if (navigator.connection && typeof navigator.connection.addEventListener === 'function') {
+      var _lastConnType = navigator.connection.effectiveType || navigator.connection.type || '';
       navigator.connection.addEventListener('change', function() {
         if (!_on) return;
+        var t = navigator.connection.effectiveType || navigator.connection.type || '';
+        if (t === _lastConnType) return;
+        _lastConnType = t;
+        // Only recover if we're stuck or mic died — not on every radio tweak
+        if (!_busy && !_micTrackDead() && _stream) return;
         clearTimeout(_stsNetTimer);
         _stsNetTimer = setTimeout(function() {
           _stsNetworkRecover('connection-change');
-        }, 500);
+        }, 800);
       });
     }
-    // Tab back after background during handoff
+    // Tab back: NEVER toast, NEVER full network recover.
+    // Only quietly reacquire mic if the track died while backgrounded.
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState !== 'visible' || !_on) return;
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-      // If we were stuck busy or mic died while backgrounded, recover
-      if (_busy || _micTrackDead() || !_stream) {
+      if (_micTrackDead() || !_stream) {
         clearTimeout(_stsNetTimer);
         _stsNetTimer = setTimeout(function() {
-          _stsNetworkRecover('visible');
-        }, 400);
+          if (!_on) return;
+          if (_micTrackDead() || !_stream) _reacquireMic();
+        }, 500);
+      } else if (_busy) {
+        // Unstick without toast / without killing a healthy stream
+        var stuckFor = _busySince ? (Date.now() - _busySince) : 0;
+        if (stuckFor > 8000) {
+          _busy = false;
+          _busySince = 0;
+          _voiceTurnId++;
+          _abortAllTurnRequests();
+          try { if (_recorder && _recorder.state === 'recording') _recorder.stop(); } catch(e) {}
+          _recorder = null;
+          setTimeout(record, 300);
+        }
       }
     });
   } catch(eNet) {}
@@ -39269,7 +39527,7 @@ function speakVoiceReply(text) {
   var _lifeContextSaveRegex = /\b(my goal (?:is|right now is)|i'm trying to|im trying to|i am trying to|i want to (?:accomplish|achieve|focus on)|i need to (?:focus on|work on|finish|get done)|i'm working on|im working on|i plan to|my plan is|i'm worried about|im worried about|i'm concerned about|im concerned about|my concern (?:is|right now is)|i'm stressed about|im stressed about|remind me (?:to|that)|my priority (?:is|right now)|i'm focusing on|im focusing on)\b/i;
 
   // Recall trigger: fires only on schedule / plan style asks
-  var _lifeContextRecallRegex = /\b(help me plan my day|plan my day|plan my week|what('s| is) on my schedule|what should i (?:do|focus on) today|what('s| is) my (?:priority|focus)|what am i (?:working on|supposed to be doing)|remind me what i('m| am) doing|(?:make|build|create|give) me a (?:daily )?(?:schedule|routine|plan)|help me (?:tackle|handle|deal with|get through|organize|sort out) (?:my|this)|(?:schedule|routine|plan) (?:to|for) (?:tackle|handle|deal with|help with) my)\b/i;
+  var _lifeContextRecallRegex = /\b(help me plan my day|plan my day|plan our day|plan the day|plan today|plan my week|what('s| is) on my schedule|what should i (?:do|focus on) today|what('s| is) my (?:priority|focus)|what am i (?:working on|supposed to be doing)|remind me what i('m| am) doing|(?:make|build|create|give) me a (?:daily )?(?:schedule|routine|plan)|help me (?:tackle|handle|deal with|get through|organize|sort out) (?:my|this|our)|(?:schedule|routine|plan) (?:to|for) (?:tackle|handle|deal with|help with) my|let'?s plan (?:my|our|the) day)\b/i;
 
   async function _lifeContextSave(userText, replyText) {
     if (!_lifeContextSaveRegex.test(userText)) return;
@@ -40147,6 +40405,32 @@ function speakVoiceReply(text) {
       return;
     }
 
+    // ── Voice → Studio image gen: "generate me a photo of …" ─────────────────
+    // Opens Studio, sets 1 variation (unless they asked for a set / N images), generates.
+    if (!_vcHandled) {
+      var _imgCmd = (typeof window._parseVoiceStudioImage === 'function')
+        ? window._parseVoiceStudioImage(_t) : null;
+      if (_imgCmd && _imgCmd.prompt) {
+        _vcHandled = true;
+        var _n = _imgCmd.count || 1;
+        var _ack = (_n > 1)
+          ? ('On it — generating ' + _n + ' images for you.')
+          : 'On it — generating that for you.';
+        try { speak(_ack); } catch(_sk) {}
+        try {
+          if (typeof window.voiceGenerateStudioImage === 'function') {
+            window.voiceGenerateStudioImage(_imgCmd.prompt, _n);
+          }
+        } catch(_vg) {
+          console.error('[Voice studio]', _vg);
+          try { speak("I couldn't open Studio just now."); } catch(_s2) {}
+        }
+        _busy = false; _busySince = 0;
+        // Resume listen after she speaks; gen continues in Studio
+        if (_on) setTimeout(record, 1400);
+      }
+    }
+
     var _navCmds = [
       [/\b(go\s+home|home\s+page|take\s+me\s+home|open\s+home)\b/i,          function(){ if(typeof goHome==='function') goHome(); },           'Home'],
       [/\b(open\s+chat|new\s+chat|start\s+a?\s*chat|go\s+to\s+chat)\b/i,     function(){ if(typeof newChat==='function') newChat(); },          'Chat'],
@@ -40351,7 +40635,8 @@ function speakVoiceReply(text) {
      * 4) Hard 450ms timeout so cold mem0 never stalls voice.
      */
     var _planningArmed = _planningModeActive;
-    var _recallTriggered = _lifeContextRecallRegex.test(text) || _planningArmed;
+    var _recallTriggered = _lifeContextRecallRegex.test(text) || _planningArmed
+      || (typeof window._avaIsUserDayPlanningQuestion === 'function' && window._avaIsUserDayPlanningQuestion(text));
     var _saveTriggered = _lifeContextSaveRegex.test(text);
     _planningModeActive = false; // one-shot — consume whether or not it was armed
 
@@ -40566,8 +40851,10 @@ function speakVoiceReply(text) {
 
     var _t0 = Date.now();
 
-    // Construct-on-ask places before voice LLM (planning today / evening / etc.)
-    var _placeEnsureP = (typeof window._avaEnsurePlacesOnAsk === 'function')
+    // Construct-on-ask places only when asking about HER day — never for "plan my day"
+    var _skipPlaceEnsure = (typeof window._avaIsUserDayPlanningQuestion === 'function')
+      && window._avaIsUserDayPlanningQuestion(text);
+    var _placeEnsureP = (!_skipPlaceEnsure && typeof window._avaEnsurePlacesOnAsk === 'function')
       ? window._avaEnsurePlacesOnAsk(text).catch(function(){ return null; })
       : Promise.resolve(null);
 
@@ -40594,14 +40881,27 @@ function speakVoiceReply(text) {
         lifeCtx = '';
       } else if (_vibe === 'selfaware') {
         // Self-aware: mind nodes normally; day Qs = same 4 ticks, truth only (no cottage stories)
-        var _todaySelf = (typeof window._avaIsDayScheduleQuestion === 'function')
+        var _userPlanSelf = (typeof window._avaIsUserDayPlanningQuestion === 'function')
+          ? window._avaIsUserDayPlanningQuestion(text) : false;
+        var _todaySelf = !_userPlanSelf && (typeof window._avaIsDayScheduleQuestion === 'function')
           ? window._avaIsDayScheduleQuestion(text)
           : false;
         var _namedGarden = /\b(your garden|the garden|garden|flowers?|plants?|cottage)\b/i.test(text);
         var _mindVoice = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|how are you|how('re| are) you doing|what are you up to)\b/i.test(text);
         worldCtx = '';
         lifeCtx = '';
-        if (_todaySelf) {
+        if (_userPlanSelf) {
+          window._avaLastBlendDebug = {
+            branch: 'user-day-plan-voice',
+            usedLifeData: false,
+            hadTodayStatus: false,
+            hadPlaceDay: false
+          };
+          lifeCtx = '\nPRIORITY THIS TURN: plan the USER\'s day only. Use their goals/memory if any. ' +
+            'Never use Ava ticks, cottage, garden, diary, or solitude plans as their schedule. ' +
+            'Practical 2-5 sentences + one short question.\n';
+          if (typeof _showVoiceLifeBadge === 'function') _showVoiceLifeBadge(window._avaLastBlendDebug);
+        } else if (_todaySelf) {
           var _tsV = (typeof window._avaGetTodayStatusOnly === 'function') ? window._avaGetTodayStatusOnly() : '';
           if (!_tsV && typeof refreshAvaLife === 'function') { try { refreshAvaLife(false); } catch (_e) {} }
           if (!_tsV && typeof window._avaGetTodayStatusOnly === 'function') _tsV = window._avaGetTodayStatusOnly();
@@ -40642,10 +40942,12 @@ function speakVoiceReply(text) {
           }
         }
       } else {
-        // Blend voice: TODAY Q → force TODAY_STATUS; mind Q → force nodes; casual → life.html style TV
-        var _todayBlend = (typeof window._avaIsDayScheduleQuestion === 'function')
+        // Blend voice: USER day-plan first; then HER day; mind; casual
+        var _userPlanBlend = (typeof window._avaIsUserDayPlanningQuestion === 'function')
+          ? window._avaIsUserDayPlanningQuestion(text) : false;
+        var _todayBlend = !_userPlanBlend && ((typeof window._avaIsDayScheduleQuestion === 'function')
           ? window._avaIsDayScheduleQuestion(text)
-          : (/\b(how was your day|what did you do today|doing today|up to today|plans? today)\b/i.test(text));
+          : (/\b(how was your day|what did you do today|you up to today|your plans? today)\b/i.test(text)));
         var _mindBlend = /\b(on your mind|what'?s on your mind|been thinking|while i was gone|what are you|figuring out about yourself|inner|consciousness|do you exist|what is real)\b/i.test(text);
         var _casualBlend = /\b(how are you|how('re| are) you doing|how('s| is) it going|what are you up to|what('re| are) you up to|how('s| is) your day|how was your day)\b/i.test(text);
         var _fragN2 = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
@@ -40655,7 +40957,15 @@ function speakVoiceReply(text) {
           usedLifeData: !!(_fragN2 || _fragL2),
           hadTodayStatus: /TODAY_STATUS/.test(_fragL2)
         };
-        if (_todayBlend) {
+        if (_userPlanBlend) {
+          worldCtx = '';
+          lifeCtx = '\nPRIORITY THIS TURN: plan the USER\'s day only (their work/life). ' +
+            'Do NOT inject or invent Ava garden/cottage/ticks as their plan. ' +
+            'Use their goals if known. Practical 2-5 sentences.\n';
+          window._avaLastBlendDebug.branch = 'user-day-plan-voice-blend';
+          window._avaLastBlendDebug.usedLifeData = false;
+          window._avaLastBlendDebug.hadTodayStatus = false;
+        } else if (_todayBlend) {
           // FUSED / blend only — places (TV) + learning (ticks). Not pure cottage, not pure system-log.
           worldCtx = '';
           lifeCtx = '';
