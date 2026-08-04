@@ -9168,56 +9168,55 @@ function downloadGeneratedImage(src, filename, imgEl){
   }
 
   /**
-   * Native Median save only. Prefer Photos (downloadImage) so the file
-   * lands in Gallery — NOT "open with ChatGPT".
-   * Returns true only if a native API was successfully invoked.
+   * Native Median save. Order matters for Android shell:
+   * 1) downloadFile({open:false}) → public Downloads (needs androidDownloadToPublicStorage:true in appConfig)
+   * 2) downloadImage → Gallery album (file IS on device; may open preview)
+   * Never a.click — that opens ChatGPT / random apps.
    */
   function medianSaveHttps(url){
     if(!url || !hasMedian()) return false;
     var share = median.share;
 
-    // 1) Photos / Gallery — correct API for images (no Open-with list)
-    try{
-      if(typeof share.downloadImage === 'function'){
-        var r1 = share.downloadImage({ url: url });
-        // Promise-style bridge
-        if(r1 && typeof r1.then === 'function'){
-          r1.then(function(){ okToast('Saved to Photos / Gallery'); })
-            .catch(function(){ failToast('Could not save to Photos'); tipClearChatGptDefault(); });
-          return true;
-        }
-        okToast('Saved to Photos / Gallery — open your Gallery app');
-        return true;
-      }
-    }catch(e1){ console.warn('[Studio dl] downloadImage', e1); }
-
-    // 2) Downloads folder (must be enabled in app shell; open MUST be false)
+    // 1) Public Downloads — silent save (requires app rebuild with public storage ON)
     try{
       if(typeof share.downloadFile === 'function'){
         var r2 = share.downloadFile({ url: url, open: false, filename: filename });
         if(r2 && typeof r2.then === 'function'){
-          r2.then(function(){ okToast('Saved to Downloads'); })
+          r2.then(function(){ okToast('Saved — check Files → Downloads'); })
             .catch(function(){ failToast('Download failed'); tipClearChatGptDefault(); });
           return true;
         }
-        okToast('Save requested — check Downloads / Files app');
-        tipClearChatGptDefault();
+        okToast('Saved — open Files app → Downloads');
         return true;
       }
     }catch(e2){ console.warn('[Studio dl] downloadFile', e2); }
 
-    // 3) Legacy GoNative names
+    // 2) Gallery — still a real save to device (not temp). Preview may open; photo is kept.
+    try{
+      if(typeof share.downloadImage === 'function'){
+        var r1 = share.downloadImage({ url: url });
+        if(r1 && typeof r1.then === 'function'){
+          r1.then(function(){ okToast('Saved to Gallery (photo is on your phone)'); })
+            .catch(function(){ failToast('Could not save to Gallery'); tipClearChatGptDefault(); });
+          return true;
+        }
+        okToast('Saved to Gallery — check Photos app');
+        return true;
+      }
+    }catch(e1){ console.warn('[Studio dl] downloadImage', e1); }
+
+    // 3) Legacy GoNative / iOS handlers
     try{
       if(typeof window.gonative_download_image === 'function'){
         window.gonative_download_image(url);
-        okToast('Saved to Photos / Gallery');
+        okToast('Saved to Gallery');
         return true;
       }
     }catch(e3){}
     try{
       if(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.downloadImage){
         window.webkit.messageHandlers.downloadImage.postMessage({ url: url });
-        okToast('Saved to Photos / Gallery');
+        okToast('Saved to Gallery');
         return true;
       }
     }catch(e4){}
