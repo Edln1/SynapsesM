@@ -9047,50 +9047,23 @@ function openStudioImageLightbox(src, meta){
 window.openStudioImageLightbox = openStudioImageLightbox;
 
 /**
- * Reliable Studio image download — SYNC first so user-gesture is kept (WebView/iOS).
- * @param {string} src
- * @param {string} [filename]
- * @param {HTMLImageElement} [imgEl] optional already-loaded <img> (best path)
+ * Studio image download — save to device, NEVER "Open with" (ChatGPT/Gallery).
+ * Android WebViews ignore <a download> on data:/blob: and open an app chooser.
+ * We convert the on-screen image → data URL → server one-shot URL with
+ * Content-Disposition: attachment, then trigger a real file download.
  */
 function downloadGeneratedImage(src, filename, imgEl){
-  if(!src) return;
-  filename = _studioDownloadFilename(filename, src);
+  if(!src && !(imgEl && imgEl.src)) return;
+  filename = _studioDownloadFilename(filename, src || (imgEl && imgEl.src) || '');
+  var proxyBase = (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY
+    : ((typeof _AVA_BACKEND_URL === 'string' && _AVA_BACKEND_URL) ? _AVA_BACKEND_URL
+    : 'https://synbot-whatsapp-2.onrender.com');
 
-  function okToast(){ if(typeof showToast === 'function') showToast('Downloaded'); }
+  function okToast(msg){ if(typeof showToast === 'function') showToast(msg || 'Saved to device'); }
   function failToast(msg){ if(typeof showToast === 'function') showToast(msg || 'Could not download image'); }
+  function busyToast(){ if(typeof showToast === 'function') showToast('Saving…'); }
 
-  /** Sync <a download> — must run in the click stack when possible */
-  function saveHref(href){
-    if(!href) return false;
-    try{
-      var a = document.createElement('a');
-      a.href = href;
-      a.download = filename;
-      a.rel = 'noopener';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function(){ try{ a.remove(); }catch(_r){} }, 1200);
-      okToast();
-      return true;
-    }catch(e){ return false; }
-  }
-  function saveBlob(blob){
-    if(!blob || !blob.size) return false;
-    try{
-      var mime = (blob.type || '').toLowerCase();
-      if(mime.indexOf('png') >= 0 && !/\.png$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.png';
-      else if((mime.indexOf('jpeg') >= 0 || mime.indexOf('jpg') >= 0) && !/\.jpe?g$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.jpg';
-    }catch(_m){}
-    try{ if(navigator.msSaveOrOpenBlob){ navigator.msSaveOrOpenBlob(blob, filename); okToast(); return true; } }catch(_ie){}
-    try{
-      var url = URL.createObjectURL(blob);
-      var ok = saveHref(url);
-      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_r){} }, 2500);
-      return ok;
-    }catch(e){ return false; }
-  }
-  /** SYNC canvas → data URL (keeps user gesture; async toBlob often fails in WebViews) */
+  /** SYNC canvas → data URL from a loaded <img> */
   function dataUrlFromImg(img){
     try{
       if(!img || !img.naturalWidth) return null;
@@ -9101,30 +9074,27 @@ function downloadGeneratedImage(src, filename, imgEl){
       return c.toDataURL('image/jpeg', 0.92);
     }catch(e){ return null; }
   }
-  function tryShareBlob(blob, done){
+  function resolveDataUrl(){
+    if(imgEl){
+      var d0 = dataUrlFromImg(imgEl);
+      if(d0) return d0;
+    }
     try{
-      if(!navigator.share || !navigator.canShare || !window.File){ done(false); return; }
-      var file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-      if(!navigator.canShare({ files: [file] })){ done(false); return; }
-      navigator.share({ files: [file], title: filename }).then(function(){ okToast(); done(true); }).catch(function(){ done(false); });
-    }catch(e){ done(false); }
-  }
-  function tryMedianUrl(url){
-    try{
-      if(typeof median === 'undefined' || !median.share) return false;
-      if(typeof median.share.downloadFile === 'function'){
-        median.share.downloadFile({ url: url, open: false, filename: filename });
-        okToast();
-        return true;
+      var nodes = document.querySelectorAll('#imageGenResults img, #imageGenHistoryGrid img, #_studioImgLightbox img');
+      for(var i = 0; i < nodes.length; i++){
+        var n = nodes[i];
+        var ns = n.currentSrc || n.src || '';
+        if(ns === src || (src && ns.indexOf((src.split('?')[0] || '')) === 0) || n.getAttribute('src') === src){
+          var d1 = dataUrlFromImg(n);
+          if(d1) return d1;
+        }
       }
-      if(typeof median.share.downloadImage === 'function'){
-        median.share.downloadImage({ url: url });
-        okToast();
-        return true;
-      }
-    }catch(e){}
-    return false;
+    }catch(_q){}
+    if(src && /^data:/i.test(src)) return src;
+    return null;
   }
+
+  /** Desktop Neutralino — real Save dialog, no Open-with */
   function tryNeutralinoDataUrl(dataUrl){
     try{
       if(!window.Neutralino || !Neutralino.os || !Neutralino.filesystem) return false;
@@ -9136,74 +9106,178 @@ function downloadGeneratedImage(src, filename, imgEl){
         var b64 = (dataUrl.split(',')[1] || '');
         var bytes = Uint8Array.from(atob(b64), function(c){ return c.charCodeAt(0); });
         return Neutralino.filesystem.writeBinaryFile(savePath, bytes.buffer);
-      }).then(function(){ okToast(); }).catch(function(){});
+      }).then(function(){ okToast('Saved'); }).catch(function(){ failToast('Save failed'); });
       return true;
     }catch(e){ return false; }
   }
 
-  // ── 1) SYNC: painted <img> on screen (best for Studio cards + lightbox) ──
-  function tryImgSync(el){
-    if(!el || !el.complete || !el.naturalWidth) return false;
-    var data = dataUrlFromImg(el);
-    if(!data) return false;
-    if(tryNeutralinoDataUrl(data)) return true;
-    if(saveHref(data)) return true;
+  /**
+   * Trigger a real DOWNLOAD (not open/view).
+   * Never navigator.share, never downloadImage, never target=_blank, never location=url.
+   */
+  function triggerAttachmentUrl(url){
+    if(!url) return false;
+    // Median Android: silent Downloads folder (open:false — no Open-with sheet)
     try{
-      var b = _dataUrlToBlob(data);
-      if(b && saveBlob(b)) return true;
-    }catch(_b){}
-    return false;
-  }
-  if(tryImgSync(imgEl)) return;
-  try{
-    var nodes = document.querySelectorAll('#imageGenResults img, #imageGenHistoryGrid img, #_studioImgLightbox img');
-    for(var i = 0; i < nodes.length; i++){
-      var n = nodes[i];
-      var ns = n.currentSrc || n.src || '';
-      if(ns === src || (src && ns.indexOf((src.split('?')[0] || '')) === 0) || n.getAttribute('src') === src){
-        if(tryImgSync(n)) return;
+      if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
+        median.share.downloadFile({ url: url, open: false, filename: filename });
+        okToast('Saved to Downloads');
+        return true;
       }
-    }
-  }catch(_q){}
-
-  // ── 2) data: URL ──
-  if(/^data:/i.test(src)){
-    if(tryNeutralinoDataUrl(src)) return;
-    if(saveHref(src)) return;
-    try{ if(saveBlob(_dataUrlToBlob(src))) return; }catch(_d){}
-    failToast();
-    return;
+    }catch(_m){}
+    // Browser / WebView: navigate via hidden <a download> to attachment URL
+    try{
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.setAttribute('download', filename);
+      a.rel = 'noopener';
+      a.style.cssText = 'display:none!important;position:fixed;left:-9999px;';
+      // Do NOT set target=_blank — that opens content in a tab / Open-with
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ try{ a.remove(); }catch(_r){} }, 2000);
+      okToast('Saved to device');
+      return true;
+    }catch(e){ return false; }
   }
 
-  // ── 3) public http(s) — Median bridge / fetch ──
-  if(/^https?:/i.test(src)){
-    if(tryMedianUrl(src)) return;
-    fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){
-      if(!r.ok) throw new Error('bad');
-      return r.blob();
-    }).then(function(b){
-      if(saveBlob(b)) return;
-      tryShareBlob(b, function(ok){ if(!ok) failToast(); });
-    }).catch(function(){
-      var im = new Image();
-      im.crossOrigin = 'anonymous';
-      im.onload = function(){
-        var data = dataUrlFromImg(im);
-        if(data && (tryNeutralinoDataUrl(data) || saveHref(data))) return;
-        failToast('Download blocked by browser');
-      };
-      im.onerror = function(){ failToast('Download blocked by browser'); };
-      im.src = src;
+  /** Desktop Chromium save picker (no Open-with) */
+  function trySaveFilePicker(dataUrl){
+    if(!window.showSaveFilePicker || !window.FileSystemWritableFileStream) return Promise.resolve(false);
+    try{
+      var blob = _dataUrlToBlob(dataUrl);
+      if(!blob) return Promise.resolve(false);
+      return window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'Image', accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] } }]
+      }).then(function(handle){
+        return handle.createWritable().then(function(w){
+          return w.write(blob).then(function(){ return w.close(); });
+        });
+      }).then(function(){ okToast('Saved'); return true; }).catch(function(){ return false; });
+    }catch(e){ return Promise.resolve(false); }
+  }
+
+  /** Local blob fallback (desktop browsers only — WebView often Open-withs this) */
+  function tryLocalBlobDownload(dataUrl){
+    try{
+      // Skip pure Android WebView — local blob almost always becomes Open-with
+      var ua = navigator.userAgent || '';
+      var isAndroidWV = /Android/i.test(ua) && (/wv|WebView|Version\/\d+\.\d+/i.test(ua) || typeof median !== 'undefined');
+      if(isAndroidWV || (typeof isMedianAndroidApp === 'function' && isMedianAndroidApp())) return false;
+
+      var blob = _dataUrlToBlob(dataUrl);
+      if(!blob || !blob.size) return false;
+      // Prefer SaveBlob (not OpenBlob)
+      try{
+        if(navigator.msSaveBlob){ navigator.msSaveBlob(blob, filename); okToast('Saved'); return true; }
+      }catch(_ie){}
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.setAttribute('download', filename);
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){
+        try{ a.remove(); }catch(_a){}
+        try{ URL.revokeObjectURL(url); }catch(_r){}
+      }, 2500);
+      okToast('Saved to device');
+      return true;
+    }catch(e){ return false; }
+  }
+
+  /** Server one-shot attachment URL — fixes Android Open-with / ChatGPT chooser */
+  function saveViaServer(dataUrl){
+    busyToast();
+    return fetch(proxyBase + '/studio-prepare-download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: dataUrl, filename: filename })
+    }).then(function(r){
+      return r.json().then(function(j){
+        if(!r.ok) throw new Error((j && j.error) || 'prepare failed');
+        return j;
+      });
+    }).then(function(j){
+      var url = j.url || (proxyBase + '/studio-download/' + j.token);
+      if(!triggerAttachmentUrl(url)) throw new Error('trigger failed');
+    }).catch(function(err){
+      console.error('[Studio download]', err);
+      // Last resort desktop only
+      if(!tryLocalBlobDownload(dataUrl)) failToast('Could not save — try again');
     });
+  }
+
+  // ── Resolve image bytes (prefer what's already on screen) ──
+  var dataUrl = resolveDataUrl();
+
+  function goWithDataUrl(du){
+    if(!du){ failToast('Image not ready'); return; }
+    if(tryNeutralinoDataUrl(du)) return;
+    // Desktop save picker first when available
+    trySaveFilePicker(du).then(function(ok){
+      if(ok) return;
+      // Mobile app / WebView: always use server attachment (no Open-with)
+      var needServer = true;
+      try{
+        if(typeof isMedianAndroidApp === 'function' && isMedianAndroidApp()) needServer = true;
+        else if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) needServer = true;
+        else if(typeof median !== 'undefined') needServer = true;
+        else needServer = false;
+      }catch(_e){}
+      if(needServer){
+        saveViaServer(du);
+        return;
+      }
+      // Desktop browser: local download is fine
+      if(tryLocalBlobDownload(du)) return;
+      saveViaServer(du);
+    });
+  }
+
+  if(dataUrl){
+    goWithDataUrl(dataUrl);
     return;
   }
 
-  // ── 4) blob: URL ──
-  if(/^blob:/i.test(src)){
-    fetch(src).then(function(r){ return r.blob(); }).then(function(b){
-      if(saveBlob(b)) return;
-      tryShareBlob(b, function(ok){ if(!ok) failToast(); });
-    }).catch(function(){ failToast(); });
+  // Need to fetch remote/blob src into a data URL first
+  if(/^https?:/i.test(src) || /^blob:/i.test(src)){
+    busyToast();
+    // Median + public https: downloadFile open:false (no Open-with, no gallery app chooser)
+    try{
+      if(/^https?:/i.test(src) && typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
+        median.share.downloadFile({ url: src, open: false, filename: filename });
+        okToast('Saved to Downloads');
+        return;
+      }
+    }catch(_m2){}
+    fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){
+      if(!r.ok) throw new Error('fetch failed');
+      return r.blob();
+    }).then(function(blob){
+      return new Promise(function(resolve, reject){
+        var fr = new FileReader();
+        fr.onload = function(){ resolve(fr.result); };
+        fr.onerror = reject;
+        fr.readAsDataURL(blob);
+      });
+    }).then(function(du){ goWithDataUrl(du); })
+      .catch(function(){
+        // CORS image → canvas
+        var im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = function(){
+          var du = dataUrlFromImg(im);
+          if(du) goWithDataUrl(du);
+          else failToast('Download blocked by browser');
+        };
+        im.onerror = function(){ failToast('Download blocked by browser'); };
+        im.src = src;
+      });
     return;
   }
 
