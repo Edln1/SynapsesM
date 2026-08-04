@@ -42498,9 +42498,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       pulse: true,
       magic: true,
       tight: true,
-      holePad: 10,
-      holeMax: 88,
-      holeMaxH: 88,
+      iconCenter: true,
+      holePad: 8,
+      holeMax: 72,
+      holeMaxH: 72,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42598,8 +42599,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       mode: 'spotlight',
       sel: '#bnavCallBtn',
       view: 'sec-chat',
-      title: 'Calls',
-      body: 'This phone icon opens your call panel. Start or resume a voice call from here, and after a call ends tap it again to reopen the result. A purple dot means there’s something new waiting.',
+      title: 'Call summary',
+      body: 'When you ask Ava (by voice) to call someone, she places the call for you. When it’s done, open this phone icon to see a short summary and transcript of what was said — so you can review the outcome anytime.',
       cta: 'Next',
       magic: true,
       tight: true,
@@ -42653,9 +42654,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       magic: true,
       tight: true,
       iconCenter: true,
-      holePad: 4,
-      holeMax: 36,
-      holeMaxH: 36,
+      holePad: 2,
+      holeMax: 30,
+      holeMaxH: 30,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42672,6 +42673,14 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       secondary: "I'll explore",
       enter: function () {
         tourDemoCleanup();
+        /* Park SynBot lower-center — not stuck high in the top-right after top-toggle step */
+        try {
+          var bx = Math.round(window.innerWidth * 0.52);
+          var by = Math.round(window.innerHeight * 0.70);
+          state.guideSpawn = { x: bx, y: by };
+          if (typeof guideFlyTo === 'function') guideFlyTo(bx, by);
+          else if (typeof releaseGuideBot === 'function') releaseGuideBot(bx, by, true);
+        } catch (eBot) {}
       }
     }
   ];
@@ -46996,8 +47005,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (!state.open) return;
       if (step.mode === 'center') {
         placeHole(null);
-        /* Don't park bot at BR on Meet Ava / You're in — stay at guideSpawn */
+        /* Don't park bot at BR on Meet Ava / You're in — stay at guideSpawn
+           (done step sets a lower-center spawn so he isn't stuck top-right) */
         if (state.guideReleased && state.guideSpawn && !step.myth) {
+          try {
+            if (step.id === 'done') {
+              state.guideSpawn = {
+                x: Math.round(window.innerWidth * 0.52),
+                y: Math.round(window.innerHeight * 0.70)
+              };
+            }
+          } catch (ePos) {}
           guideFlyTo(state.guideSpawn.x, state.guideSpawn.y);
         }
         card.style.display = 'none';
