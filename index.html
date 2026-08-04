@@ -42369,26 +42369,25 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       } catch (eTop) {}
     } catch (e) {}
   }
-  /** Show only the bottom icons we tour — never the Call button (wrong target) */
+  /** Bottom-left icon row for tour — keep Call (phone) visible the whole way */
   function tourDemoBnavShow() {
     try {
       document.body.classList.add('bottom-nav');
       _tourDemo.bnavForced = true;
-      var show = ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn'];
-      var hide = ['bnavCallBtn'];
+      var call0 = document.getElementById('bnavCallBtn');
+      if (call0 && !_tourDemo._userHadCallChecked) {
+        _tourDemo._userHadCallChecked = true;
+        _tourDemo._userHadCall = call0.classList.contains('has-call');
+      }
+      var show = ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn', 'bnavCallBtn'];
       show.forEach(function (id) {
         var el = document.getElementById(id);
         if (el) {
           el.style.setProperty('display', 'flex', 'important');
           el.style.visibility = 'visible';
           el.style.opacity = '1';
-        }
-      });
-      hide.forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) {
-          el.style.setProperty('display', 'none', 'important');
-          el.classList.remove('has-call', 'cs-unread');
+          /* Call is normally display:none until .has-call — force it for the tour */
+          if (id === 'bnavCallBtn') el.classList.add('has-call');
         }
       });
     } catch (e) {}
@@ -42442,8 +42441,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       var dyn = document.getElementById('topBarDynBtns');
       if (dyn) dyn.style.visibility = '';
       var call = document.getElementById('bnavCallBtn');
-      if (call) call.style.removeProperty('display');
-      ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn'].forEach(function (id) {
+      if (call) {
+        call.style.removeProperty('display');
+        /* Leave .has-call if user really has call history — only strip tour-only force */
+        if (!_tourDemo._userHadCall) call.classList.remove('has-call');
+      }
+      ['bnavNotesBtn', 'bnavPulseBtn', 'bnavAskBtn', 'bnavImageGenBtn', 'bnavCallBtn'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.style.removeProperty('display');
       });
@@ -42515,9 +42518,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      holePad: 8,
-      holeMax: 52,
-      holeMaxH: 52,
+      iconCenter: true,
+      holePad: 6,
+      holeMax: 44,
+      holeMaxH: 44,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42556,9 +42560,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      holePad: 8,
-      holeMax: 56,
-      holeMaxH: 56,
+      iconCenter: true,
+      holePad: 6,
+      holeMax: 44,
+      holeMaxH: 44,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42576,15 +42581,44 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      holePad: 8,
-      holeMax: 52,
-      holeMaxH: 52,
+      iconCenter: true,
+      holePad: 6,
+      holeMax: 44,
+      holeMaxH: 44,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
         tourDemoAskOff();
         /* Do not open the tall panel here — only ring the icon so position stays correct */
         tourDemoPulseOff();
+      }
+    },
+    {
+      id: 'call',
+      mode: 'spotlight',
+      sel: '#bnavCallBtn',
+      view: 'sec-chat',
+      title: 'Calls',
+      body: 'This phone icon opens your call panel. Start or resume a voice call from here, and after a call ends tap it again to reopen the result. A purple dot means there’s something new waiting.',
+      cta: 'Next',
+      magic: true,
+      tight: true,
+      iconCenter: true,
+      holePad: 6,
+      holeMax: 44,
+      holeMaxH: 44,
+      enter: function () {
+        tourDemoEmptyHome();
+        tourDemoBnavShow();
+        tourDemoAskOff();
+        tourDemoPulseOff();
+        try {
+          var cb = document.getElementById('bnavCallBtn');
+          if (cb) {
+            cb.classList.add('has-call');
+            cb.style.setProperty('display', 'flex', 'important');
+          }
+        } catch (eC) {}
       }
     },
     {
@@ -42597,9 +42631,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      holePad: 8,
-      holeMax: 52,
-      holeMaxH: 52,
+      iconCenter: true,
+      holePad: 6,
+      holeMax: 44,
+      holeMaxH: 44,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -42617,9 +42652,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       cta: 'Next',
       magic: true,
       tight: true,
-      holePad: 6,
-      holeMax: 40,
-      holeMaxH: 40,
+      iconCenter: true,
+      holePad: 4,
+      holeMax: 36,
+      holeMaxH: 36,
       enter: function () {
         tourDemoEmptyHome();
         tourDemoBnavShow();
@@ -46096,7 +46132,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     try { if (typeof setView === 'function') setView('sec-chat'); } catch (e) {}
   }
 
-  function rectFor(sel) {
+  function rectFor(sel, step) {
     if (!sel) return null;
     var parts = sel.split(',');
     for (var i = 0; i < parts.length; i++) {
@@ -46110,7 +46146,17 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (st.pointerEvents === 'none' && (st.opacity === '0' || st.visibility === 'hidden')) continue;
       } catch (eSt) {}
       var r = el.getBoundingClientRect();
-      if (r.width < 8 || r.height < 8) continue;
+      /* Prefer inner SVG/icon box for bottom-nav buttons so the ring centers on the glyph */
+      if (step && step.iconCenter) {
+        try {
+          var glyph = el.querySelector('svg, img, .syn-fp-icon');
+          if (glyph) {
+            var gr = glyph.getBoundingClientRect();
+            if (gr.width >= 8 && gr.height >= 8) r = gr;
+          }
+        } catch (eG) {}
+      }
+      if (r.width < 6 || r.height < 6) continue;
       if (r.bottom < 4 || r.top > innerHeight - 4) continue;
       if (r.right < 4 || r.left > innerWidth - 4) continue;
       /* Prefer real screen geometry as plain object (survives element reflow) */
@@ -46132,7 +46178,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function placeHole(r, step) {
     var hole = $('synTourHole');
     if (!hole) return;
-    if (!r || !(r.width > 6) || !(r.height > 6)) {
+    if (!r || !(r.width > 4) || !(r.height > 4)) {
       /* No valid target yet — hide ring (never leave a box floating over empty UI) */
       hole.classList.remove('show', 'pulse');
       hole.style.left = '-9999px';
@@ -46145,14 +46191,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     var maxW = (step && step.holeMax) ? step.holeMax : Math.min(innerWidth - 24, 420);
     var maxH = (step && step.holeMaxH) ? step.holeMaxH : 160;
     var w, h;
-    if (step && step.tight) {
-      /* Icon buttons: ring hugs the control — no huge min-width that drifts left onto Call */
-      w = Math.min(maxW, Math.max(r.width + pad * 2, 44));
-      h = Math.min(maxH, Math.max(r.height + pad * 2, 44));
-      /* Prefer square ring centered on the icon */
-      var side = Math.max(w, h);
-      w = Math.min(maxW, side);
-      h = Math.min(maxH, side);
+    if (step && (step.tight || step.iconCenter)) {
+      /* Small square ring centered on the icon glyph — not the whole 48×52 hit box */
+      var side = Math.ceil(Math.max(r.width, r.height) + pad * 2);
+      side = Math.max(36, Math.min(side, Math.min(maxW, maxH)));
+      w = side;
+      h = side;
     } else {
       var minW = Math.min(120, Math.max(40, r.width + pad * 2));
       var minH = Math.min(56, Math.max(36, r.height + pad * 2));
@@ -46161,15 +46205,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
     var cx = r.left + r.width / 2;
     var cy = r.top + r.height / 2;
-    var left = Math.max(4, Math.min(innerWidth - w - 4, cx - w / 2));
-    var top = Math.max(4, Math.min(innerHeight - h - 4, cy - h / 2));
+    var left = Math.max(2, Math.min(innerWidth - w - 2, cx - w / 2));
+    var top = Math.max(2, Math.min(innerHeight - h - 2, cy - h / 2));
     hole.style.left = left + 'px';
     hole.style.top = top + 'px';
     hole.style.width = w + 'px';
     hole.style.height = h + 'px';
-    hole.style.borderRadius = (step && step.tight) ? '14px' : (h < 100 ? '16px' : '18px');
+    hole.style.borderRadius = (step && (step.tight || step.iconCenter)) ? '12px' : (h < 100 ? '16px' : '18px');
     hole.classList.add('show');
-    spawnBurst(cx, cy, 10, [C.purp, 'rgba(196,181,253,0.85)']);
+    spawnBurst(cx, cy, 8, [C.purp, 'rgba(196,181,253,0.85)']);
   }
 
   function placeBot(r) {
@@ -47080,7 +47124,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           ensureChat();
           try { if (typeof step.enter === 'function') step.enter(); } catch (eE3) {}
           /* Prefer exact first selector when multiple (e.g. only Ask, never Call) */
-          var hit2 = rectFor(step.sel);
+          var hit2 = rectFor(step.sel, step);
           if (hit2 && hit2.r) {
             placeHole(hit2.r, step);
             if (step.pulse) hole.classList.add('pulse');
