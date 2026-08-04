@@ -9066,9 +9066,17 @@ function downloadGeneratedImage(src, filename, imgEl){
     : ((typeof _AVA_BACKEND_URL === 'string' && _AVA_BACKEND_URL) ? _AVA_BACKEND_URL
     : 'https://synbot-whatsapp-2.onrender.com');
 
-  function okToast(msg){ if(typeof showToast === 'function') showToast(msg || 'Saved'); }
+  /* On Android/Median the OS already shows "Download complete" — our toast stacks on it.
+     Only show app toasts for errors (or desktop where there is no system toast). */
+  function okToast(msg){
+    if(isMobile() || hasMedian()) return; // let system toast own the success moment
+    if(typeof showToast === 'function') showToast(msg || 'Saved');
+  }
   function failToast(msg){ if(typeof showToast === 'function') showToast(msg || 'Could not save image'); }
-  function busyToast(){ if(typeof showToast === 'function') showToast('Saving…'); }
+  function busyToast(){
+    if(isMobile() || hasMedian()) return; // no double busy + system
+    if(typeof showToast === 'function') showToast('Saving…');
+  }
 
   function hasMedian(){
     try{ return typeof median !== 'undefined' && median && median.share; }catch(e){ return false; }
@@ -9471,9 +9479,11 @@ function _readStudioImageCache(){
     }catch(e2){}
   }
   if(!Array.isArray(hist)) return [];
-  // Drop stale huge data URLs from the light index (they belong in IDB now)
+  // Keep entries with id even if src empty (blob lives in IDB). Drop only huge bare data URLs.
   return hist.filter(function(it){
-    if(!it || !it.src) return false;
+    if(!it) return false;
+    if(it.id) return true;
+    if(!it.src) return false;
     if(/^data:/i.test(it.src) && it.src.length > 4000) return false;
     return true;
   });
@@ -9655,18 +9665,30 @@ async function loadImageGenHistory(){
     }
 
     var local = (rows || []).map(_studioRowToDisplay).filter(Boolean);
-    // Fill gaps from light LS index (http URLs)
+    // Fill gaps from light LS index (http URLs + id-only rows that map to IDB)
     try{
       var ls = _readStudioImageCache();
       var seen = {};
+      var idbById = {};
+      (rows || []).forEach(function(r){ if(r && r.id) idbById[r.id] = r; });
       local.forEach(function(it){ if(it.src) seen[it.src] = 1; if(it.id) seen[it.id] = 1; });
       ls.forEach(function(it){
-        if(!it || !it.src || seen[it.src]) return;
-        if(/^data:/i.test(it.src) && it.src.length > 4000) return;
-        seen[it.src] = 1;
+        if(!it) return;
+        if(it.id && seen[it.id]) return;
+        if(it.src && seen[it.src]) return;
+        // Resolve empty src via IDB blob/row
+        var src = it.src || '';
+        if(!src && it.id && idbById[it.id]){
+          var disp = _studioRowToDisplay(idbById[it.id]);
+          if(disp && disp.src) src = disp.src;
+        }
+        if(!src) return;
+        if(/^data:/i.test(src) && src.length > 4000 && !it.id) return;
+        if(it.id) seen[it.id] = 1;
+        seen[src] = 1;
         local.push({
           id: it.id || '',
-          src: it.src,
+          src: src,
           prompt: it.prompt || '',
           model: it.model || '',
           aspect: it.aspect || '',
@@ -10655,68 +10677,113 @@ var allJobs=[],currentUser=null,jobFilter='all';
     }
   }
 
-  // ── Auth restore: synapses_session (fast) → Supabase persisted tokens (backup) ──
-  try{
-    var sv = localStorage.getItem('synapses_session');
-    if(sv){
-      var s = JSON.parse(sv);
-      if(s && s.email && (s.name || s.isGuest)){
-        if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
-        _bootUserSession(s, {
-          afterLogin: function(){ _refreshProfileFromDb(s); }
-        });
-        return;
-      }
-    }
-  }catch(e){}
-
-  // No synapses_session — try Supabase auth storage (survives if custom session key was wiped by quota)
-  if(window._supabase && _supabase.auth && typeof _supabase.auth.getSession === 'function'){
+  // ── Auth restore (same install only — uninstall wipes all of this) ──
+  function _tryBootFromLocalSession(){
     try{
+      var sv = localStorage.getItem('synapses_session');
+      if(!sv) return false;
+      var s = JSON.parse(sv);
+      if(!s || !s.email) return false;
+      if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
+      _bootUserSession(s, {
+        afterLogin: function(){ _refreshProfileFromDb(s); }
+      });
+      return true;
+    }catch(e){ return false; }
+  }
+
+  if(_tryBootFromLocalSession()){
+    /* already in */
+  } else if(window._supabase && _supabase.auth && typeof _supabase.auth.getSession === 'function'){
+    // Wait for Supabase tokens before showing login (avoids false login screen)
+    try{
+      var _authBootDone = false;
+      function _finishAuthBoot(fn){
+        if(_authBootDone) return;
+        _authBootDone = true;
+        try{ fn(); }catch(_f){}
+      }
+      setTimeout(function(){
+        // timeout: if still no user, show login
+        _finishAuthBoot(function(){
+          if(typeof currentUser !== 'undefined' && currentUser && currentUser.email) return;
+          if(!_tryBootFromLocalSession()) showAuthModal();
+        });
+      }, 2800);
       _supabase.auth.getSession().then(function(r){
         var session = r.data && r.data.session;
         var u = session && session.user;
         if(!u || !u.email){
-          showAuthModal();
-          return;
+          // Retry once after refresh (cold WebView often needs this)
+          return _supabase.auth.refreshSession().then(function(rr){
+            var s2 = rr.data && rr.data.session;
+            var u2 = s2 && s2.user;
+            if(!u2 || !u2.email){
+              _finishAuthBoot(function(){
+                if(!_tryBootFromLocalSession()) showAuthModal();
+              });
+              return;
+            }
+            u = u2;
+            return _supabase.from('profiles').select('*').eq('id', u.id).single().then(function(pr){
+              var p = pr.data || {};
+              var user = {
+                id: u.id, email: u.email,
+                name: p.name || (u.email.split('@')[0] || 'User'),
+                roles: p.role ? [p.role] : ['seeker'],
+                color: p.color || '#6366f1',
+                initial: ((p.name || u.email)[0] || 'U').toUpperCase(),
+                avatar: p.avatar_url || null,
+                coverVideo: p.cover_video_url || null,
+                plan: p.plan || 'free', planStatus: p.plan_status || 'active',
+                stripeCustomerId: p.stripe_customer_id || null, isGuest: false
+              };
+              _finishAuthBoot(function(){
+                _bootUserSession(user, { afterLogin: function(){ _refreshProfileFromDb(user); } });
+              });
+            });
+          }).catch(function(){
+            _finishAuthBoot(function(){
+              if(!_tryBootFromLocalSession()) showAuthModal();
+            });
+          });
         }
-        _supabase.from('profiles').select('*').eq('id', u.id).single().then(function(pr){
+        return _supabase.from('profiles').select('*').eq('id', u.id).single().then(function(pr){
           var p = pr.data || {};
           var user = {
-            id: u.id,
-            email: u.email,
+            id: u.id, email: u.email,
             name: p.name || (u.email.split('@')[0] || 'User'),
             roles: p.role ? [p.role] : ['seeker'],
             color: p.color || '#6366f1',
             initial: ((p.name || u.email)[0] || 'U').toUpperCase(),
             avatar: p.avatar_url || null,
             coverVideo: p.cover_video_url || null,
-            plan: p.plan || 'free',
-            planStatus: p.plan_status || 'active',
-            stripeCustomerId: p.stripe_customer_id || null,
-            isGuest: false
+            plan: p.plan || 'free', planStatus: p.plan_status || 'active',
+            stripeCustomerId: p.stripe_customer_id || null, isGuest: false
           };
-          _bootUserSession(user, {
-            afterLogin: function(){ _refreshProfileFromDb(user); }
+          _finishAuthBoot(function(){
+            _bootUserSession(user, { afterLogin: function(){ _refreshProfileFromDb(user); } });
           });
         }).catch(function(){
           var user = {
-            id: u.id,
-            email: u.email,
+            id: u.id, email: u.email,
             name: (u.email.split('@')[0] || 'User'),
-            roles: ['seeker'],
-            color: '#6366f1',
-            initial: (u.email[0] || 'U').toUpperCase(),
-            isGuest: false
+            roles: ['seeker'], color: '#6366f1',
+            initial: (u.email[0] || 'U').toUpperCase(), isGuest: false
           };
-          _bootUserSession(user);
+          _finishAuthBoot(function(){ _bootUserSession(user); });
         });
-      }).catch(function(){ showAuthModal(); });
-      return;
-    }catch(_se){}
+      }).catch(function(){
+        _finishAuthBoot(function(){
+          if(!_tryBootFromLocalSession()) showAuthModal();
+        });
+      });
+    }catch(_se){
+      if(!_tryBootFromLocalSession()) showAuthModal();
+    }
+  } else {
+    if(!_tryBootFromLocalSession()) showAuthModal();
   }
-
-  showAuthModal();
 })();
 var chatHistory=[],isSending=false,isCoachHubSending=false;
 var _chatAbortCtrl = null; // AbortController for the current LLM stream
