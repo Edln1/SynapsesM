@@ -8724,9 +8724,10 @@ function openStudioImageLightbox(src, meta){
 
   var dlBtn = document.createElement('button');
   dlBtn.type = 'button';
-  dlBtn.innerHTML = '⬇ Download';
+  // Same glass language as Studio prompt bar (frosted pill, low-key — not purple CTA)
+  dlBtn.innerHTML = '<span style="opacity:0.7;font-size:12px;line-height:1;">↓</span><span>Download</span>';
   dlBtn.title = 'Save image to device';
-  dlBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:702;padding:11px 20px;border-radius:999px;border:1px solid rgba(255,255,255,0.16);background:rgba(124,106,247,0.28);color:#fff;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);';
+  dlBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:702;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.72);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:none;letter-spacing:0.01em;';
 
   function close(){
     lb.style.opacity = '0';
@@ -8753,87 +8754,129 @@ function openStudioImageLightbox(src, meta){
 window.openStudioImageLightbox = openStudioImageLightbox;
 
 /**
- * Save image to the user's device.
- * Android Median: native downloadImage (gallery/Downloads).
- * Web: blob download (works for data URLs + remote URLs via fetch).
+ * Save Studio image to the device as a real file download.
+ * - Always uses a Blob + <a download> (or native downloadFile with open:false)
+ * - Never opens gallery / new-tab preview prompts
  */
 function downloadGeneratedImage(src, filename){
-  filename = filename || ('synapses-image-' + Date.now() + '.jpg');
   if(!src) return;
+  filename = _studioDownloadFilename(filename, src);
 
-  // Native Android / Median shell — reliable device save
-  try{
-    if(typeof median !== 'undefined' && median.share && typeof median.share.downloadImage === 'function'){
-      median.share.downloadImage({ url: src, filename: filename });
-      if(typeof showToast === 'function') showToast('Saving to device…');
-      return;
-    }
-    if(typeof gonative !== 'undefined' && gonative.share && typeof gonative.share.downloadImage === 'function'){
-      gonative.share.downloadImage({ url: src, filename: filename });
-      if(typeof showToast === 'function') showToast('Saving to device…');
-      return;
-    }
-    if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
-      median.share.downloadFile({ url: src, filename: filename, open: false });
-      if(typeof showToast === 'function') showToast('Saving to device…');
-      return;
-    }
-  }catch(_n){}
+  function failQuiet(msg){
+    if(typeof showToast === 'function') showToast(msg || 'Could not download image');
+  }
 
   function triggerBlobDownload(blob){
+    if(!blob || !blob.size){ failQuiet(); return; }
+    // Keep extension in sync with real mime when possible
+    try{
+      var mime = (blob.type || '').toLowerCase();
+      if(mime.indexOf('png') >= 0 && !/\.png$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.png';
+      else if((mime.indexOf('jpeg') >= 0 || mime.indexOf('jpg') >= 0) && !/\.jpe?g$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.jpg';
+      else if(mime.indexOf('webp') >= 0 && !/\.webp$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.webp';
+    }catch(_m){}
+
     try{
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.rel = 'noopener';
+      // Do NOT set target=_blank — that opens/preview instead of saving
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_r){} }, 1500);
-      if(typeof showToast === 'function') showToast('Image saved');
-    }catch(e){
-      // last resort: open in new tab
-      try{ window.open(src, '_blank'); }catch(_o){}
-      if(typeof showToast === 'function') showToast('Could not auto-download — opened image instead');
-    }
+      setTimeout(function(){
+        try{ a.remove(); }catch(_a){}
+        try{ URL.revokeObjectURL(url); }catch(_r){}
+      }, 2000);
+      if(typeof showToast === 'function') showToast('Downloaded');
+      return;
+    }catch(e){}
+
+    // Native shell: force file save without opening the image
+    try{
+      if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
+        // open:false — no gallery / preview prompt
+        median.share.downloadFile({ url: URL.createObjectURL(blob), filename: filename, open: false });
+        if(typeof showToast === 'function') showToast('Downloaded');
+        return;
+      }
+    }catch(_n){}
+
+    failQuiet();
   }
 
-  // data: URLs → blob
+  function canvasFromImageUrl(url){
+    return new Promise(function(resolve, reject){
+      var im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = function(){
+        try{
+          var c = document.createElement('canvas');
+          c.width = im.naturalWidth || im.width;
+          c.height = im.naturalHeight || im.height;
+          if(!c.width || !c.height){ reject(new Error('empty')); return; }
+          var ctx = c.getContext('2d');
+          ctx.drawImage(im, 0, 0);
+          c.toBlob(function(b){
+            if(b) resolve(b); else reject(new Error('toBlob'));
+          }, 'image/jpeg', 0.92);
+        }catch(err){ reject(err); }
+      };
+      im.onerror = function(){ reject(new Error('img load')); };
+      im.src = url;
+    });
+  }
+
+  // data: → blob
   if(/^data:/i.test(src)){
-    try{
-      triggerBlobDownload(_dataUrlToBlob(src));
-    }catch(e){
-      var a2 = document.createElement('a');
-      a2.href = src;
-      a2.download = filename;
-      document.body.appendChild(a2);
-      a2.click();
-      a2.remove();
-    }
+    try{ triggerBlobDownload(_dataUrlToBlob(src)); }
+    catch(e){ failQuiet(); }
     return;
   }
 
-  // Remote/http(s) — fetch then save (avoids cross-origin download attr issues)
-  fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){
-    if(!r.ok) throw new Error('fetch failed');
+  // already a blob: URL
+  if(/^blob:/i.test(src)){
+    fetch(src).then(function(r){ return r.blob(); }).then(triggerBlobDownload).catch(function(){ failQuiet(); });
+    return;
+  }
+
+  // http(s) / relative — fetch as blob (required for cross-origin + download attr)
+  fetch(src, { mode: 'cors', credentials: 'omit', cache: 'force-cache' }).then(function(r){
+    if(!r.ok) throw new Error('fetch ' + r.status);
     return r.blob();
-  }).then(triggerBlobDownload).catch(function(){
-    // Fallback: try direct anchor (may work same-origin)
-    try{
-      var a = document.createElement('a');
-      a.href = src;
-      a.download = filename;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      if(typeof showToast === 'function') showToast('Download started');
-    }catch(e2){
-      try{ window.open(src, '_blank'); }catch(_o2){}
-    }
+  }).then(function(blob){
+    // Some CDNs return application/octet-stream — still fine for download
+    triggerBlobDownload(blob);
+  }).catch(function(){
+    // CORS-blocked: redraw via canvas when server sends ACAO *
+    canvasFromImageUrl(src).then(triggerBlobDownload).catch(function(){
+      // Last resort native file save (still no gallery open)
+      try{
+        if(typeof median !== 'undefined' && median.share && typeof median.share.downloadFile === 'function'){
+          median.share.downloadFile({ url: src, filename: filename, open: false });
+          if(typeof showToast === 'function') showToast('Downloaded');
+          return;
+        }
+      }catch(_nf){}
+      failQuiet('Download blocked — try again or use a different image');
+    });
   });
+}
+function _studioDownloadFilename(name, src){
+  var base = (name && String(name).trim()) || ('synapses-image-' + Date.now() + '.jpg');
+  // strip path / query junk
+  base = base.split(/[\\/]/).pop().split('?')[0] || base;
+  if(!/\.(jpe?g|png|webp|gif)$/i.test(base)){
+    var ext = 'jpg';
+    if(/^data:image\/png/i.test(src)) ext = 'png';
+    else if(/^data:image\/webp/i.test(src)) ext = 'webp';
+    else if(/\.(png)(\?|$)/i.test(src)) ext = 'png';
+    else if(/\.(webp)(\?|$)/i.test(src)) ext = 'webp';
+    base = base.replace(/\.\w+$/, '') + '.' + ext;
+  }
+  return base;
 }
 window.downloadGeneratedImage = downloadGeneratedImage;
 
