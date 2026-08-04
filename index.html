@@ -28491,30 +28491,60 @@ function _tnvClearGlideTimer(){
   if(_tnvGlideTimer){ clearTimeout(_tnvGlideTimer); _tnvGlideTimer = null; }
 }
 
-// The status toast (#tnvToast) anchors itself to the mic button's position
-// at the moment it's shown, and never re-checks after that. That's fine
-// while the button is stationary, but the button moves — container fade
-// (±16px), glide-to-center, glide-home, fade-out-centered — and if the
-// toast is on screen during any of that, it's left pointing at wherever the
-// button used to be. This polls the button's live position every frame for
-// `ms` and keeps the toast locked to it, matching the exact anchor math
-// toast() itself uses, so it never gets orphaned mid-move.
+/**
+ * Pin #tnvToast under the STS mic and keep the caret aimed at the mic center.
+ * Handles: glide-to-center mid-show, long first-intro text, edge clamping.
+ */
+function _tnvPositionToastToMic(toastEl, btn){
+  toastEl = toastEl || document.getElementById('tnvToast');
+  btn = btn || document.getElementById('topNavVoiceBtn');
+  if(!toastEl || !btn) return;
+  var r = btn.getBoundingClientRect();
+  if(!(r.width > 2) || !(r.height > 2)) return;
+  var cx = r.left + r.width / 2;
+  var top = r.bottom + 10;
+  toastEl.style.top = top + 'px';
+  toastEl.style.bottom = 'auto';
+  toastEl.style.left = cx + 'px';
+  toastEl.style.transform = 'translateX(-50%)';
+  toastEl.style.setProperty('--tnv-arrow-left', '50%');
+  /* After layout, if toast was clamped by screen edges, shift arrow so it still points at mic */
+  requestAnimationFrame(function(){
+    if(!toastEl.classList.contains('show') && toastEl.style.opacity === '0') return;
+    var tr = toastEl.getBoundingClientRect();
+    if(!(tr.width > 4)) return;
+    var pad = 10;
+    var shift = 0;
+    if(tr.left < pad) shift = pad - tr.left;
+    if(tr.right > window.innerWidth - pad) shift = (window.innerWidth - pad) - tr.right;
+    if(shift !== 0){
+      toastEl.style.left = (cx + shift) + 'px';
+      tr = toastEl.getBoundingClientRect();
+    }
+    /* Arrow % along toast width so tip lines up with mic center */
+    var arrowPct = ((cx - tr.left) / tr.width) * 100;
+    if(!isFinite(arrowPct)) arrowPct = 50;
+    arrowPct = Math.max(10, Math.min(90, arrowPct));
+    toastEl.style.setProperty('--tnv-arrow-left', arrowPct + '%');
+  });
+}
+window._tnvPositionToastToMic = _tnvPositionToastToMic;
+
+// While the mic is moving (glide / hide chrome), keep the toast glued to it.
 function _tnvTrackToastDuring(ms){
   var toastEl = document.getElementById('tnvToast');
   var btn = document.getElementById('topNavVoiceBtn');
   if(!toastEl || !btn) return;
   var start = (window.performance && performance.now) ? performance.now() : Date.now();
+  var dur = (typeof ms === 'number' && ms > 0) ? ms : 600;
   function step(now){
     if(!toastEl.classList.contains('show')) return; // dismissed mid-move — nothing to follow
-    var r = btn.getBoundingClientRect();
-    toastEl.style.top = (r.bottom + 12) + 'px';
-    toastEl.style.left = (r.left + r.width / 2) + 'px';
-    toastEl.style.transform = 'translateX(-50%)';
-    toastEl.style.bottom = 'auto';
-    if(now - start < ms) requestAnimationFrame(step);
+    _tnvPositionToastToMic(toastEl, btn);
+    if(now - start < dur) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
+window._tnvTrackToastDuring = _tnvTrackToastDuring;
 
 function _tnvGlideToCenter(){
   var btn = document.getElementById('topNavVoiceBtn');
@@ -28525,31 +28555,12 @@ function _tnvGlideToCenter(){
   if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
   /*
-    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%,
-    not “middle of .top-bar” (bar can be offset by layout/padding).
-    Vertical: optical mid of #topTitle / icon row.
+    Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%.
+    Vertical: same rowCy as restore (see _tnvComputeCenterRowCy) so reload matches live.
   */
-  var rowCy = first.top + first.height / 2;
-  try{
-    var titleEl = document.getElementById('topTitle');
-    if(titleEl && titleEl.getBoundingClientRect().height > 4){
-      var tr = titleEl.getBoundingClientRect();
-      rowCy = tr.top + tr.height / 2;
-    } else {
-      var barHidden = !!(bar.classList.contains('hidden') || document.body.classList.contains('topbar-hidden') || (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN));
-      if(barHidden) rowCy += 16;
-      var actions = document.querySelector('.top-bar .top-actions');
-      if(actions){
-        var row = actions.getBoundingClientRect();
-        if(row.height > 8){
-          var acy = row.top + row.height / 2;
-          if(barHidden) acy += 16;
-          rowCy = acy - 3;
-        }
-      }
-    }
-  }catch(_r){}
-  rowCy -= 2;
+  var rowCy = (typeof _tnvComputeCenterRowCy === 'function')
+    ? _tnvComputeCenterRowCy()
+    : (first.top + first.height / 2);
   _tnvHomeParent = btn.parentNode;
   _tnvHomeNextSibling = btn.nextSibling;
   // Body + fixed = left:50% is screen center (camera), independent of top-bar box
@@ -28741,20 +28752,51 @@ function _tnvClearEscapeInline(btn){
   if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
 }
 
+/**
+ * Optical mid of the top title / chrome — shared by live glide + reload restore
+ * so the mic doesn't sit higher after app reopen.
+ */
 function _tnvComputeCenterRowCy(){
-  var rowCy = (window.innerHeight || 640) * 0.06;
+  var rowCy = 0;
   try{
+    /* Prefer title label mid (stable even when top-actions are faded/hidden) */
     var titleEl = document.getElementById('topTitle');
-    if(titleEl && titleEl.getBoundingClientRect().height > 4){
+    if(titleEl){
       var tr = titleEl.getBoundingClientRect();
-      rowCy = tr.top + tr.height / 2 - 2;
-    } else {
-      var actions = document.querySelector('.top-bar .top-actions');
-      var row = actions ? actions.getBoundingClientRect() : null;
-      rowCy = (row && row.height > 8) ? (row.top + row.height / 2 + 16 - 3) : rowCy;
+      if(tr.height > 4 && tr.width > 4){
+        rowCy = tr.top + tr.height / 2;
+      }
     }
-  }catch(_y){}
-  return rowCy;
+    if(!rowCy){
+      var bar = document.querySelector('.top-bar');
+      if(bar){
+        var br = bar.getBoundingClientRect();
+        if(br.height > 8){
+          rowCy = br.top + br.height / 2;
+        }
+      }
+    }
+    if(!rowCy){
+      var strip = document.getElementById('winStrip') || document.getElementById('topBarToggle');
+      if(strip){
+        var sr = strip.getBoundingClientRect();
+        if(sr.height > 4) rowCy = sr.top + sr.height / 2;
+      }
+    }
+    if(!rowCy){
+      /* Fallback: safe-area + typical half top chrome (~30px content) */
+      var safe = 0;
+      try{
+        var vv = window.visualViewport;
+        if(vv && typeof vv.offsetTop === 'number') safe = vv.offsetTop;
+      }catch(_s){}
+      rowCy = safe + 30;
+    }
+  }catch(_y){
+    rowCy = 30;
+  }
+  /* Same optical nudge as the original live glide */
+  return rowCy - 2;
 }
 
 function _tnvApplyCenteredAtRow(btn, rowCy){
@@ -28982,12 +29024,9 @@ function toggleTopBar(){
 
 // Restores the mic's centered position on reload/app-reopen if it was left
 // there last session (top bar collapsed + mic glided to center — see
-// _tnvGlideToCenter above). This is a pure visual restore: it snaps the
-// button straight into place with no glide animation and does NOT resume
-// an actual live speech-to-speech session — clicking it just re-enters
-// voice mode like normal.
-// IMPORTANT: must apply translate(-50%,-50%) with top/left 50% — without it
-// the mic's top-left sits at center and looks shifted down+right (reload bug).
+// _tnvGlideToCenter above). Pure visual restore — does NOT resume live STS.
+// MUST set the same top:rowCy px as live glide; CSS alone has no top and the
+// mic sat slightly higher after reopen (static-position fallback).
 function _tnvEnsureHomeMic(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn) return;
@@ -28995,11 +29034,14 @@ function _tnvEnsureHomeMic(){
   btn.style.transition = '';
   btn.style.transform = '';
   btn.style.opacity = '';
+  if(typeof _tnvClearCenteredInline === 'function') _tnvClearCenteredInline();
   btn.style.top = '';
   btn.style.left = '';
   btn.style.right = '';
   btn.style.bottom = '';
   btn.style.margin = '';
+  btn.style.position = '';
+  btn.style.zIndex = '';
   var actions = document.querySelector('.top-bar .top-actions');
   if(actions && btn.parentNode !== actions){
     /* Mic is the first control in the top-actions row */
@@ -29020,30 +29062,30 @@ function _restoreTnvCenteredState(){
     _tnvEnsureHomeMic();
     return;
   }
-  if(_tnvCentered){
-    /* Re-assert true center (fixes partial restore) */
-    btn.style.transform = 'translate(-50%,-50%)';
-    btn.style.opacity = '1';
-    return;
-  }
   _tnvHomeParent = document.querySelector('.top-bar .top-actions') || btn.parentNode;
-  _tnvHomeNextSibling = _tnvHomeParent ? _tnvHomeParent.firstChild : null;
-  bar.appendChild(btn);
-  btn.classList.add('tnv-centered');
-  btn.style.transition = 'none';
-  btn.style.opacity = '1';
-  btn.style.transform = 'translate(-50%,-50%)';
-  _tnvCentered = true;
+  _tnvHomeNextSibling = (_tnvHomeParent && btn.parentNode === _tnvHomeParent) ? btn.nextSibling : (_tnvHomeParent ? _tnvHomeParent.firstChild : null);
+  /* Same body + top:rowCy as live glide (not bar-append with top:auto) */
+  var rowCy = _tnvComputeCenterRowCy();
+  _tnvApplyCenteredAtRow(btn, rowCy);
 }
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', _restoreTnvCenteredState);
 } else {
   setTimeout(_restoreTnvCenteredState, 0);
 }
-/* After layout settles (fonts/safe-area), re-assert position once more */
+/* After layout settles (fonts/safe-area), re-assert the same rowCy once more */
 window.addEventListener('load', function(){
   setTimeout(_restoreTnvCenteredState, 50);
+  setTimeout(_restoreTnvCenteredState, 300);
 });
+/* Android status bar / safe-area can settle late — one more pass */
+setTimeout(function(){
+  try{
+    if(localStorage.getItem('synapses_tnv_centered') === '1' && TOP_BAR_HIDDEN){
+      _restoreTnvCenteredState();
+    }
+  }catch(e){}
+}, 600);
 
 // ── Day / Night toggle ──────────────────────────────────────────
 function toggleDayNight(){
@@ -36640,7 +36682,7 @@ function speakVoiceReply(text) {
       'content:" ";' +
       'position:absolute;' +
       'top:-10px;' +
-      'left:50%;' +
+      'left:var(--tnv-arrow-left,50%);' +
       'transform:translateX(-50%);' +
       'width:0;height:0;' +
       'border-left:8px solid transparent;' +
@@ -36651,7 +36693,7 @@ function speakVoiceReply(text) {
       'content:" ";' +
       'position:absolute;' +
       'top:-8px;' +
-      'left:50%;' +
+      'left:var(--tnv-arrow-left,50%);' +
       'transform:translateX(-50%);' +
       'width:0;height:0;' +
       'border-left:6px solid transparent;' +
@@ -36865,6 +36907,16 @@ function speakVoiceReply(text) {
     }
     window._avaLastReply = intro;
     speak(intro);
+    /* Intro bubble often appears while mic is still gliding to mid-header —
+       keep caret tracking the live mic until it settles. */
+    try {
+      if (typeof window._tnvTrackToastDuring === 'function') {
+        window._tnvTrackToastDuring(3200);
+        setTimeout(function () {
+          if (typeof window._tnvTrackToastDuring === 'function') window._tnvTrackToastDuring(1800);
+        }, 900);
+      }
+    } catch (eTr) {}
     return true;
   }
 
@@ -37407,15 +37459,30 @@ function speakVoiceReply(text) {
     requestAnimationFrame(function() {
       if (span.scrollHeight > span.clientHeight + 2) hint.style.display = '';
     });
-    var btn = document.getElementById('topNavVoiceBtn');
-    if (btn) {
-      var r = btn.getBoundingClientRect();
-      _toast.style.top = (r.bottom + 12) + 'px';
-      _toast.style.left = (r.left + r.width / 2) + 'px';
-      _toast.style.transform = 'translateX(-50%)';
-      _toast.style.bottom = 'auto';
-    }
     _toast.classList.add('show');
+    /* Anchor under live mic (may be gliding to center on first STS) + aim caret */
+    if (typeof window._tnvPositionToastToMic === 'function') {
+      window._tnvPositionToastToMic(_toast, document.getElementById('topNavVoiceBtn'));
+    } else {
+      var btn = document.getElementById('topNavVoiceBtn');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        _toast.style.top = (r.bottom + 10) + 'px';
+        _toast.style.left = (r.left + r.width / 2) + 'px';
+        _toast.style.transform = 'translateX(-50%)';
+        _toast.style.bottom = 'auto';
+      }
+    }
+    /* First intro / glide: keep toast locked to mic while it moves (~0.7s delay + glide) */
+    if (typeof window._tnvTrackToastDuring === 'function') {
+      var trackMs = 900;
+      try {
+        if (window._s2sFirstSessionActive) trackMs = 2800;
+        else if (typeof _tnvCentered !== 'undefined' && _tnvCentered) trackMs = 1200;
+        else if (typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN) trackMs = 1600;
+      } catch (eT) {}
+      window._tnvTrackToastDuring(trackMs);
+    }
   }
   function toastHide() { if (_toast) _toast.classList.remove('show'); }
 
@@ -46284,11 +46351,12 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     hole.style.top = top + 'px';
     hole.style.width = w + 'px';
     hole.style.height = h + 'px';
-    hole.style.borderRadius = (step && (step.tight || step.iconCenter)) ? '50%' : (h < 100 ? '16px' : '18px');
+    /* Same rounded-rect highlight as before — not a full circle */
+    hole.style.borderRadius = (h < 100 ? '16px' : '18px');
     /* Win strip is z-index 9999999 — ring must sit above it for topBarToggle */
     hole.style.zIndex = (step && step.sel === '#topBarToggle') ? '10000001' : '';
     hole.classList.add('show');
-    spawnBurst(cx, cy, 8, [C.purp, 'rgba(196,181,253,0.85)']);
+    spawnBurst(cx, cy, 14, [C.purp, 'rgba(196,181,253,0.85)']);
   }
 
   function placeBot(r) {
