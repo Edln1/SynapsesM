@@ -7574,13 +7574,17 @@ function resetImageGenStudio(){
 function showStudioClearHistoryConfirm(){
   var existing = document.getElementById('studioClearHistoryModal');
   if(existing) existing.remove();
+  var loggedIn = !!(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id);
+  var bodyMsg = loggedIn
+    ? 'This permanently deletes all your Studio images on this device and from your account in the cloud (database + file storage). You can’t undo this.'
+    : 'This permanently deletes all saved generated images on this device. You can’t undo this.';
   var ov = document.createElement('div');
   ov.id = 'studioClearHistoryModal';
   ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:20px;';
   ov.innerHTML =
     '<div role="dialog" aria-modal="true" style="width:min(360px,100%);background:rgba(18,16,28,0.96);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:22px 20px 18px;box-shadow:0 24px 64px rgba(0,0,0,0.55);font-family:DM Sans,sans-serif;">' +
       '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#e8e6f5;margin-bottom:8px;">Clear studio history?</div>' +
-      '<div style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.55);margin-bottom:18px;">This deletes all saved generated images on this device (local cache). You can’t undo this.</div>' +
+      '<div style="font-size:13px;line-height:1.5;color:rgba(255,255,255,0.55);margin-bottom:18px;">' + bodyMsg + '</div>' +
       '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
         '<button type="button" id="studioClearCancel" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(255,255,255,0.7);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>' +
         '<button type="button" id="studioClearConfirm" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(232,93,150,0.45);background:rgba(232,93,150,0.18);color:#ffb3c9;font-size:13px;font-weight:600;cursor:pointer;">Clear history</button>' +
@@ -7598,16 +7602,64 @@ function showStudioClearHistoryConfirm(){
   };
 }
 
+/** Extract storage object path from a Supabase public/signed URL for bucket generated-images */
+function _studioStoragePathFromUrl(url, userId){
+  if(!url || typeof url !== 'string') return null;
+  try{
+    // .../storage/v1/object/public/generated-images/<path>
+    var m = url.match(/\/storage\/v1\/object\/(?:public|sign)\/generated-images\/(.+?)(?:\?|$)/i);
+    if(m && m[1]) return decodeURIComponent(m[1]);
+    // Already a relative path userId/...
+    if(userId && url.indexOf(userId + '/') === 0) return url;
+  }catch(e){}
+  return null;
+}
+
 function clearStudioImageHistoryAndUi(){
   try{ clearStudioImageCache(); }catch(e){}
   // Also wipe guest legacy key if present
   try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
-  // Best-effort remote clear for signed-in users
+
+  // Logged-in: wipe cloud DB rows + Storage files under this user's folder
   try{
     if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
-      _supabase.from('generated_images').delete().eq('user_id', currentUser.id).then(function(){}).catch(function(){});
+      var uid = currentUser.id;
+      // 1) List + remove files in storage bucket (folder = user id)
+      _supabase.storage.from('generated-images').list(uid, { limit: 1000 }).then(function(listRes){
+        if(listRes && !listRes.error && listRes.data && listRes.data.length){
+          var paths = listRes.data.map(function(f){ return uid + '/' + f.name; });
+          // Chunk deletes (Supabase accepts array of paths)
+          var chunk = 100;
+          for(var i = 0; i < paths.length; i += chunk){
+            _supabase.storage.from('generated-images').remove(paths.slice(i, i + chunk)).then(function(){}).catch(function(){});
+          }
+        }
+      }).catch(function(){});
+
+      // 2) Also remove by image_url path (covers nested/odd paths) then delete DB rows
+      _supabase.from('generated_images').select('image_url').eq('user_id', uid).then(function(sel){
+        if(sel && !sel.error && sel.data && sel.data.length){
+          var extra = [];
+          sel.data.forEach(function(row){
+            var p = _studioStoragePathFromUrl(row.image_url, uid);
+            if(p) extra.push(p);
+          });
+          if(extra.length){
+            var seen = {};
+            var uniq = extra.filter(function(p){ if(seen[p]) return false; seen[p] = 1; return true; });
+            var chunk2 = 100;
+            for(var j = 0; j < uniq.length; j += chunk2){
+              _supabase.storage.from('generated-images').remove(uniq.slice(j, j + chunk2)).then(function(){}).catch(function(){});
+            }
+          }
+        }
+        _supabase.from('generated_images').delete().eq('user_id', uid).then(function(){}).catch(function(){});
+      }).catch(function(){
+        _supabase.from('generated_images').delete().eq('user_id', uid).then(function(){}).catch(function(){});
+      });
     }
   }catch(e3){}
+
   document.getElementById('imageGenPrompt').value = '';
   document.getElementById('imageGenResults').innerHTML = '';
   document.getElementById('imageGenResults').style.display = 'none';
