@@ -8809,7 +8809,8 @@ function openImageGenModal(){
   closeMobileMore();
   renderImageGenTemplates();
   switchStudioTab('generate');
-  // Always restore from local (and account) cache so reloads don’t empty the grid
+  // Always re-read local IDB + cloud (if logged in) — never assume empty after HTML update
+  _imageGenFeedLoaded = false;
   renderImageGenDefaultFeed();
   var modal = document.getElementById('imageGenModal');
   modal.style.transition = 'none';
@@ -10553,6 +10554,23 @@ var allJobs=[],currentUser=null,jobFilter='all';
       if(m) m.style.display='flex';
       _loginAnimStarted=false;
       if(typeof initLoginAnim==='function') setTimeout(initLoginAnim,50);
+      // Prefill last email if we still have it (password still required after reinstall)
+      try{
+        var le = localStorage.getItem('synapses_last_email') || '';
+        var em = document.getElementById('loginEmail');
+        if(em && le && !em.value) em.value = le;
+        // Median native storage may still have email after some updates (not after full uninstall)
+        if(typeof median !== 'undefined' && median.storage && median.storage.app && typeof median.storage.app.get === 'function'){
+          var got = median.storage.app.get({ key: 'syn_user_email' });
+          if(got && typeof got.then === 'function'){
+            got.then(function(v){
+              var email = (v && (v.value || v.data || v)) || '';
+              if(typeof email === 'object' && email.value) email = email.value;
+              if(em && email && !em.value) em.value = String(email).toLowerCase();
+            }).catch(function(){});
+          }
+        }
+      }catch(_pf){}
     };
     // DOMContentLoaded has usually already fired by the time this runs from a
     // click (e.g. guest tapping the profile button), so the old code — which
@@ -11398,6 +11416,19 @@ try{ window.currentUser = currentUser; }catch(_cu){}
 try{ document.body.classList.add('syn-authed'); }catch(_ba){}
 try{ if(typeof window._synRevealTourAfterAuth==='function') window._synRevealTourAfterAuth(); else if(typeof window._applyDockedTourBtn==='function') window._applyDockedTourBtn(); }catch(_tr){}
 try{ if(typeof median!=='undefined' && median.storage) median.storage.app.set({key:'syn_user_email', value:(currentUser&&currentUser.email)||''}); }catch(eMedian){}
+// Remember email for prefill after wipe/reinstall (password still required — OS wipes tokens)
+try{
+  if(currentUser&&currentUser.email&&!currentUser.isGuest){
+    localStorage.setItem('synapses_last_email', String(currentUser.email).toLowerCase());
+  }
+}catch(_le){}
+// After login: pull Studio images from cloud into IDB so gallery isn't empty post-reinstall
+try{
+  _imageGenFeedLoaded = false;
+  if(typeof renderImageGenDefaultFeed === 'function'){
+    setTimeout(function(){ try{ renderImageGenDefaultFeed(); }catch(_rf){} }, 400);
+  }
+}catch(_st){}
 if(currentUser&&currentUser.email){ try{ notifyNotesWidget(currentUser.email); }catch(eNw){} }
 if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if(currentUser&&currentUser.email&&!currentUser.isGuest){setTimeout(function(){syncWhatsAppNotes(currentUser.email);startWhatsAppNotePolling(currentUser.email);notifyNotesWidget(currentUser.email);},800);}if(typeof window._hideSplash==='function')window._hideSplash();try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){} nlSave(); chatHistory=[];activeSession=null;document.getElementById('sbName').textContent=currentUser.name;document.getElementById('sbRole').textContent=getRoleLabel(currentUser);// Avatar already populated from DB in doLogin; cache it locally for preload
 if(currentUser.avatar)try{localStorage.setItem('synapses_avatar_'+currentUser.email,currentUser.avatar);}catch(e){}
