@@ -676,20 +676,216 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .role-card .rd{font-size:11px;color:#6b6b8a;margin-top:3px;}
 @media(max-width:768px){
   #imageGenResults{grid-template-columns:1fr 1fr!important;}
-  /* ── Auth modal ── */
-  .modal-overlay#authModal{align-items:flex-start!important;padding:0!important;}
-  #authModalInner{flex-direction:column!important;width:100vw!important;max-width:100vw!important;max-height:100vh!important;height:100vh!important;border-radius:0!important;overflow-y:auto!important;border:none!important;}
-  /* Left panel becomes full-width hero on top */
-  #authLeftPanel{width:100%!important;min-height:220px!important;height:220px!important;border-right:none!important;border-bottom:1px solid #1f2130!important;flex-shrink:0!important;position:relative!important;overflow:hidden!important;background:linear-gradient(135deg,#0d0f1e,#111420)!important;}
-  #authDotCanvas{opacity:0.85!important;}
-  #authLeftPanel canvas{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;}
-  #authLeftPanel > div:first-child{display:block!important;}
-  /* Keep the inner content centered */
-  #authLeftPanel > div:last-child{position:absolute!important;inset:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;padding:20px!important;gap:10px!important;}
+  /* ── Auth modal — immersive glass + aurora (Studio-inspired) ── */
+  .modal-overlay#authModal{
+    align-items:stretch!important;
+    justify-content:stretch!important;
+    padding:0!important;
+    background:#000!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  #authModalInner{
+    flex-direction:column!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    max-height:100dvh!important;
+    height:100dvh!important;
+    border-radius:0!important;
+    overflow:hidden!important;
+    border:none!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    position:relative!important;
+  }
+  /* Full-screen particle / beam layer (same black field as Studio Community — no pink/red tint) */
+  #authLeftPanel{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    border:none!important;
+    border-right:none!important;
+    border-bottom:none!important;
+    flex-shrink:0!important;
+    overflow:hidden!important;
+    z-index:0!important;
+    background:#000!important;
+  }
+  #authLeftPanel::after{display:none!important;content:none!important;}
+  /* Beams under particles — blur beams were covering dots completely */
+  #authBeamsWrap{
+    position:absolute!important;inset:0!important;z-index:0!important;
+    display:block!important;opacity:1!important;pointer-events:none!important;
+  }
+  #authBeamsCanvas{
+    display:block!important;position:absolute!important;inset:0!important;
+    width:100%!important;height:100%!important;z-index:0!important;
+    /* opacity animated in JS for smooth land — don't force 1 here */
+  }
+  /* Particles ABOVE beams so dots stay sharp and visible */
+  #authFlowCanvas{
+    display:block!important;position:absolute!important;inset:0!important;
+    width:100%!important;height:100%!important;z-index:2!important;
+    visibility:visible!important;pointer-events:none!important;
+  }
+  /* Hide brand hero on mobile — glass form is the whole screen */
+  #authLeftPanel > div:last-child{display:none!important;}
   #authLogoDesktop{display:none!important;}
-  #authLogoMobile{display:flex!important;margin-bottom:2px!important;}
-  #authLogoMobile svg{width:36px!important;height:36px!important;}
-  #authRightPanel{padding:24px 20px 40px!important;flex:1!important;}
+  #authLogoMobile{display:none!important;}
+  /* Full-screen form layer — NO backdrop-filter (it erases fine particles).
+     Glass look lives on buttons/inputs only (Studio style). */
+  #authRightPanel{
+    position:absolute!important;
+    inset:0!important;
+    z-index:3!important;
+    margin:0!important;
+    max-height:none!important;
+    height:100%!important;
+    width:100%!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:calc(28px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px))!important;
+    flex:none!important;
+    box-sizing:border-box!important;
+    border-radius:0!important;
+    border:none!important;
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:center!important;
+    transition:background .35s ease!important;
+  }
+  /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
+  #authModal.auth-field-clear #authRightPanel{
+    background:transparent!important;
+  }
+  /* Dark field: light veil only — heavy 0.42 black killed particles */
+  #authModal.auth-field-dark #authRightPanel{
+    background:rgba(0,0,0,0.22)!important;
+  }
+  #authModal.auth-field-dark #authLeftPanel::after{
+    display:block!important;
+    content:''!important;
+    position:absolute!important;
+    inset:0!important;
+    z-index:1!important; /* under particles (z=2) so dots stay visible */
+    pointer-events:none!important;
+    background:linear-gradient(180deg,rgba(0,0,0,0.12) 0%,transparent 45%,rgba(0,0,0,0.18) 100%)!important;
+  }
+  /* Field compare toggle — hidden; Dark is locked */
+  .auth-field-toggle{display:none!important;}
+  /* Beams present but quiet — not washed out to zero */
+  #authBeamsWrap{opacity:0.65!important;}
+  #authRightPanel .auth-welcome-row{
+    display:flex!important;
+    align-items:center!important;
+    gap:12px!important;
+    margin-bottom:8px!important;
+  }
+  #authRightPanel .auth-welcome-logo{
+    flex-shrink:0!important;
+    display:flex!important;
+    width:34px!important;
+    height:34px!important;
+  }
+  #authRightPanel .auth-welcome-logo svg{
+    width:34px!important;
+    height:34px!important;
+    display:block!important;
+    filter:drop-shadow(0 0 10px rgba(124,106,247,0.35));
+  }
+  #authRightPanel .auth-welcome-title{
+    font-size:20px!important;
+    color:#f0eef8!important;
+    margin-bottom:0!important;
+    flex:1!important;
+    min-width:0!important;
+  }
+  #authRightPanel .auth-welcome-sub{
+    color:rgba(180,176,210,0.65)!important;
+    margin-bottom:18px!important;
+    font-size:12.5px!important;
+    line-height:1.45!important;
+  }
+  #authRightPanel .modal-btn{
+    background:rgba(255,255,255,0.06)!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    backdrop-filter:blur(12px)!important;
+    -webkit-backdrop-filter:blur(12px)!important;
+    border-radius:14px!important;
+    color:rgba(255,255,255,0.9)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.06)!important;
+  }
+  #authRightPanel .modal-btn:active{
+    background:rgba(255,255,255,0.1)!important;
+  }
+  #authRightPanel #loginForm .modal-btn,
+  #authRightPanel #registerForm > .modal-btn{
+    background:rgba(124,106,247,0.22)!important;
+    border-color:rgba(124,106,247,0.4)!important;
+    font-weight:600!important;
+  }
+  #authRightPanel .form-row label{
+    color:rgba(190,186,220,0.55)!important;
+    font-size:11px!important;
+    letter-spacing:.04em!important;
+    text-transform:uppercase!important;
+  }
+  #authRightPanel .form-row input{
+    background:rgba(0,0,0,0.28)!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    border-radius:12px!important;
+    color:#f2f2f5!important;
+    padding:12px 14px!important;
+    backdrop-filter:blur(8px)!important;
+    -webkit-backdrop-filter:blur(8px)!important;
+  }
+  #authRightPanel .form-row input:focus{
+    border-color:rgba(124,106,247,0.45)!important;
+    outline:none!important;
+    box-shadow:0 0 0 3px rgba(124,106,247,0.12)!important;
+  }
+  #authRightPanel .modal-tabs{
+    background:rgba(0,0,0,0.28)!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    border-radius:12px!important;
+    padding:3px!important;
+    gap:0!important;
+  }
+  #authRightPanel .modal-tab{
+    border-radius:10px!important;
+    border:none!important;
+    background:transparent!important;
+    color:rgba(190,186,220,0.55)!important;
+    flex:1!important;
+  }
+  #authRightPanel .modal-tab.active{
+    background:rgba(255,255,255,0.08)!important;
+    color:#efeaff!important;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06)!important;
+  }
+  #authRightPanel .role-card{
+    background:rgba(0,0,0,0.25)!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    border-radius:12px!important;
+  }
+  #authRightPanel .role-card.selected{
+    border-color:rgba(124,106,247,0.45)!important;
+    background:rgba(124,106,247,0.12)!important;
+  }
+  #authRightPanel .auth-or-line{
+    color:rgba(160,156,190,0.5)!important;
+  }
+  #authRightPanel .auth-or-line::before,
+  #authRightPanel .auth-or-line span,
+  #authRightPanel .auth-divider-line{
+    background:rgba(255,255,255,0.08)!important;
+  }
   .role-picker{grid-template-columns:1fr 1fr!important;}
 
   /* ── Global ── */
@@ -4073,7 +4269,7 @@ html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
-<script>try{window._supabase=(typeof supabase!=='undefined')?supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL'):null;}catch(e){console.warn('Supabase init failed (CDN may be slow/blocked) — continuing without sync:',e);window._supabase=null;}</script>
+<script>try{window._supabase=(typeof supabase!=='undefined')?supabase.createClient('https://wockoewhlybhboprluxv.supabase.co','sb_publishable_gHjY5TDsgyfzhR4twYlhqw_CEp929PL',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage,storageKey:'synapses-supabase-auth-v1'}}):null;}catch(e){console.warn('Supabase init failed (CDN may be slow/blocked) — continuing without sync:',e);window._supabase=null;}</script>
 
 <script>
 // Instant avatar pre-load — runs before body paints, no flash
@@ -5058,8 +5254,11 @@ window.getWebAudioNode = getWebAudioNode;
 <div class="modal-overlay" id="authModal" style="display:none;">
   <div style="width:100%;max-width:820px;border-radius:20px;overflow:hidden;display:flex;background:#090b13;box-shadow:0 32px 80px rgba(0,0,0,0.6);border:1px solid #1f2130;animation:fadeUp .4s ease;" id="authModalInner">
     <div style="width:45%;position:relative;overflow:hidden;border-right:1px solid #1f2130;min-height:520px;background:linear-gradient(135deg,#0d0f1e,#111420);" id="authLeftPanel">
-      <canvas id="authBeamsCanvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
-      <canvas id="authDotCanvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
+      <!-- Beams under, particles on top (same stack order as Studio community) -->
+      <div id="authBeamsWrap" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;">
+        <canvas id="authBeamsCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+      </div>
+      <canvas id="authFlowCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;"></canvas>
       <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:2;">
         <div id="authLogoDesktop" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 0 32px rgba(99,102,241,0.4);">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -5087,13 +5286,76 @@ window.getWebAudioNode = getWebAudioNode;
             <circle cx="40" cy="40" r="4.5" fill="#c7d2fe" opacity="0.9"><animate attributeName="r" values="4.5;5;4.5;5.2;4.5" dur="6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/></circle>
           </svg>
         </div>
-        <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;text-align:center;background:linear-gradient(90deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;">Synapses</div>
-        <div style="font-size:13px;color:#6b7280;text-align:center;line-height:1.6;max-width:200px;">Your personal AI OS — voice, live avatar &amp; neural chat.</div>
+        <div class="auth-brand-title" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;text-align:center;background:linear-gradient(90deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;">Synapses</div>
+        <div class="auth-brand-sub" style="font-size:13px;color:#6b7280;text-align:center;line-height:1.6;max-width:200px;">Your personal AI OS — voice, live avatar &amp; neural chat.</div>
       </div>
     </div>
     <div style="flex:1;padding:36px 32px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;max-height:90vh;" id="authRightPanel">
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:4px;">Welcome to Synapses</div>
-      <div style="font-size:13px;color:#6b7280;margin-bottom:24px;">Talk free — live avatar &amp; speech-to-speech. Sign in or continue as guest.</div>
+      <!-- Mobile compare: Clear vs Dark field (particles stay; dark adds a veil, no blur) -->
+      <button type="button" id="authFieldToggle" class="auth-field-toggle" onclick="toggleAuthFieldDepth()" title="Compare field darkness" style="display:none;">
+        <span class="auth-field-dot" aria-hidden="true"></span>
+        <span id="authFieldToggleLabel">Field: Dark</span>
+      </button>
+      <div class="auth-welcome-row" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+        <!-- Exact same glowing synapse mark as mobile top-left (bnavLogoMark / top bar) -->
+        <div class="auth-welcome-logo" aria-hidden="true" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:0;">
+          <svg class="syn-logo-mark" width="32" height="32" viewBox="0 0 80 80" fill="none">
+            <defs>
+              <radialGradient id="synCoreAuth" cx="36%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#f5f3ff"/>
+                <stop offset="28%" stop-color="#c4b5fd"/>
+                <stop offset="62%" stop-color="#7c6af7"/>
+                <stop offset="100%" stop-color="#312e81"/>
+              </radialGradient>
+              <radialGradient id="synHaloAuth" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+                <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+              </radialGradient>
+              <linearGradient id="synSpokeAuth" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
+              </linearGradient>
+              <filter id="synNodeGlowAuth" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
+                <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/>
+                <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="synCoreGlowAuth" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <circle cx="40" cy="40" r="18" fill="url(#synHaloAuth)"/>
+            <g stroke="url(#synSpokeAuth)" stroke-width="1.35" stroke-linecap="round">
+              <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
+              <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
+              <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
+              <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
+              <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
+              <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
+            </g>
+            <g filter="url(#synNodeGlowAuth)">
+              <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+              <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+              <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+              <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+              <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+              <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+            </g>
+            <circle cx="40" cy="40" r="3.2" fill="url(#synCoreAuth)" filter="url(#synCoreGlowAuth)">
+              <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
+              <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
+          </svg>
+        </div>
+        <div class="auth-welcome-title" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:0;line-height:1.15;">Welcome to Synapses</div>
+      </div>
+      <div class="auth-welcome-sub" style="font-size:13px;color:#6b7280;margin-bottom:24px;">Talk free — live avatar &amp; speech-to-speech. Sign in or continue as guest.</div>
       <button onclick="doGuest()" class="modal-btn" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;text-align:left;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
         <div style="flex:1;">
@@ -5102,7 +5364,7 @@ window.getWebAudioNode = getWebAudioNode;
         </div>
         <span style="opacity:0.45;">→</span>
       </button>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;"><div style="flex:1;height:1px;background:#1f2130;"></div><span style="font-size:11px;color:#6b7280;white-space:nowrap;">or sign in with email</span><div style="flex:1;height:1px;background:#1f2130;"></div></div>
+      <div class="auth-or-wrap" style="display:flex;align-items:center;gap:12px;margin-bottom:18px;"><div class="auth-divider-line" style="flex:1;height:1px;background:#1f2130;"></div><span class="auth-or-line" style="font-size:11px;color:#6b7280;white-space:nowrap;">or sign in with email</span><div class="auth-divider-line" style="flex:1;height:1px;background:#1f2130;"></div></div>
       <div class="modal-tabs" style="margin-bottom:18px;">
         <button class="modal-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
         <button class="modal-tab" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
@@ -8674,6 +8936,8 @@ function _buildStudioImageCard(opts){
   card.style.cssText = 'position:relative;overflow:hidden;background:var(--surface);cursor:pointer;';
   card.title = prompt || 'Open full size';
   var img = document.createElement('img');
+  // crossOrigin so canvas download works for remote URLs
+  try{ if(/^https?:/i.test(src)) img.crossOrigin = 'anonymous'; }catch(_c){}
   img.src = src;
   img.loading = 'lazy';
   img.alt = prompt || 'Generated image';
@@ -8687,7 +8951,7 @@ function _buildStudioImageCard(opts){
   dl.onclick = function(e){
     e.preventDefault();
     e.stopPropagation();
-    downloadGeneratedImage(src, filename);
+    downloadGeneratedImage(src, filename, img);
   };
   card.onclick = function(e){
     e.preventDefault();
@@ -8712,6 +8976,7 @@ function openStudioImageLightbox(src, meta){
   lb.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.94);display:flex;align-items:center;justify-content:center;cursor:zoom-out;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:env(safe-area-inset-top,0) 12px env(safe-area-inset-bottom,0);box-sizing:border-box;';
 
   var img = document.createElement('img');
+  try{ if(/^https?:/i.test(src)) img.crossOrigin = 'anonymous'; }catch(_c){}
   img.src = src;
   img.alt = meta.prompt || 'Generated image';
   img.style.cssText = 'max-width:min(96vw,920px);max-height:86vh;border-radius:12px;object-fit:contain;box-shadow:0 28px 80px rgba(0,0,0,0.65);user-select:none;cursor:default;';
@@ -8741,8 +9006,9 @@ function openStudioImageLightbox(src, meta){
   closeBtn.onclick = function(e){ e.stopPropagation(); close(); };
   img.onclick = function(e){ e.stopPropagation(); };
   dlBtn.onclick = function(e){
+    e.preventDefault();
     e.stopPropagation();
-    downloadGeneratedImage(src, meta.filename || ('synapses-image-' + Date.now() + '.jpg'));
+    downloadGeneratedImage(src, meta.filename || ('synapses-image-' + Date.now() + '.jpg'), img);
   };
 
   document.addEventListener('keydown', onKey);
@@ -8754,146 +9020,153 @@ function openStudioImageLightbox(src, meta){
 window.openStudioImageLightbox = openStudioImageLightbox;
 
 /**
- * Save Studio image to the device — silent file download only.
- * Never calls native downloadImage / downloadFile (those open Gallery chooser).
- * Never window.open / target=_blank.
+ * Reliable Studio image download.
+ * @param {string} src
+ * @param {string} [filename]
+ * @param {HTMLImageElement} [imgEl] optional already-loaded <img> (best path)
  */
-function downloadGeneratedImage(src, filename){
+function downloadGeneratedImage(src, filename, imgEl){
   if(!src) return;
   filename = _studioDownloadFilename(filename, src);
 
-  function failQuiet(msg){
+  function okToast(){
+    if(typeof showToast === 'function') showToast('Downloaded');
+  }
+  function failToast(msg){
     if(typeof showToast === 'function') showToast(msg || 'Could not download image');
   }
 
-  function normalizeFilenameForBlob(blob){
+  /** Classic anchor download — most reliable across browsers/WebViews */
+  function saveBlob(blob){
+    if(!blob || !blob.size){ failToast(); return false; }
     try{
-      var mime = (blob && blob.type || '').toLowerCase();
+      var mime = (blob.type || '').toLowerCase();
       if(mime.indexOf('png') >= 0 && !/\.png$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.png';
       else if((mime.indexOf('jpeg') >= 0 || mime.indexOf('jpg') >= 0) && !/\.jpe?g$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.jpg';
-      else if(mime.indexOf('webp') >= 0 && !/\.webp$/i.test(filename)) filename = filename.replace(/\.\w+$/, '') + '.webp';
     }catch(_m){}
-    return filename;
-  }
-
-  function triggerBlobDownload(blob){
-    if(!blob || !blob.size){ failQuiet(); return; }
-    filename = normalizeFilenameForBlob(blob);
-
-    // 1) Chromium Save picker — user picks folder, no gallery open
-    if(typeof window.showSaveFilePicker === 'function'){
-      var accept = { 'image/jpeg': ['.jpg', '.jpeg'] };
-      var mimePick = (blob.type || 'image/jpeg').toLowerCase();
-      if(mimePick.indexOf('png') >= 0) accept = { 'image/png': ['.png'] };
-      else if(mimePick.indexOf('webp') >= 0) accept = { 'image/webp': ['.webp'] };
-      window.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{ description: 'Image', accept: accept }]
-      }).then(function(handle){
-        return handle.createWritable().then(function(w){
-          return w.write(blob).then(function(){ return w.close(); });
-        });
-      }).then(function(){
-        if(typeof showToast === 'function') showToast('Saved');
-      }).catch(function(err){
-        if(err && err.name === 'AbortError') return; // cancelled
-        // fall through to anchor download
-        _anchorDownloadSilent(blob);
-      });
-      return;
-    }
-
-    _anchorDownloadSilent(blob);
-  }
-
-  function _anchorDownloadSilent(blob){
-    // Use generic binary type so Android WebView is less likely to
-    // auto-launch Gallery / "Open with" after the download finishes.
-    // Filename still ends in .jpg/.png so the file opens correctly later.
-    var payload = blob;
-    try{
-      payload = new Blob([blob], { type: 'application/octet-stream' });
-    }catch(_b){ payload = blob; }
 
     try{
-      if(typeof navigator !== 'undefined' && navigator.msSaveOrOpenBlob){
-        navigator.msSaveOrOpenBlob(payload, filename);
-        if(typeof showToast === 'function') showToast('Downloaded');
-        return;
+      if(navigator.msSaveOrOpenBlob){
+        navigator.msSaveOrOpenBlob(blob, filename);
+        okToast();
+        return true;
       }
     }catch(_ie){}
 
     try{
-      var url = URL.createObjectURL(payload);
+      var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
       a.download = filename;
-      a.rel = 'noopener';
-      a.type = 'application/octet-stream';
-      // critical: never target=_blank (opens / gallery intents)
-      a.removeAttribute('target');
-      a.style.cssText = 'display:none;position:fixed;left:-9999px;';
+      a.style.display = 'none';
       document.body.appendChild(a);
-      // Synchronous click in the same user-gesture turn when possible
-      a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      a.click(); // real click — more reliable than synthetic MouseEvent
       setTimeout(function(){
         try{ a.remove(); }catch(_a){}
         try{ URL.revokeObjectURL(url); }catch(_r){}
-      }, 2500);
-      if(typeof showToast === 'function') showToast('Downloaded');
+      }, 1500);
+      okToast();
+      return true;
     }catch(e){
-      failQuiet();
+      return false;
     }
   }
 
-  function canvasFromImageUrl(url){
-    return new Promise(function(resolve, reject){
-      var im = new Image();
-      im.crossOrigin = 'anonymous';
-      im.onload = function(){
+  /** Draw a loaded <img> to canvas → jpeg blob (works while image is on screen) */
+  function blobFromImg(img, cb){
+    try{
+      if(!img || !img.naturalWidth){ cb(null); return; }
+      var c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      if(c.toBlob){
+        c.toBlob(function(b){ cb(b || null); }, 'image/jpeg', 0.92);
+      } else {
         try{
-          var c = document.createElement('canvas');
-          c.width = im.naturalWidth || im.width;
-          c.height = im.naturalHeight || im.height;
-          if(!c.width || !c.height){ reject(new Error('empty')); return; }
-          var ctx = c.getContext('2d');
-          ctx.drawImage(im, 0, 0);
-          c.toBlob(function(b){
-            if(b) resolve(b); else reject(new Error('toBlob'));
-          }, 'image/jpeg', 0.92);
-        }catch(err){ reject(err); }
-      };
-      im.onerror = function(){ reject(new Error('img load')); };
-      im.src = url;
+          var data = c.toDataURL('image/jpeg', 0.92);
+          cb(_dataUrlToBlob(data));
+        }catch(_t){ cb(null); }
+      }
+    }catch(e){ cb(null); }
+  }
+
+  // ── 1) data: URL — convert + download immediately (keeps user gesture) ──
+  if(/^data:/i.test(src)){
+    try{
+      if(saveBlob(_dataUrlToBlob(src))) return;
+    }catch(_d){}
+    try{
+      var a0 = document.createElement('a');
+      a0.href = src;
+      a0.download = filename;
+      a0.style.display = 'none';
+      document.body.appendChild(a0);
+      a0.click();
+      a0.remove();
+      okToast();
+      return;
+    }catch(_d2){ failToast(); return; }
+  }
+
+  // ── 2) Use visible <img> first (no network, works offline) ──
+  function tryImgEl(el, next){
+    if(!el || !el.complete || !el.naturalWidth){ next(); return; }
+    blobFromImg(el, function(b){
+      if(b && saveBlob(b)) return;
+      next();
     });
   }
 
-  // data: → blob
-  if(/^data:/i.test(src)){
-    try{ triggerBlobDownload(_dataUrlToBlob(src)); }
-    catch(e){ failQuiet(); }
-    return;
+  function tryAnyMatchingImg(next){
+    try{
+      var nodes = document.querySelectorAll('#imageGenResults img, #imageGenHistoryGrid img, #_studioImgLightbox img');
+      var i = 0;
+      function step(){
+        if(i >= nodes.length){ next(); return; }
+        var n = nodes[i++];
+        var ns = n.currentSrc || n.src || '';
+        if(ns === src || (src && ns.indexOf(src.split('?')[0]) === 0) || (n.getAttribute('src') === src)){
+          tryImgEl(n, step);
+        } else step();
+      }
+      step();
+    }catch(_e){ next(); }
   }
 
-  // already a blob: URL
-  if(/^blob:/i.test(src)){
-    fetch(src).then(function(r){ return r.blob(); }).then(triggerBlobDownload).catch(function(){ failQuiet(); });
-    return;
-  }
-
-  // http(s) — fetch as blob, then silent download (no native gallery bridges)
-  fetch(src, { mode: 'cors', credentials: 'omit', cache: 'force-cache' }).then(function(r){
-    if(!r.ok) throw new Error('fetch ' + r.status);
-    return r.blob();
-  }).then(triggerBlobDownload).catch(function(){
-    canvasFromImageUrl(src).then(triggerBlobDownload).catch(function(){
-      failQuiet('Download blocked — try again');
+  tryImgEl(imgEl, function(){
+    tryAnyMatchingImg(function(){
+      // ── 3) blob: URL ──
+      if(/^blob:/i.test(src)){
+        fetch(src).then(function(r){ return r.blob(); }).then(function(b){
+          if(!saveBlob(b)) failToast();
+        }).catch(function(){ failToast(); });
+        return;
+      }
+      // ── 4) http(s) fetch as blob ──
+      fetch(src, { mode: 'cors', credentials: 'omit' }).then(function(r){
+        if(!r.ok) throw new Error('bad status');
+        return r.blob();
+      }).then(function(b){
+        if(!saveBlob(b)) failToast();
+      }).catch(function(){
+        // ── 5) load fresh image with CORS + canvas ──
+        var im = new Image();
+        im.crossOrigin = 'anonymous';
+        im.onload = function(){
+          blobFromImg(im, function(b){
+            if(b && saveBlob(b)) return;
+            failToast('Download blocked by browser');
+          });
+        };
+        im.onerror = function(){ failToast('Download blocked by browser'); };
+        im.src = src;
+      });
     });
   });
 }
 function _studioDownloadFilename(name, src){
   var base = (name && String(name).trim()) || ('synapses-image-' + Date.now() + '.jpg');
-  // strip path / query junk
   base = base.split(/[\\/]/).pop().split('?')[0] || base;
   if(!/\.(jpe?g|png|webp|gif)$/i.test(base)){
     var ext = 'jpg';
@@ -8907,10 +9180,17 @@ function _studioDownloadFilename(name, src){
 }
 window.downloadGeneratedImage = downloadGeneratedImage;
 
-// ── Studio image history: always local cache (survives reset) + optional cloud ─
+// ── Studio image history ────────────────────────────────────────────────────
+// IndexedDB holds full images (survives HTML deploys + localStorage 5MB quota).
+// localStorage only keeps a light URL index (no giant data: URLs).
+// Logged-in users also load from Supabase generated_images + storage.
 var GUEST_IMAGE_HISTORY_KEY = 'synapses_guest_image_history'; // legacy
 var STUDIO_IMAGE_CACHE_KEY = 'synapses_studio_image_cache_v1';
-var STUDIO_IMAGE_CACHE_MAX = 20; // cap — use ⟲ to clear (with confirm); no 100-image pileups
+var STUDIO_IMAGE_CACHE_MAX = 20;
+var STUDIO_IDB_NAME = 'synapses_studio_idb_v1';
+var STUDIO_IDB_STORE = 'images';
+var _studioIdbReady = null;
+var _studioBlobUrlCache = {}; // id -> objectURL (session)
 
 function _dataUrlToBlob(dataUrl){
   var parts = dataUrl.split(',');
@@ -8923,28 +9203,157 @@ function _dataUrlToBlob(dataUrl){
   return new Blob([u8], {type: mime});
 }
 
+function _studioIdbOpen(){
+  if(_studioIdbReady) return _studioIdbReady;
+  _studioIdbReady = new Promise(function(resolve, reject){
+    try{
+      if(!window.indexedDB){ reject(new Error('no indexedDB')); return; }
+      var req = indexedDB.open(STUDIO_IDB_NAME, 1);
+      req.onupgradeneeded = function(){
+        var db = req.result;
+        if(!db.objectStoreNames.contains(STUDIO_IDB_STORE)){
+          var st = db.createObjectStore(STUDIO_IDB_STORE, { keyPath: 'id' });
+          try{ st.createIndex('ts', 'ts', { unique: false }); }catch(_i){}
+        }
+      };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error || new Error('idb open failed')); };
+    }catch(e){ reject(e); }
+  });
+  return _studioIdbReady;
+}
+
+function _studioIdbGetAll(){
+  return _studioIdbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      try{
+        var tx = db.transaction(STUDIO_IDB_STORE, 'readonly');
+        var req = tx.objectStore(STUDIO_IDB_STORE).getAll();
+        req.onsuccess = function(){
+          var rows = req.result || [];
+          rows.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+          resolve(rows);
+        };
+        req.onerror = function(){ reject(req.error); };
+      }catch(e){ reject(e); }
+    });
+  });
+}
+
+function _studioIdbPut(item){
+  return _studioIdbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      try{
+        var tx = db.transaction(STUDIO_IDB_STORE, 'readwrite');
+        tx.objectStore(STUDIO_IDB_STORE).put(item);
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onerror = function(){ reject(tx.error); };
+      }catch(e){ reject(e); }
+    });
+  });
+}
+
+function _studioIdbReplaceAll(items){
+  return _studioIdbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      try{
+        var tx = db.transaction(STUDIO_IDB_STORE, 'readwrite');
+        var store = tx.objectStore(STUDIO_IDB_STORE);
+        store.clear();
+        (items || []).slice(0, STUDIO_IMAGE_CACHE_MAX).forEach(function(it){
+          if(it && it.id) store.put(it);
+        });
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onerror = function(){ reject(tx.error); };
+      }catch(e){ reject(e); }
+    });
+  });
+}
+
+function _studioIdbClear(){
+  return _studioIdbOpen().then(function(db){
+    return new Promise(function(resolve){
+      try{
+        var tx = db.transaction(STUDIO_IDB_STORE, 'readwrite');
+        tx.objectStore(STUDIO_IDB_STORE).clear();
+        tx.oncomplete = function(){ resolve(true); };
+        tx.onerror = function(){ resolve(false); };
+      }catch(e){ resolve(false); }
+    });
+  }).catch(function(){ return false; });
+}
+
+/** Display src from an IDB row (blob → object URL) */
+function _studioRowToDisplay(row){
+  if(!row) return null;
+  var src = row.src || '';
+  if(row.blob instanceof Blob){
+    try{
+      if(_studioBlobUrlCache[row.id]) src = _studioBlobUrlCache[row.id];
+      else {
+        src = URL.createObjectURL(row.blob);
+        _studioBlobUrlCache[row.id] = src;
+      }
+    }catch(_b){}
+  }
+  if(!src) return null;
+  return {
+    id: row.id,
+    src: src,
+    prompt: row.prompt || '',
+    model: row.model || '',
+    aspect: row.aspect || '',
+    ts: row.ts || 0
+  };
+}
+
+/** Light localStorage index only — never store giant data: URLs (quota killer) */
 function _readStudioImageCache(){
   var hist = [];
   try{ hist = JSON.parse(localStorage.getItem(STUDIO_IMAGE_CACHE_KEY) || '[]'); }catch(e){ hist = []; }
   if(!hist || !hist.length){
     try{
       var legacy = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]');
-      if(legacy && legacy.length){ hist = legacy; _writeStudioImageCache(hist); }
+      if(legacy && legacy.length) hist = legacy;
     }catch(e2){}
   }
-  return Array.isArray(hist) ? hist : [];
+  if(!Array.isArray(hist)) return [];
+  // Drop stale huge data URLs from the light index (they belong in IDB now)
+  return hist.filter(function(it){
+    if(!it || !it.src) return false;
+    if(/^data:/i.test(it.src) && it.src.length > 4000) return false;
+    return true;
+  });
 }
 
 function _writeStudioImageCache(hist){
   if(!Array.isArray(hist)) hist = [];
   if(hist.length > STUDIO_IMAGE_CACHE_MAX) hist = hist.slice(0, STUDIO_IMAGE_CACHE_MAX);
+  // Light entries only — protect login/session space in localStorage
+  var light = hist.map(function(it){
+    var src = (it && it.src) || '';
+    if(/^data:/i.test(src) && src.length > 4000) src = ''; // keep in IDB only
+    return {
+      id: (it && it.id) || '',
+      src: src,
+      prompt: (it && it.prompt) || '',
+      model: (it && it.model) || '',
+      aspect: (it && it.aspect) || '',
+      ts: (it && it.ts) || 0
+    };
+  }).filter(function(it){ return it.src || it.id; });
   try{
-    localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist));
+    localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(light));
     return true;
   }catch(e){
-    hist = hist.slice(0, Math.max(4, Math.floor(hist.length / 2)));
-    try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist)); return true; }catch(e2){
-      try{ localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(hist.slice(0, 4))); return true; }catch(e3){ return false; }
+    // Never wipe synapses_session — just drop image index if full
+    try{
+      light = light.filter(function(it){ return /^https?:/i.test(it.src); }).slice(0, 8);
+      localStorage.setItem(STUDIO_IMAGE_CACHE_KEY, JSON.stringify(light));
+      return true;
+    }catch(e2){
+      try{ localStorage.removeItem(STUDIO_IMAGE_CACHE_KEY); }catch(_r){}
+      return false;
     }
   }
 }
@@ -8952,29 +9361,119 @@ function _writeStudioImageCache(hist){
 function clearStudioImageCache(){
   try{ localStorage.removeItem(STUDIO_IMAGE_CACHE_KEY); }catch(e){}
   try{ localStorage.removeItem(GUEST_IMAGE_HISTORY_KEY); }catch(e2){}
+  try{
+    Object.keys(_studioBlobUrlCache).forEach(function(k){
+      try{ URL.revokeObjectURL(_studioBlobUrlCache[k]); }catch(_u){}
+    });
+    _studioBlobUrlCache = {};
+  }catch(_c){}
+  try{ _studioIdbClear(); }catch(_i){}
+}
+
+function _studioMakeId(){
+  return 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+}
+
+/** Migrate old localStorage history (incl. data URLs) into IndexedDB once */
+function _migrateStudioCacheToIdb(){
+  return _studioIdbGetAll().then(function(existing){
+    if(existing && existing.length) return existing;
+    var ls = [];
+    try{ ls = JSON.parse(localStorage.getItem(STUDIO_IMAGE_CACHE_KEY) || '[]'); }catch(e){ ls = []; }
+    if(!ls || !ls.length){
+      try{ ls = JSON.parse(localStorage.getItem(GUEST_IMAGE_HISTORY_KEY) || '[]'); }catch(e2){ ls = []; }
+    }
+    if(!ls || !ls.length) return [];
+    var rows = ls.map(function(it, i){
+      var id = (it && it.id) || ('migrated_' + i + '_' + (it.ts || Date.now()));
+      var row = {
+        id: id,
+        src: (it && it.src) || '',
+        prompt: (it && it.prompt) || '',
+        model: (it && it.model) || '',
+        aspect: (it && it.aspect) || '',
+        ts: (it && it.ts) || Date.now() - i,
+        blob: null
+      };
+      if(row.src && /^data:/i.test(row.src)){
+        try{
+          row.blob = _dataUrlToBlob(row.src);
+          // free LS later via light rewrite
+        }catch(_b){}
+      }
+      return row;
+    });
+    return _studioIdbReplaceAll(rows).then(function(){
+      // Rewrite light LS without huge data URLs
+      _writeStudioImageCache(rows.map(function(r){
+        return { id: r.id, src: (r.blob ? '' : r.src), prompt: r.prompt, model: r.model, aspect: r.aspect, ts: r.ts };
+      }));
+      return rows;
+    }).catch(function(){ return rows; });
+  }).catch(function(){ return []; });
 }
 
 function saveGeneratedImageToHistory(src, meta){
   try{
     meta = meta || {};
-    // Always local first so app reset still shows images
-    var hist = _readStudioImageCache();
-    hist.unshift({ src: src, prompt: meta.prompt || '', model: meta.model || '', aspect: meta.aspect || '', ts: Date.now() });
-    _writeStudioImageCache(hist);
+    if(!src) return;
+    var id = _studioMakeId();
+    var ts = Date.now();
+    var row = {
+      id: id,
+      src: src,
+      prompt: meta.prompt || '',
+      model: meta.model || '',
+      aspect: meta.aspect || '',
+      ts: ts,
+      blob: null
+    };
+    if(/^data:/i.test(src)){
+      try{
+        row.blob = _dataUrlToBlob(src);
+        // Keep data URL only as last-resort; IDB blob is primary
+      }catch(_b){}
+    }
 
+    // Primary: IndexedDB (survives deploys + large images)
+    _studioIdbPut(row).then(function(){
+      // Light local index (URLs only when possible)
+      var light = _readStudioImageCache();
+      light.unshift({
+        id: id,
+        src: (/^https?:/i.test(src) ? src : (row.blob ? '' : src)),
+        prompt: row.prompt,
+        model: row.model,
+        aspect: row.aspect,
+        ts: ts
+      });
+      _writeStudioImageCache(light);
+    }).catch(function(err){
+      console.warn('Studio IDB save failed, using localStorage fallback', err);
+      var hist = _readStudioImageCache();
+      hist.unshift({ id: id, src: src, prompt: row.prompt, model: row.model, aspect: row.aspect, ts: ts });
+      _writeStudioImageCache(hist);
+    });
+
+    // Cloud for logged-in users
     if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
       if(/^data:/.test(src)){
-        var blob = _dataUrlToBlob(src);
-        var ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];
+        var blob = row.blob || _dataUrlToBlob(src);
+        var ext = ((blob.type || 'image/jpeg').split('/')[1] || 'jpg').split('+')[0];
         var path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
-        _supabase.storage.from('generated-images').upload(path, blob, {contentType: blob.type}).then(function(r){
+        _supabase.storage.from('generated-images').upload(path, blob, {contentType: blob.type || 'image/jpeg'}).then(function(r){
           if(r.error){ console.error('Image storage upload error:', r.error); return; }
           var pub = _supabase.storage.from('generated-images').getPublicUrl(path);
           var url = pub && pub.data && pub.data.publicUrl;
           if(url){
+            row.src = url;
+            // Keep blob too so offline still works; prefer public URL for display
+            _studioIdbPut(row).catch(function(){});
             try{
               var h2 = _readStudioImageCache();
-              for(var i = 0; i < h2.length; i++){ if(h2[i].src === src){ h2[i].src = url; break; } }
+              for(var i = 0; i < h2.length; i++){
+                if(h2[i].id === id || h2[i].src === src){ h2[i].src = url; h2[i].id = id; break; }
+              }
               _writeStudioImageCache(h2);
             }catch(_u){}
           }
@@ -8993,29 +9492,95 @@ function saveGeneratedImageToHistory(src, meta){
 
 async function loadImageGenHistory(){
   try{
-    var local = _readStudioImageCache();
+    // 1) IDB (primary local) + one-time migrate from old LS
+    var rows = [];
+    try{
+      rows = await _migrateStudioCacheToIdb();
+      if(!rows || !rows.length) rows = await _studioIdbGetAll();
+    }catch(_idb){
+      rows = [];
+    }
+
+    var local = (rows || []).map(_studioRowToDisplay).filter(Boolean);
+    // Fill gaps from light LS index (http URLs)
+    try{
+      var ls = _readStudioImageCache();
+      var seen = {};
+      local.forEach(function(it){ if(it.src) seen[it.src] = 1; if(it.id) seen[it.id] = 1; });
+      ls.forEach(function(it){
+        if(!it || !it.src || seen[it.src]) return;
+        if(/^data:/i.test(it.src) && it.src.length > 4000) return;
+        seen[it.src] = 1;
+        local.push({
+          id: it.id || '',
+          src: it.src,
+          prompt: it.prompt || '',
+          model: it.model || '',
+          aspect: it.aspect || '',
+          ts: it.ts || 0
+        });
+      });
+      local.sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+    }catch(_ls){}
+
+    // 2) Cloud for logged-in
     if(typeof currentUser !== 'undefined' && currentUser && !currentUser.isGuest && currentUser.id && typeof _supabase !== 'undefined' && _supabase){
       try{
         var r = await _supabase.from('generated_images').select('*').eq('user_id', currentUser.id).order('created_at', {ascending: false}).limit(40);
         if(!r.error && r.data && r.data.length){
           var remote = r.data.map(function(row){
-            return {src: row.image_url, prompt: row.prompt, model: row.model, aspect: row.aspect, ts: row.created_at ? Date.parse(row.created_at) : 0};
+            return {
+              id: 'remote_' + (row.id || row.image_url || Math.random()),
+              src: row.image_url,
+              prompt: row.prompt,
+              model: row.model,
+              aspect: row.aspect,
+              ts: row.created_at ? Date.parse(row.created_at) : 0
+            };
           });
-          var seen = {};
+          var seen2 = {};
           var merged = [];
           local.concat(remote).forEach(function(it){
-            if(!it || !it.src || seen[it.src]) return;
-            seen[it.src] = 1;
+            if(!it || !it.src || seen2[it.src]) return;
+            seen2[it.src] = 1;
             merged.push(it);
           });
           if(merged.length > STUDIO_IMAGE_CACHE_MAX) merged = merged.slice(0, STUDIO_IMAGE_CACHE_MAX);
-          if(merged.length) _writeStudioImageCache(merged);
+          // Persist remote URLs into IDB (no blobs needed)
+          try{
+            var idbRows = merged.map(function(it){
+              return {
+                id: it.id || _studioMakeId(),
+                src: it.src,
+                prompt: it.prompt || '',
+                model: it.model || '',
+                aspect: it.aspect || '',
+                ts: it.ts || 0,
+                blob: null
+              };
+            });
+            // Merge with existing blobs so we don't drop offline copies of same image
+            try{
+              var existing = await _studioIdbGetAll();
+              var bySrc = {};
+              existing.forEach(function(ex){ if(ex && ex.src) bySrc[ex.src] = ex; });
+              idbRows = idbRows.map(function(row){
+                var prev = bySrc[row.src];
+                if(prev && prev.blob) row.blob = prev.blob;
+                return row;
+              });
+            }catch(_m){}
+            await _studioIdbReplaceAll(idbRows);
+            _writeStudioImageCache(merged);
+          }catch(_p){}
           return merged;
         }
       }catch(er){ console.error('load remote image history:', er); }
     }
+
+    if(local.length > STUDIO_IMAGE_CACHE_MAX) local = local.slice(0, STUDIO_IMAGE_CACHE_MAX);
     return local;
-  }catch(e){ console.error('loadImageGenHistory error:', e); return []; }
+  }catch(e){ console.error('loadImageGenHistory error:', e); return _readStudioImageCache(); }
 }
 
 function renderImageGenHistory(items){
@@ -9041,7 +9606,8 @@ function renderImageGenHistory(items){
     dl.title = 'Download to device';
     dl.style.cssText = 'position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:6px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;';
     var fname = 'synapses-image-' + (idx + 1) + '.jpg';
-    dl.onclick = function(e){ e.preventDefault(); e.stopPropagation(); downloadGeneratedImage(it.src, fname); };
+    try{ if(/^https?:/i.test(it.src || '')) img.crossOrigin = 'anonymous'; }catch(_c){}
+    dl.onclick = function(e){ e.preventDefault(); e.stopPropagation(); downloadGeneratedImage(it.src, fname, img); };
     cell.onclick = function(e){
       e.preventDefault();
       e.stopPropagation();
@@ -9847,57 +10413,139 @@ var allJobs=[],currentUser=null,jobFilter='all';
     }
   }
   window.showAuthModal = showAuthModal;
+
+  function _bootUserSession(s, opts){
+    opts = opts || {};
+    if(!s || !s.email) return false;
+    if(!s.name) s.name = (s.email.split('@')[0] || 'User');
+    currentUser = s;
+    try{ window.currentUser = s; }catch(_w){}
+    try{ localStorage.setItem('synapses_session', JSON.stringify(s)); }catch(e){}
+    function go(){
+      try{
+        var m = document.getElementById('authModal');
+        if(m) m.style.display = 'none';
+      }catch(_m){}
+      if(typeof onLogin === 'function') onLogin();
+      if(opts.afterLogin) try{ opts.afterLogin(); }catch(_a){}
+    }
+    if(document.readyState === 'loading') window.addEventListener('DOMContentLoaded', go);
+    else go();
+    return true;
+  }
+
+  function _refreshProfileFromDb(user){
+    if(!user || user.isGuest || !window._supabase || !user.id) return;
+    try{
+      _supabase.auth.getSession().then(function(r){
+        var session = r.data && r.data.session;
+        // Keep local session even if supabase token is momentarily missing — don't force re-login
+        if(!session || !session.user){
+          // Try refresh once
+          try{
+            _supabase.auth.refreshSession().then(function(rr){
+              var s2 = rr.data && rr.data.session;
+              if(s2 && s2.user) _pullProfile(s2.user.id);
+            }).catch(function(){});
+          }catch(_rs){}
+          return;
+        }
+        _pullProfile(session.user.id);
+      }).catch(function(){});
+    }catch(_e){}
+    function _pullProfile(uid){
+      _supabase.from('profiles').select('*').eq('id', uid).single().then(function(pr){
+        var p = pr.data || {};
+        currentUser.avatar = p.avatar_url || currentUser.avatar || null;
+        currentUser.coverVideo = p.cover_video_url || null;
+        var _localPref = null;
+        try{ _localPref = localStorage.getItem('synapses_postmedia_'+currentUser.email); }catch(_e){}
+        currentUser.postMediaPref = _localPref || (p.post_media_pref || 'photo');
+        currentUser.name = p.name || currentUser.name;
+        currentUser.plan = p.plan || currentUser.plan || 'free';
+        currentUser.planStatus = p.plan_status || currentUser.planStatus || 'active';
+        currentUser.stripeCustomerId = p.stripe_customer_id || currentUser.stripeCustomerId || null;
+        if(p.avatar_url) try{ localStorage.setItem('synapses_avatar_'+currentUser.email, p.avatar_url); }catch(e){}
+        if(p.cover_video_url) try{ localStorage.setItem('synapses_cover_'+currentUser.email, p.cover_video_url); }catch(e){}
+        try{ localStorage.setItem('synapses_session', JSON.stringify(currentUser)); }catch(e){}
+        if(p.avatar_url){
+          try{ _avatarCache[currentUser.email] = p.avatar_url; }catch(_a){}
+          if(typeof feedPosts !== 'undefined') feedPosts.forEach(function(fp){ if(fp.email === currentUser.email) fp.avatar = p.avatar_url; });
+          if(typeof socialPosts !== 'undefined') socialPosts.forEach(function(fp){ if(fp.email === currentUser.email) fp.avatar = p.avatar_url; });
+        }
+        if(typeof _profiles !== 'undefined') _profiles[currentUser.email] = Object.assign(_profiles[currentUser.email] || {}, { bio: p.bio || '', skills: p.skills || [], avail: p.avail || 'open', project: p.project || '', endorsements: p.endorsements || 0 });
+        if(typeof applyAvatar === 'function') applyAvatar(currentUser.avatar);
+        if(currentUser.coverVideo && currentUser.postMediaPref === 'video' && typeof applyCoverVideo === 'function') applyCoverVideo(currentUser.coverVideo);
+        else if(typeof applyAvatar === 'function') applyAvatar(currentUser.avatar);
+        if(typeof renderFeed === 'function') renderFeed();
+        if(typeof renderSocialFeed === 'function') renderSocialFeed();
+        if(typeof renderPlanBadge === 'function') renderPlanBadge();
+        if(typeof _seedUsageFromRemote === 'function') _seedUsageFromRemote(p.usage_count, p.usage_reset_at);
+      }).catch(function(){});
+    }
+  }
+
+  // ── Auth restore: synapses_session (fast) → Supabase persisted tokens (backup) ──
   try{
-    var sv=localStorage.getItem('synapses_session');
+    var sv = localStorage.getItem('synapses_session');
     if(sv){
-      var s=JSON.parse(sv);
-      if(s&&s.email&&s.name){
-        // Boot instantly from localStorage — no waiting on network, splash hides immediately
-        currentUser=s;
-        window.addEventListener('DOMContentLoaded',function(){
-          if(typeof onLogin==='function') onLogin();
-          // After app is running, silently refresh avatar/coverVideo/bio from DB in background
-          if(!s.isGuest&&window._supabase){
-            _supabase.auth.getSession().then(function(r){
-              var session=r.data&&r.data.session;
-              if(!session||!session.user)return;
-              _supabase.from('profiles').select('*').eq('id',session.user.id).single().then(function(pr){
-                var p=pr.data||{};
-                // Patch currentUser with fresh DB values
-                currentUser.avatar=p.avatar_url||currentUser.avatar||null;
-                currentUser.coverVideo=p.cover_video_url||null;
-                // postMediaPref: localStorage is written synchronously on toggle, DB write is async.
-                // If localStorage has a value use it — it's the user's most recent explicit choice.
-                var _localPref=null;try{_localPref=localStorage.getItem('synapses_postmedia_'+currentUser.email);}catch(_e){}
-                currentUser.postMediaPref=_localPref||(p.post_media_pref||'photo');
-                currentUser.name=p.name||currentUser.name;
-                if(p.avatar_url)try{localStorage.setItem('synapses_avatar_'+currentUser.email,p.avatar_url);}catch(e){}
-                if(p.cover_video_url)try{localStorage.setItem('synapses_cover_'+currentUser.email,p.cover_video_url);}catch(e){}
-                try{localStorage.setItem('synapses_session',JSON.stringify(currentUser));}catch(e){}
-                // Update avatar in already-loaded feed post objects so re-render shows correct image
-                if(p.avatar_url){
-                  _avatarCache[currentUser.email]=p.avatar_url;
-                  if(typeof feedPosts!=='undefined')feedPosts.forEach(function(fp){if(fp.email===currentUser.email)fp.avatar=p.avatar_url;});
-                  if(typeof socialPosts!=='undefined')socialPosts.forEach(function(fp){if(fp.email===currentUser.email)fp.avatar=p.avatar_url;});
-                }
-                // Populate _profiles with bio/skills/avail from DB
-                if(typeof _profiles!=='undefined')_profiles[currentUser.email]=Object.assign(_profiles[currentUser.email]||{},{bio:p.bio||'',skills:p.skills||[],avail:p.avail||'open',project:p.project||'',endorsements:p.endorsements||0});
-                // Apply avatar to all UI spots silently
-                if(typeof applyAvatar==='function')applyAvatar(currentUser.avatar);
-                // Only apply cover video to sidebar if user's pref is actually 'video'
-                if(currentUser.coverVideo&&currentUser.postMediaPref==='video'&&typeof applyCoverVideo==='function')applyCoverVideo(currentUser.coverVideo);
-                else if(typeof applyAvatar==='function')applyAvatar(currentUser.avatar);
-                // Re-render feed so post avatars update
-                if(typeof renderFeed==='function')renderFeed();
-                if(typeof renderSocialFeed==='function')renderSocialFeed();
-              });
-            });
-          }
+      var s = JSON.parse(sv);
+      if(s && s.email && (s.name || s.isGuest)){
+        if(!s.name) s.name = s.isGuest ? 'Guest' : (s.email.split('@')[0] || 'User');
+        _bootUserSession(s, {
+          afterLogin: function(){ _refreshProfileFromDb(s); }
         });
         return;
       }
     }
   }catch(e){}
+
+  // No synapses_session — try Supabase auth storage (survives if custom session key was wiped by quota)
+  if(window._supabase && _supabase.auth && typeof _supabase.auth.getSession === 'function'){
+    try{
+      _supabase.auth.getSession().then(function(r){
+        var session = r.data && r.data.session;
+        var u = session && session.user;
+        if(!u || !u.email){
+          showAuthModal();
+          return;
+        }
+        _supabase.from('profiles').select('*').eq('id', u.id).single().then(function(pr){
+          var p = pr.data || {};
+          var user = {
+            id: u.id,
+            email: u.email,
+            name: p.name || (u.email.split('@')[0] || 'User'),
+            roles: p.role ? [p.role] : ['seeker'],
+            color: p.color || '#6366f1',
+            initial: ((p.name || u.email)[0] || 'U').toUpperCase(),
+            avatar: p.avatar_url || null,
+            coverVideo: p.cover_video_url || null,
+            plan: p.plan || 'free',
+            planStatus: p.plan_status || 'active',
+            stripeCustomerId: p.stripe_customer_id || null,
+            isGuest: false
+          };
+          _bootUserSession(user, {
+            afterLogin: function(){ _refreshProfileFromDb(user); }
+          });
+        }).catch(function(){
+          var user = {
+            id: u.id,
+            email: u.email,
+            name: (u.email.split('@')[0] || 'User'),
+            roles: ['seeker'],
+            color: '#6366f1',
+            initial: (u.email[0] || 'U').toUpperCase(),
+            isGuest: false
+          };
+          _bootUserSession(user);
+        });
+      }).catch(function(){ showAuthModal(); });
+      return;
+    }catch(_se){}
+  }
+
   showAuthModal();
 })();
 var chatHistory=[],isSending=false,isCoachHubSending=false;
@@ -22789,36 +23437,311 @@ async function confirmWorldApproach(){
 (function(){var canvas=document.getElementById('roomFlowCanvas'),container=document.getElementById('sec-room');if(!canvas||!container)return;var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false,lastT=0;var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];var attractors=[];function addAttractor(x,y,strength){attractors.push({x:x,y:y,born:performance.now(),strength:strength});if(attractors.length>8)attractors.shift();}var _dragging=false,_dragLast=null,_dragLastSample=null;function _px(e){var r=canvas.getBoundingClientRect();return {x:(e.clientX||0)-r.left,y:(e.clientY||0)-r.top};}container.addEventListener('pointerdown',function(e){var p=_px(e);_dragging=true;_dragLast=p;_dragLastSample={x:p.x,y:p.y,t:performance.now()};addAttractor(p.x,p.y,150);},{passive:true});container.addEventListener('pointermove',function(e){if(!_dragging)return;var p=_px(e);_dragLast=p;var now=performance.now();if(!_dragLastSample||now-_dragLastSample.t>60){addAttractor(p.x,p.y,80);_dragLastSample={x:p.x,y:p.y,t:now};}},{passive:true});function _endDrag(e){if(!_dragging)return;_dragging=false;if(_dragLast&&_dragLastSample){var dx=_dragLast.x-_dragLastSample.x,dy=_dragLast.y-_dragLastSample.y;var d=Math.hypot(dx,dy);if(d>4){var nx=dx/d,ny=dy/d;addAttractor(_dragLast.x+nx*140,_dragLast.y+ny*140,130);}}}container.addEventListener('pointerup',_endDrag,{passive:true});container.addEventListener('pointercancel',_endDrag,{passive:true});function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.orbR=18+Math.random()*38;this.orbA=Math.random()*Math.PI*2;this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}function init(){w=canvas.width=container.offsetWidth||window.innerWidth;h=canvas.height=container.offsetHeight||window.innerHeight;isMobile=w<=768;var count=isMobile?38:56;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}function draw(now){now=now||performance.now();/* battery: pause when tab hidden or Pulse open; cap mobile FPS */if(document.hidden){setTimeout(function(){requestAnimationFrame(draw);},document.hidden?600:200);return;}if(isMobile&&lastT&&(now-lastT)<48){requestAnimationFrame(draw);return;}if(!lastT)lastT=now;var dt=(now-lastT)/16.6667;dt=Math.max(.2,Math.min(dt,3));lastT=now;var tau=900;for(var ai=attractors.length-1;ai>=0;ai--){var age=now-attractors[ai].born;if(age>tau*4)attractors.splice(ai,1);}var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){var ax=0,ay=0;for(var ai=0;ai<attractors.length;ai++){var a=attractors[ai];var age=now-a.born;var cur=a.strength*Math.exp(-age/tau);if(cur<3)continue;var tx=a.x+Math.cos(p.orbA)*p.orbR,ty=a.y+Math.sin(p.orbA)*p.orbR;var dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy)||1;dist=Math.max(dist,55);var pull=cur/dist;ax+=(dx/dist)*pull;ay+=(dy/dist)*pull;}var pullMag=Math.hypot(ax,ay);var maxPull=0.55;if(pullMag>maxPull){ax=ax/pullMag*maxPull;ay=ay/pullMag*maxPull;}p.x+=(p.vx+ax*0.55)*dt;p.y+=(p.vy+ay*0.55)*dt;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;p.x=Math.max(0,Math.min(w,p.x));p.y=Math.max(0,Math.min(h,p.y));ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;ctx.lineWidth=.6;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}window.addEventListener('resize',function(){canvas.style.width=(container.offsetWidth||window.innerWidth)+'px';canvas.style.height=(container.offsetHeight||window.innerHeight)+'px';});window._reinitRoomFlowCanvas=init;setTimeout(function(){init();draw();},300);})();
 
 
-/* SYNAPSES LOGIN ANIMATION — DO NOT CHANGE: Layer 1 = rising diagonal blurred light beams on authBeamsCanvas. Layer 2 = same particle network as home page on authDotCanvas. Both run simultaneously. Restore from this code if lost. */
-var _loginAnimStarted=false;
-function initLoginAnim(){
-  var bc=document.getElementById('authBeamsCanvas'),container=document.getElementById('authLeftPanel');
-  if(!bc||!container||!container.offsetWidth)return;
-  if(_loginAnimStarted)return;
-  _loginAnimStarted=true;
-  // ── Layer 1: Beams ──
-  var bctx=bc.getContext('2d'),beams=[];
-  function resizeBeams(){var dpr=window.devicePixelRatio||1,w=container.offsetWidth,h=container.offsetHeight;if(!w||!h)return;bc.width=w*dpr;bc.height=h*dpr;bc.style.width=w+'px';bc.style.height=h+'px';bctx.scale(dpr,dpr);beams=Array.from({length:18},function(){return mkBeam(w,h);});}
-  function mkBeam(w,h){return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:-35+Math.random()*10,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
-  function rstBeam(b,i,tot){var w=container.offsetWidth,h=container.offsetHeight,col=i%3,sp=w/3;b.y=h+100;b.x=col*sp+sp/2+(Math.random()-.5)*sp*0.5;b.width=100+Math.random()*100;b.speed=0.5+Math.random()*0.4;b.hue=190+(i*70)/tot;b.opacity=0.2+Math.random()*0.1;}
-  function drawBeam(b){var w=container.offsetWidth,h=container.offsetHeight;bctx.save();bctx.translate(b.x,b.y);bctx.rotate(b.angle*Math.PI/180);var op=b.opacity*(0.8+Math.sin(b.pulse)*0.2);var g=bctx.createLinearGradient(0,0,0,b.length);g.addColorStop(0,'hsla('+b.hue+',85%,65%,0)');g.addColorStop(0.1,'hsla('+b.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(0.4,'hsla('+b.hue+',85%,65%,'+op+')');g.addColorStop(0.6,'hsla('+b.hue+',85%,65%,'+op+')');g.addColorStop(0.9,'hsla('+b.hue+',85%,65%,'+(op*0.5)+')');g.addColorStop(1,'hsla('+b.hue+',85%,65%,0)');bctx.fillStyle=g;bctx.fillRect(-b.width/2,0,b.width,b.length);bctx.restore();}
-  var _loginBeamLast=0;function animBeams(ts){if(!ts)ts=0;if(window._loginDone){return;}if(ts-_loginBeamLast<32){requestAnimationFrame(animBeams);return;}_loginBeamLast=ts;var w=container.offsetWidth,h=container.offsetHeight,tot=beams.length;bctx.clearRect(0,0,w,h);bctx.filter='blur(35px)';beams.forEach(function(b,i){b.y-=b.speed;b.pulse+=b.pulseSpeed;if(b.y+b.length<-100)rstBeam(b,i,tot);drawBeam(b);});bctx.filter='none';requestAnimationFrame(animBeams);}
-  resizeBeams();requestAnimationFrame(animBeams);
-  window.addEventListener('resize',resizeBeams);
-  // ── Layer 2: Particle network ──
-  var canvas=document.getElementById('authDotCanvas'),cont=container;
-  if(!canvas)return;
-  var ctx=canvas.getContext('2d'),particles=[],w,h,isMobile=false;
-  var COLORS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];
-  function resize(){w=canvas.width=cont.offsetWidth;h=canvas.height=cont.offsetHeight;isMobile=window.innerWidth<=768;}
-  function Particle(){this.x=Math.random()*w;this.y=Math.random()*h;var sp=isMobile?.28:.4;this.vx=(Math.random()-.5)*sp;this.vy=(Math.random()-.5)*sp;this.r=isMobile?(Math.random()*1.3+.6):(Math.random()*2+1);this.color=COLORS[Math.floor(Math.random()*COLORS.length)];this.alpha=Math.random()*.25+.08;}
-  function initPart(){resize();var count=isMobile?38:56;particles=[];for(var i=0;i<count;i++)particles.push(new Particle());}
-  var _authDotLast=0;
-  function draw(ts){if(window._loginDone)return;if(ts-_authDotLast<32){requestAnimationFrame(draw);return;}_authDotLast=ts;var linkDist=isMobile?80:120;ctx.clearRect(0,0,w,h);particles.forEach(function(p){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>w)p.vx*=-1;if(p.y<0||p.y>h)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.color;ctx.globalAlpha=p.alpha;ctx.fill();});ctx.globalAlpha=.12;particles.forEach(function(p,i){particles.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<linkDist){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.strokeStyle='#6366f1';ctx.lineWidth=.6;ctx.stroke();}});});ctx.globalAlpha=1;requestAnimationFrame(draw);}
-  window.addEventListener('resize',initPart);initPart();requestAnimationFrame(draw);
+/* Auth aurora — home-identical particles + beams; smooth single land (no multi-reseed skip) */
+var _authAuroraRunning = false;
+function initAuthAuroraBackground(){
+  var flow = document.getElementById('authFlowCanvas');
+  var beams = document.getElementById('authBeamsCanvas');
+  var panel = document.getElementById('authLeftPanel');
+  var modal = document.getElementById('authModal');
+  if(!flow || !beams || !panel || !modal) return;
+
+  function sizeBox(){
+    var w = modal.offsetWidth || panel.offsetWidth || window.innerWidth || 390;
+    var h = modal.offsetHeight || panel.offsetHeight || window.innerHeight || 800;
+    if(w < 2) w = window.innerWidth || 390;
+    if(h < 2) h = window.innerHeight || 800;
+    return { w: w, h: h };
+  }
+
+  function revealAurora(){
+    // One soft fade-in — avoids pop/skip on first paint
+    try{
+      flow.style.transition = 'opacity .55s ease';
+      beams.style.transition = 'opacity .55s ease';
+      if(flow.style.opacity !== '1') flow.style.opacity = '1';
+      if(beams.style.opacity !== '1') beams.style.opacity = '1';
+    }catch(_r){}
+  }
+
+  // Start hidden so first reseed isn’t a hard flash
+  if(!flow._authFadeReady){
+    flow._authFadeReady = true;
+    flow.style.opacity = '0';
+    beams.style.opacity = '0';
+  }
+
+  // ── Particles: EXACT home flowCanvas loadout ──
+  if(!flow._authWired){
+    flow._authWired = true;
+    var fctx = flow.getContext('2d');
+    var particles = [];
+    var fw = 0, fh = 0, isMobile = false, lastT = 0;
+    var COLORS = ['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7'];
+    var attractors = [];
+    function Particle(){
+      this.x = Math.random() * fw;
+      this.y = Math.random() * fh;
+      var sp = isMobile ? 0.28 : 0.4;
+      this.vx = (Math.random() - 0.5) * sp;
+      this.vy = (Math.random() - 0.5) * sp;
+      this.r = isMobile ? (Math.random() * 1.3 + 0.6) : (Math.random() * 2 + 1);
+      this.orbR = 18 + Math.random() * 38;
+      this.orbA = Math.random() * Math.PI * 2;
+      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      this.alpha = Math.random() * 0.25 + 0.08;
+    }
+    /** Resize canvas; only recreate particles when size actually changes (no skip) */
+    function reseed(force){
+      var box = sizeBox();
+      var nw = box.w, nh = box.h;
+      isMobile = nw <= 768;
+      var sizeChanged = !fw || !fh || Math.abs(nw - fw) > 8 || Math.abs(nh - fh) > 8;
+      var oldW = fw, oldH = fh;
+      fw = nw; fh = nh;
+      flow.width = fw;
+      flow.height = fh;
+      flow.style.width = fw + 'px';
+      flow.style.height = fh + 'px';
+      fctx.setTransform(1, 0, 0, 1, 0, 0);
+      if(force || !particles.length || sizeChanged){
+        if(particles.length && oldW > 0 && oldH > 0 && sizeChanged && !force){
+          // Scale existing particles into new bounds — continuous field, no full wipe
+          var sx = fw / oldW, sy = fh / oldH;
+          particles.forEach(function(p){
+            p.x = Math.max(0, Math.min(fw, p.x * sx));
+            p.y = Math.max(0, Math.min(fh, p.y * sy));
+          });
+        } else {
+          var count = isMobile ? 38 : 56;
+          particles = [];
+          for(var i = 0; i < count; i++) particles.push(new Particle());
+        }
+      }
+    }
+    function drawFlow(now){
+      now = now || performance.now();
+      if(document.hidden){
+        setTimeout(function(){ requestAnimationFrame(drawFlow); }, 600);
+        return;
+      }
+      if(modal.style.display === 'none'){
+        setTimeout(function(){ requestAnimationFrame(drawFlow); }, 300);
+        return;
+      }
+      if(isMobile && lastT && (now - lastT) < 48){
+        requestAnimationFrame(drawFlow);
+        return;
+      }
+      if(!lastT) lastT = now;
+      var dt = (now - lastT) / 16.6667;
+      // Clamp hard first frames so open doesn’t “jump”
+      dt = Math.max(0.2, Math.min(dt, 1.6));
+      lastT = now;
+      if(!fw || !fh || !particles.length) reseed(false);
+
+      var tau = 900;
+      for(var ai = attractors.length - 1; ai >= 0; ai--){
+        if(now - attractors[ai].born > tau * 4) attractors.splice(ai, 1);
+      }
+      var linkDist = isMobile ? 80 : 120;
+      fctx.clearRect(0, 0, fw, fh);
+
+      particles.forEach(function(p){
+        var ax = 0, ay = 0;
+        for(var i = 0; i < attractors.length; i++){
+          var a = attractors[i];
+          var age = now - a.born;
+          var cur = a.strength * Math.exp(-age / tau);
+          if(cur < 3) continue;
+          var tx = a.x + Math.cos(p.orbA) * p.orbR;
+          var ty = a.y + Math.sin(p.orbA) * p.orbR;
+          var dx = tx - p.x, dy = ty - p.y;
+          var dist = Math.hypot(dx, dy) || 1;
+          dist = Math.max(dist, 55);
+          var pull = cur / dist;
+          ax += (dx / dist) * pull;
+          ay += (dy / dist) * pull;
+        }
+        var pullMag = Math.hypot(ax, ay);
+        var maxPull = 0.55;
+        if(pullMag > maxPull){ ax = ax / pullMag * maxPull; ay = ay / pullMag * maxPull; }
+        p.x += (p.vx + ax * 0.55) * dt;
+        p.y += (p.vy + ay * 0.55) * dt;
+        if(p.x < 0 || p.x > fw) p.vx *= -1;
+        if(p.y < 0 || p.y > fh) p.vy *= -1;
+        p.x = Math.max(0, Math.min(fw, p.x));
+        p.y = Math.max(0, Math.min(fh, p.y));
+        fctx.beginPath();
+        fctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        fctx.fillStyle = p.color;
+        fctx.globalAlpha = p.alpha;
+        fctx.fill();
+      });
+
+      fctx.globalAlpha = 0.12;
+      fctx.lineWidth = 0.6;
+      fctx.strokeStyle = '#6366f1';
+      particles.forEach(function(p, i){
+        particles.slice(i + 1).forEach(function(q){
+          var d = Math.hypot(p.x - q.x, p.y - q.y);
+          if(d < linkDist){
+            fctx.beginPath();
+            fctx.moveTo(p.x, p.y);
+            fctx.lineTo(q.x, q.y);
+            fctx.stroke();
+          }
+        });
+      });
+      fctx.globalAlpha = 1;
+      requestAnimationFrame(drawFlow);
+    }
+    // Soft remeasure: never force-wipe particles unless needed
+    window._authFlowRemeasure = function(){ reseed(false); };
+    reseed(true);
+    requestAnimationFrame(function(){
+      drawFlow();
+      // Fade in after first layout frame
+      requestAnimationFrame(revealAurora);
+    });
+  } else if(window._authFlowRemeasure){
+    window._authFlowRemeasure();
+    revealAurora();
+  }
+
+  // ── Beams ──
+  if(!beams._authWired){
+    beams._authWired = true;
+    var bctx = beams.getContext('2d');
+    var beamList = [];
+    var bw = 0, bh = 0, beamLast = 0;
+    var BEAM_COUNT = 14;
+    function makeBeam(){
+      return {
+        x: Math.random() * bw * 1.5 - bw * 0.25,
+        y: Math.random() * bh * 1.5 - bh * 0.25,
+        width: 38 + Math.random() * 60,
+        length: bh * 2.5,
+        angle: -35 + Math.random() * 10,
+        speed: 0.5 + Math.random() * 0.75,
+        opacity: 0.08 + Math.random() * 0.1, // quieter than full Studio, still visible
+        hue: 200 + Math.random() * 45,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.018 + Math.random() * 0.025
+      };
+    }
+    function reseedBeams(force){
+      var box = sizeBox();
+      var nw = box.w, nh = box.h;
+      var sizeChanged = !bw || !bh || Math.abs(nw - bw) > 8 || Math.abs(nh - bh) > 8;
+      bw = nw; bh = nh;
+      var dpr = window.devicePixelRatio || 1;
+      beams.width = Math.max(1, Math.floor(bw * dpr));
+      beams.height = Math.max(1, Math.floor(bh * dpr));
+      beams.style.width = bw + 'px';
+      beams.style.height = bh + 'px';
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if(force || !beamList.length || sizeChanged){
+        if(beamList.length && sizeChanged && !force){
+          // Keep beams; only update length for new height
+          beamList.forEach(function(b){ b.length = bh * 2.5; });
+        } else {
+          beamList = [];
+          for(var i = 0; i < BEAM_COUNT; i++) beamList.push(makeBeam());
+        }
+      }
+    }
+    function drawBeam(beam){
+      bctx.save();
+      bctx.translate(beam.x, beam.y);
+      bctx.rotate(beam.angle * Math.PI / 180);
+      var op = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2);
+      var g = bctx.createLinearGradient(0, 0, 0, beam.length);
+      g.addColorStop(0, 'hsla(' + beam.hue + ',85%,65%,0)');
+      g.addColorStop(0.15, 'hsla(' + beam.hue + ',85%,65%,' + (op * 0.45) + ')');
+      g.addColorStop(0.45, 'hsla(' + beam.hue + ',85%,65%,' + op + ')');
+      g.addColorStop(0.7, 'hsla(' + beam.hue + ',85%,65%,' + op + ')');
+      g.addColorStop(1, 'hsla(' + beam.hue + ',85%,65%,0)');
+      bctx.fillStyle = g;
+      bctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
+      bctx.restore();
+    }
+    function animateBeams(ts){
+      if(document.hidden || modal.style.display === 'none'){
+        setTimeout(function(){ requestAnimationFrame(animateBeams); }, 300);
+        return;
+      }
+      if(ts - beamLast < 32){ requestAnimationFrame(animateBeams); return; }
+      // Smooth first frames
+      if(beamLast && (ts - beamLast) > 80) beamLast = ts - 32;
+      beamLast = ts;
+      if(!bw || !bh || !beamList.length) reseedBeams(false);
+      bctx.clearRect(0, 0, bw, bh);
+      bctx.filter = 'blur(32px)';
+      for(var i = 0; i < beamList.length; i++){
+        var beam = beamList[i];
+        beam.y -= beam.speed;
+        beam.pulse += beam.pulseSpeed;
+        if(beam.y + beam.length < -100){
+          beam.y = bh + 80;
+          beam.x = (i % 3) * (bw / 3) + (bw / 6) + (Math.random() - 0.5) * (bw / 4);
+        }
+        drawBeam(beam);
+      }
+      bctx.filter = 'none';
+      requestAnimationFrame(animateBeams);
+    }
+    window._authBeamsRemeasure = function(){ reseedBeams(false); };
+    reseedBeams(true);
+    requestAnimationFrame(animateBeams);
+  } else if(window._authBeamsRemeasure){
+    window._authBeamsRemeasure();
+  }
+
+  _authAuroraRunning = true;
 }
-// Auto-init on page load since auth modal starts visible
-requestAnimationFrame(function(){initLoginAnim();});
+
+function initLoginAnim(){
+  try{ initAuthAuroraBackground(); }catch(e){ console.warn('auth aurora', e); }
+  try{ applyAuthFieldDepth(getAuthFieldDepth()); }catch(e){}
+  // One delayed remeasure only (modal may open from display:none) — no 4× wipe
+  clearTimeout(window._authRemeasureT);
+  window._authRemeasureT = setTimeout(function(){
+    try{ if(window._authFlowRemeasure) window._authFlowRemeasure(); }catch(e){}
+    try{ if(window._authBeamsRemeasure) window._authBeamsRemeasure(); }catch(e){}
+  }, 120);
+}
+
+/** Login field compare: 'clear' (current) vs 'dark' (deeper veil, no blur) */
+var AUTH_FIELD_KEY = 'synapses_auth_field_depth';
+function getAuthFieldDepth(){
+  try{
+    var v = localStorage.getItem(AUTH_FIELD_KEY);
+    if(v === 'dark' || v === 'clear') return v;
+  }catch(e){}
+  return 'dark'; // locked preference: darker wallpaper
+}
+function applyAuthFieldDepth(mode){
+  // Always dark — user preferred this over Clear
+  mode = 'dark';
+  var modal = document.getElementById('authModal');
+  var label = document.getElementById('authFieldToggleLabel');
+  if(modal){
+    modal.classList.remove('auth-field-clear', 'auth-field-dark');
+    modal.classList.add('auth-field-dark');
+  }
+  if(label) label.textContent = 'Field: Dark';
+  try{ localStorage.setItem(AUTH_FIELD_KEY, mode); }catch(e){}
+}
+function toggleAuthFieldDepth(){
+  // no-op for now (toggle hidden); keep API so old onclick doesn’t error
+  applyAuthFieldDepth('dark');
+}
+window.toggleAuthFieldDepth = toggleAuthFieldDepth;
+window.applyAuthFieldDepth = applyAuthFieldDepth;
+
+// Boot when DOM is ready
+requestAnimationFrame(function(){ initLoginAnim(); });
 
 // ── HABIT TRACKER ──────────────────────────────────────────
 var habits=[],habitLogs={};try{habits=JSON.parse(localStorage.getItem('synapses_habits')||'[]');habitLogs=JSON.parse(localStorage.getItem('synapses_habitlogs')||'{}');}catch(e){}
