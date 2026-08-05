@@ -4435,13 +4435,12 @@ html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globa
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
-   already is for Dark Mode / True Black above. PC only; mobile intentionally left untouched. */
-@media(min-width:769px){
-  #studioBeamsCanvas,#studioFlowCanvas{transition:opacity 1.4s ease;}
-  html[data-theme="trueblack"] #studioBeamsCanvas,html[data-theme="trueblack"] #studioFlowCanvas{opacity:0!important;}
-  #chatBeamsWrap,#chatBeamsCanvas{transition:opacity 1.4s ease;}
-  html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBeamsCanvas{opacity:0!important;}
-}
+   already is for Dark Mode / True Black above. Now applies on mobile too (was PC-only, which is
+   why True Black still looked like regular Dark Mode on phones). */
+#studioBeamsCanvas,#studioFlowCanvas{transition:opacity 1.4s ease;}
+html[data-theme="trueblack"] #studioBeamsCanvas,html[data-theme="trueblack"] #studioFlowCanvas{opacity:0!important;}
+#chatBeamsWrap,#chatBeamsCanvas{transition:opacity 1.4s ease;}
+html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBeamsCanvas{opacity:0!important;}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
