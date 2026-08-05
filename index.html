@@ -1971,7 +1971,17 @@ html[data-theme="trueblack"] .send-btn:hover{
 }
 /* True Black: kill the remaining purple accents (logo mark, home-screen orb, voice mic button,
    floating voice pill) and reuse the same neutral white/grey palette as the ask-bar/send-btn above. */
-html[data-theme="trueblack"] .syn-logo-mark{filter:grayscale(1) brightness(1.7) contrast(1.05)!important;}
+html[data-theme="trueblack"] .syn-stop-core-1{stop-color:#ffffff!important;}
+html[data-theme="trueblack"] .syn-stop-core-2{stop-color:#ffffff!important;}
+html[data-theme="trueblack"] .syn-stop-core-3{stop-color:#ffffff!important;}
+html[data-theme="trueblack"] .syn-stop-core-4{stop-color:#ffffff!important;}
+html[data-theme="trueblack"] .syn-stop-halo-1{stop-color:#ffffff!important;stop-opacity:0.45!important;}
+html[data-theme="trueblack"] .syn-stop-halo-2{stop-color:#ffffff!important;stop-opacity:0.12!important;}
+html[data-theme="trueblack"] .syn-stop-halo-3{stop-color:#ffffff!important;stop-opacity:0!important;}
+html[data-theme="trueblack"] .syn-stop-spoke-1{stop-color:#ffffff!important;stop-opacity:1!important;}
+html[data-theme="trueblack"] .syn-stop-spoke-2{stop-color:#ffffff!important;stop-opacity:1!important;}
+html[data-theme="trueblack"] .syn-orbit-dot{fill:#ffffff!important;}
+html[data-theme="trueblack"] .syn-core-glint{fill:#ffffff!important;}
 /* Home screen "spinning orb" — core + purple/indigo ring + purple/indigo orbiting nodes go white. Teal ring/node stays teal. */
 html[data-theme="trueblack"] .syn-orb-core{background:radial-gradient(circle,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.35) 50%,transparent 70%)!important;box-shadow:0 0 30px rgba(255,255,255,0.5),0 0 60px rgba(255,255,255,0.2),inset 0 0 20px rgba(255,255,255,0.1)!important;}
 html[data-theme="trueblack"] .syn-ring-1{border-color:rgba(255,255,255,0.25)!important;border-top-color:rgba(255,255,255,0.7)!important;}
@@ -5590,19 +5600,19 @@ window.getWebAudioNode = getWebAudioNode;
           <svg class="syn-logo-mark" width="32" height="32" viewBox="0 0 80 80" fill="none">
             <defs>
               <radialGradient id="synCoreAuth" cx="36%" cy="30%" r="70%">
-                <stop offset="0%" stop-color="#f5f3ff"/>
-                <stop offset="28%" stop-color="#c4b5fd"/>
-                <stop offset="62%" stop-color="#7c6af7"/>
-                <stop offset="100%" stop-color="#312e81"/>
+                <stop class="syn-stop-core-1" offset="0%" stop-color="#f5f3ff"/>
+                <stop class="syn-stop-core-2" offset="28%" stop-color="#c4b5fd"/>
+                <stop class="syn-stop-core-3" offset="62%" stop-color="#7c6af7"/>
+                <stop class="syn-stop-core-4" offset="100%" stop-color="#312e81"/>
               </radialGradient>
               <radialGradient id="synHaloAuth" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
-                <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
-                <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+                <stop class="syn-stop-halo-1" offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+                <stop class="syn-stop-halo-2" offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
+                <stop class="syn-stop-halo-3" offset="100%" stop-color="#6366f1" stop-opacity="0"/>
               </radialGradient>
               <linearGradient id="synSpokeAuth" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
+                <stop class="syn-stop-spoke-1" offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
+                <stop class="syn-stop-spoke-2" offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
               </linearGradient>
               <filter id="synNodeGlowAuth" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
@@ -5624,17 +5634,17 @@ window.getWebAudioNode = getWebAudioNode;
               <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
             </g>
             <g filter="url(#synNodeGlowAuth)">
-              <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
-              <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
-              <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-              <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
-              <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
-              <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+              <circle class="syn-orbit-dot" cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
             </g>
             <circle cx="40" cy="40" r="3.2" fill="url(#synCoreAuth)" filter="url(#synCoreGlowAuth)">
               <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
             </circle>
-            <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
+            <circle class="syn-core-glint" cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
               <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
               <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
             </circle>
@@ -5809,19 +5819,19 @@ window.getWebAudioNode = getWebAudioNode;
       <svg class="syn-logo-mark" width="34" height="34" viewBox="0 0 80 80" fill="none" aria-hidden="true">
         <defs>
           <radialGradient id="synCoreSB" cx="36%" cy="30%" r="70%">
-            <stop offset="0%" stop-color="#f5f3ff"/>
-            <stop offset="28%" stop-color="#c4b5fd"/>
-            <stop offset="62%" stop-color="#7c6af7"/>
-            <stop offset="100%" stop-color="#312e81"/>
+            <stop class="syn-stop-core-1" offset="0%" stop-color="#f5f3ff"/>
+            <stop class="syn-stop-core-2" offset="28%" stop-color="#c4b5fd"/>
+            <stop class="syn-stop-core-3" offset="62%" stop-color="#7c6af7"/>
+            <stop class="syn-stop-core-4" offset="100%" stop-color="#312e81"/>
           </radialGradient>
           <radialGradient id="synHaloSB" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
-            <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
-            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+            <stop class="syn-stop-halo-1" offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+            <stop class="syn-stop-halo-2" offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
+            <stop class="syn-stop-halo-3" offset="100%" stop-color="#6366f1" stop-opacity="0"/>
           </radialGradient>
           <linearGradient id="synSpokeSB" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
-            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
+            <stop class="syn-stop-spoke-1" offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
+            <stop class="syn-stop-spoke-2" offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
           </linearGradient>
           <filter id="synNodeGlowSB" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
             <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
@@ -5846,18 +5856,18 @@ window.getWebAudioNode = getWebAudioNode;
         </g>
         <!-- Outer nodes — ORIGINAL UAP on/off pattern from first icon -->
         <g filter="url(#synNodeGlowSB)">
-          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
-          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
-          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
-          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
-          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
         </g>
         <!-- Center node — only slightly larger than outer nodes -->
         <circle cx="40" cy="40" r="3.2" fill="url(#synCoreSB)" filter="url(#synCoreGlowSB)">
           <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
-        <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
+        <circle class="syn-core-glint" cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
           <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
           <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
@@ -7275,19 +7285,19 @@ window.getWebAudioNode = getWebAudioNode;
       <svg class="syn-logo-mark" width="28" height="28" viewBox="0 0 80 80" fill="none" aria-hidden="true">
         <defs>
           <radialGradient id="synCoreTB" cx="36%" cy="30%" r="70%">
-            <stop offset="0%" stop-color="#f5f3ff"/>
-            <stop offset="28%" stop-color="#c4b5fd"/>
-            <stop offset="62%" stop-color="#7c6af7"/>
-            <stop offset="100%" stop-color="#312e81"/>
+            <stop class="syn-stop-core-1" offset="0%" stop-color="#f5f3ff"/>
+            <stop class="syn-stop-core-2" offset="28%" stop-color="#c4b5fd"/>
+            <stop class="syn-stop-core-3" offset="62%" stop-color="#7c6af7"/>
+            <stop class="syn-stop-core-4" offset="100%" stop-color="#312e81"/>
           </radialGradient>
           <radialGradient id="synHaloTB" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
-            <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
-            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+            <stop class="syn-stop-halo-1" offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+            <stop class="syn-stop-halo-2" offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
+            <stop class="syn-stop-halo-3" offset="100%" stop-color="#6366f1" stop-opacity="0"/>
           </radialGradient>
           <linearGradient id="synSpokeTB" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
-            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
+            <stop class="syn-stop-spoke-1" offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
+            <stop class="syn-stop-spoke-2" offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
           </linearGradient>
           <filter id="synNodeGlowTB" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
             <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
@@ -7311,18 +7321,18 @@ window.getWebAudioNode = getWebAudioNode;
         </g>
         <!-- Outer nodes — ORIGINAL UAP on/off pattern from first icon -->
         <g filter="url(#synNodeGlowTB)">
-          <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
-          <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
-          <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-          <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
-          <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
-          <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+          <circle class="syn-orbit-dot" cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
         </g>
         <!-- Center node — only slightly larger than outer nodes -->
         <circle cx="40" cy="40" r="3.2" fill="url(#synCoreTB)" filter="url(#synCoreGlowTB)">
           <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
-        <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
+        <circle class="syn-core-glint" cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
           <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
           <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
         </circle>
@@ -39451,7 +39461,13 @@ function speakVoiceReply(text) {
     '}' +
     '#tnvToast.show{opacity:1;}' +
     '#tnvToast.expanded{cursor:default;}' +
-    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(130,140,220,0.6);margin-top:4px;cursor:pointer;}';
+    '#tnvToast .toast-expand-hint{display:block;font-size:10px;color:rgba(130,140,220,0.6);margin-top:4px;cursor:pointer;}' +
+    'html[data-theme="trueblack"] #tnvToast{background:rgba(8,8,8,0.97)!important;border-color:rgba(140,140,150,0.35)!important;color:rgba(225,225,230,0.95)!important;}' +
+    'html[data-theme="trueblack"] #tnvToast::after{border-bottom-color:rgba(140,140,150,0.35)!important;}' +
+    'html[data-theme="trueblack"] #tnvToast::before{border-bottom-color:rgba(8,8,8,0.97)!important;}' +
+    'html[data-theme="trueblack"] #tnvToast .toast-expand-hint{color:rgba(150,150,160,0.65)!important;}' +
+    'html[data-theme="trueblack"] #tnvFakeThumb{background:rgba(150,150,160,0.85)!important;box-shadow:0 0 8px rgba(150,150,160,0.5)!important;}' +
+    'html[data-theme="trueblack"] #tnvFakeScroll{background:rgba(255,255,255,0.06)!important;}';
   document.head.appendChild(st);
 
   var _on = false;
