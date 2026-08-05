@@ -3133,6 +3133,25 @@ body.voice-live .syn-fp-icon{
   margin:0!important;
   flex-shrink:0;
 }
+/* PC only: true viewport-centered title. Mobile keeps its original off-center flex layout untouched. */
+@media(min-width:769px){
+  #studioTopBar{
+    display:grid!important;
+    grid-template-columns:1fr auto 1fr;
+  }
+  #studioTopBarTitle{
+    grid-column:2;
+    justify-self:center;
+  }
+  #studioTopBarActions{
+    grid-column:3;
+    justify-self:end;
+  }
+  #studioTopBar > button:first-child{
+    grid-column:1;
+    justify-self:start;
+  }
+}
 #studioResetBtn .studio-reset-glyph{
   display:flex!important;
   align-items:center!important;
@@ -3212,6 +3231,80 @@ body.voice-live .syn-fp-icon{
 }
 .ig-set-section{margin-bottom:16px;}
 .ig-set-section:last-child{margin-bottom:2px;}
+
+/* ── Video reference grid (Runway-style: add box + thumbnail slots) ── */
+.ig-video-ref-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin-bottom:14px;
+  max-width:280px;
+}
+.ig-video-ref-box{
+  aspect-ratio:1;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  color:rgba(190,188,220,0.55);
+  font-family:'DM Sans',sans-serif;
+  font-size:11px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color .15s, background .15s;
+}
+.ig-video-ref-add{
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.ig-video-ref-add:hover, .ig-video-ref-add:active{
+  border-color:rgba(167,154,255,0.5);
+  background:rgba(124,106,247,0.08);
+  color:rgba(230,225,255,0.85);
+}
+.ig-video-ref-add-icon{display:flex;align-items:center;justify-content:center;line-height:1;}
+.ig-video-ref-add-icon svg{width:22px;height:22px;display:block;color:var(--text);}
+.ig-video-ref-add-label{font-size:11px;font-weight:600;color:rgba(190,188,220,0.55);}
+.ig-video-ref-empty-icon{font-size:18px;opacity:0.35;}
+.ig-video-ref-slot.ig-video-ref-filled{
+  border-style:solid;
+  border-color:rgba(255,255,255,0.1);
+  cursor:default;
+}
+.ig-video-ref-slot img, .ig-video-ref-slot video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.ig-video-ref-filename{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  padding:3px 5px;
+  font-size:9.5px;
+  color:rgba(255,255,255,0.85);
+  background:linear-gradient(0deg, rgba(0,0,0,0.72), transparent);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.ig-video-ref-remove{
+  position:absolute;
+  top:4px;right:4px;
+  width:18px;height:18px;
+  border-radius:50%;
+  border:none;
+  background:rgba(0,0,0,0.7);
+  color:#fff;
+  font-size:11px;
+  line-height:1;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
 
 /* ── Model list (Runway/Higgsfield-style full-width rows) ── */
 .ig-model-list{
@@ -6657,39 +6750,62 @@ window.getWebAudioNode = getWebAudioNode;
           </div>
         </div>
 
-        <!-- VIDEO settings — PC uses same select-row UX as image; mobile keeps visual pickers -->
+        <!-- VIDEO settings — Runway-style: 3-box reference grid, model note, then chip controls -->
         <div id="igVideoSettingsBody" class="ig-settings-panel" aria-hidden="true">
+          <!-- Reference grid — box 1 opens the picker, boxes 2 & 3 preview whatever's added -->
+          <div class="ig-video-ref-grid" id="videoGenRefGrid">
+            <div class="ig-video-ref-box ig-video-ref-add" id="videoGenRefAddBox" onclick="document.getElementById('videoGenRefInput').click()" role="button" tabindex="0" aria-label="Add reference">
+              <span class="ig-video-ref-add-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="13" height="13" rx="2.5"/><circle cx="6.2" cy="7.2" r="1" fill="currentColor" stroke="none"/><path d="M4 14l3.4-3.6a1 1 0 0 1 1.4 0L12.5 14"/><circle cx="15.2" cy="15.2" r="5.3" fill="var(--surface)"/><path d="M15.2 12.7v5M12.7 15.2h5"/></svg></span>
+              <span class="ig-video-ref-add-label">Reference</span>
+            </div>
+            <div class="ig-video-ref-box ig-video-ref-slot" id="videoGenRefSlot1" data-slot="1">
+              <span class="ig-video-ref-empty-icon" aria-hidden="true">＋</span>
+            </div>
+            <div class="ig-video-ref-box ig-video-ref-slot" id="videoGenRefSlot2" data-slot="2">
+              <span class="ig-video-ref-empty-icon" aria-hidden="true">＋</span>
+            </div>
+            <input type="file" id="videoGenRefInput" accept="image/*,video/*,audio/*" multiple style="display:none;" onchange="handleVideoGenRefSelect(event)" />
+          </div>
+
+          <!-- Model support note, matches Runway's model description copy -->
+          <div id="videoGenModelNote" style="font-size:12.5px;line-height:1.55;color:rgba(190,188,220,0.72);padding:2px 2px 14px;">
+            Seedance 2.0 supports text and multiple images, videos and audio. Simply describe your scene or add references to begin.
+            <a href="https://seed.bytedance.com/en/seedance2_0" target="_blank" rel="noopener" style="color:rgba(167,154,255,0.9);text-decoration:underline;">See guide</a>
+          </div>
+
           <!-- Desktop / web: compact selects (mirror image settings) -->
           <div class="ig-set-desktop">
-            <select id="videoGenModel" disabled title="Coming soon" style="opacity:0.72;cursor:not-allowed;">
-              <option value="" selected style="background:#17171a;color:#f2f2f5;">Video model — coming soon</option>
+            <select id="videoGenModel">
+              <option value="seedance-2.0" selected style="background:#17171a;color:#f2f2f5;">Seedance 2.0</option>
             </select>
-            <select id="videoGenDuration" onchange="syncVideoGenPickersFromSelects()">
-              <option value="3" style="background:#17171a;color:#f2f2f5;">3 seconds</option>
-              <option value="5" selected style="background:#17171a;color:#f2f2f5;">5 seconds</option>
-              <option value="10" style="background:#17171a;color:#f2f2f5;">10 seconds</option>
+            <select id="videoGenAudio" onchange="syncVideoGenPickersFromSelects()">
+              <option value="on" selected style="background:#17171a;color:#f2f2f5;">Audio: On</option>
+              <option value="off" style="background:#17171a;color:#f2f2f5;">Audio: Off</option>
             </select>
             <select id="videoGenAspect" onchange="syncVideoGenPickersFromSelects()">
               <option value="portrait" style="background:#17171a;color:#f2f2f5;">9:16 Portrait</option>
               <option value="landscape" selected style="background:#17171a;color:#f2f2f5;">16:9 Landscape</option>
               <option value="square" style="background:#17171a;color:#f2f2f5;">1:1 Square</option>
             </select>
+            <select id="videoGenResolution" onchange="syncVideoGenPickersFromSelects()">
+              <option value="480p" style="background:#17171a;color:#f2f2f5;">480p</option>
+              <option value="720p" selected style="background:#17171a;color:#f2f2f5;">720p</option>
+              <option value="1080p" style="background:#17171a;color:#f2f2f5;">1080p</option>
+            </select>
+            <select id="videoGenDuration" onchange="syncVideoGenPickersFromSelects()">
+              <option value="3" style="background:#17171a;color:#f2f2f5;">3 seconds</option>
+              <option value="5" selected style="background:#17171a;color:#f2f2f5;">5 seconds</option>
+              <option value="10" style="background:#17171a;color:#f2f2f5;">10 seconds</option>
+            </select>
           </div>
 
-          <!-- Mobile only: visual duration / frame pickers + soon card -->
+          <!-- Mobile only: visual pickers -->
           <div class="ig-set-mobile">
-            <div class="ig-video-soon">
-              <div class="ig-video-soon-kicker">Coming soon</div>
-              <div class="ig-video-soon-title">Video generation</div>
-              <div class="ig-video-soon-desc">Settings below are ready for when video gen ships. Flip back to Image anytime.</div>
-            </div>
-
             <div class="ig-set-section">
-              <div class="ig-set-label">Duration</div>
-              <div class="ig-count-row" role="listbox" aria-label="Video duration">
-                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="3" onclick="selectVideoGenOption('duration','3')" role="option" aria-selected="false">3s</button>
-                <button type="button" class="ig-count-btn ig-on" data-ig="vid-duration" data-val="5" onclick="selectVideoGenOption('duration','5')" role="option" aria-selected="true">5s</button>
-                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="10" onclick="selectVideoGenOption('duration','10')" role="option" aria-selected="false">10s</button>
+              <div class="ig-set-label">Audio</div>
+              <div class="ig-count-row" role="listbox" aria-label="Audio">
+                <button type="button" class="ig-count-btn ig-on" data-ig="vid-audio" data-val="on" onclick="selectVideoGenOption('audio','on')" role="option" aria-selected="true">On</button>
+                <button type="button" class="ig-count-btn" data-ig="vid-audio" data-val="off" onclick="selectVideoGenOption('audio','off')" role="option" aria-selected="false">Off</button>
               </div>
             </div>
 
@@ -6711,6 +6827,24 @@ window.getWebAudioNode = getWebAudioNode;
                   <span class="ig-aspect-ratio">1:1</span>
                   <span class="ig-aspect-sub">Square</span>
                 </button>
+              </div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Resolution</div>
+              <div class="ig-count-row" role="listbox" aria-label="Resolution">
+                <button type="button" class="ig-count-btn" data-ig="vid-resolution" data-val="480p" onclick="selectVideoGenOption('resolution','480p')" role="option" aria-selected="false">480p</button>
+                <button type="button" class="ig-count-btn ig-on" data-ig="vid-resolution" data-val="720p" onclick="selectVideoGenOption('resolution','720p')" role="option" aria-selected="true">720p</button>
+                <button type="button" class="ig-count-btn" data-ig="vid-resolution" data-val="1080p" onclick="selectVideoGenOption('resolution','1080p')" role="option" aria-selected="false">1080p</button>
+              </div>
+            </div>
+
+            <div class="ig-set-section">
+              <div class="ig-set-label">Duration</div>
+              <div class="ig-count-row" role="listbox" aria-label="Video duration">
+                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="3" onclick="selectVideoGenOption('duration','3')" role="option" aria-selected="false">3s</button>
+                <button type="button" class="ig-count-btn ig-on" data-ig="vid-duration" data-val="5" onclick="selectVideoGenOption('duration','5')" role="option" aria-selected="true">5s</button>
+                <button type="button" class="ig-count-btn" data-ig="vid-duration" data-val="10" onclick="selectVideoGenOption('duration','10')" role="option" aria-selected="false">10s</button>
               </div>
             </div>
 
@@ -8588,13 +8722,87 @@ function selectVideoGenOption(kind, value){
     var a = document.getElementById('videoGenAspect');
     if(a) a.value = value;
     _paintImageGenPicker('vid-aspect', value);
+  } else if(kind === 'resolution'){
+    var r = document.getElementById('videoGenResolution');
+    if(r) r.value = value;
+    _paintImageGenPicker('vid-resolution', value);
+  } else if(kind === 'audio'){
+    var au = document.getElementById('videoGenAudio');
+    if(au) au.value = value;
+    _paintImageGenPicker('vid-audio', value);
   }
 }
 function syncVideoGenPickersFromSelects(){
   var d = document.getElementById('videoGenDuration');
   var a = document.getElementById('videoGenAspect');
+  var r = document.getElementById('videoGenResolution');
+  var au = document.getElementById('videoGenAudio');
   if(d) _paintImageGenPicker('vid-duration', d.value);
   if(a) _paintImageGenPicker('vid-aspect', a.value);
+  if(r) _paintImageGenPicker('vid-resolution', r.value);
+  if(au) _paintImageGenPicker('vid-audio', au.value);
+}
+/** Video reference grid — up to 2 slots, fills the first empty one(s) with whatever's picked */
+var _videoGenRefSlots = [null, null]; // {file, url, kind} | null, index 0 = slot1, index 1 = slot2
+
+function _videoGenRefKind(file){
+  if(file.type.indexOf('image/') === 0) return 'image';
+  if(file.type.indexOf('video/') === 0) return 'video';
+  if(file.type.indexOf('audio/') === 0) return 'audio';
+  return 'file';
+}
+
+function _renderVideoGenRefSlot(i){
+  var el = document.getElementById('videoGenRefSlot' + (i + 1));
+  if(!el) return;
+  var data = _videoGenRefSlots[i];
+  if(!data){
+    el.classList.remove('ig-video-ref-filled');
+    el.innerHTML = '<span class="ig-video-ref-empty-icon" aria-hidden="true">＋</span>';
+    el.onclick = function(){ document.getElementById('videoGenRefInput').click(); };
+    return;
+  }
+  el.classList.add('ig-video-ref-filled');
+  el.onclick = null;
+  var inner = '';
+  if(data.kind === 'image'){
+    inner = '<img src="' + data.url + '" alt="' + data.file.name.replace(/"/g,'') + '" />';
+  } else if(data.kind === 'video'){
+    inner = '<video src="' + data.url + '" muted preload="metadata"></video><span class="ig-video-ref-filename">🎬 ' + data.file.name + '</span>';
+  } else if(data.kind === 'audio'){
+    inner = '<span class="ig-video-ref-empty-icon" aria-hidden="true">🎵</span><span class="ig-video-ref-filename">' + data.file.name + '</span>';
+  } else {
+    inner = '<span class="ig-video-ref-empty-icon" aria-hidden="true">📄</span><span class="ig-video-ref-filename">' + data.file.name + '</span>';
+  }
+  inner += '<button type="button" class="ig-video-ref-remove" title="Remove" onclick="event.stopPropagation();clearVideoGenRefSlot(' + i + ')">×</button>';
+  el.innerHTML = inner;
+}
+
+function handleVideoGenRefSelect(event){
+  var files = event && event.target && event.target.files ? Array.prototype.slice.call(event.target.files) : [];
+  if(!files.length) return;
+  for(var f = 0; f < files.length; f++){
+    var emptyIdx = _videoGenRefSlots.indexOf(null);
+    if(emptyIdx === -1) break; // both slots full
+    var file = files[f];
+    var kind = _videoGenRefKind(file);
+    var url = (kind === 'image' || kind === 'video') ? URL.createObjectURL(file) : '';
+    _videoGenRefSlots[emptyIdx] = { file: file, url: url, kind: kind };
+    _renderVideoGenRefSlot(emptyIdx);
+  }
+  event.target.value = ''; // allow re-picking the same file later
+}
+
+function clearVideoGenRefSlot(i){
+  var data = _videoGenRefSlots[i];
+  if(data && data.url) URL.revokeObjectURL(data.url);
+  _videoGenRefSlots[i] = null;
+  _renderVideoGenRefSlot(i);
+}
+
+function clearVideoGenRef(){
+  clearVideoGenRefSlot(0);
+  clearVideoGenRefSlot(1);
 }
 
 function _igSettingsSheetIsOpen(){
@@ -19413,11 +19621,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
       // /classify, regardless of how time-sensitive the topic actually was. This gate
       // doesn't try to guess whether the topic needs a search — it just ensures these
       // messages reach the classifier, which decides based on the actual topic.
-      // NOTE: bare "tell me" / "show me" / "find me" / "figure out" removed — no topic
-      // signal on their own, were causing e.g. "tell me how ur doing today" to hit this
-      // gate (which defaults to BASIC/search on a classify timeout). Real topic words
-      // still catch "tell me the latest news" via "latest"/"news"/etc.
-      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|whats|wheres|where's|where is|when is|when are|when's|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet|what do you think about|what do you think of|your thoughts on|thoughts on|thoughts about|opinion on|your take on|what's your take)\b/i.test(_lu);
+      var _keywordHit = /\b(news|latest|current|today|who is|who was|who are|what is|what are|what's|whats|wheres|where's|where is|when is|when are|when's|tell me|show me|find me|figure out|price|how much|2024|2025|2026|2027|weather|stock|score|president|preside|presid|prime minister|ceo|leader|winner|war|conflict|attack|happened|recent|update|situation|going on|lawsuit|sued|arrested|died|released|announced|launched|acquired|banned|fired|hired|elected|won|lost|streamer|now|currently|search|look up|google|what happened|breaking|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|is it open|still open|is out yet|still airing|right now|as of|at the moment|nowadays|these days|up.to.date|not yet|what do you think about|what do you think of|your thoughts on|thoughts on|thoughts about|opinion on|your take on|what's your take)\b/i.test(_lu);
 
       /* FOLLOW-UP DETECTION:
        * A live search just happened → window._searchFollowUpBudget is armed (>0).
@@ -40668,13 +40872,7 @@ function speakVoiceReply(text) {
     var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
-    // NOTE: bare "tell me" / "show me" / "find me" / "figure out" were removed from this
-    // list — they carry zero topic signal on their own and were making messages like
-    // "tell me how ur doing today" match as a content keyword, which skips classify
-    // entirely in voice mode (minimal-blockers path) and fired a live search for a
-    // message that had nothing to look up. Real topic words below still catch
-    // "tell me the latest news" etc via "latest"/"news"/whatever the actual topic is.
-    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
+    var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
     /* Explicit "I want live/current info" phrasing — same override used in text chat's
      * explicitLiveHint. Forces a search regardless of topic, since the user directly
      * signaled recency (this was the actual gap causing "best restaurants ... right now"
