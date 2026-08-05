@@ -1982,10 +1982,12 @@ html[data-theme="trueblack"] .syn-node[style*="#6366f1"]{--col:#ffffff!important
    per request), and the purple/speaking state (goes white — excluded while .tts-breathing is active
    so the breathing keyframe animation isn't fought by this static !important box-shadow). */
 html[data-theme="trueblack"] #voiceModeBtn{border-color:rgba(255,255,255,0.14)!important;}
-html[data-theme="trueblack"] #voiceModeBtn[style*="0,217,168"],
-html[data-theme="trueblack"] #voiceModeBtn[style*="0, 217, 168"]{
-  border-color:rgba(0,217,168,1)!important;
-  color:rgba(0,217,168,1)!important;
+html[data-theme="trueblack"] #voiceModeBtn[style*="0,217,168"]:not(.tts-breathing),
+html[data-theme="trueblack"] #voiceModeBtn[style*="0, 217, 168"]:not(.tts-breathing){
+  background:rgba(255,255,255,0.16)!important;
+  border-color:#ffffff!important;
+  box-shadow:0 0 20px rgba(255,255,255,0.5)!important;
+  color:#ffffff!important;
 }
 html[data-theme="trueblack"] #voiceModeBtn[style*="124, 106, 247"]:not(.tts-breathing),
 html[data-theme="trueblack"] #voiceModeBtn[style*="124,106,247"]:not(.tts-breathing){
@@ -7378,13 +7380,13 @@ window.getWebAudioNode = getWebAudioNode;
           <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
         </svg>
       </button>
-      <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" title="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;transform:translateZ(0);overflow:hidden;">
+      <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" title="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;overflow:hidden;">
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
-          <div id="dnt-left" style="display:flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:9999px;transition:transform .3s;background:#27272a;transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;">
-            <svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <div id="dnt-left" style="display:flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:9999px;transition:transform .3s;background:#27272a;">
+            <svg id="dnt-left-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </div>
-          <div id="dnt-right" style="display:flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:9999px;transition:transform .3s;transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;">
-            <svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <div id="dnt-right" style="display:flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:9999px;transition:transform .3s;">
+            <svg id="dnt-right-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </div>
         </div>
       </div>
@@ -31898,10 +31900,10 @@ function _syncDayNightToggle(t){
   var rightIcon = document.getElementById('dnt-right-icon');
   if(!wrap||!left||!right) return;
 
-  var moonSVG = '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-  var sunWhite= '<svg id="dnt-left-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-  var sunDim  = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-  var moonDim = '<svg id="dnt-right-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  var moonSVG = '<svg id="dnt-left-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  var sunWhite= '<svg id="dnt-left-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="#374151" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  var sunDim  = '<svg id="dnt-right-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+  var moonDim = '<svg id="dnt-right-icon" width="28" height="28" viewBox="0 0 24 24" style="width:14px;height:14px;" shape-rendering="geometricPrecision" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 
   if(t === 'easyview'){
     wrap.style.background  = '#ffffff';
