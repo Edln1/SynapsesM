@@ -983,6 +983,13 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
     /* Inset + thin ring only — no big outer purple halo (looks cut-off on phones) */
     box-shadow:0 0 0 1.5px rgba(124,106,247,0.5),inset 0 0 0 1px rgba(124,106,247,0.12),inset 0 1px 0 rgba(255,255,255,0.06)!important;
   }
+  html[data-theme="trueblack"] #sec-chat .input-box,html[data-theme="trueblack"] #sec-coach .input-box{
+    box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 2px 10px rgba(0,0,0,0.28)!important;
+  }
+  html[data-theme="trueblack"] #sec-chat .input-box:focus,html[data-theme="trueblack"] #sec-coach .input-box:focus{
+    border-color:rgba(255,255,255,0.14)!important;
+    box-shadow:0 0 0 1.5px rgba(255,255,255,0.3),inset 0 0 0 1px rgba(255,255,255,0.1),inset 0 1px 0 rgba(255,255,255,0.06)!important;
+  }
   #sec-chat #chatHistoryBtn{
     left:14px!important;top:0!important;bottom:0!important;margin:auto 0!important;
     transform:none!important;width:26px!important;height:26px!important;
@@ -1944,7 +1951,15 @@ html[data-theme="trueblack"] #sec-chat .input-box:focus,html[data-theme="truebla
 }
 /* True Black: the top-nav speech-to-speech mic icon — same neutral treatment as the ask-bar mic. */
 html[data-theme="trueblack"] #topNavVoiceBtn{border-color:rgba(255,255,255,0.14)!important;color:rgba(255,255,255,0.55)!important;}
-html[data-theme="trueblack"] #topNavVoiceBtn:hover{border-color:rgba(255,255,255,0.4)!important;color:rgba(255,255,255,0.85)!important;}
+/* No hover color change — keep whatever state (idle/active) it's already in. */
+/* Active (listening/speaking) keeps its green ring in True Black too, same as the other themes. */
+html[data-theme="trueblack"] #topNavVoiceBtn.tnv-on,
+html[data-theme="trueblack"] #topNavVoiceBtn.tnv-speak{
+  border-color:rgba(0,217,168,0.9)!important;
+  background:rgba(0,180,120,0.15)!important;
+  color:rgba(0,217,168,1)!important;
+  box-shadow:0 0 8px rgba(0,217,168,0.5)!important;
+}
 /* True Black: solid white send button + black icon, Grok-reference-style contrast instead of the purple-tinted fill. */
 html[data-theme="trueblack"] .send-btn{
   background:#ffffff!important;
@@ -1963,11 +1978,17 @@ html[data-theme="trueblack"] .syn-ring-1{border-color:rgba(255,255,255,0.25)!imp
 html[data-theme="trueblack"] .syn-ring-3{border-color:rgba(255,255,255,0.08)!important;border-bottom-color:rgba(255,255,255,0.35)!important;}
 html[data-theme="trueblack"] .syn-node[style*="#7c6af7"],
 html[data-theme="trueblack"] .syn-node[style*="#6366f1"]{--col:#ffffff!important;}
-/* Voice mic button — base border + the two purple states (JS-set "speaking" fill, and the
-   .tts-breathing pulse which comes from its own keyframe, so it needs its own white keyframe too). */
+/* Ask-bar mic — base border, the green "listening" state (kept as its normal green, no ring added
+   per request), and the purple/speaking state (goes white — excluded while .tts-breathing is active
+   so the breathing keyframe animation isn't fought by this static !important box-shadow). */
 html[data-theme="trueblack"] #voiceModeBtn{border-color:rgba(255,255,255,0.14)!important;}
-html[data-theme="trueblack"] #voiceModeBtn[style*="124, 106, 247"],
-html[data-theme="trueblack"] #voiceModeBtn[style*="124,106,247"]{
+html[data-theme="trueblack"] #voiceModeBtn[style*="0,217,168"],
+html[data-theme="trueblack"] #voiceModeBtn[style*="0, 217, 168"]{
+  border-color:rgba(0,217,168,1)!important;
+  color:rgba(0,217,168,1)!important;
+}
+html[data-theme="trueblack"] #voiceModeBtn[style*="124, 106, 247"]:not(.tts-breathing),
+html[data-theme="trueblack"] #voiceModeBtn[style*="124,106,247"]:not(.tts-breathing){
   background:rgba(255,255,255,0.16)!important;
   border-color:#ffffff!important;
   box-shadow:0 0 20px rgba(255,255,255,0.5)!important;
@@ -1976,6 +1997,8 @@ html[data-theme="trueblack"] #voiceModeBtn[style*="124,106,247"]{
 html[data-theme="trueblack"] #voiceModeBtn.tts-breathing{
   animation-name:_micBreatheTB!important;
   border-color:#ffffff!important;
+  background:rgba(255,255,255,0.16)!important;
+  color:#ffffff!important;
 }
 @keyframes _micBreatheTB{
   0%,100%{box-shadow:0 0 8px rgba(255,255,255,0.4),0 0 18px rgba(255,255,255,0.15);}
