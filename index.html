@@ -30,6 +30,10 @@
 /* ── Themes ── */
 /* Moon / True Black: pure black aurora field (particles already fade out over 1.4s) */
 html[data-theme="purple"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#d8d8e8;--muted:#7a7a8a;}
+/* True Black: same base as Dark Mode, but the overrides below (logo, bottom-nav icons,
+   message text, ask-bar input, send button, ambient beams) push everything to pure
+   black + white instead of the purple-tinted "Dark Mode" look. */
+html[data-theme="trueblack"]{--bg:#000000;--sidebar:rgba(0,0,0,0.6);--surface:#0d0d0d;--surface2:#161616;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#d8d8e8;--muted:#7a7a8a;}
 /* Sun / Easy View: black base (same as before) — particles/beams add the atmosphere, not a purple page wash */
 html[data-theme="easyview"]{--bg:#000000;--sidebar:rgba(19,18,34,0.36);--surface:#18172a;--surface2:#1f1e34;--border:rgba(255,255,255,0.08);--accent:#7c6af7;--accent2:#e85d96;--accent3:#00d9a8;--text:#f2f2f5;--muted:#7070a0;}
 html[data-theme="slate"]{--bg:#0b0d12;--sidebar:#101318;--surface:#161a22;--surface2:#1d222d;--border:rgba(255,255,255,0.07);--accent:#94a3b8;--accent2:#f97316;--accent3:#38bdf8;--text:#e2e8f0;--muted:#64748b;}
@@ -269,6 +273,7 @@ html[data-theme="ios"] #sec-chat .input-area,html[data-theme="ios"] #sec-coach .
 html[data-theme="ios"] .welcome-title,html[data-theme="ios"] .welcome-sub{color:var(--text)!important;}
 html[data-theme="ios"] #authLeftPanel{background:linear-gradient(135deg,#0e0d16,#1a1530)!important;}
 html[data-theme="ios"] .logo [style*="color:#d4d0ee"]{color:rgba(255,255,255,0.9)!important;}
+html[data-theme="trueblack"] .logo [style*="color:#d4d0ee"]{color:#ffffff!important;}
 html[data-theme="ios"] .logo [style*="color:#6b6b9a"]{color:rgba(255,255,255,0.4)!important;}
 html[data-theme="ios"] .sidebar:not(.collapsed) ~ .main::after{background:rgba(14,13,22,0.6)!important;}
 html[data-theme="ios"] .section-card-header,html[data-theme="ios"] [style*="border-bottom"]{border-color:rgba(255,255,255,0.07)!important;}
@@ -403,6 +408,13 @@ html[data-theme="easyview"] .sidebar.collapsed{background:rgba(19,18,34,0.28);}
   }
 }
 @media(max-width:768px){.bnav-mobile-only{display:flex!important;}}
+html[data-theme="trueblack"] #bnavNotesBtn svg,
+html[data-theme="trueblack"] #bnavPulseBtn svg,
+html[data-theme="trueblack"] #bnavCallBtn svg,
+html[data-theme="trueblack"] #bnavAskBtn svg,
+html[data-theme="trueblack"] #bnavImageGenBtn svg{
+  stroke:rgba(255,255,255,0.55)!important;
+}
 
 .icon-rail-divider{width:28px;height:1px;background:var(--border);margin:6px 0;}
 .sidebar-resize{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize;z-index:200;transition:background .2s;}
@@ -1211,6 +1223,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   opacity:1;
   transform:translate3d(0,0,0) scale(1);
   filter:blur(0);
+  border-radius:14px; /* wrapper had no radius — the glow box-shadow below was rendering as a square behind the rounded pill */
   box-shadow:0 8px 32px rgba(0,0,0,.22),0 0 0 1px rgba(124,106,247,.12),0 0 28px rgba(124,106,247,.1);
 }
 /* When Ask is open on home: fingerprint soft-exits as Ask fades in */
@@ -1551,8 +1564,12 @@ body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #chatHistoryTrigger .cht-ring{position:absolute;inset:-5px;border-radius:50%;border:1px solid rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.5);animation:ringRotate 4s linear infinite;}
 #chatHistoryTrigger .cht-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.7);box-shadow:0 0 6px rgba(124,106,247,0.8);animation:synapseNodePulse 2s ease-in-out infinite;}
 #chpSidebar{position:absolute;top:0;left:0;width:0;height:100%;background:rgba(22,22,32,0.18);border-right:1px solid transparent;backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);overflow:hidden;transition:width .3s cubic-bezier(0.22,1,0.36,1),background .35s ease,backdrop-filter .35s ease,border-color .3s ease;z-index:49;display:flex;flex-direction:column;}
-/* Only darken further when there's an actual conversation (bright message text) behind it — the empty "ask me anything" state stays at the lighter tint above. .chp-msgs-dark is a JS fallback for mobile webviews that don't support :has(). */
+/* Dark Mode (purple theme) only: slightly more transparent panel behind Past Chats. Sun and True Black untouched. */
+html[data-theme="purple"] #chpSidebar{background:rgba(22,22,32,0.12)!important;}
+/* Only darken further when there's an actual conversation (bright message text) behind it — the empty "ask me anything" state stays at the lighter tint above. .chp-msgs-dark is a JS fallback for mobile webviews that don't support :has(). Mobile only — PC keeps the lighter tint regardless of conversation state. */
+@media(max-width:768px){
 #sec-chat:has(#chatEmptyState.hidden) #chpSidebar,#chpSidebar.chp-msgs-dark{background:rgba(9,8,15,0.74);}
+}
 #chpSidebar.open,#chpSidebar.fade-open{border-right-color:rgba(255,255,255,0.06);}
 /* Panel keeps one consistent translucent glass look in all states — the force-field blur applied directly to the content elements (see below) is what hides message text/canvas behind it now, not a solid-black background swap. */
 /* Heavy-glass (solid black) override removed — the force-field blur on the content elements themselves now hides what's behind, so the panel stays the same translucent glass look whether or not the chat has messages. */
@@ -1570,6 +1587,12 @@ body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #sec-chat.cs-blur-active .input-area .send-btn,#sec-chat.cs-blur-active .input-area #voiceModeBtn{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
 #sec-chat.chp-blur-active-instant #chatFlowCanvas,#sec-chat.chp-blur-active-instant #chatBeamsWrap,#sec-chat.chp-blur-active-instant #avaAvatarBox,#sec-chat.chp-blur-active-instant #chatEmptyState,#sec-chat.chp-blur-active-instant #chatContainer,#sec-chat.chp-blur-active-instant .input-area,
 #sec-chat.cs-blur-active-instant #chatFlowCanvas,#sec-chat.cs-blur-active-instant #chatBeamsWrap,#sec-chat.cs-blur-active-instant #avaAvatarBox,#sec-chat.cs-blur-active-instant #chatEmptyState,#sec-chat.cs-blur-active-instant #chatContainer,#sec-chat.cs-blur-active-instant .input-area{transition:none!important;}
+/* PC only: don't blur/dim the rest of the page behind the Past Chats panel. Mobile keeps the blur
+   (cs-blur-active, the call popup blur, is untouched on both). */
+@media(min-width:769px){
+#sec-chat.chp-blur-active #chatFlowCanvas,#sec-chat.chp-blur-active #chatBeamsWrap,#sec-chat.chp-blur-active #avaAvatarBox,#sec-chat.chp-blur-active #chatEmptyState,#sec-chat.chp-blur-active #chatContainer,#sec-chat.chp-blur-active .input-area,
+#sec-chat.chp-blur-active-instant #chatFlowCanvas,#sec-chat.chp-blur-active-instant #chatBeamsWrap,#sec-chat.chp-blur-active-instant #avaAvatarBox,#sec-chat.chp-blur-active-instant #chatEmptyState,#sec-chat.chp-blur-active-instant #chatContainer,#sec-chat.chp-blur-active-instant .input-area{filter:none!important;}
+}
 /* Call popup is up: the backdrop filter itself is a static, non-animating value
    the instant it's applied, BUT glow box-shadow keyframes running on elements
    underneath (mic breathing animation, Ava's glow ring) keep growing/shrinking
@@ -1643,6 +1666,20 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .chp-act-btn.bookmarked{color:rgba(124,106,247,0.8);}
 .chp-section-label{padding:8px 16px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,0.2);text-transform:uppercase;}
 .chp-empty{padding:20px 16px;font-size:12px;color:rgba(255,255,255,0.25);font-style:italic;}
+/* True Black: "Past Chats" sidebar text (header, section labels, chat titles) goes to
+   true white instead of the dimmed purple-tinted greys used in Sun / Dark Mode. */
+html[data-theme="trueblack"] .chp-header{color:rgba(200,195,225,0.35)!important;}
+html[data-theme="trueblack"] .chp-header > div button{color:rgba(200,195,225,0.35)!important;}
+html[data-theme="trueblack"] .chp-header > div button:hover{color:rgba(200,195,225,0.85)!important;}
+html[data-theme="trueblack"] .chp-header-close{color:rgba(255,255,255,0.3)!important;}
+html[data-theme="trueblack"] .chp-header-close:hover{color:rgba(255,255,255,0.8)!important;}
+html[data-theme="trueblack"] .chp-section-label{color:rgba(255,255,255,0.2)!important;}
+html[data-theme="trueblack"] .chp-item-label{color:#ffffff!important;}
+html[data-theme="trueblack"] .chp-item.active .chp-item-label{color:#ffffff!important;}
+/* True Black only: swap the purple accent dot/highlight for a white one to match the monochrome theme. */
+html[data-theme="trueblack"] .chp-item-dot{background:rgba(255,255,255,0.55)!important;}
+html[data-theme="trueblack"] .chp-item.active{background:rgba(255,255,255,0.14)!important;border-left-color:rgba(255,255,255,0.4)!important;}
+html[data-theme="trueblack"] .chp-item:hover{background:rgba(255,255,255,0.07)!important;}
 
 .tts-speak-btn{position:absolute;bottom:6px;right:-46px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.6);background:rgba(15,15,26,0.85);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.6;transition:all .25s;z-index:10;color:rgba(255,255,255,0.8);padding:0;box-shadow:0 0 5px 1px rgba(0,217,168,0.3);}.tts-speak-btn:hover{opacity:1;border-color:rgba(0,217,168,0.9);box-shadow:0 0 6px 2px rgba(0,217,168,0.6);}.tts-speak-btn svg{pointer-events:none;}
 /* Clock widget: true vertical center of the ask bar (matches placeholder text center) */
@@ -1789,6 +1826,8 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .message-group-user{padding-left:34px;}
 .message-group-user .message-text{margin-left:10px;}
 .message-text{font-size:14.5px;line-height:1.7;}
+html[data-theme="trueblack"] .message-text{color:#ffffff!important;}
+html[data-theme="trueblack"] .message-text *{color:#ffffff!important;}
 .message-text p{margin-bottom:12px;}
 .message-text p:last-child{margin-bottom:0;}
 .typing{display:flex;gap:4px;align-items:center;padding-top:4px;}
@@ -1892,6 +1931,102 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   padding:16px 100px 16px 52px!important; /* (52-20)/2=16 → true vertical center */
   box-sizing:border-box;
 }
+/* True Black only: neutral grey border + a real grey fill (lighter than the pure-black bg,
+   darker than the border) instead of the purple-tinted glass outline. */
+html[data-theme="trueblack"] #sec-chat .input-box,html[data-theme="trueblack"] #sec-coach .input-box{
+  background:rgba(150,135,205,0.05)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 4px 24px rgba(0,0,0,0.3);
+  caret-color:#ffffff!important;
+}
+html[data-theme="trueblack"] #sec-chat .input-box:focus,html[data-theme="trueblack"] #sec-coach .input-box:focus{
+  border-color:rgba(255,255,255,0.14)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.14),0 4px 24px rgba(0,0,0,0.3)!important;
+}
+/* True Black: the top-nav speech-to-speech mic icon — same neutral treatment as the ask-bar mic. */
+html[data-theme="trueblack"] #topNavVoiceBtn{border-color:rgba(255,255,255,0.14)!important;color:rgba(255,255,255,0.55)!important;}
+html[data-theme="trueblack"] #topNavVoiceBtn:hover{border-color:rgba(255,255,255,0.4)!important;color:rgba(255,255,255,0.85)!important;}
+/* True Black: solid white send button + black icon, Grok-reference-style contrast instead of the purple-tinted fill. */
+html[data-theme="trueblack"] .send-btn{
+  background:#ffffff!important;
+  border-color:#ffffff!important;
+  color:#000000!important;
+}
+html[data-theme="trueblack"] .send-btn:hover{
+  box-shadow:0 0 20px rgba(255,255,255,0.25)!important;
+}
+/* True Black: kill the remaining purple accents (logo mark, home-screen orb, voice mic button,
+   floating voice pill) and reuse the same neutral white/grey palette as the ask-bar/send-btn above. */
+html[data-theme="trueblack"] .syn-logo-mark{filter:grayscale(1) brightness(1.7) contrast(1.05)!important;}
+/* Home screen "spinning orb" — core + purple/indigo ring + purple/indigo orbiting nodes go white. Teal ring/node stays teal. */
+html[data-theme="trueblack"] .syn-orb-core{background:radial-gradient(circle,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0.35) 50%,transparent 70%)!important;box-shadow:0 0 30px rgba(255,255,255,0.5),0 0 60px rgba(255,255,255,0.2),inset 0 0 20px rgba(255,255,255,0.1)!important;}
+html[data-theme="trueblack"] .syn-ring-1{border-color:rgba(255,255,255,0.25)!important;border-top-color:rgba(255,255,255,0.7)!important;}
+html[data-theme="trueblack"] .syn-ring-3{border-color:rgba(255,255,255,0.08)!important;border-bottom-color:rgba(255,255,255,0.35)!important;}
+html[data-theme="trueblack"] .syn-node[style*="#7c6af7"],
+html[data-theme="trueblack"] .syn-node[style*="#6366f1"]{--col:#ffffff!important;}
+/* Voice mic button — base border + the two purple states (JS-set "speaking" fill, and the
+   .tts-breathing pulse which comes from its own keyframe, so it needs its own white keyframe too). */
+html[data-theme="trueblack"] #voiceModeBtn{border-color:rgba(255,255,255,0.14)!important;}
+html[data-theme="trueblack"] #voiceModeBtn[style*="124, 106, 247"],
+html[data-theme="trueblack"] #voiceModeBtn[style*="124,106,247"]{
+  background:rgba(255,255,255,0.16)!important;
+  border-color:#ffffff!important;
+  box-shadow:0 0 20px rgba(255,255,255,0.5)!important;
+  color:#ffffff!important;
+}
+html[data-theme="trueblack"] #voiceModeBtn.tts-breathing{
+  animation-name:_micBreatheTB!important;
+  border-color:#ffffff!important;
+}
+@keyframes _micBreatheTB{
+  0%,100%{box-shadow:0 0 8px rgba(255,255,255,0.4),0 0 18px rgba(255,255,255,0.15);}
+  50%{box-shadow:0 0 22px rgba(255,255,255,0.85),0 0 44px rgba(255,255,255,0.45);}
+}
+html[data-theme="trueblack"] #ttsFloatMic{
+  background:rgba(255,255,255,0.12)!important;
+  border-color:rgba(255,255,255,0.7)!important;
+  color:#ffffff!important;
+}
+/* True Black: the "Delia" voice-picker pill + its dropdown (Deepgram/Hume tabs, voice list) —
+   swap the indigo/purple accents for the same white/grey palette as the ask-bar. */
+html[data-theme="trueblack"] #dgVoiceToggle{
+  background:rgba(60,60,68,0.35)!important;
+  border-color:rgba(90,90,100,0.4)!important;
+  color:rgba(180,180,190,0.8)!important;
+}
+html[data-theme="trueblack"] #dgVoiceToggle:hover{
+  background:rgba(70,70,80,0.5)!important;
+  border-color:rgba(110,110,120,0.6)!important;
+}
+html[data-theme="trueblack"] #dgVoicePanel{
+  background:rgba(8,8,9,0.98)!important;
+  border-color:rgba(90,90,100,0.3)!important;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(90,90,100,0.1)!important;
+}
+html[data-theme="trueblack"] #dgVoicePanel .vp-header{
+  color:rgba(150,150,160,0.7)!important;
+  border-bottom-color:rgba(90,90,100,0.2)!important;
+}
+html[data-theme="trueblack"] #dgVoicePanel .vp-tabs{border-bottom-color:rgba(90,90,100,0.2)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-tab{color:rgba(140,140,150,0.55)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-tab:hover{background:rgba(90,90,100,0.15)!important;color:rgba(180,180,190,0.85)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-tab.active{background:rgba(90,90,100,0.3)!important;color:#e8e8ea!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-list::-webkit-scrollbar-thumb{background:rgba(90,90,100,0.35)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item{color:rgba(160,160,170,0.7)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item:hover{background:rgba(90,90,100,0.15)!important;color:#d8d8dc!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item.active{background:rgba(90,90,100,0.22)!important;color:#e8e8ea!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item .vp-dot{background:rgba(120,120,130,0.5)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item.active .vp-dot{background:rgba(180,180,190,0.9)!important;box-shadow:0 0 5px rgba(140,140,150,0.7)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item .vp-desc{color:rgba(120,120,130,0.45)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-item.locked .vp-dot{background:rgba(90,90,100,0.3)!important;}
+html[data-theme="trueblack"] #dgVoicePanel .vp-section-label{color:rgba(130,130,140,0.5)!important;border-top-color:rgba(90,90,100,0.2)!important;}
+/* True Black: the hamburger→orb "past chats" trigger button — dark grey instead of purple. */
+html[data-theme="trueblack"] #chatHistoryTrigger{border-color:rgba(140,140,150,0.25)!important;}
+html[data-theme="trueblack"] #chatHistoryTrigger:hover{border-color:rgba(140,140,150,0.6)!important;box-shadow:0 0 18px rgba(140,140,150,0.25)!important;}
+html[data-theme="trueblack"] #chatHistoryTrigger .cht-ring{border-color:rgba(140,140,150,0.15)!important;border-top-color:rgba(140,140,150,0.5)!important;}
+html[data-theme="trueblack"] #chatHistoryTrigger .cht-dot{background:rgba(140,140,150,0.7)!important;box-shadow:0 0 6px rgba(140,140,150,0.8)!important;}
+html[data-theme="trueblack"] #chatHistoryTrigger.cht-morphed{background:rgba(140,140,150,0.15)!important;border-color:rgba(140,140,150,0.4)!important;}
+html[data-theme="trueblack"] #chatHistoryTrigger.cht-morphed:hover{background:rgba(140,140,150,0.28)!important;border-color:rgba(140,140,150,0.7)!important;}
+
 #sec-chat .input-box::placeholder,#sec-coach .input-box::placeholder{
   line-height:20px;position:relative;top:0;
 }
@@ -4273,8 +4408,17 @@ body.voice-live .syn-fp-icon{
 html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 /* Moon: beams fade out over 1.4s (black base already). Sun: original beam strength. */
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
-html[data-theme="purple"] #globalBeamsCanvas{opacity:0!important;}
+html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
+/* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
+   beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
+   already is for Dark Mode / True Black above. PC only; mobile intentionally left untouched. */
+@media(min-width:769px){
+  #studioBeamsCanvas,#studioFlowCanvas{transition:opacity 1.4s ease;}
+  html[data-theme="trueblack"] #studioBeamsCanvas,html[data-theme="trueblack"] #studioFlowCanvas{opacity:0!important;}
+  #chatBeamsWrap,#chatBeamsCanvas{transition:opacity 1.4s ease;}
+  html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBeamsCanvas{opacity:0!important;}
+}
 .syn-glyph,.syn-orb-wrap{display:none!important;}
 .syn-greeting{color:#ffffff!important;}
 .syn-sub{color:rgba(255,255,255,0.55)!important;}
@@ -24095,6 +24239,18 @@ async function confirmWorldApproach(){
       setTimeout(function(){
         try{ if(window._askBarOpen && typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint(); }catch(_p2){}
       }, 220);
+    } else if(!wasHidden && hasMessages){
+      /* Conversation just started from the empty home screen. While on that
+         screen, _positionAskBarAtFingerprint() pins the ask bar with inline
+         top/left/right/bottom (!important) styles so it sits under the
+         fingerprint. Those inline styles aren't cleared automatically when
+         the CSS position:absolute rule stops matching (chatEmptyState just
+         got .hidden) — the bar just becomes position:relative but keeps the
+         stale "top" offset, so it renders way off its normal spot at the
+         bottom until something (e.g. a zoom-triggered resize event) calls
+         _positionAskBarAtFingerprint() again and clears them. Clear them
+         right away instead of waiting on that. */
+      if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
     }
     // Sync notes toggle visibility with empty state
     if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility();
@@ -31646,7 +31802,11 @@ setTimeout(function(){
 // ── Day / Night toggle ──────────────────────────────────────────
 function toggleDayNight(){
   var cur = localStorage.getItem('_appTheme') || 'easyview';
-  var next = (cur === 'easyview') ? 'purple' : 'easyview';
+  // Moon side isn't a single fixed theme anymore — it's whichever dark theme (True
+  // Black or Dark Mode) was last chosen in profile settings, so the toggle always
+  // lands back on the person's preferred dark look instead of forcing one.
+  var darkVariant = localStorage.getItem('_darkVariant') || 'purple';
+  var next = (cur === 'easyview') ? darkVariant : 'easyview';
   window._applyTheme(next);
   _syncDayNightToggle(next);
   _syncAndroidStatusBarForTheme(next);
@@ -31745,6 +31905,12 @@ function _syncDayNightToggle(t){
 // init toggle state on load
 (function(){
   var t = localStorage.getItem('_appTheme')||'easyview';
+  // Seed the remembered dark-mode preference from whatever's already active, so
+  // returning users (theme picked before this update shipped) get a working
+  // sun/moon toggle right away instead of only after re-picking in profile.
+  if((t === 'purple' || t === 'trueblack') && !localStorage.getItem('_darkVariant')){
+    localStorage.setItem('_darkVariant', t);
+  }
   window._syncDayNightToggle = _syncDayNightToggle;
   window._syncAndroidStatusBarForTheme = _syncAndroidStatusBarForTheme;
   _syncDayNightToggle(t);
@@ -33198,10 +33364,9 @@ function _openNeutralinoWebview(url){
 // ── Theme Switcher ──────────────────────────────────────────
 (function(){
   var THEMES = [
-    {id:'purple',   label:'True Black', accent:'#7c6af7', bg:'#000000'},
-    {id:'easyview', label:'Easy View',       accent:'#7c6af7', bg:'#000000'},
-    {id:'ios',      label:'✦ Frost Glass',   accent:'#6e6cf7', bg:'#0e0d16'},
-    {id:'light',    label:'☀ iOS Light',     accent:'#5e5ce6', bg:'#f2f2f7'},
+    {id:'easyview',  label:'Sun',        accent:'#7c6af7', bg:'#000000'},
+    {id:'trueblack', label:'True Black', accent:'#ffffff', bg:'#000000'},
+    {id:'purple',    label:'Dark Mode',  accent:'#7c6af7', bg:'#000000'},
   ];
 
   function applyTheme(t){
@@ -33209,7 +33374,7 @@ function _openNeutralinoWebview(url){
     // Sun + moon share pure black page chrome. Only light theme is different.
     // (Never force easyview to #0d0c15 — that painted a purple wash over the app.)
     try{
-      var bgMap = { purple:'#000000', easyview:'#000000', ios:'#000000', light:'#f2f2f7' };
+      var bgMap = { purple:'#000000', trueblack:'#000000', easyview:'#000000', ios:'#000000', light:'#f2f2f7' };
       var toBg = bgMap[t] || '#000000';
       document.documentElement.setAttribute('data-theme', t);
       // Clear any leftover inline washes from older builds
@@ -33223,6 +33388,9 @@ function _openNeutralinoWebview(url){
       document.documentElement.setAttribute('data-theme', t);
     }
     localStorage.setItem('_appTheme', t);
+    // Remember which dark theme (True Black or Dark Mode) the person prefers, so the
+    // top-right sun/moon toggle knows which one to swap to when leaving Sun mode.
+    if(t === 'purple' || t === 'trueblack') localStorage.setItem('_darkVariant', t);
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
@@ -41787,7 +41955,9 @@ function speakVoiceReply(text) {
 // ── Floating "back to chat" pill — shown on non-chat pages while TTS is speaking ─
 (function(){
   var st = document.createElement('style');
-  st.textContent = '@keyframes ttsFloatPulse{0%,100%{box-shadow:0 0 18px rgba(124,106,247,0.6),0 2px 12px rgba(0,0,0,0.5);}50%{box-shadow:0 0 32px rgba(124,106,247,1),0 2px 16px rgba(0,0,0,0.6);}}';
+  st.textContent = '@keyframes ttsFloatPulse{0%,100%{box-shadow:0 0 18px rgba(124,106,247,0.6),0 2px 12px rgba(0,0,0,0.5);}50%{box-shadow:0 0 32px rgba(124,106,247,1),0 2px 16px rgba(0,0,0,0.6);}}' +
+    '@keyframes ttsFloatPulseTB{0%,100%{box-shadow:0 0 18px rgba(255,255,255,0.5),0 2px 12px rgba(0,0,0,0.5);}50%{box-shadow:0 0 32px rgba(255,255,255,0.85),0 2px 16px rgba(0,0,0,0.6);}}' +
+    'html[data-theme="trueblack"] #ttsFloatMic{animation-name:ttsFloatPulseTB!important;}';
   document.head.appendChild(st);
 
   var btn = document.createElement('button');
