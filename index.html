@@ -3446,15 +3446,6 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
   89%{opacity:.97;filter:drop-shadow(0 0 11px rgba(167,139,250,.32));transform:scale(1.034)}
   94%{opacity:.9;filter:drop-shadow(0 0 6px rgba(124,106,247,.24));transform:scale(1.01)}
 }
-/* True Black: same breathing curve as fpIdleBreath, purple swapped for the theme's neutral grey/white
-   so the fingerprint scanner glow matches the rest of the True Black chrome instead of staying purple. */
-@keyframes fpIdleBreathTrueBlack{
-  0%,72%,100%{opacity:.86;filter:drop-shadow(0 0 4px rgba(255,255,255,.18));transform:scale(1)}
-  78%{opacity:.94;filter:drop-shadow(0 0 9px rgba(255,255,255,.36));transform:scale(1.028)}
-  84%{opacity:.88;filter:drop-shadow(0 0 5px rgba(255,255,255,.22));transform:scale(1.008)}
-  89%{opacity:.97;filter:drop-shadow(0 0 11px rgba(255,255,255,.32));transform:scale(1.034)}
-  94%{opacity:.9;filter:drop-shadow(0 0 6px rgba(255,255,255,.24));transform:scale(1.01)}
-}
 .syn-fp{
   display:flex!important;flex-direction:column;align-items:center;gap:0;margin:0 0 8px;
   opacity:1!important;visibility:visible!important;
@@ -3545,23 +3536,6 @@ body.voice-live .syn-fp-icon,
 body.voice-live .syn-fp-icon{
   opacity:.78;
   filter:drop-shadow(0 0 3px rgba(124,106,247,.12));
-}
-/* True Black: swap the resting glow and the breathing animation itself to the grey variant. */
-html[data-theme="trueblack"] .syn-fp-icon{
-  filter:drop-shadow(0 0 4px rgba(255,255,255,.18));
-  animation:fpIdleBreathTrueBlack 10.5s ease-in-out infinite;
-}
-html[data-theme="trueblack"] body.voice-live .syn-fp-icon,
-html[data-theme="trueblack"] .syn-fp.holding .syn-fp-icon,
-html[data-theme="trueblack"] .syn-fp.scanning .syn-fp-icon,
-html[data-theme="trueblack"] .syn-fp.ok .syn-fp-icon,
-html[data-theme="trueblack"] .syn-fp.fog .syn-fp-icon,
-html[data-theme="trueblack"] .syn-fp.fail .syn-fp-icon{
-  animation:none!important;
-}
-html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
-  opacity:.78;
-  filter:drop-shadow(0 0 3px rgba(255,255,255,.12));
 }
 /* Single fog pulse — shared by trusted quick tap-on/tap-off only */
 .syn-fp.fog .syn-fp-icon{
@@ -33392,10 +33366,8 @@ function _syncDayNightToggle(t){
     dust = [];
     meteors = [];
     var area = w * h;
-    // Density scales with area; floor lowered from 280→150 so phones
-    // (~329k px²) land near their natural ~117 count instead of being
-    // forced up to desktop-sized density.
-    var nStars = Math.min(900, Math.max(150, Math.floor(area / 2800)));
+    // Same density as before — but each star has depth for integration
+    var nStars = Math.min(900, Math.max(280, Math.floor(area / 2800)));
     var i;
     for(i = 0; i < nStars; i++){
       var bright = Math.random();
@@ -33429,11 +33401,7 @@ function _syncDayNightToggle(t){
     // sort far → near so we can paint with haze between
     stars.sort(function(a, b){ return a.depth - b.depth; });
 
-    // Dust used to be a flat 55 regardless of screen size — ~6x denser
-    // per pixel on phones than desktop. Now scales with area, same idea
-    // as nStars above (mobile ~15, desktop caps at 55).
-    var nDust = Math.min(55, Math.max(15, Math.floor(area / 22000)));
-    for(i = 0; i < nDust; i++){
+    for(i = 0; i < 55; i++){
       dust.push({
         x: Math.random() * w,
         y: Math.random() * h,
