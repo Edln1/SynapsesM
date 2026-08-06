@@ -1233,6 +1233,12 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   border-radius:14px; /* wrapper had no radius — the glow box-shadow below was rendering as a square behind the rounded pill */
   box-shadow:0 8px 32px rgba(0,0,0,.22),0 0 0 1px rgba(124,106,247,.12),0 0 28px rgba(124,106,247,.1);
 }
+/* True Black: home ask-bar glow was still purple-tinted (unthemed) while the desktop/mobile
+   .input-box rules already switch to the neutral grey ring — mismatch was pre-send bar vs
+   post-send bar. Match the same rgba(255,255,255,0.14) grey used on #sec-chat .input-box. */
+html[data-theme="trueblack"] #sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
+  box-shadow:0 8px 32px rgba(0,0,0,.22);
+}
 /* When Ask is open on home: fingerprint soft-exits as Ask fades in */
 #sec-chat.askbar-on #chatEmptyState:not(.hidden) .syn-fp{
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;
@@ -4981,12 +4987,6 @@ html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBe
 }
 html[data-theme="trueblack"].deep-space-on #deepSpaceLayer{opacity:1;}
 #deepSpaceLayer canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
-/* Soft still limb glow — no animated waves */
-#deepSpaceHorizon{
-  position:absolute;left:0;right:0;bottom:0;height:28%;
-  background:radial-gradient(ellipse 90% 70% at 50% 100%, rgba(200,215,240,0.07) 0%, transparent 70%);
-  filter:blur(24px);opacity:0.75;pointer-events:none;
-}
 /* Very light edge falloff only — full-screen field, not a cockpit slit */
 #deepSpaceVignette{
   position:absolute;inset:0;pointer-events:none;
@@ -7710,7 +7710,6 @@ window.getWebAudioNode = getWebAudioNode;
 <!-- Deep-space field (Night mode moon right-click) — behind UI, above pure black -->
 <div id="deepSpaceLayer" aria-hidden="true">
   <canvas id="deepSpaceCanvas"></canvas>
-  <div id="deepSpaceHorizon"></div>
   <div id="deepSpaceVignette"></div>
 </div>
 <div id="deepSpaceMenu" role="menu" aria-label="Night field options">
@@ -33313,6 +33312,8 @@ function _syncDayNightToggle(t){
   var stars = [], dust = [], meteors = [];
   var t0 = performance.now();
   var grainCanvas = null, grainReady = false;
+  // Real elapsed-time delta drives star drift between frames.
+  var _lastFrameT = 0;
 
   function isOn(){ try{ return localStorage.getItem(KEY) === '1'; }catch(e){ return false; } }
   function isNight(){ return (localStorage.getItem('_appTheme') || 'trueblack') === 'trueblack'; }
@@ -33379,16 +33380,22 @@ function _syncDayNightToggle(t){
       // Soft halo size — far stars blurrier so they sit *in* the void
       var soft = depth === 0 ? (5.5 + Math.random() * 3)
         : (depth === 1 ? (3.8 + Math.random() * 1.8) : (2.6 + Math.random() * 1.2));
+      // Depth-scaled drift: near stars stream past faster than far ones —
+      // real motion parallax for a viewpoint actually moving through space.
+      var driftSpeed = depth === 2 ? (2.4 + Math.random() * 2.6)
+        : (depth === 1 ? (0.6 + Math.random() * 0.9) : (0.1 + Math.random() * 0.16));
+      var driftAng = Math.random() * Math.PI * 2;
       stars.push({
         x: Math.random() * w,
-        y: Math.random() * h * 0.92,
+        y: Math.random() * h,
         r: baseR,
         a: baseA * (depth === 0 ? 0.75 : 1),
         soft: soft,
         depth: depth,
-        tw: Math.random() * Math.PI * 2,
-        tws: 0.25 + Math.random() * (depth === 0 ? 0.8 : 1.4),
-        cool: Math.random() > 0.78
+        cool: Math.random() > 0.78,
+        vx: Math.cos(driftAng) * driftSpeed,
+        vy: Math.sin(driftAng) * driftSpeed * 0.5 - driftSpeed * 0.1,
+        flareAt: 0
       });
     }
     // sort far → near so we can paint with haze between
@@ -33423,9 +33430,11 @@ function _syncDayNightToggle(t){
   }
 
   // Soft blob only — never a hard disc (that’s what made them look stickers)
-  function drawSoftStar(s, a){
+  function drawSoftStar(s, a, rx, ry){
+    if(rx === undefined) rx = s.x;
+    if(ry === undefined) ry = s.y;
     var R = s.r * s.soft;
-    var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, R);
+    var g = ctx.createRadialGradient(rx, ry, 0, rx, ry, R);
     // Cool tint toward blue-grey so they pick up the void, not pure UI-white
     var c0 = s.cool ? '210,222,245' : '235,238,248';
     var c1 = s.cool ? '170,185,215' : '200,205,220';
@@ -33435,13 +33444,44 @@ function _syncDayNightToggle(t){
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(s.x, s.y, R, 0, Math.PI * 2);
+    ctx.arc(rx, ry, R, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  function renderStar(s, t, dt){
+    // Autonomous drift, wrapping at the edges — a continuous field flowing
+    // past rather than a static, frozen sky.
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    if(s.x < -20) s.x = w + 20; else if(s.x > w + 20) s.x = -20;
+    if(s.y < -20) s.y = h + 20; else if(s.y > h + 20) s.y = -20;
+
+    // No atmosphere out here, so no scintillation/sparkle — real stars in
+    // space burn as steady, unwavering points of light. Brightness stays
+    // fixed; only the closest, brightest stars ever get a genuine flare,
+    // and rarely — a handful across the whole field per minute, not a
+    // constant flicker.
+    var aVal = s.a;
+    if(s.depth === 2){
+      if(!s.flareAt && Math.random() < 0.000004) s.flareAt = t;
+      if(s.flareAt){
+        var age = t - s.flareAt;
+        if(age > 0.6) s.flareAt = 0;
+        else aVal *= 1 + Math.sin((age / 0.6) * Math.PI) * 1.6;
+      }
+    }
+    if(aVal <= 0.015) return;
+
+    drawSoftStar(s, aVal, s.x, s.y);
   }
 
   function frame(now){
     if(!running || !ctx) return;
     raf = requestAnimationFrame(frame);
+
+    var dt = _lastFrameT ? Math.min((now - _lastFrameT) / 1000, 0.1) : 0;
+    _lastFrameT = now;
+
     ctx.clearRect(0, 0, w, h);
 
     // True void base (slightly lifted so stars can sink into it)
@@ -33471,17 +33511,13 @@ function _syncDayNightToggle(t){
     // ── FAR stars (soft, embedded) ──
     for(si = 0; si < stars.length; si++){
       if(stars[si].depth !== 0) continue;
-      var s0 = stars[si];
-      var a0 = s0.a * (0.72 + 0.28 * Math.sin(t * s0.tws + s0.tw));
-      if(a0 > 0.015) drawSoftStar(s0, a0);
+      renderStar(stars[si], t, dt);
     }
 
     // ── MID stars ──
     for(si = 0; si < stars.length; si++){
       if(stars[si].depth !== 1) continue;
-      var s1 = stars[si];
-      var a1 = s1.a * (0.68 + 0.32 * Math.sin(t * s1.tws + s1.tw));
-      if(a1 > 0.015) drawSoftStar(s1, a1);
+      renderStar(stars[si], t, dt);
     }
     // Dust lives between mid and near — soft blobs only
     dust.forEach(function(d){
@@ -33500,9 +33536,7 @@ function _syncDayNightToggle(t){
     // ── NEAR stars (a bit tighter glow, still soft) ──
     for(si = 0; si < stars.length; si++){
       if(stars[si].depth !== 2) continue;
-      var s2 = stars[si];
-      var a2 = s2.a * (0.78 + 0.22 * Math.sin(t * s2.tws + s2.tw));
-      if(a2 > 0.015) drawSoftStar(s2, a2);
+      renderStar(stars[si], t, dt);
     }
 
     spawnMeteor();
@@ -33545,6 +33579,7 @@ function _syncDayNightToggle(t){
     ctx = canvas.getContext('2d');
     if(!grainReady) bakeGrain();
     running = true;
+    _lastFrameT = 0;
     resize();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
