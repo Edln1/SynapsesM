@@ -380,12 +380,10 @@ html[data-theme="easyview"] .sidebar.collapsed{background:rgba(19,18,34,0.28);}
 #sidebarFull.sb-hidden{opacity:0;pointer-events:none;}
 #sidebarIconRail{display:none;flex-direction:column;align-items:center;width:100%;flex:1;padding:0;gap:0;overflow:hidden;opacity:1;transition:opacity .12s ease;}
 #sidebarIconRail.sb-hidden{opacity:0;}
-/* Icons are injected by JS ~100ms after load; fading the icon rail in
+/* Icons are injected by JS ~100ms after load; fading the whole rail/bar in
    (instead of letting icons pop in mid-render) turns that into one smooth
-   reveal instead of a visible flash. #bottomNavBar starts pre-collapsed
-   via its class in markup, so it doesn't need its own fade — animating it
-   too just raced the collapse and caused a flash of the opaque grey bar. */
-#sidebarIconRail{animation:navIconsSettle .25s ease .18s backwards;}
+   reveal instead of a visible flash. */
+#sidebarIconRail,#bottomNavBar{animation:navIconsSettle .25s ease .18s backwards;}
 @keyframes navIconsSettle{from{opacity:0;}to{opacity:1;}}
 .icon-rail-btn{width:38px;height:38px;border-radius:10px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;transition:background .15s;position:relative;margin:2px 0;}
 .icon-rail-btn:hover{background:var(--surface2);}
@@ -4975,61 +4973,25 @@ html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBe
 .ncmd-input::placeholder,.input-box::placeholder{color:rgba(255,255,255,0.45)!important;}
 #ncmdLaunchBtn,#ncmdLauncher{display:none!important;}
 .quick-actions{display:none!important;}
-/* Deep-space — full viewport; imprint layers stripped (voidG/haze/vignette/grain) */
+/* Deep-space aurora — Night (trueblack) only, toggled from moon right-click */
 #deepSpaceLayer{
-  position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
-  width:100vw!important;height:100vh!important;height:100dvh!important;
-  z-index:0;pointer-events:none;overflow:hidden;
-  opacity:0;
-  /* No long fade on load — that read as a “weird rendering animation” */
-  transition:none;
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  opacity:0;transition:opacity 1.6s ease;
   background:#000;
 }
 html[data-theme="trueblack"].deep-space-on #deepSpaceLayer{opacity:1;}
-#deepSpaceLayer canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;display:block;}
-/* Horizon is painted on canvas only (full-field fade). CSS bars = the imprint lines. */
-#deepSpaceHorizon{display:none!important;}
-#deepSpaceVignette{display:none!important;}
-/* Deep space ON: kill ask-bar frosted glass + load blur-unblur (filter:blur 5px→0)
-   That filter ramp is the “weird rendering animation” near Ask me anything. */
-html.deep-space-on #sec-chat .input-box,
-html.deep-space-on #sec-coach .input-box{
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  background:rgba(0,0,0,0.55)!important;
-  box-shadow:0 0 0 1px rgba(255,255,255,0.12),0 4px 20px rgba(0,0,0,0.45)!important;
+#deepSpaceLayer canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+/* Soft still limb glow — no animated waves */
+#deepSpaceHorizon{
+  position:absolute;left:0;right:0;bottom:0;height:28%;
+  background:radial-gradient(ellipse 90% 70% at 50% 100%, rgba(200,215,240,0.07) 0%, transparent 70%);
+  filter:blur(24px);opacity:0.75;pointer-events:none;
 }
-html.deep-space-on #sec-chat .input-box:focus,
-html.deep-space-on #sec-coach .input-box:focus{
-  box-shadow:0 0 0 1px rgba(255,255,255,0.18),0 4px 20px rgba(0,0,0,0.5)!important;
-}
-html.deep-space-on #sec-chat .input-area .send-btn,
-html.deep-space-on #sec-chat .input-area #voiceModeBtn{
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-}
-html.deep-space-on #chatEmptyState{
-  background:transparent!important;
-}
-/* Freeze ask-bar entrance blur/scale when deep space is on (load flash) */
-html.deep-space-on #sec-chat #chatEmptyState:not(.hidden) ~ .input-area,
-html.deep-space-on #sec-chat #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
-  transition:none!important;
-  filter:none!important;
-  will-change:auto!important;
-}
-html.deep-space-on #sec-chat.askbar-off #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper,
-html.deep-space-on #sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper{
-  filter:none!important;
-  transform:none!important;
-  box-shadow:none!important;
-}
-/* Don’t fade deep-space canvas with chat particle transitions */
-html.deep-space-on #chatFlowCanvas,
-html.deep-space-on #chatBeamsWrap,
-html.deep-space-on #chatBeamsCanvas{
-  transition:none!important;
-  opacity:0!important;
+/* Very light edge falloff only — full-screen field, not a cockpit slit */
+#deepSpaceVignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 120% 120% at 50% 50%, transparent 75%, rgba(0,0,0,0.16) 100%);
+  box-shadow:none;
 }
 /* Moon context menu */
 #deepSpaceMenu{
@@ -6654,7 +6616,7 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
   </div>
 </div>
-<nav id="bottomNavBar" class="bnav-cloud-collapsed" style="overflow:hidden;">
+<nav id="bottomNavBar" style="overflow:hidden;">
   <span style="font-size:13px;color:var(--muted);padding:0 4px;cursor:grab;flex-shrink:0;" id="bnavDragHandle">⠿</span>
   <div class="bnav-divider"></div>
   <!-- dynamic bnav buttons injected here by renderBottomNav() -->
@@ -7301,14 +7263,12 @@ window.getWebAudioNode = getWebAudioNode;
     b.addEventListener('mouseenter', function(){ clearTimeout(hideTimer); });
     b.addEventListener('focusin', reveal);
     if(orb){
-      orb.style.transition = 'none';
+      orb.style.transition = 'none'; // no glide animation on the very first paint
       positionOrbByNotes();
       void orb.offsetWidth;
       orb.style.transition = '';
     }
-    // Bar already starts collapsed via its class in the markup (see HTML),
-    // so there's nothing to do here on load — no flash, no visible grey
-    // bar, no race between a fade-in and an instant collapse.
+    b.classList.add('bnav-cloud-collapsed'); // start collapsed into the orb immediately on load
   }
   var mo = new MutationObserver(function(){
     if(document.body.classList.contains('bottom-nav')) initCloud();
@@ -33345,15 +33305,14 @@ function _syncDayNightToggle(t){
   setTimeout(function(){ _syncAndroidStatusBarForTheme(t); }, 1200);
 })();
 
-// ── Deep Space (reconstructed from pre-deepspace-fullscreen art) ─────────
-// Same style: soft stars + dust + meteors + soft ice limb glow.
-// FIXED imprints: no voidG circle, no haze rings, no grain, no vignette,
-// no rectangular clip on the limb (that made the circle + bars visible).
+// ── Deep Space Aurora (Night / trueblack) — moon right-click ─────────────
+// Spectacle field: pure void + starfield + horizon aurora (spaceship viewport).
 (function(){
   var KEY = 'nightDeepSpace';
   var canvas, ctx, w = 0, h = 0, dpr = 1, raf = 0, running = false;
   var stars = [], dust = [], meteors = [];
   var t0 = performance.now();
+  var grainCanvas = null, grainReady = false;
 
   function isOn(){ try{ return localStorage.getItem(KEY) === '1'; }catch(e){ return false; } }
   function isNight(){ return (localStorage.getItem('_appTheme') || 'trueblack') === 'trueblack'; }
@@ -33374,15 +33333,29 @@ function _syncDayNightToggle(t){
     }catch(e){}
   }
 
+  function bakeGrain(){
+    grainCanvas = document.createElement('canvas');
+    grainCanvas.width = 256; grainCanvas.height = 256;
+    var gctx = grainCanvas.getContext('2d');
+    var img = gctx.createImageData(256, 256);
+    var d = img.data;
+    for(var i = 0; i < d.length; i += 4){
+      var v = (Math.random() * 255) | 0;
+      d[i] = d[i+1] = d[i+2] = v;
+      d[i+3] = 18 + (Math.random() * 22) | 0;
+    }
+    gctx.putImageData(img, 0, 0);
+    grainReady = true;
+  }
+
   function resize(){
     if(!canvas) return;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    w = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0) || window.innerWidth || 1;
-    h = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0) || window.innerHeight || 1;
+    w = window.innerWidth; h = window.innerHeight;
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     seed();
   }
@@ -33392,51 +33365,33 @@ function _syncDayNightToggle(t){
     dust = [];
     meteors = [];
     var area = w * h;
-    // Same density / soft-star art as the fullscreen backup
+    // Same density as before — but each star has depth for integration
     var nStars = Math.min(900, Math.max(280, Math.floor(area / 2800)));
     var i;
     for(i = 0; i < nStars; i++){
       var bright = Math.random();
+      // depth 0 = far (soft/dim), 1 = mid, 2 = near (slightly sharper)
       var depth = bright > 0.94 ? 2 : (bright > 0.55 ? 1 : 0);
       var baseR = bright > 0.97 ? (1.2 + Math.random() * 1.3)
         : (bright > 0.85 ? 0.75 + Math.random() * 0.55 : 0.3 + Math.random() * 0.5);
       var baseA = bright > 0.97 ? 0.42 + Math.random() * 0.28
         : (bright > 0.7 ? 0.18 + Math.random() * 0.22 : 0.06 + Math.random() * 0.12);
+      // Soft halo size — far stars blurrier so they sit *in* the void
       var soft = depth === 0 ? (5.5 + Math.random() * 3)
         : (depth === 1 ? (3.8 + Math.random() * 1.8) : (2.6 + Math.random() * 1.2));
-      // All stars alive, but subtle — strong mid-screen pulse was shimmer stacking
-      var dScale = depth === 0 ? 0.5 : (depth === 1 ? 0.85 : 1.15);
       stars.push({
         x: Math.random() * w,
         y: Math.random() * h * 0.92,
-        x0: 0, y0: 0,
         r: baseR,
         a: baseA * (depth === 0 ? 0.75 : 1),
         soft: soft,
         depth: depth,
         tw: Math.random() * Math.PI * 2,
-        // gentle continuous scintillation (not a full-field strobe)
-        tws: (0.2 + Math.random() * 0.9) * dScale,
-        twAmp: (0.1 + Math.random() * 0.18) * (depth === 0 ? 0.7 : 1),
-        tw2: Math.random() * Math.PI * 2,
-        tws2: 0.05 + Math.random() * 0.14,
-        cool: Math.random() > 0.78,
-        // rare individual flares only (staggered — never a center “breath”)
-        flareT: Math.random() * 40,
-        flareGap: 8 + Math.random() * 28,
-        flareDur: 0.22 + Math.random() * 0.4,
-        flarePow: (0.12 + Math.random() * 0.22) * dScale,
-        // micro-drift — visible over time, not a swirl
-        driftA: Math.random() * Math.PI * 2,
-        driftS: (0.006 + Math.random() * 0.012) * dScale,
-        driftR: (0.2 + Math.random() * 0.55) * dScale,
-        driftA2: Math.random() * Math.PI * 2,
-        driftS2: (0.004 + Math.random() * 0.008) * dScale,
-        driftR2: (0.12 + Math.random() * 0.35) * dScale
+        tws: 0.25 + Math.random() * (depth === 0 ? 0.8 : 1.4),
+        cool: Math.random() > 0.78
       });
-      stars[stars.length - 1].x0 = stars[stars.length - 1].x;
-      stars[stars.length - 1].y0 = stars[stars.length - 1].y;
     }
+    // sort far → near so we can paint with haze between
     stars.sort(function(a, b){ return a.depth - b.depth; });
 
     for(i = 0; i < 55; i++){
@@ -33467,11 +33422,11 @@ function _syncDayNightToggle(t){
     });
   }
 
-  // Soft star art (backup style)
-  function drawSoftStar(s, a, rMul){
-    rMul = rMul || 1;
-    var R = s.r * s.soft * rMul;
+  // Soft blob only — never a hard disc (that’s what made them look stickers)
+  function drawSoftStar(s, a){
+    var R = s.r * s.soft;
     var g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, R);
+    // Cool tint toward blue-grey so they pick up the void, not pure UI-white
     var c0 = s.cool ? '210,222,245' : '235,238,248';
     var c1 = s.cool ? '170,185,215' : '200,205,220';
     g.addColorStop(0, 'rgba(' + c0 + ',' + a + ')');
@@ -33484,74 +33439,51 @@ function _syncDayNightToggle(t){
     ctx.fill();
   }
 
-  // Horizon glow — low and subtle so it doesn’t sit under the ask-bar as a fog ball
-  function drawHorizonGlow(){
-    // Keep atmosphere near the bottom of the viewport (away from Ask me anything)
-    var cx = w * 0.5, cy = h * 0.88;
-    var R = Math.max(w, h) * 0.55;
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(1.8, 0.38);
-    var limb = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
-    limb.addColorStop(0, 'rgba(140,160,200,0.028)');
-    limb.addColorStop(0.45, 'rgba(100,120,160,0.014)');
-    limb.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = limb;
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function starAlpha(s, t){
-    // Subtle continuous scintillation — no big mid-field beat
-    var s1 = 0.5 + 0.5 * Math.sin(t * s.tws + s.tw);
-    var s2 = 0.5 + 0.5 * Math.sin(t * s.tws2 + s.tw2);
-    var shimmer = 1 - s.twAmp + s.twAmp * (0.45 * s1 + 0.55 * s2);
-    var cycle = s.flareGap + s.flareDur;
-    var u = (t + s.flareT) % cycle;
-    var flare = 0;
-    if(u > s.flareGap){
-      var p = (u - s.flareGap) / s.flareDur;
-      flare = Math.sin(p * Math.PI) * s.flarePow;
-    }
-    return s.a * Math.max(0.35, shimmer) * (1 + flare);
-  }
-
-  function updateStarPos(s, t){
-    // Two-axis micro-drift — continuous, never parked (real FOV “swims” slightly)
-    s.x = s.x0
-      + Math.cos(t * s.driftS + s.driftA) * s.driftR
-      + Math.cos(t * s.driftS2 + s.driftA2) * s.driftR2;
-    s.y = s.y0
-      + Math.sin(t * s.driftS * 0.9 + s.driftA * 1.2) * s.driftR * 0.7
-      + Math.sin(t * s.driftS2 * 1.1 + s.driftA2) * s.driftR2 * 0.55;
-  }
-
   function frame(now){
     if(!running || !ctx) return;
     raf = requestAnimationFrame(frame);
     ctx.clearRect(0, 0, w, h);
 
-    ctx.fillStyle = '#000000';
+    // True void base (slightly lifted so stars can sink into it)
+    ctx.fillStyle = '#010103';
     ctx.fillRect(0, 0, w, h);
 
-    drawHorizonGlow();
+    // Flat void — no center glow layers here (they read as a visible circle
+    // against pure black). Stars/dust/haze below carry all the depth cues.
+
+    // Soft galactic dust lane (behind far stars a bit — drawn under stars too)
+    ctx.save();
+    ctx.translate(w * 0.5, h * 0.5);
+    ctx.rotate(-0.26);
+    var band = ctx.createLinearGradient(0, -h * 0.1, 0, h * 0.1);
+    band.addColorStop(0, 'rgba(0,0,0,0)');
+    band.addColorStop(0.4, 'rgba(150,165,200,0.03)');
+    band.addColorStop(0.5, 'rgba(180,195,220,0.045)');
+    band.addColorStop(0.6, 'rgba(150,165,200,0.028)');
+    band.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
+    ctx.restore();
 
     var t = (now - t0) / 1000;
-    var si, s, a, flareBoost;
+    var si;
 
-    // Animate + draw all stars (far → near)
+    // ── FAR stars (soft, embedded) ──
     for(si = 0; si < stars.length; si++){
-      s = stars[si];
-      updateStarPos(s, t);
-      a = starAlpha(s, t);
-      if(a < 0.012) continue;
-      // When flaring, slightly grow halo so it reads as a sparkle not a static pixel
-      flareBoost = a > s.a * 1.15 ? (1 + (a / s.a - 1) * 0.35) : 1;
-      drawSoftStar(s, Math.min(0.95, a), flareBoost);
+      if(stars[si].depth !== 0) continue;
+      var s0 = stars[si];
+      var a0 = s0.a * (0.72 + 0.28 * Math.sin(t * s0.tws + s0.tw));
+      if(a0 > 0.015) drawSoftStar(s0, a0);
     }
 
+    // ── MID stars ──
+    for(si = 0; si < stars.length; si++){
+      if(stars[si].depth !== 1) continue;
+      var s1 = stars[si];
+      var a1 = s1.a * (0.68 + 0.32 * Math.sin(t * s1.tws + s1.tw));
+      if(a1 > 0.015) drawSoftStar(s1, a1);
+    }
+    // Dust lives between mid and near — soft blobs only
     dust.forEach(function(d){
       d.x += d.vx; d.y += d.vy;
       if(d.x < 0) d.x = w; if(d.x > w) d.x = 0;
@@ -33564,6 +33496,14 @@ function _syncDayNightToggle(t){
       ctx.arc(d.x, d.y, d.r * d.soft, 0, Math.PI * 2);
       ctx.fill();
     });
+
+    // ── NEAR stars (a bit tighter glow, still soft) ──
+    for(si = 0; si < stars.length; si++){
+      if(stars[si].depth !== 2) continue;
+      var s2 = stars[si];
+      var a2 = s2.a * (0.78 + 0.22 * Math.sin(t * s2.tws + s2.tw));
+      if(a2 > 0.015) drawSoftStar(s2, a2);
+    }
 
     spawnMeteor();
     for(var mi = meteors.length - 1; mi >= 0; mi--){
@@ -33582,6 +33522,20 @@ function _syncDayNightToggle(t){
       ctx.lineTo(m.x - m.vx * (m.len / 9), m.y - m.vy * (m.len / 9));
       ctx.stroke();
     }
+
+    // Light film grain only — keeps stars integrated, no dark tunnel
+    if(grainReady && grainCanvas){
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      ctx.globalCompositeOperation = 'overlay';
+      var px, py;
+      for(py = 0; py < h; py += 256){
+        for(px = 0; px < w; px += 256){
+          ctx.drawImage(grainCanvas, px, py);
+        }
+      }
+      ctx.restore();
+    }
   }
 
   function start(){
@@ -33589,6 +33543,7 @@ function _syncDayNightToggle(t){
     canvas = document.getElementById('deepSpaceCanvas');
     if(!canvas) return;
     ctx = canvas.getContext('2d');
+    if(!grainReady) bakeGrain();
     running = true;
     resize();
     cancelAnimationFrame(raf);
@@ -33680,24 +33635,15 @@ function _syncDayNightToggle(t){
   }
 
   window._deepSpaceAurora = { toggle: toggle, set: setOn, isOn: isOn, sync: onThemeChange };
-  function bootDeepSpace(){
+  window.addEventListener('load', function(){
     bind();
     syncDom();
     updateMenuUi();
-    // Start canvas ASAP so first paint isn’t empty→stars “render animation”
     if(active()) start();
-    // Kill any residual ask-bar blur class churn on first paint
-    try{
-      var sc = document.getElementById('sec-chat');
-      if(sc && isOn() && isNight()){
-        sc.classList.remove('askbar-off');
-        sc.classList.add('askbar-on');
-      }
-    }catch(e){}
-  }
-  window.addEventListener('load', bootDeepSpace);
+  });
+  // In case script runs after load
   if(document.readyState === 'complete' || document.readyState === 'interactive'){
-    setTimeout(bootDeepSpace, 0);
+    setTimeout(function(){ bind(); syncDom(); updateMenuUi(); if(active()) start(); }, 0);
   }
 })();
 
