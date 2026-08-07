@@ -2690,6 +2690,10 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
 #chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
+/* Deep-space aurora mismatch (ask-me-anything on, llm chat off): skip the
+   lingering fade-out so the greeting vanishes with the rest of the page
+   instead of hanging over the now-dark background. See updateBeamsVisibility. */
+#chatEmptyState.ds-instant-hide{transition:none!important;}
 .syn-glyph{pointer-events:none;}
 .syn-orb-wrap{pointer-events:none;}
 #chatEmptyState h2{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:10px;text-shadow:0 2px 40px rgba(124,106,247,.6),0 0 80px rgba(99,102,241,.2);}
@@ -3343,7 +3347,7 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .home-suggest-card{background:rgba(99,102,241,0.03)!important;border:1px solid rgba(99,102,241,0.1)!important;border-radius:12px!important;padding:14px 16px!important;cursor:pointer!important;transition:background .2s ease,border-color .2s ease,transform .2s ease!important;pointer-events:all!important;}
 .home-suggest-card:hover{background:rgba(124,106,247,0.12)!important;border-color:rgba(124,106,247,0.45)!important;transform:translateY(-2px)!important;}
-.ncmd-wrap{width:100%;max-width:520px;background:rgba(15,13,28,0.55);border:1px solid rgba(124,106,247,0.25);border-radius:16px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.06);animation:chatEmptyIn .6s ease-out .5s both;overflow:visible;position:relative;z-index:9000;transition:border-color .2s,box-shadow .2s;}
+.ncmd-wrap{width:100%;max-width:520px;background:rgba(15,13,28,0.55);border:1px solid rgba(124,106,247,0.25);border-radius:16px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 8px 32px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.06);animation-name:chatEmptyIn;animation-duration:var(--ds-restart-duration,.6s);animation-timing-function:ease-out;animation-delay:.5s;animation-fill-mode:both;overflow:visible;position:relative;z-index:9000;transition:border-color .2s,box-shadow .2s;}
 .ncmd-wrap.focused{border-color:rgba(124,106,247,0.7);box-shadow:0 0 0 3px rgba(124,106,247,0.15),0 8px 40px rgba(124,106,247,0.15),inset 0 1px 0 rgba(255,255,255,0.07);}
 .ncmd-search-row{display:flex;align-items:center;gap:9px;padding:12px 16px;}
 .ncmd-icon{color:rgba(124,106,247,0.55);flex-shrink:0;}
@@ -3381,7 +3385,7 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .ncmd-modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:400;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 .ncmd-modal-box{background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:100%;max-width:400px;margin:16px;box-shadow:0 24px 80px rgba(0,0,0,0.6);animation:fadeUp .22s ease both;}
 @media(max-width:600px){.ncmd-wrap{border-radius:12px;}.ncmd-hint{display:none;}}
-.syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;animation:chatEmptyIn .6s ease-out .1s both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
+.syn-greeting-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;animation-name:chatEmptyIn;animation-duration:var(--ds-restart-duration,.6s);animation-timing-function:ease-out;animation-delay:.1s;animation-fill-mode:both;max-width:92vw;padding:0 8px;box-sizing:border-box;}
 .syn-greeting{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#f0f0ff;letter-spacing:-.01em;text-align:center;margin-bottom:0;line-height:1.25;}
 /* Live / normal greeting toggle — a tiny, barely-visible dark-grey dot,
    not a deliberate icon/button. Hit area stays generous for tappability;
@@ -3432,7 +3436,7 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .syn-greet-skip-btn svg{width:10px;height:10px;display:block;fill:currentColor;transition:transform .15s ease;}
 .syn-greet-skip-btn:hover,.syn-greet-skip-btn:focus-visible{color:rgba(255,255,255,0.55);outline:none;}
 .syn-greet-skip-btn:active svg{transform:scale(0.85);}
-.syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'DM Sans',sans-serif;margin-bottom:28px;animation:chatEmptyIn .6s ease-out .25s both;letter-spacing:.08em;text-transform:uppercase;}
+.syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'Syne',sans-serif;margin-bottom:28px;animation-name:chatEmptyIn;animation-duration:var(--ds-restart-duration,.6s);animation-timing-function:ease-out;animation-delay:.25s;animation-fill-mode:both;letter-spacing:.08em;text-transform:uppercase;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
 @keyframes fpShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
@@ -3589,7 +3593,7 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 .syn-fp.fail .syn-fp-status{color:#ff8fa3;}
 .syn-fp.fp-tap-mode .syn-fp-pad{cursor:pointer;}
 .syn-fp-label{display:none!important;}
-.syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation:chatEmptyIn .6s ease-out .4s both;}
+.syn-prompts{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:520px;animation-name:chatEmptyIn;animation-duration:var(--ds-restart-duration,.6s);animation-timing-function:ease-out;animation-delay:.4s;animation-fill-mode:both;}
 .syn-prompt{padding:11px 14px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:10px;text-align:left;}
 .syn-prompt:hover{background:rgba(124,106,247,0.08);border-color:rgba(124,106,247,0.3);transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,106,247,0.1);}
 .syn-prompt-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
@@ -12872,6 +12876,9 @@ var _currentViewId=null;function setView(id){
   // Set current view ID first, then update floating mic button visibility
   _currentViewId = id;
   if(typeof window._ttsUpdateFloatingPill === 'function') window._ttsUpdateFloatingPill(id);
+  // Deep-space aurora is saved per-scope (ask-me-anything vs active chat vs
+  // other pages) — re-sync the canvas now that we've switched views.
+  if(window._deepSpaceAurora && typeof window._deepSpaceAurora.sync === 'function') window._deepSpaceAurora.sync();
 
   document.querySelectorAll('.section').forEach(function(s){ if(s.id !== id) s.classList.remove('active'); });
   if(id!=='sec-chat'){ if(window._avaOrbRaf){cancelAnimationFrame(window._avaOrbRaf);window._avaOrbRaf=null;} var _ob=document.getElementById('avaGlowToggle');if(_ob)_ob.classList.remove('orb-active'); }
@@ -17857,7 +17864,15 @@ function _restoreEmptyChatHome(withAsk){
   var cc = document.getElementById('chatContainer');
   if(cc){ cc.innerHTML = ''; cc.scrollTop = 0; }
   var es = document.getElementById('chatEmptyState');
+  var _wasActiveConvo = es && es.classList.contains('hidden');
   if(es){ es.classList.remove('hidden'); es._manualHide = false; }
+  // This is the real "leaving an active llm chat back to the empty
+  // ask-me-anything state" moment. Trigger the greeting fade-in at the
+  // slower 1s pace right here — don't rely on updateBeamsVisibility's
+  // wasHidden check, since by the time that runs (async, via the
+  // MutationObserver on chatContainer or the setView hook) the 'hidden'
+  // class above has already been stripped, so it always reads false.
+  if(_wasActiveConvo && typeof window.restartEmptyStateAnims === 'function') window.restartEmptyStateAnims(1);
   try{ if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility(); }catch(_s){}
   setView('sec-chat');
   /* Pad visible first → measure → then restore Ask. silent: do not clobber saved pref mid-restore */
@@ -22403,7 +22418,16 @@ function openSavedChat(i){
     }catch(_e){}
   }
   var es=document.getElementById('chatEmptyState');
-  if(es){ es.classList.add('hidden'); es._manualHide=true; }
+  if(es){
+    // Opening a past chat should swap straight to it — the normal .5s
+    // opacity fade on #chatEmptyState (meant for the "conversation just
+    // started from scratch" case) looked like the greeting lingering/fading
+    // away here. Force-skip the transition for this specific hide.
+    es.classList.add('ds-instant-hide');
+    es.offsetHeight; // force reflow so transition:none applies before opacity flips
+    es.classList.add('hidden'); es._manualHide=true;
+    setTimeout(function(){ es.classList.remove('ds-instant-hide'); }, 60);
+  }
   if(typeof setAskBarVisible==='function') setAskBarVisible(true);
   if(cc) cc.scrollTop=cc.scrollHeight;
   updateChpActiveState();
@@ -22501,7 +22525,16 @@ function openRecentChat(i){
     }catch(_e){}
   }
   var es=document.getElementById('chatEmptyState');
-  if(es){ es.classList.add('hidden'); es._manualHide=true; }
+  if(es){
+    // Opening a past chat should swap straight to it — the normal .5s
+    // opacity fade on #chatEmptyState (meant for the "conversation just
+    // started from scratch" case) looked like the greeting lingering/fading
+    // away here. Force-skip the transition for this specific hide.
+    es.classList.add('ds-instant-hide');
+    es.offsetHeight; // force reflow so transition:none applies before opacity flips
+    es.classList.add('hidden'); es._manualHide=true;
+    setTimeout(function(){ es.classList.remove('ds-instant-hide'); }, 60);
+  }
   if(typeof setAskBarVisible==='function') setAskBarVisible(true);
   if(cc) cc.scrollTop=cc.scrollHeight;
   updateChpActiveState();
@@ -25541,17 +25574,41 @@ async function confirmWorldApproach(){
     animId=requestAnimationFrame(animate);
   }
 
-  function restartEmptyStateAnims(){
+  var _lastForcedRestartAt = 0;
+  function restartEmptyStateAnims(durationOverrideSec){
     // Force-restart the chatEmptyIn animations so elements fade in from opacity:0
     // instead of snapping in at full white on repeated visits.
+    // Note: .syn-greeting (the "Still up, Edln" text) is intentionally left
+    // out — it has no animation of its own and should stay static, not fade.
     if(!emptyState) return;
-    var targets = emptyState.querySelectorAll('.syn-greeting,.syn-sub,.syn-prompts,.ncmd-wrap,.syn-orb-wrap');
+    _lastForcedRestartAt = Date.now();
+    var targets = emptyState.querySelectorAll('.syn-sub,.syn-prompts,.ncmd-wrap,.syn-orb-wrap');
     targets.forEach(function(el){
+      if(durationOverrideSec) el.style.setProperty('--ds-restart-duration', durationOverrideSec + 's');
+      else el.style.removeProperty('--ds-restart-duration');
+      // Pin to the animation's opacity:0/translateY(16px) starting look
+      // BEFORE turning the animation off. Without this, the instant the
+      // animation is off there's nothing controlling opacity, so the
+      // element snaps to its plain fully-visible default for one frame —
+      // that snap is the flicker/flash on restart. Setting it directly
+      // here keeps it invisible through the whole off→on gap.
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(16px)';
       el.style.animation = 'none';
       el.offsetHeight; // force reflow
       el.style.animation = '';
+      // The animation now owns opacity/transform again (it overrides plain
+      // inline styles once running) — clear our pins so nothing lingers.
+      el.style.opacity = '';
+      el.style.transform = '';
     });
   }
+  // Exposed so _restoreEmptyChatHome() (defined earlier in the file, outside
+  // this closure) can trigger the real "left active chat" 1s restart at the
+  // exact moment it happens, instead of relying on updateBeamsVisibility's
+  // wasHidden check — which races with _restoreEmptyChatHome stripping the
+  // 'hidden' class synchronously before this IIFE ever gets to check it.
+  window.restartEmptyStateAnims = restartEmptyStateAnims;
 
   function updateBeamsVisibility(){
     var container=document.getElementById('chatContainer');
@@ -25560,10 +25617,31 @@ async function confirmWorldApproach(){
     var _chpSb = document.getElementById('chpSidebar');
     if(_chpSb) _chpSb.classList.toggle('chp-msgs-dark', hasMessages);
     var wasHidden = emptyState && emptyState.classList.contains('hidden');
+    // About to hide the empty state (conversation just started). If the two
+    // aurora scopes disagree — "ask me anything" on, "llm chat" off — the
+    // greeting's normal ~0.5s fade-out lingers on screen over a background
+    // that just went dark, which looks off. Skip the fade in that one case
+    // so the greeting just vanishes with the rest of the page instead.
+    if(!wasHidden && hasMessages && emptyState){
+      try{
+        var _dsa = window._deepSpaceAurora;
+        var _nightNow = (localStorage.getItem('_appTheme')||'trueblack') === 'trueblack';
+        if(_nightNow && _dsa && typeof _dsa.isOn === 'function' && _dsa.isOn('sec-chat-ask') && !_dsa.isOn('sec-chat-llm')){
+          emptyState.classList.add('ds-instant-hide');
+          emptyState.offsetHeight; // force reflow so transition:none applies before opacity flips
+          setTimeout(function(){ emptyState.classList.remove('ds-instant-hide'); }, 60);
+        }
+      }catch(_dsErr){}
+    }
     wrap.classList.toggle('hidden',hasMessages);
     if(emptyState) emptyState.classList.toggle('hidden',hasMessages);
     // If the empty state just became visible, restart its entrance animations
     if(wasHidden && !hasMessages){
+      // NOTE: this branch is a fallback for paths that clear messages
+      // without going through _restoreEmptyChatHome (which now fires its
+      // own restartEmptyStateAnims(1) directly, at the exact moment it
+      // strips 'hidden' — see there for why this wasHidden check can't be
+      // trusted to catch that specific path). Default 0.6s here.
       restartEmptyStateAnims();
       try{ if(typeof window.refreshHomeGreeting === 'function') window.refreshHomeGreeting({ animate: true }); }catch(eG){}
       /* Drop stale mid-chat Ask Y and re-seat under greeting after layout */
@@ -25618,6 +25696,18 @@ async function confirmWorldApproach(){
     if(id==='sec-chat'){
       if(!_beamsInited){_beamsInited=true;resize();animate();}
       updateBeamsVisibility();
+      // Landing on the empty "ask me anything" state via plain navigation
+      // (chat was already empty — hasMessages never flipped during this
+      // nav, so the branch above never fires). Restart the fade-in here too,
+      // but at the normal 0.6s default — NOT the 1s override, since this
+      // path also fires on first-ever load (guest login calls setView
+      // directly) and that must stay at the CSS default speed.
+      // Guard: skip if a deliberate restart (e.g. the 1s one from
+      // _restoreEmptyChatHome) JUST fired — setView('sec-chat') is called
+      // synchronously from inside that function right after its own
+      // restartEmptyStateAnims(1), so without this guard this fallback
+      // immediately stomps that 1s duration back down to 0.6s.
+      if(emptyState && !emptyState.classList.contains('hidden') && (Date.now()-_lastForcedRestartAt)>50) restartEmptyStateAnims();
     }
   };
 
@@ -33338,24 +33428,100 @@ function _syncDayNightToggle(t){
   var stars = [], dust = [], meteors = [];
   var t0 = performance.now();
   var grainCanvas = null, grainReady = false;
+  // Dust-lane band gradient is expensive to rebuild (5 color stops) and its
+  // values only ever depend on h — cache it and only rebuild on resize()
+  // instead of recreating it 60x/sec in frame(). Rebuilding every frame was
+  // adding avoidable per-frame cost that showed up as stutter/flicker during
+  // the opacity fade-in.
+  var bandGradient = null;
   // Real elapsed-time delta drives star drift between frames.
   var _lastFrameT = 0;
+  var _resizeDebounceTimer = null;
+  // Band reveals via a growing CLIP region (sweeps outward from center),
+  // not by animating its own alpha. Its gradient stops are close together
+  // (0.03/0.045/0.028) — if alpha changes every frame, the browser has to
+  // re-dither those close values differently each time, which is what read
+  // as shaky/glitchy/pixelated. A clip only changes *how much* of a fixed,
+  // never-changing gradient is visible, so nothing ever gets re-dithered —
+  // it just draws itself outward like a beam extending, cleanly.
+  var _bandStartT = 0, BAND_REVEAL_MS = 650;
+  // #deepSpaceLayer fades opacity over 1.6s in CSS (see the #deepSpaceLayer
+  // rule) — this timer matches that so stop() can defer wiping the canvas
+  // until after the fade finishes, instead of clearing it instantly.
+  var _stopClearTimer = null;
 
-  function isOn(){ try{ return localStorage.getItem(KEY) === '1'; }catch(e){ return false; } }
+  // Per-page state: "Ask me anything" (empty chat starter) and "LLM chat"
+  // (once a conversation is going) are actually the SAME section (#sec-chat)
+  // just with #chatEmptyState shown vs hidden — so scope on that, not on
+  // _currentViewId, or both states collapse onto one shared key.
+  function currentScope(){
+    try{
+      var view = (typeof _currentViewId !== 'undefined' && _currentViewId) ? _currentViewId : (localStorage.getItem('synapses_last_section') || 'sec-welcome');
+      if(view === 'sec-chat'){
+        var es = document.getElementById('chatEmptyState');
+        var empty = !es || !es.classList.contains('hidden');
+        return empty ? 'sec-chat-ask' : 'sec-chat-llm';
+      }
+      return view;
+    }catch(e){ return 'sec-welcome'; }
+  }
+  function scopedKey(scope){ return KEY + ':' + scope; }
+  // One-time migration: the old build had a single global switch. Carry its
+  // value forward into the scopes that actually used it so nothing changes
+  // for existing users — from here on each scope tracks its own.
+  function migrateLegacy(){
+    try{
+      var legacy = localStorage.getItem(KEY);
+      if(legacy === null) return;
+      ['sec-welcome','sec-chat-ask','sec-chat-llm'].forEach(function(scope){
+        if(localStorage.getItem(scopedKey(scope)) === null) localStorage.setItem(scopedKey(scope), legacy);
+      });
+      localStorage.removeItem(KEY);
+    }catch(e){}
+  }
+  function isOn(scope){ try{ return localStorage.getItem(scopedKey(scope || currentScope())) === '1'; }catch(e){ return false; } }
   function isNight(){ return (localStorage.getItem('_appTheme') || 'trueblack') === 'trueblack'; }
   function active(){ return isOn() && isNight(); }
 
   function setOn(on){
-    try{ localStorage.setItem(KEY, on ? '1' : '0'); }catch(e){}
+    try{ localStorage.setItem(scopedKey(currentScope()), on ? '1' : '0'); }catch(e){}
     syncDom();
     if(on && isNight()) start(); else if(!active()) stop();
     updateMenuUi();
   }
   function toggle(){ setOn(!isOn()); }
 
+  // #chatEmptyState's hidden class flips in a dozen different places in the
+  // app (send message, new chat, open recent chat, etc). Rather than hook
+  // every call site, just watch the element itself and re-sync whenever its
+  // empty/active state actually changes.
+  var _watchedEmptyStateEl = null, _lastEmptyStateHidden = null;
+  function watchChatEmptyState(){
+    var es = document.getElementById('chatEmptyState');
+    if(!es || es === _watchedEmptyStateEl) return;
+    _watchedEmptyStateEl = es;
+    _lastEmptyStateHidden = es.classList.contains('hidden');
+    var mo = new MutationObserver(function(){
+      var nowHidden = es.classList.contains('hidden');
+      if(nowHidden !== _lastEmptyStateHidden){
+        _lastEmptyStateHidden = nowHidden;
+        onThemeChange();
+      }
+    });
+    mo.observe(es, { attributes: true, attributeFilter: ['class'] });
+  }
+
+
+  // Fade-in stays slow (matches the greeting text's entrance pace), but
+  // fade-out was using the same 1.6s and felt sluggish — snappier on the way
+  // out. Kept in sync with the deferred canvas-clear timer in stop() below.
+  var FADE_IN_MS = 1600, FADE_OUT_MS = 400;
   function syncDom(){
     try{
-      if(active()) document.documentElement.classList.add('deep-space-on');
+      var layer = document.getElementById('deepSpaceLayer');
+      var on = active();
+      if(layer) layer.style.transitionDuration = (on ? FADE_IN_MS : FADE_OUT_MS) + 'ms';
+      if(on) document.documentElement.classList.add('deep-space-on');
       else document.documentElement.classList.remove('deep-space-on');
     }catch(e){}
   }
@@ -33375,6 +33541,17 @@ function _syncDayNightToggle(t){
     grainReady = true;
   }
 
+  function buildBandGradient(){
+    if(!ctx) return;
+    var band = ctx.createLinearGradient(0, -h * 0.1, 0, h * 0.1);
+    band.addColorStop(0, 'rgba(0,0,0,0)');
+    band.addColorStop(0.4, 'rgba(150,165,200,0.03)');
+    band.addColorStop(0.5, 'rgba(180,195,220,0.045)');
+    band.addColorStop(0.6, 'rgba(150,165,200,0.028)');
+    band.addColorStop(1, 'rgba(0,0,0,0)');
+    bandGradient = band;
+  }
+
   function resize(){
     if(!canvas) return;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -33384,6 +33561,7 @@ function _syncDayNightToggle(t){
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildBandGradient();
     seed();
   }
 
@@ -33524,18 +33702,25 @@ function _syncDayNightToggle(t){
     // against pure black). Stars/dust/haze below carry all the depth cues.
 
     // Soft galactic dust lane (behind far stars a bit — drawn under stars too)
-    ctx.save();
-    ctx.translate(w * 0.5, h * 0.5);
-    ctx.rotate(-0.26);
-    var band = ctx.createLinearGradient(0, -h * 0.1, 0, h * 0.1);
-    band.addColorStop(0, 'rgba(0,0,0,0)');
-    band.addColorStop(0.4, 'rgba(150,165,200,0.03)');
-    band.addColorStop(0.5, 'rgba(180,195,220,0.045)');
-    band.addColorStop(0.6, 'rgba(150,165,200,0.028)');
-    band.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = band;
-    ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
-    ctx.restore();
+    // Gradient itself is cached in bandGradient (built once in resize()) and
+    // its alpha never changes frame to frame — only a CLIP region grows
+    // outward from center over BAND_REVEAL_MS, so it draws itself in like a
+    // beam extending, with nothing ever re-dithered.
+    if(!bandGradient) buildBandGradient();
+    var bandT = Math.min(1, (now - _bandStartT) / BAND_REVEAL_MS);
+    var bandEase = 1 - Math.pow(1 - bandT, 3); // ease-out cubic
+    var bandHalfW = w * 0.8 * bandEase;
+    if(bandHalfW > 0){
+      ctx.save();
+      ctx.translate(w * 0.5, h * 0.5);
+      ctx.rotate(-0.26);
+      ctx.beginPath();
+      ctx.rect(-bandHalfW, -h * 0.12, bandHalfW * 2, h * 0.24);
+      ctx.clip();
+      ctx.fillStyle = bandGradient;
+      ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
+      ctx.restore();
+    }
 
     var t = (now - t0) / 1000;
     var si;
@@ -33605,6 +33790,9 @@ function _syncDayNightToggle(t){
   }
 
   function start(){
+    // Cancel any pending deferred clear from a very recent stop() — toggling
+    // back on quickly shouldn't have its fresh frame wiped out from under it.
+    if(_stopClearTimer){ clearTimeout(_stopClearTimer); _stopClearTimer = null; }
     if(running) return;
     canvas = document.getElementById('deepSpaceCanvas');
     if(!canvas) return;
@@ -33612,6 +33800,7 @@ function _syncDayNightToggle(t){
     if(!grainReady) bakeGrain();
     running = true;
     _lastFrameT = 0;
+    _bandStartT = performance.now();
     resize();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(frame);
@@ -33619,7 +33808,17 @@ function _syncDayNightToggle(t){
   function stop(){
     running = false;
     cancelAnimationFrame(raf);
-    if(ctx && w){ ctx.clearRect(0, 0, w, h); }
+    // Don't wipe the canvas right away — #deepSpaceLayer's container fades
+    // opacity over 1.6s in CSS. If we clear the stars/aurora glow here,
+    // there's nothing left for that opacity fade to actually show, so it
+    // just fades an already-blank canvas and the whole thing reads as an
+    // abrupt cut instead of a graceful fade. Leave the last frame in place
+    // and only wipe it once the CSS fade has had time to finish.
+    if(_stopClearTimer) clearTimeout(_stopClearTimer);
+    _stopClearTimer = setTimeout(function(){
+      _stopClearTimer = null;
+      if(!running && ctx && w){ ctx.clearRect(0, 0, w, h); }
+    }, FADE_OUT_MS + 50);
   }
 
   function updateMenuUi(){
@@ -33697,13 +33896,31 @@ function _syncDayNightToggle(t){
       if(e.key === 'Escape') hideMenu();
     });
     window.addEventListener('resize', function(){
-      if(running) resize();
+      if(!running) return;
+      // Mobile fires bursts of resize events during layout settling (address
+      // bar show/hide, viewport nudges) — often right while the fade-in is
+      // playing. Each raw resize() call fully re-seeds every star and
+      // rebuilds the band at the new size, so a burst of these mid-fade was
+      // rebuilding everything repeatedly and reading as a "shaky" render.
+      // Debounce so a burst collapses into a single resize() after things
+      // settle, instead of one full rebuild per event.
+      clearTimeout(_resizeDebounceTimer);
+      _resizeDebounceTimer = setTimeout(function(){
+        // Also ignore trivial sub-pixel jitter that isn't a real size
+        // change (same browser-chrome-animation cause) — no need to reseed
+        // for a few px of noise.
+        var nw = window.innerWidth, nh = window.innerHeight;
+        if(Math.abs(nw - w) < 4 && Math.abs(nh - h) < 4) return;
+        resize();
+      }, 150);
     });
   }
 
   window._deepSpaceAurora = { toggle: toggle, set: setOn, isOn: isOn, sync: onThemeChange };
   window.addEventListener('load', function(){
+    migrateLegacy();
     bind();
+    watchChatEmptyState();
     syncDom();
     updateMenuUi();
     if(active()) start();
