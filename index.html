@@ -16,8 +16,86 @@
         var t = localStorage.getItem('_appTheme') || 'trueblack';
         document.documentElement.setAttribute('data-theme', t);
       }catch(e){}
+      /* Apply bottom-nav BEFORE first paint when user uses the bottom taskbar.
+         Otherwise the old left sidebar glass paints under the splash and reads
+         as a foggy vertical film on the left during load/fade. */
+      try{
+        var bottom = true;
+        var raw = localStorage.getItem('synapses_navConfig');
+        if(raw){
+          var cfg = JSON.parse(raw);
+          if(cfg && cfg.atBottom === false) bottom = false;
+        }
+        if(bottom) document.documentElement.classList.add('early-bottom-nav');
+      }catch(e2){}
+      /* SynBot toggle button: paint its real on/off look before first paint too —
+         otherwise the static markup (always drawn "on") shows briefly, then the
+         late init script corrects it to "off", which reads as a flash. */
+      try{
+        var sb = localStorage.getItem('synapses_synbot_enabled');
+        if(sb !== '1') document.documentElement.classList.add('early-synbot-off');
+      }catch(e3){}
     })();
   </script>
+  <style id="earlyNavBootCSS">
+    /* Hide left glass rail as early as possible when bottom taskbar is the mode */
+    html.early-bottom-nav .sidebar,
+    html.early-bottom-nav .sidebar-toggle,
+    html.early-bottom-nav #sidebarResize{display:none!important;visibility:hidden!important;width:0!important;min-width:0!important;border:none!important;opacity:0!important;}
+    /* Show the header synapse-mark icon from first paint when we already know
+       (synchronously, before body parses) that bottom-nav mode is active —
+       otherwise it stays display:none until a <script> ~13k lines down the
+       page adds body.bottom-nav, which paints late and looks like a pop-in/flash.
+       Margin is also set to its final bottom-nav value here (not the 6px default)
+       so the icon doesn't visibly jump right once that late script catches up. */
+    html.early-bottom-nav #bnavLogoMark{display:flex!important;transform:translateY(-2px)!important;margin-left:12px!important;margin-right:8px!important;padding:0!important;}
+    html.early-bottom-nav #bnavLogoMark ~ span,
+    html.early-bottom-nav #bnavLogoMark + span,
+    html.early-bottom-nav .top-title{padding-left:0!important;margin-left:0!important;}
+    html.early-bottom-nav .top-bar > div:first-child{padding-left:6px!important;gap:0!important;column-gap:0!important;}
+    /* SynBot toggle button: bake in the "off" look before first paint so the
+       static markup's default "on" colors never flash before the real
+       synapses_synbot_enabled preference is applied by JS later on. */
+    html.early-synbot-off #synBotToggleBtn{opacity:0.35!important;}
+    html.early-synbot-off #synBotToggleIcon rect,
+    html.early-synbot-off #synBotToggleIcon line,
+    html.early-synbot-off #synBotToggleIcon circle{stroke:#555!important;}
+    html.early-synbot-off #synBotToggleIcon rect[fill]{fill:#555!important;}
+    /* While splash plate exists (incl. opacity fade), never show left chrome /
+       taskbar / beam fog that can film through translucent frames */
+    body:has(#appSplash) .sidebar,
+    body:has(#appSplash) .sidebar-toggle,
+    body:has(#appSplash) #sidebarResize,
+    body:has(#appSplash) #sidebarIconRail,
+    body:has(#appSplash) #sidebarFull{
+      display:none!important;visibility:hidden!important;opacity:0!important;
+      width:0!important;min-width:0!important;border:none!important;pointer-events:none!important;
+    }
+    body:has(#appSplash) #globalBeamsCanvas,
+    body:has(#appSplash) #deepSpaceLayer{
+      opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+    }
+    body:has(#appSplash) #bottomNavBar,
+    body:has(#appSplash) #bnavNotesBtn,
+    body:has(#appSplash) #bnavPulseBtn,
+    body:has(#appSplash) #bnavAskBtn,
+    body:has(#appSplash) #bnavCallBtn,
+    body:has(#appSplash) #bnavImageGenBtn{
+      opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+    }
+    body:has(#appSplash) #neu-resize-w,
+    body:has(#appSplash) #neu-resize-e,
+    body:has(#appSplash) #neu-resize-n,
+    body:has(#appSplash) #neu-resize-s,
+    body:has(#appSplash) #neu-resize-nw,
+    body:has(#appSplash) #neu-resize-ne,
+    body:has(#appSplash) #neu-resize-sw,
+    body:has(#appSplash) #neu-resize-se,
+    body:has(#appSplash) #right-edge-blocker{
+      opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+    }
+  </style>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1232,6 +1310,12 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
   filter:blur(0);
   border-radius:14px; /* wrapper had no radius — the glow box-shadow below was rendering as a square behind the rounded pill */
   box-shadow:0 8px 32px rgba(0,0,0,.22),0 0 0 1px rgba(124,106,247,.12),0 0 28px rgba(124,106,247,.1);
+}
+/* Instant snap during empty-home restore (leave mid-chat / logo home) — no Ask fade flash */
+#sec-chat.askbar-snap #chatEmptyState:not(.hidden) ~ .input-area,
+#sec-chat.askbar-snap #chatEmptyState:not(.hidden) ~ .input-area .input-wrapper,
+#sec-chat.askbar-snap #chatEmptyState:not(.hidden) .syn-fp{
+  transition:none!important;
 }
 /* True Black: home ask-bar glow was still purple-tinted (unthemed) while the desktop/mobile
    .input-box rules already switch to the neutral grey ring — mismatch was pre-send bar vs
@@ -3788,11 +3872,27 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
   pointer-events:none!important;
   opacity:0!important;
 }
+/* Home icon (left cluster, next to Back) hides entirely on Community — no layout reservation needed there */
+#imageGenModal.studio-tab-community #studioHomeBtn{
+  display:none!important;
+}
+/* Home icon only makes sense once there's something to navigate away from (i.e. on the results view).
+   Desktop/PC only — mobile keeps the original single Back-arrow header untouched. */
+#studioHomeBtn{ display:none!important; }
+@media(min-width:769px){
+  #imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
+}
 /* Default Studio header layout (original): back | Studio | actions — NOT viewport-centered */
 #studioTopBar{
   display:flex!important;
   align-items:center!important;
   justify-content:space-between!important;
+}
+#studioTopBarLeft{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  flex-shrink:0;
 }
 #studioTopBarTitle{
   font-family:'Syne',sans-serif;
@@ -3803,6 +3903,12 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
   /* Natural flex middle item — do not absolute/grid center (was too close to STS) */
   flex:0 0 auto;
   pointer-events:none;
+}
+/* Dark modes: true white header title (not purple-tinted #d4d0ee) */
+html[data-theme="trueblack"] #studioTopBarTitle,
+html[data-theme="pitchblack"] #studioTopBarTitle,
+html[data-theme="purple"] #studioTopBarTitle{
+  color:#ffffff!important;
 }
 #studioTopBarActions{
   display:flex!important;
@@ -3815,7 +3921,7 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 }
 /* Pixel-center glyphs inside circle bubbles */
 #studioTopBarActions > button,
-#studioTopBar > button:first-child{
+#studioTopBarLeft > button{
   display:inline-flex!important;
   align-items:center!important;
   justify-content:center!important;
@@ -3826,7 +3932,7 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
   flex-shrink:0!important;
 }
 #studioTopBarActions > button svg,
-#studioTopBar > button:first-child svg{
+#studioTopBarLeft > button svg{
   display:block!important;
   margin:0!important;
   flex-shrink:0;
@@ -3845,11 +3951,750 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
     grid-column:3;
     justify-self:end;
   }
-  #studioTopBar > button:first-child{
+  #studioTopBarLeft{
     grid-column:1;
     justify-self:start;
   }
+
+  /* ── PC Studio: denser “real studio” stage (Runway-inspired) — desktop only ── */
+  #imageGenModal:not(.studio-tab-community) #studioTopBar{
+    background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.18) 70%,transparent 100%)!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    border-bottom:none!important;
+    padding-bottom:18px!important;
+  }
+  /* Centered generation stage — soft charcoal + aurora glow (PC only; mobile untouched) */
+  #studioGenerateView #imageGenScrollCol{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    padding:92px 48px 120px!important;
+    box-sizing:border-box!important;
+    background:
+      radial-gradient(ellipse 75% 55% at 18% 22%,rgba(100,80,220,0.14) 0%,transparent 58%),
+      radial-gradient(ellipse 65% 50% at 88% 28%,rgba(60,140,220,0.09) 0%,transparent 52%),
+      radial-gradient(ellipse 90% 60% at 50% 105%,rgba(90,50,180,0.12) 0%,transparent 58%),
+      radial-gradient(ellipse 50% 40% at 50% 45%,rgba(255,255,255,0.025) 0%,transparent 60%),
+      #0e0e12!important;
+  }
+  /* True Black: drop the flat charcoal stage so the sitewide deep-space aurora
+     (fixed behind the modal) shows through instead of being blocked. */
+  html[data-theme="trueblack"] #studioGenerateView #imageGenScrollCol{
+    background:transparent!important;
+  }
+  #studioGenerateView #imageGenScrollCol.igRowHidden{
+    padding-top:92px!important;
+  }
+  #studioGenerateView #imageGenTemplateRow{
+    width:100%!important;
+    max-width:1100px!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    padding-top:8px!important;
+    margin-bottom:8px!important;
+  }
+  #studioGenerateView #imageGenError,
+  #studioGenerateView #imageGenEditNote{
+    width:100%!important;
+    max-width:1100px!important;
+    box-sizing:border-box!important;
+  }
+  /* Results stage frame */
+  #studioGenerateView #imageGenResults{
+    width:100%!important;
+    max-width:1100px!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:14px!important;
+    padding:12px 0 28px!important;
+    box-sizing:border-box!important;
+  }
+  #studioGenerateView #imageGenResults > *{
+    border-radius:14px!important;
+    overflow:hidden!important;
+    border:1px solid rgba(255,255,255,0.07)!important;
+    box-shadow:0 10px 36px rgba(0,0,0,0.35)!important;
+    background:rgba(255,255,255,0.02)!important;
+  }
+  #studioGenerateView #imageGenResults img{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+  }
+  /* Empty stage — left content (full stretch) + right community image rail */
+  #studioGenerateView #imageGenEmptyState{
+    width:100%!important;
+    max-width:none!important;
+    min-height:auto!important;
+    height:auto!important;
+    box-sizing:border-box!important;
+    gap:0!important;
+    /* Top: ~one wheel-notch less than before (was +70px extra under header pad).
+       Header clearance already comes from #imageGenScrollCol (~92px). */
+    padding:0 0 200px!important;
+    justify-content:flex-start!important;
+    align-items:stretch!important;
+    text-align:left!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-stage{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(260px,320px)!important;
+    gap:0 22px!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0 18px 0 20px!important;
+    box-sizing:border-box!important;
+    align-items:start!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-main{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:28px!important;
+    min-width:0!important;
+    width:100%!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero-wrap{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    text-align:left!important;
+    gap:12px!important;
+    padding:0 0 2px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero{
+    font-family:'Syne',sans-serif!important;
+    font-size:clamp(26px,3vw,40px)!important;
+    font-weight:800!important;
+    letter-spacing:-.03em!important;
+    line-height:1.15!important;
+    color:#fff!important;
+    max-width:18ch!important;
+    margin:0!important;
+    text-align:left!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-sub{
+    font-size:13.5px!important;
+    line-height:1.55!important;
+    color:rgba(200,200,210,0.55)!important;
+    max-width:46ch!important;
+    margin:0!important;
+    text-align:left!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chips{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+    justify-content:flex-start!important;
+    margin-top:4px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chip{
+    display:inline-flex!important;
+    align-items:center!important;
+    padding:7px 14px!important;
+    border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    background:rgba(255,255,255,0.04)!important;
+    color:rgba(230,230,240,0.78)!important;
+    font-size:12px!important;
+    font-weight:600!important;
+    letter-spacing:.01em!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chip.studio-empty-chip-on{
+    background:rgba(255,255,255,0.1)!important;
+    border-color:rgba(255,255,255,0.2)!important;
+    color:#fff!important;
+  }
+  /* Section titles */
+  #studioGenerateView #imageGenEmptyState .studio-sec-head{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    margin:0 0 14px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-sec-title{
+    font-family:'Syne',sans-serif!important;
+    font-size:16px!important;
+    font-weight:800!important;
+    color:rgba(255,255,255,0.92)!important;
+    letter-spacing:-.01em!important;
+  }
+  /* Featured multi-image strip (several cards visible at once) */
+  #studioGenerateView #imageGenEmptyState .studio-feat-wrap{
+    position:relative!important;
+    width:100%!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-track{
+    display:flex!important;
+    gap:12px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    /* no scroll-snap / smooth — those cause phase stutter when cards enter view */
+    scroll-snap-type:none!important;
+    scroll-behavior:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:2px 2px 8px!important;
+    scrollbar-width:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-track::-webkit-scrollbar{display:none!important;}
+  #studioGenerateView #imageGenEmptyState .studio-feat-card{
+    flex:0 0 220px!important;
+    width:220px!important;
+    min-width:220px!important;
+    max-width:220px!important;
+    height:150px!important; /* fixed px — aspect-ratio reflowed while imgs decoded */
+    min-height:150px!important;
+    max-height:150px!important;
+    border-radius:14px!important;
+    overflow:hidden!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    background:#1c1c24!important;
+    padding:0!important;
+    cursor:pointer!important;
+    position:relative!important;
+    font:inherit!important;
+    color:inherit!important;
+    box-shadow:none!important;
+    /* no transform/transition on card — hover lift was flashing imgs */
+    transition:border-color .15s ease!important;
+    transform:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card:hover{
+    transform:none!important;
+    border-color:rgba(255,255,255,0.18)!important;
+    box-shadow:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card img,
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-grad{
+    position:absolute!important;inset:0!important;
+    width:100%!important;height:100%!important;
+    object-fit:cover!important;display:block!important;
+    transform:none!important;
+  }
+  /* Solid plate only — no opacity tricks */
+  #studioGenerateView #imageGenEmptyState .studio-land-img{
+    opacity:1!important;
+    background:#1c1c24!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile{
+    backface-visibility:hidden!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-shade{
+    position:absolute!important;inset:0!important;
+    background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,0.78) 100%)!important;
+    pointer-events:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-label{
+    position:absolute!important;left:12px!important;right:12px!important;bottom:11px!important;
+    font-family:'Syne',sans-serif!important;font-size:13px!important;font-weight:800!important;
+    color:#fff!important;text-align:left!important;z-index:2!important;
+    pointer-events:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-nav{
+    position:absolute!important;
+    top:50%!important;
+    transform:translateY(-55%)!important;
+    width:34px!important;height:34px!important;
+    border-radius:50%!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    background:rgba(18,18,22,0.72)!important;
+    backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important;
+    color:rgba(255,255,255,0.85)!important;
+    font-size:16px!important;line-height:1!important;
+    cursor:pointer!important;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    z-index:5!important;
+    box-shadow:0 6px 18px rgba(0,0,0,0.35)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-nav:hover{background:rgba(30,30,38,0.9)!important;color:#fff!important;}
+  #studioGenerateView #imageGenEmptyState .studio-feat-nav.prev{left:-6px!important;}
+  #studioGenerateView #imageGenEmptyState .studio-feat-nav.next{right:-6px!important;}
+  /* Feature cards grid — "New in Studio" */
+  #studioGenerateView #imageGenEmptyState .studio-new-grid{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:12px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    padding:16px 16px 14px!important;
+    border-radius:16px!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    background:rgba(255,255,255,0.035)!important;
+    text-align:left!important;
+    cursor:pointer!important;
+    font:inherit!important;
+    color:inherit!important;
+    transition:background .15s,border-color .15s,transform .15s!important;
+    min-height:132px!important;
+    position:relative!important;
+    overflow:hidden!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card:hover{
+    background:rgba(255,255,255,0.06)!important;
+    border-color:rgba(255,255,255,0.14)!important;
+    transform:translateY(-1px)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-top{
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    flex:1!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-copy{min-width:0!important;flex:1!important;}
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-name{
+    font-family:'Syne',sans-serif!important;
+    font-size:14.5px!important;font-weight:800!important;
+    color:#fff!important;margin:0 0 5px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-desc{
+    font-size:12px!important;line-height:1.45!important;
+    color:rgba(190,190,205,0.55)!important;margin:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb{
+    position:relative!important;
+    width:56px!important;height:56px!important;flex-shrink:0!important;
+    border-radius:12px!important;overflow:hidden!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    background:#1c1c24!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb img,
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb .studio-feat-grad{
+    position:absolute!important;inset:0!important;
+    width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-cta{
+    display:inline-flex!important;align-items:center!important;
+    align-self:flex-start!important;
+    padding:6px 12px!important;border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    background:rgba(255,255,255,0.06)!important;
+    color:rgba(245,245,250,0.9)!important;
+    font-size:11.5px!important;font-weight:650!important;
+  }
+  /* Get started — tabs + app rows */
+  #studioGenerateView #imageGenEmptyState .studio-apps-head{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    margin:0 0 14px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-tabs{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:6px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-tab{
+    padding:6px 12px!important;
+    border-radius:999px!important;
+    border:1px solid transparent!important;
+    background:transparent!important;
+    color:rgba(190,190,205,0.55)!important;
+    font-size:12px!important;font-weight:600!important;
+    cursor:pointer!important;
+    font-family:inherit!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-tab:hover{color:rgba(230,230,240,0.85)!important;}
+  #studioGenerateView #imageGenEmptyState .studio-apps-tab.on{
+    background:rgba(255,255,255,0.08)!important;
+    border-color:rgba(255,255,255,0.1)!important;
+    color:#fff!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px 18px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-row{
+    display:flex!important;
+    align-items:center!important;
+    gap:12px!important;
+    padding:10px 10px!important;
+    border-radius:12px!important;
+    border:1px solid transparent!important;
+    background:transparent!important;
+    cursor:pointer!important;
+    text-align:left!important;
+    font:inherit!important;
+    color:inherit!important;
+    transition:background .15s,border-color .15s!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-row:hover{
+    background:rgba(255,255,255,0.04)!important;
+    border-color:rgba(255,255,255,0.06)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-ico{
+    position:relative!important;
+    width:42px!important;height:42px!important;flex-shrink:0!important;
+    border-radius:10px!important;overflow:hidden!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    background:#1c1c24!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-ico img,
+  #studioGenerateView #imageGenEmptyState .studio-app-ico .studio-feat-grad{
+    position:absolute!important;inset:0!important;
+    width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-meta{min-width:0!important;flex:1!important;}
+  #studioGenerateView #imageGenEmptyState .studio-app-name{
+    font-size:13px!important;font-weight:700!important;color:rgba(245,245,250,0.92)!important;
+    margin:0 0 2px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-desc{
+    font-size:11.5px!important;line-height:1.35!important;
+    color:rgba(170,170,185,0.5)!important;margin:0!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-badge{
+    flex-shrink:0!important;
+    font-size:9px!important;font-weight:700!important;letter-spacing:.04em!important;
+    text-transform:uppercase!important;
+    padding:3px 7px!important;border-radius:6px!important;
+    background:rgba(124,106,247,0.18)!important;
+    color:rgba(200,190,255,0.9)!important;
+    border:1px solid rgba(124,106,247,0.3)!important;
+  }
+  /* Right rail — clean 2-col gallery (no overlap; tight rounded gaps) */
+  #studioGenerateView #imageGenEmptyState .studio-empty-rail{
+    position:sticky!important;
+    top:calc(64px + env(safe-area-inset-top, 0px))!important;
+    align-self:start!important;
+    width:100%!important;
+    /* Definite height so the feed can overflow + auto-scroll (max-height alone is not enough) */
+    height:min(62vh,540px)!important;
+    max-height:calc(100vh - 200px)!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    min-width:0!important;
+    padding:2px 2px 8px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-head{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+    padding:0 2px!important;
+    flex-shrink:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-title{
+    font-family:'Syne',sans-serif!important;
+    font-size:13px!important;
+    font-weight:800!important;
+    color:rgba(255,255,255,0.88)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-more{
+    border:none!important;
+    background:transparent!important;
+    color:rgba(180,180,200,0.55)!important;
+    font-size:11.5px!important;
+    font-weight:600!important;
+    cursor:pointer!important;
+    font-family:inherit!important;
+    padding:4px 6px!important;
+    border-radius:8px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-more:hover{
+    color:#fff!important;
+    background:rgba(255,255,255,0.06)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-feed{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    height:0!important;
+    /* overflow hidden — motion is transform only (scrollTop caused phase flash) */
+    overflow:hidden!important;
+    position:relative!important;
+    display:block!important;
+    /* permanent 6px right inset for fake scrollbar — tiles never shrink */
+    padding:0 6px 0 0!important;
+    box-sizing:border-box!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-fakebar{
+    position:absolute!important;
+    top:4px!important;right:0!important;bottom:4px!important;
+    width:6px!important;
+    pointer-events:none!important;
+  }
+  /* Inner track — two copies for loop. Transform is set by JS (no !important — that killed auto-scroll). */
+  #studioGenerateView #imageGenEmptyState .studio-rail-marquee{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    flex-direction:row!important;
+    align-content:flex-start!important;
+    align-items:flex-start!important;
+    justify-content:flex-start!important;
+    gap:10px 8px!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+    backface-visibility:hidden!important;
+    -webkit-backface-visibility:hidden!important;
+  }
+  /* Two per row; explicit pixel height = real layout space between rows */
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile{
+    position:relative!important;
+    display:block!important;
+    box-sizing:border-box!important;
+    width:calc(50% - 4px)!important;
+    flex:0 0 calc(50% - 4px)!important;
+    height:148px!important;
+    min-height:148px!important;
+    max-height:148px!important;
+    margin:0!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    border-radius:14px!important;
+    overflow:hidden!important;
+    background:#1c1c24!important;
+    cursor:pointer!important;
+    font:inherit!important;
+    color:inherit!important;
+    box-shadow:none!important;
+    transform:translateZ(0)!important;
+    backface-visibility:hidden!important;
+    appearance:none!important;
+    -webkit-appearance:none!important;
+    line-height:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile:hover{
+    border-color:rgba(255,255,255,0.2)!important;
+    /* no filter: — filter causes paint thrash / “phase flash” */
+  }
+  /* Drop the extra frame wrapper styles — img is direct + in-flow cover */
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile-frame{
+    display:block!important;
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    margin:0!important;
+    padding:0!important;
+    border:none!important;
+    border-radius:0!important;
+    overflow:hidden!important;
+    background:transparent!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile img,
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile-frame img{
+    position:absolute!important;
+    top:0!important;left:0!important;
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    display:block!important;
+    margin:0!important;
+    border:none!important;
+    pointer-events:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile-cap{
+    position:absolute!important;left:0!important;right:0!important;bottom:0!important;
+    padding:14px 8px 7px!important;
+    background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.58) 100%)!important;
+    font-size:10px!important;font-weight:650!important;
+    line-height:1.2!important;
+    color:rgba(255,255,255,0.9)!important;
+    text-align:left!important;
+    pointer-events:none!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+    z-index:2!important;
+    box-sizing:border-box!important;
+  }
+  @media(max-width:1100px){
+    #studioGenerateView #imageGenEmptyState .studio-empty-stage{
+      grid-template-columns:minmax(0,1fr) minmax(220px,270px)!important;
+      gap:0 14px!important;
+      padding:8px 12px 0 14px!important;
+    }
+    #studioGenerateView #imageGenEmptyState .studio-new-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  }
+  @media(max-width:980px){
+    #studioGenerateView #imageGenEmptyState .studio-feat-card{
+      width:200px!important;min-width:200px!important;max-width:200px!important;
+      flex:0 0 200px!important;height:136px!important;min-height:136px!important;max-height:136px!important;
+    }
+  }
+  @media(max-width:900px) and (min-width:769px){
+    #studioGenerateView #imageGenEmptyState .studio-empty-stage{
+      grid-template-columns:1fr!important;
+    }
+    #studioGenerateView #imageGenEmptyState .studio-empty-rail{
+      position:relative!important;
+      top:auto!important;
+      max-height:none!important;
+    }
+    #studioGenerateView #imageGenEmptyState .studio-rail-feed{
+      max-height:300px!important;
+    }
+    #studioGenerateView #imageGenEmptyState .studio-rail-tile{
+      width:calc(25% - 6px)!important;
+      flex:0 0 calc(25% - 6px)!important;
+      height:120px!important;
+      min-height:120px!important;
+      max-height:120px!important;
+    }
+    #studioGenerateView #imageGenEmptyState .studio-apps-grid{grid-template-columns:1fr!important;}
+  }
+  /* ── PC floating dock — Krea-style stack (tool pill + prompt card) ── */
+  #studioGenerateView .studioBottomBar{
+    left:50%!important;
+    right:auto!important;
+    transform:translateX(-50%)!important;
+    width:min(560px,calc(100vw - 80px))!important;
+    bottom:26px!important;
+    padding:0!important;
+    gap:10px!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    border:none!important;
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
+  }
+  /* Hide mobile-only gear; tools live in the Krea pill */
+  #studioGenerateView .studioDockGearMobile{display:none!important;}
+  #studioGenerateView .studioDockTools{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:2px!important;
+    padding:5px 7px!important;
+    border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    background:rgba(18,18,22,0.82)!important;
+    backdrop-filter:blur(22px) saturate(150%)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
+    box-shadow:0 10px 32px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.04) inset!important;
+  }
+  #studioGenerateView .studioDockToolBtn{
+    width:34px!important;
+    height:34px!important;
+    border-radius:50%!important;
+    border:none!important;
+    background:transparent!important;
+    color:rgba(220,220,230,0.72)!important;
+    cursor:pointer!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    font-size:14px!important;
+    padding:0!important;
+    transition:background .15s,color .15s!important;
+  }
+  #studioGenerateView .studioDockToolBtn:hover{
+    background:rgba(255,255,255,0.08)!important;
+    color:#fff!important;
+  }
+  #studioGenerateView .studioDockToolBtn svg{
+    display:block!important;
+    width:14px!important;
+    height:14px!important;
+  }
+  /* Prompt card — same frosted language as mobile input pill */
+  #studioGenerateView .studioDockCard{
+    width:100%!important;
+    flex:none!important;
+    gap:8px!important;
+    padding:10px 10px 10px 16px!important;
+    border-radius:20px!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    background:rgba(16,16,20,0.88)!important;
+    backdrop-filter:blur(24px) saturate(160%)!important;
+    -webkit-backdrop-filter:blur(24px) saturate(160%)!important;
+    box-shadow:0 14px 40px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.04) inset!important;
+  }
+  #studioGenerateView .studioDockPromptRow{
+    min-height:36px!important;
+  }
+  #studioGenerateView .studioBottomBar input#imageGenPrompt{
+    font-size:14px!important;
+  }
+  #studioGenerateView .studioBottomBar #imageGenSubmitBtn{
+    width:34px!important;
+    height:34px!important;
+    background:rgba(255,255,255,0.1)!important;
+    border:1px solid rgba(255,255,255,0.16)!important;
+    color:#fff!important;
+  }
+  html[data-theme="trueblack"] #studioGenerateView .studioBottomBar #imageGenSubmitBtn,
+  html[data-theme="pitchblack"] #studioGenerateView .studioBottomBar #imageGenSubmitBtn{
+    background:rgba(255,255,255,0.12)!important;
+    border-color:rgba(255,255,255,0.18)!important;
+    color:#fff!important;
+  }
+  /* Meta chips row under prompt (Krea-style) */
+  #studioGenerateView .studioDockMeta{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:6px!important;
+    padding:0 4px 2px!important;
+  }
+  #studioGenerateView .studioDockChip{
+    display:inline-flex!important;
+    align-items:center!important;
+    gap:4px!important;
+    padding:5px 10px!important;
+    border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    background:rgba(255,255,255,0.05)!important;
+    color:rgba(220,220,230,0.78)!important;
+    font-family:'DM Sans',sans-serif!important;
+    font-size:11.5px!important;
+    font-weight:600!important;
+    cursor:pointer!important;
+    transition:background .15s,border-color .15s,color .15s!important;
+  }
+  #studioGenerateView .studioDockChip:hover{
+    background:rgba(255,255,255,0.1)!important;
+    border-color:rgba(255,255,255,0.18)!important;
+    color:#fff!important;
+  }
+  /* Hide compact mobile empty copy on PC (hero is the landing) */
+  #studioGenerateView #imageGenEmptyState .studio-empty-mobile-fallback{display:none!important;}
 }
+/* Mobile: keep original compact empty copy + original dock chrome; hide PC-only pieces */
+@media(max-width:768px){
+  #studioGenerateView #imageGenEmptyState .studio-empty-stage,
+  #studioGenerateView #imageGenEmptyState .studio-empty-main,
+  #studioGenerateView #imageGenEmptyState .studio-empty-rail,
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero-wrap,
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero,
+  #studioGenerateView #imageGenEmptyState .studio-empty-sub,
+  #studioGenerateView #imageGenEmptyState .studio-empty-chips,
+  #studioGenerateView #imageGenEmptyState .studio-land-section{display:none!important;}
+  #studioGenerateView #imageGenEmptyState .studio-empty-mobile-fallback{display:block!important;}
+  #studioGenerateView #imageGenEmptyState{
+    justify-content:center!important;
+    align-items:center!important;
+    text-align:center!important;
+    padding:40px 20px 100px!important;
+    height:auto!important;
+    min-height:260px!important;
+  }
+  #studioGenerateView .studioDockTools,
+  #studioGenerateView .studioDockMeta{display:none!important;}
+  #studioGenerateView .studioDockGearMobile{display:flex!important;}
+  #studioGenerateView .studioDockCard{
+    /* same glass as original mobile input shell */
+    background:rgba(255,255,255,0.06)!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    border-radius:22px!important;
+    padding:6px 6px 6px 14px!important;
+    gap:0!important;
+  }
+}
+/* Default (before media): hide PC-only tools until wide */
+.studioDockTools,
+.studioDockMeta{display:none;}
+.studioDockGearMobile{display:flex;}
 #studioResetBtn .studio-reset-glyph{
   display:flex!important;
   align-items:center!important;
@@ -4931,6 +5776,80 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 @keyframes cgWaveArm{0%,100%{transform:rotate(0deg);}20%{transform:rotate(-35deg);}40%{transform:rotate(20deg);}60%{transform:rotate(-25deg);}80%{transform:rotate(10deg);}}
 @keyframes cgEyeBlink{0%,90%,100%{transform:scaleY(1);}95%{transform:scaleY(0.1);}}
 @keyframes cgGlow{0%,100%{box-shadow:0 0 12px rgba(124,106,247,0.4);}50%{box-shadow:0 0 24px rgba(124,106,247,0.7);}}
+@keyframes cgGlowTB{0%,100%{box-shadow:0 0 8px rgba(255,255,255,0.25);}50%{box-shadow:0 0 16px rgba(255,255,255,0.45);}}
+/* True Black: welcome-back toast + global #toast — OLED glass, no purple */
+html[data-theme="trueblack"] #toast{
+  background:rgba(10,10,12,0.92)!important;
+  border-color:rgba(255,255,255,0.12)!important;
+  color:rgba(255,255,255,0.92)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.06)!important;
+}
+html[data-theme="trueblack"] #cyberGreeting .cg-bubble{
+  background:rgba(8,8,10,0.92)!important;
+  border-color:rgba(255,255,255,0.12)!important;
+  box-shadow:0 8px 32px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.04)!important;
+}
+html[data-theme="trueblack"] #cyberGreeting .cg-tag{color:rgba(255,255,255,0.4)!important;}
+html[data-theme="trueblack"] #cyberGreeting .cg-name{color:#ffffff!important;}
+html[data-theme="trueblack"] #cyberGreeting .cg-msg{color:rgba(255,255,255,0.5)!important;}
+html[data-theme="trueblack"] #cyberGreeting .cg-dot{
+  background:rgba(255,255,255,0.85)!important;
+  box-shadow:0 0 6px rgba(255,255,255,0.45)!important;
+  animation:cgGlowTB 2s ease-in-out infinite!important;
+}
+/* True Black: notes tray icon — neutral white when selected (no purple wash) */
+html[data-theme="trueblack"] #bnavNotesBtn:hover{background:rgba(255,255,255,0.035)!important;}
+html[data-theme="trueblack"] #bnavNotesBtn.active{background:rgba(255,255,255,0.055)!important;}
+html[data-theme="trueblack"] #bnavNotesBtn.active svg{stroke:rgba(210,210,220,0.82)!important;}
+/* Ask / Pulse / Studio / Call: no active plate — icon stroke only (default CSS) */
+/* True Black: Notes page chrome — pure black panels, white/grey controls */
+html[data-theme="trueblack"] #nbCol1,
+html[data-theme="trueblack"] #nbCol2{
+  background:#000000!important;
+  border-right-color:rgba(255,255,255,0.08)!important;
+}
+html[data-theme="trueblack"] #nbCol1 > div:first-child,
+html[data-theme="trueblack"] #nbCol2 > div:first-child,
+html[data-theme="trueblack"] #notesTopBar{
+  border-bottom-color:rgba(255,255,255,0.08)!important;
+}
+html[data-theme="trueblack"] #nbCol1 > div:first-child span,
+html[data-theme="trueblack"] #nbPagesLabel{color:rgba(255,255,255,0.35)!important;}
+html[data-theme="trueblack"] #nbCol1 > div:first-child button,
+html[data-theme="trueblack"] #nbAddPageBtn,
+html[data-theme="trueblack"] #sec-notes .nb-mobile-back{
+  background:rgba(255,255,255,0.06)!important;
+  border-color:rgba(255,255,255,0.14)!important;
+  color:rgba(255,255,255,0.75)!important;
+}
+html[data-theme="trueblack"] #sec-notes > div:last-child,
+html[data-theme="trueblack"] #notesEditorWrap{background:#000000!important;}
+html[data-theme="trueblack"] #notesPageTitle{color:rgba(255,255,255,0.92)!important;caret-color:#ffffff!important;}
+html[data-theme="trueblack"] #notesEditor{color:rgba(255,255,255,0.88)!important;caret-color:#ffffff!important;}
+html[data-theme="trueblack"] #notesSaveIndicator{color:rgba(255,255,255,0.35)!important;}
+html[data-theme="trueblack"] #nbFormatBar button{color:rgba(255,255,255,0.45)!important;}
+html[data-theme="trueblack"] #nbFormatBar button:hover{color:#ffffff!important;}
+html[data-theme="trueblack"] #nbFormatBar span{background:rgba(255,255,255,0.12)!important;}
+html[data-theme="trueblack"] #nbNotebookList,
+html[data-theme="trueblack"] #nbPageList{
+  scrollbar-color:rgba(255,255,255,0.12) transparent!important;
+}
+html[data-theme="trueblack"] #nbQuickPopup{
+  background:#0a0a0a!important;
+  border-color:rgba(255,255,255,0.12)!important;
+}
+html[data-theme="trueblack"] #nbQuickPopup input,
+html[data-theme="trueblack"] #nbQuickPopup textarea,
+html[data-theme="trueblack"] #nbQuickPopup select{
+  background:rgba(255,255,255,0.04)!important;
+  border-color:rgba(255,255,255,0.12)!important;
+  color:rgba(255,255,255,0.9)!important;
+}
+html[data-theme="trueblack"] #nbQuickPopup button[onclick*="saveQuickNotePopup"]{
+  background:rgba(255,255,255,0.1)!important;
+  border-color:rgba(255,255,255,0.22)!important;
+  color:#ffffff!important;
+}
 </style>
 <style id="robotTooltipCSS">
 #robotTooltip{position:fixed;bottom:24px;right:24px;z-index:88888;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;transition:opacity .25s ease,transform .25s ease;}
@@ -4948,6 +5867,16 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
   pointer-events:none!important;
 }
 /* Terminal open: kill toast completely — no re-hover, no backdrop fog under glass */
+/* Studio open: never show SynBot (corner bot, roam canvas, or chat) even if toggle is on */
+body.studio-open #robotTooltip,
+body.studio-open #tinyBotCanvas,
+body.studio-open #synBotChat,
+body.studio-open #synBotRephrasePopup{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
 body.synbot-terminal-open #robotTooltip,
 body.synbot-terminal-open #robotTooltip #rtBubble,
 body.synbot-terminal-open #robotTooltip #rtRobot,
@@ -5017,6 +5946,14 @@ html[data-theme="trueblack"] #chatBeamsWrap,html[data-theme="trueblack"] #chatBe
 }
 html[data-theme="trueblack"].deep-space-on #deepSpaceLayer{opacity:1;}
 #deepSpaceLayer canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}
+/* Studio's Generate tab: the deep-space aurora layer gets reparented inside the
+   modal (see _studioMountDeepSpace/_studioUnmountDeepSpace in JS) rather than
+   the modal being made transparent — a transparent modal exposed whatever page
+   was open underneath (chat, sidebar, etc.), not just the intended aurora. */
+#imageGenModal #deepSpaceLayer{
+  position:absolute!important;
+  z-index:0!important;
+}
 /* Very light edge falloff only — full-screen field, not a cockpit slit */
 #deepSpaceVignette{
   position:absolute;inset:0;pointer-events:none;
@@ -6025,6 +6962,47 @@ window.getWebAudioNode = getWebAudioNode;
 })();
 </script>
 <!-- ═══ SPLASH SCREEN ═══ -->
+<style id="appSplashCSS">
+/* True Black splash — deep-space void + soft cool greys (not bright white) */
+html[data-theme="trueblack"] #appSplash,
+html[data-theme="pitchblack"] #appSplash{background:#010103!important;}
+html[data-theme="trueblack"] #appSplash .sp-glyph,
+html[data-theme="pitchblack"] #appSplash .sp-glyph{color:rgba(150,165,200,0.14)!important;}
+html[data-theme="trueblack"] #appSplash .sp-ring-1,
+html[data-theme="pitchblack"] #appSplash .sp-ring-1{
+  border-color:rgba(150,165,200,0.07)!important;
+  border-top-color:rgba(180,195,220,0.28)!important;
+}
+html[data-theme="trueblack"] #appSplash .sp-ring-2,
+html[data-theme="pitchblack"] #appSplash .sp-ring-2{
+  border-color:rgba(150,165,200,0.05)!important;
+  border-right-color:rgba(170,185,215,0.22)!important;
+}
+html[data-theme="trueblack"] #appSplash .sp-ring-3,
+html[data-theme="pitchblack"] #appSplash .sp-ring-3{
+  border-color:rgba(150,165,200,0.04)!important;
+  border-bottom-color:rgba(150,165,200,0.16)!important;
+}
+html[data-theme="trueblack"] #appSplash .sp-node-dot,
+html[data-theme="pitchblack"] #appSplash .sp-node-dot{
+  background:rgba(180,195,220,0.4)!important;
+  box-shadow:0 0 8px rgba(150,165,200,0.18)!important;
+}
+html[data-theme="trueblack"] #appSplash .sp-node-soft .sp-node-dot,
+html[data-theme="pitchblack"] #appSplash .sp-node-soft .sp-node-dot{
+  background:rgba(150,165,200,0.22)!important;
+  box-shadow:0 0 6px rgba(150,165,200,0.12)!important;
+}
+html[data-theme="trueblack"] #appSplash .sp-core,
+html[data-theme="pitchblack"] #appSplash .sp-core{
+  background:radial-gradient(circle,rgba(200,210,230,0.32) 0%,rgba(150,165,200,0.12) 48%,transparent 72%)!important;
+  box-shadow:0 0 28px rgba(150,165,200,0.12),0 0 56px rgba(120,140,180,0.06),inset 0 0 18px rgba(180,195,220,0.06)!important;
+}
+html[data-theme="trueblack"] #appSplash #splashBar,
+html[data-theme="pitchblack"] #appSplash #splashBar{
+  background:linear-gradient(90deg,rgba(150,165,200,0.15),rgba(180,195,220,0.42),rgba(150,165,200,0.18))!important;
+}
+</style>
 <div id="appSplash" style="position:fixed;inset:0;z-index:999999;background:#0c0c17;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:opacity 0.5s ease;pointer-events:all;">
 
   <!-- Layer 1: Beam canvas (login anim) -->
@@ -6033,23 +7011,23 @@ window.getWebAudioNode = getWebAudioNode;
   <canvas id="splashDotCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
 
   <!-- Layer 3: Ambient glyphs -->
-  <div style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);top:12%;left:8%;animation:glyphFlicker 7s ease-in-out infinite;pointer-events:none;">01001110</div>
-  <div style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);top:18%;right:10%;animation:glyphFlicker 9s ease-in-out infinite 2s;pointer-events:none;">SYNAPSES</div>
-  <div style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);bottom:20%;left:9%;animation:glyphFlicker 11s ease-in-out infinite 4s;pointer-events:none;">∇ NEURAL</div>
-  <div style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);bottom:16%;right:8%;animation:glyphFlicker 8s ease-in-out infinite 1s;pointer-events:none;">◈ READY</div>
+  <div class="sp-glyph" style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);top:12%;left:8%;animation:glyphFlicker 7s ease-in-out infinite;pointer-events:none;">01001110</div>
+  <div class="sp-glyph" style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);top:18%;right:10%;animation:glyphFlicker 9s ease-in-out infinite 2s;pointer-events:none;">SYNAPSES</div>
+  <div class="sp-glyph" style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);bottom:20%;left:9%;animation:glyphFlicker 11s ease-in-out infinite 4s;pointer-events:none;">∇ NEURAL</div>
+  <div class="sp-glyph" style="position:absolute;font-family:monospace;font-size:11px;color:rgba(124,106,247,0.15);bottom:16%;right:8%;animation:glyphFlicker 8s ease-in-out infinite 1s;pointer-events:none;">◈ READY</div>
 
   <!-- Layer 4: Orbital rings + nodes (new chat anim) — scaled up -->
   <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:340px;height:340px;pointer-events:none;">
     <!-- Rings -->
-    <div style="position:absolute;top:50%;left:50%;width:200px;height:200px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(124,106,247,0.55);border-color:rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.55);transform:translate(-50%,-50%);animation:ringRotate 4s linear infinite;"></div>
-    <div style="position:absolute;top:50%;left:50%;width:270px;height:270px;border-radius:50%;border:1px solid transparent;border-color:rgba(0,217,168,0.1);border-right-color:rgba(0,217,168,0.45);transform:translate(-50%,-50%);animation:ringRotateCCW 6s linear infinite;"></div>
-    <div style="position:absolute;top:50%;left:50%;width:338px;height:338px;border-radius:50%;border:1px solid transparent;border-color:rgba(99,102,241,0.07);border-bottom-color:rgba(99,102,241,0.3);transform:translate(-50%,-50%);animation:ringRotate 10s linear infinite;"></div>
+    <div class="sp-ring-1" style="position:absolute;top:50%;left:50%;width:200px;height:200px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(124,106,247,0.55);border-color:rgba(124,106,247,0.15);border-top-color:rgba(124,106,247,0.55);transform:translate(-50%,-50%);animation:ringRotate 4s linear infinite;"></div>
+    <div class="sp-ring-2" style="position:absolute;top:50%;left:50%;width:270px;height:270px;border-radius:50%;border:1px solid transparent;border-color:rgba(0,217,168,0.1);border-right-color:rgba(0,217,168,0.45);transform:translate(-50%,-50%);animation:ringRotateCCW 6s linear infinite;"></div>
+    <div class="sp-ring-3" style="position:absolute;top:50%;left:50%;width:338px;height:338px;border-radius:50%;border:1px solid transparent;border-color:rgba(99,102,241,0.07);border-bottom-color:rgba(99,102,241,0.3);transform:translate(-50%,-50%);animation:ringRotate 10s linear infinite;"></div>
     <!-- Orbiting nodes -->
-    <div style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:100px;--dur:4s;--col:#7c6af7;--pdur:2.2s;animation:synapseOrbit var(--dur) linear infinite;"><div style="width:8px;height:8px;border-radius:50%;background:#7c6af7;box-shadow:0 0 10px #7c6af7;animation:synapseNodePulse 2.2s ease-in-out infinite;"></div></div>
-    <div style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:135px;--dur:7s;--col:#00d9a8;--pdur:3s;animation:synapseOrbit var(--dur) linear infinite -3s;"><div style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 10px #00d9a8;animation:synapseNodePulse 3s ease-in-out infinite;"></div></div>
-    <div style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:169px;--dur:10s;--col:#6366f1;--pdur:2.8s;animation:synapseOrbit var(--dur) linear infinite -6s;"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px #6366f1;animation:synapseNodePulse 2.8s ease-in-out infinite;"></div></div>
+    <div style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:100px;--dur:4s;--col:#7c6af7;--pdur:2.2s;animation:synapseOrbit var(--dur) linear infinite;"><div class="sp-node-dot" style="width:8px;height:8px;border-radius:50%;background:#7c6af7;box-shadow:0 0 10px #7c6af7;animation:synapseNodePulse 2.2s ease-in-out infinite;"></div></div>
+    <div class="sp-node-soft" style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:135px;--dur:7s;--col:#00d9a8;--pdur:3s;animation:synapseOrbit var(--dur) linear infinite -3s;"><div class="sp-node-dot" style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 10px #00d9a8;animation:synapseNodePulse 3s ease-in-out infinite;"></div></div>
+    <div style="position:absolute;width:8px;height:8px;border-radius:50%;top:50%;left:50%;margin:-4px 0 0 -4px;--r:169px;--dur:10s;--col:#6366f1;--pdur:2.8s;animation:synapseOrbit var(--dur) linear infinite -6s;"><div class="sp-node-dot" style="width:8px;height:8px;border-radius:50%;background:#6366f1;box-shadow:0 0 10px #6366f1;animation:synapseNodePulse 2.8s ease-in-out infinite;"></div></div>
     <!-- Core -->
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:radial-gradient(circle,rgba(124,106,247,0.9) 0%,rgba(99,102,241,0.4) 50%,transparent 70%);box-shadow:0 0 40px rgba(124,106,247,0.5),0 0 80px rgba(124,106,247,0.2),inset 0 0 24px rgba(255,255,255,0.1);animation:synapseNodePulse 3s ease-in-out infinite;"></div>
+    <div class="sp-core" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:radial-gradient(circle,rgba(124,106,247,0.9) 0%,rgba(99,102,241,0.4) 50%,transparent 70%);box-shadow:0 0 40px rgba(124,106,247,0.5),0 0 80px rgba(124,106,247,0.2),inset 0 0 24px rgba(255,255,255,0.1);animation:synapseNodePulse 3s ease-in-out infinite;"></div>
   </div>
 
   <!-- Layer 5: Logo + name -->
@@ -6063,6 +7041,22 @@ window.getWebAudioNode = getWebAudioNode;
 
 <script>
 (function(){
+  /* Splash always plays on every load — same as the pre-studio-layout backup.
+     A previous change made this skip itself for 4 hours after first showing
+     in order to stop it replaying on every refresh, but the splash is also
+     what covers the page's ~7s of unavoidable main-thread boot work (heavy
+     inline JS parse/exec + canvas animations). Skipping it just exposed that
+     work as visible flashing/jumping header elements instead of hiding it
+     behind the splash like it always used to. Always showing it trades a
+     splash-on-every-refresh for a page that never looks broken while it boots. */
+
+  /* Theme already set on <html> in head — True Black = mono OLED splash palette */
+  var _tb = false;
+  try {
+    var th = document.documentElement.getAttribute('data-theme') || localStorage.getItem('_appTheme') || 'trueblack';
+    _tb = (th === 'trueblack' || th === 'pitchblack');
+  } catch(_e){}
+
   // ── Beam canvas (login-style) ──
   var bc = document.getElementById('splashBeamCanvas');
   var bctx = bc.getContext('2d');
@@ -6070,24 +7064,50 @@ window.getWebAudioNode = getWebAudioNode;
   function resizeBeams(){
     var dpr=window.devicePixelRatio||1, w=window.innerWidth, h=window.innerHeight;
     bc.width=w*dpr; bc.height=h*dpr; bc.style.width=w+'px'; bc.style.height=h+'px';
-    bctx.scale(dpr,dpr);
-    beams = Array.from({length:14},function(){ return mkBeam(w,h); });
+    bctx.setTransform(dpr,0,0,dpr,0,0);
+    beams = Array.from({length:_tb ? 10 : 14},function(){ return mkBeam(w,h); });
   }
-  function mkBeam(w,h){ return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:40+Math.random()*80,length:h*2.5,angle:-35+Math.random()*10,speed:0.5+Math.random()*1,opacity:0.1+Math.random()*0.14,hue:190+Math.random()*80,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03}; }
-  function rstBeam(b){var w=window.innerWidth,h=window.innerHeight;b.y=h+100;b.x=Math.random()*w;b.speed=0.4+Math.random()*0.5;b.hue=190+Math.random()*80;b.opacity=0.1+Math.random()*0.12;}
+  function mkBeam(w,h){
+    return{
+      x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,
+      width:40+Math.random()*80,length:h*2.5,angle:-35+Math.random()*10,
+      speed:0.5+Math.random()*1,
+      opacity:(_tb?0.025:0.1)+Math.random()*(_tb?0.035:0.14),
+      hue:_tb?0:(190+Math.random()*80),
+      pulse:Math.random()*Math.PI*2,
+      pulseSpeed:0.02+Math.random()*0.03
+    };
+  }
+  function rstBeam(b){
+    var w=window.innerWidth,h=window.innerHeight;
+    b.y=h+100;b.x=Math.random()*w;b.speed=0.4+Math.random()*0.5;
+    b.hue=_tb?0:(190+Math.random()*80);
+    b.opacity=(_tb?0.025:0.1)+Math.random()*(_tb?0.03:0.12);
+  }
   function animBeams(){
     var w=window.innerWidth,h=window.innerHeight;
-    bctx.clearRect(0,0,w,h); bctx.filter='blur(38px)';
+    /* Solid plate first so nothing films through from under the splash */
+    bctx.fillStyle=_tb?'#010103':'#0c0c17';
+    bctx.fillRect(0,0,w,h);
+    bctx.filter=_tb?'blur(32px)':'blur(38px)';
     beams.forEach(function(b){
       b.y-=b.speed; b.pulse+=b.pulseSpeed;
       if(b.y+b.length<-100) rstBeam(b);
       bctx.save(); bctx.translate(b.x,b.y); bctx.rotate(b.angle*Math.PI/180);
       var op=b.opacity*(0.8+Math.sin(b.pulse)*0.2);
       var g=bctx.createLinearGradient(0,0,0,b.length);
-      g.addColorStop(0,'hsla('+b.hue+',85%,65%,0)');
-      g.addColorStop(0.3,'hsla('+b.hue+',85%,65%,'+op+')');
-      g.addColorStop(0.7,'hsla('+b.hue+',85%,65%,'+op+')');
-      g.addColorStop(1,'hsla('+b.hue+',85%,65%,0)');
+      if(_tb){
+        /* Soft cool grey — same family as deep-space stars, not pure white */
+        g.addColorStop(0,'rgba(150,165,200,0)');
+        g.addColorStop(0.3,'rgba(170,185,215,'+op+')');
+        g.addColorStop(0.7,'rgba(150,165,200,'+op+')');
+        g.addColorStop(1,'rgba(150,165,200,0)');
+      } else {
+        g.addColorStop(0,'hsla('+b.hue+',85%,65%,0)');
+        g.addColorStop(0.3,'hsla('+b.hue+',85%,65%,'+op+')');
+        g.addColorStop(0.7,'hsla('+b.hue+',85%,65%,'+op+')');
+        g.addColorStop(1,'hsla('+b.hue+',85%,65%,0)');
+      }
       bctx.fillStyle=g; bctx.fillRect(-b.width/2,0,b.width,b.length);
       bctx.restore();
     });
@@ -6100,8 +7120,27 @@ window.getWebAudioNode = getWebAudioNode;
   var dc = document.getElementById('splashDotCanvas');
   var dctx = dc.getContext('2d');
   var pts = [], pw, ph;
-  var COLS=['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7','#00d9a8'];
-  function resizeDots(){pw=dc.width=window.innerWidth;ph=dc.height=window.innerHeight;pts=[];for(var i=0;i<70;i++)pts.push({x:Math.random()*pw,y:Math.random()*ph,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.8+0.8,col:COLS[Math.floor(Math.random()*COLS.length)],a:Math.random()*.2+.06});}
+  /* TB: deep-space star greys (dim), not bright UI white */
+  var COLS = _tb
+    ? ['rgba(170,185,215,0.28)','rgba(150,165,200,0.2)','rgba(200,210,230,0.18)','rgba(130,145,175,0.16)']
+    : ['#6366f1','#818cf8','#4f46e5','#a5b4fc','#7c6af7','#00d9a8'];
+  var LINK = _tb ? 'rgba(150,165,200,0.12)' : '#7c6af7';
+  function resizeDots(){
+    pw=window.innerWidth; ph=window.innerHeight;
+    var dpr=window.devicePixelRatio||1;
+    dc.width=Math.floor(pw*dpr); dc.height=Math.floor(ph*dpr);
+    dc.style.width=pw+'px'; dc.style.height=ph+'px';
+    dctx.setTransform(dpr,0,0,dpr,0,0);
+    pts=[];
+    var n=_tb?48:70;
+    for(var i=0;i<n;i++)pts.push({
+      x:Math.random()*pw,y:Math.random()*ph,
+      vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,
+      r:Math.random()*1.8+0.8,
+      col:COLS[Math.floor(Math.random()*COLS.length)],
+      a:Math.random()*(_tb?0.08:0.2)+(_tb?0.03:0.06)
+    });
+  }
   function animDots(){
     dctx.clearRect(0,0,pw,ph);
     pts.forEach(function(p){
@@ -6110,8 +7149,8 @@ window.getWebAudioNode = getWebAudioNode;
       dctx.beginPath(); dctx.arc(p.x,p.y,p.r,0,Math.PI*2);
       dctx.fillStyle=p.col; dctx.globalAlpha=p.a; dctx.fill();
     });
-    dctx.globalAlpha=.08;
-    pts.forEach(function(p,i){pts.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<110){dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.lineTo(q.x,q.y);dctx.strokeStyle='#7c6af7';dctx.lineWidth=.5;dctx.stroke();}});});
+    dctx.globalAlpha=_tb?0.035:0.08;
+    pts.forEach(function(p,i){pts.slice(i+1).forEach(function(q){var d=Math.hypot(p.x-q.x,p.y-q.y);if(d<110){dctx.beginPath();dctx.moveTo(p.x,p.y);dctx.lineTo(q.x,q.y);dctx.strokeStyle=LINK;dctx.lineWidth=.5;dctx.stroke();}});});
     dctx.globalAlpha=1;
     if(!window._splashDone) requestAnimationFrame(animDots);
   }
@@ -6144,8 +7183,6 @@ window.getWebAudioNode = getWebAudioNode;
 })();
 </script>
 <div id="right-edge-blocker" onmousedown="event.preventDefault();event.stopPropagation();" onmouseup="event.preventDefault();event.stopPropagation();" onclick="event.preventDefault();event.stopPropagation();"></div>
-
-</div>
 
 <!-- Auth Modal -->
 <div class="modal-overlay" id="authModal" style="display:none;">
@@ -6477,7 +7514,7 @@ window.getWebAudioNode = getWebAudioNode;
         <div style="font-size:9px;color:#6b6b9a;letter-spacing:.28em;text-transform:uppercase;">NETWORK</div>
       </div>
     </div>
-    <button class="new-chat-btn" onclick="newChat()">
+    <button class="new-chat-btn" onclick="newChat({forceAsk:true})">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Chat
     </button>
     <div class="cat-nav">
@@ -6553,7 +7590,7 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
     
     <div class="icon-rail-divider" style="margin-top:9px;"></div>
-    <button class="icon-rail-btn" onclick="newChat()" title="New Chat" style="margin-bottom:2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="rail-tooltip">New Chat</span></button>
+    <button class="icon-rail-btn" onclick="newChat({forceAsk:true})" title="New Chat" style="margin-bottom:2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="rail-tooltip">New Chat</span></button>
     <div class="icon-rail-divider"></div>
     <div id="iconRailCollapsible" style="overflow:hidden;transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.3s ease;max-height:400px;opacity:1;">
       <div id="iconRailDynamic"></div>
@@ -6984,7 +8021,7 @@ window.getWebAudioNode = getWebAudioNode;
   function ensureControlCentre(){
     if(document.getElementById('bnavCCBackdrop')) return;
     var navItems = [
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat', fn:function(){ if(typeof newChat==='function') newChat(); }},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat', fn:function(){ if(typeof newChat==='function') newChat({forceAsk:true}); }},
       {icon:'🏠', label:'Home', fn:function(){ if(typeof goHome==='function') goHome(); }},
       {icon:'📡', label:'Builder Hub', fn:function(){ if(typeof goHub==='function') goHub('feed'); }},
       {icon:'🌿', label:'Health AI', fn:function(){ if(typeof goHuman==='function') goHuman(); }},
@@ -7128,7 +8165,7 @@ window.getWebAudioNode = getWebAudioNode;
       el.addEventListener('click', function(e){
         e.stopPropagation();
         closeControlCentre();
-        if(typeof newChat==='function') newChat();
+        if(typeof newChat==='function') newChat({forceAsk:true});
       });
     });
     panel.querySelectorAll('[data-open-notes]').forEach(function(el){
@@ -7351,7 +8388,12 @@ window.getWebAudioNode = getWebAudioNode;
 
   <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
   <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
-    <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
+    <div id="studioTopBarLeft" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
+      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Studio home" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+      </button>
+    </div>
     <div id="studioTopBarTitle">Studio</div>
     <div id="studioTopBarActions" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button type="button" id="studioCommunityGlassBtn" onclick="switchStudioTab('community')" title="Community" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
@@ -7641,15 +8683,35 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
 
     <!-- Bottom input bar — floats over the full-screen grid like the header does up top.
-         Bar-level frosted background is desktop-only (.studioBottomBar CSS media query);
-         on mobile it's fully transparent so just the buttons float over the grid. The
-         buttons themselves keep their frosted glass look on both. -->
+         Mobile: transparent bar + gear circle + glass prompt (unchanged look).
+         PC: Krea-style floating stack (tool pill + prompt card). -->
     <div class="studioBottomBar" style="position:absolute;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));">
-      <button onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
-      <div style="flex:1;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;min-width:0;">
-        <span class="ig-mode-chip" id="igVideoModeChip" aria-hidden="true">▶ Video</span>
-        <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
-        <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
+      <!-- PC tool strip (Krea-style icon pill); mobile uses the single gear below -->
+      <div class="studioDockTools" aria-label="Studio tools">
+        <button type="button" class="studioDockToolBtn" onclick="toggleImageGenSettingsSheet()" title="Generation settings" aria-label="Settings">⚙️</button>
+        <button type="button" class="studioDockToolBtn" onclick="toggleImageGenTemplateRow()" title="Style templates" aria-label="Styles">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <button type="button" class="studioDockToolBtn" onclick="toggleStudioGenMode()" title="Image / Video mode" aria-label="Mode">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 10l4.55-2.27A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.89L15 14"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>
+        </button>
+        <button type="button" class="studioDockToolBtn" onclick="switchStudioTab('community')" title="Community" aria-label="Community">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+      </div>
+      <button type="button" class="studioDockGearMobile" onclick="toggleImageGenSettingsSheet()" title="Generation settings" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">⚙️</button>
+      <div class="studioDockCard" style="flex:1;display:flex;flex-direction:column;gap:0;min-width:0;background:rgba(255,255,255,0.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:6px 6px 6px 14px;">
+        <div class="studioDockPromptRow" style="display:flex;align-items:center;gap:6px;min-width:0;width:100%;">
+          <span class="ig-mode-chip" id="igVideoModeChip" aria-hidden="true">▶ Video</span>
+          <input id="imageGenPrompt" type="text" placeholder="Type to imagine…" style="flex:1;min-width:0;background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitImageGen();}" />
+          <button id="imageGenSubmitBtn" onclick="submitImageGen()" title="Generate" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(124,106,247,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(124,106,247,0.3);color:rgba(255,255,255,0.92);font-size:15px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
+        </div>
+        <div class="studioDockMeta" aria-label="Quick settings">
+          <button type="button" class="studioDockChip" id="studioDockChipModel" onclick="toggleImageGenSettingsSheet()" title="Model and settings">DreamShaper 8</button>
+          <button type="button" class="studioDockChip" id="studioDockChipStyle" onclick="toggleImageGenTemplateRow()" title="Style">None</button>
+          <button type="button" class="studioDockChip" id="studioDockChipAspect" onclick="toggleImageGenSettingsSheet()" title="Aspect ratio">1:1</button>
+          <button type="button" class="studioDockChip" id="studioDockChipMode" onclick="toggleStudioGenMode()" title="Image / Video">Image</button>
+        </div>
       </div>
     </div>
   </div>
@@ -7893,7 +8955,7 @@ window.getWebAudioNode = getWebAudioNode;
 <div class="top-bar">
     <div style="display:flex;align-items:center;gap:0;flex-shrink:0;margin-left:-24px;padding-left:24px;">
     <!-- Refined synapse mark — same light-up animation, glass treatment -->
-    <div id="bnavLogoMark" onclick="newChat()" title="Synapses" style="display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px;margin-right:8px;opacity:0.92;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.92'">
+    <div id="bnavLogoMark" onclick="newChat({forceAsk:false})" title="Synapses" style="display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px;margin-right:8px;opacity:0.92;transition:opacity .2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.92'">
       <svg class="syn-logo-mark" width="28" height="28" viewBox="0 0 80 80" fill="none" aria-hidden="true">
         <defs>
           <radialGradient id="synCoreTB" cx="36%" cy="30%" r="70%">
@@ -7951,7 +9013,7 @@ window.getWebAudioNode = getWebAudioNode;
         <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
       </svg>
     </div>
-    <span class="top-title" id="topTitle">AI Tools Hub</span>
+    <span class="top-title" id="topTitle"><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">S</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">y</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">n</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">a</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">p</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">s</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">e</span><span class="ttl-ch" style="display:inline-block;opacity:0.15;transition:opacity 0.12s;">s</span></span>
     </div>
     <div class="hub-tab-bar" id="hubTabBar" style="display:none;border-bottom:none;background:transparent;flex:1;margin-left:8px;justify-content:center;gap:8px;">
         <button class="hub-tab-btn active" id="hub-tab-feed" onclick="switchHubTab('feed')" title="Builder Feed" style="padding:8px 12px;font-size:14px;">📡</button>
@@ -8012,6 +9074,43 @@ window.getWebAudioNode = getWebAudioNode;
           </div>
         </div>
       </div>
+      <script>
+      (function(){
+        /* Paint the whole sun/moon toggle (icons + outer ring + dot position)
+           the instant this markup exists — the full init script runs ~26k
+           lines later in the page, so without this the toggle shows blank
+           icon boxes and the wrong ring color/dot position (dark defaults,
+           even on light theme) until that script finally catches up, which
+           reads as a flash/stutter. */
+        try{
+          var _moonPath='<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+          var _sunPath='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+          function _rawIcon(body, stroke){
+            var svg='<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="'+stroke+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+          }
+          var t = document.documentElement.getAttribute('data-theme') || 'trueblack';
+          var wrap  = document.getElementById('dayNightToggle');
+          var left  = document.getElementById('dnt-left');
+          var right = document.getElementById('dnt-right');
+          var li = document.getElementById('dnt-left-icon');
+          var ri = document.getElementById('dnt-right-icon');
+          if(t === 'easyview'){
+            if(wrap){ wrap.style.background='#ffffff'; wrap.style.borderColor='#e4e4e7'; }
+            if(left){ left.style.transform='translate3d(32px,0,0)'; left.style.background='#e5e7eb'; }
+            if(right){ right.style.transform='translate3d(-32px,0,0)'; right.style.background='transparent'; }
+            if(li) li.src = _rawIcon(_sunPath, '#374151');
+            if(ri) ri.src = _rawIcon(_moonPath, '#000');
+          } else {
+            if(wrap){ wrap.style.background='#09090b'; wrap.style.borderColor='#27272a'; }
+            if(left){ left.style.transform='translate3d(0,0,0)'; left.style.background='#27272a'; }
+            if(right){ right.style.transform='translate3d(0,0,0)'; right.style.background='transparent'; }
+            if(li) li.src = _rawIcon(_moonPath, 'white');
+            if(ri) ri.src = _rawIcon(_sunPath, '#6b7280');
+          }
+        }catch(e){}
+      })();
+      </script>
     </div>
   </div>
 
@@ -8062,7 +9161,7 @@ window.getWebAudioNode = getWebAudioNode;
     </div>
     <div id="chpSidebar">
       <div id="chpSidebarInner">
-        <div class="chp-header" id="chpHeader">Past Chats<div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><button onclick="newChat()" title="New Chat" style="background:none;border:none;color:rgba(200,195,225,0.35);font-size:14px;cursor:pointer;padding:0;line-height:1;transition:color .2s;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='rgba(200,195,225,0.85)'" onmouseout="this.style.color='rgba(200,195,225,0.35)'">+</button></div></div>
+        <div class="chp-header" id="chpHeader">Past Chats<div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><button onclick="newChat({forceAsk:true})" title="New Chat" style="background:none;border:none;color:rgba(200,195,225,0.35);font-size:14px;cursor:pointer;padding:0;line-height:1;transition:color .2s;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='rgba(200,195,225,0.85)'" onmouseout="this.style.color='rgba(200,195,225,0.35)'">+</button></div></div>
         <div class="chp-list" id="chpList"></div>
       </div>
     </div>
@@ -9218,7 +10317,7 @@ var NAV_ALL_ITEMS = [
   {id:'notes',  icon:'📓', label:'My Notes',    fn:'goNotes()'},
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
-  {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat();triggerNavGlow(this)'},
+  {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat({forceAsk:true});triggerNavGlow(this)'},
   {id:'tour',   icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:'window.startTourFromNav&&window.startTourFromNav()'},
 ];
 var navMainIds  = ['chat','home','hub','human','room','jobs','world','whiteboard','tools'];
@@ -9251,43 +10350,58 @@ function loadNavConfig(){
         }
       } catch (eDock) {}
       if(cfg.topBar) navTopBarIds=cfg.topBar;
-      // Restore nav mode after render
+      // Restore nav mode ASAP (was 150ms — left sidebar glass filmed under splash)
       if(cfg.atBottom){
-        setTimeout(function(){
+        (function(){
           var bar=document.getElementById('bottomNavBar');
-          if(!bar) return;
           _navAtBottom=true;
           document.body.classList.add('bottom-nav');
-          initBnavDrag();
-          if(cfg.fullwidth){
-            _navFullwidth=true;
-            bar.classList.add('fullwidth');
-            document.body.classList.add('nav-fullwidth');
-            var btn=document.getElementById('bnavExpandBtn');
-            if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-          } else if(cfg.pos&&cfg.pos.left){
-            bar.style.transform='none';
-            bar.style.left=cfg.pos.left;
-            if(cfg.pos.top) bar.style.top=cfg.pos.top;
+          document.documentElement.classList.add('early-bottom-nav');
+          if(bar){
+            initBnavDrag();
+            if(cfg.fullwidth){
+              _navFullwidth=true;
+              bar.classList.add('fullwidth');
+              document.body.classList.add('nav-fullwidth');
+              var btn=document.getElementById('bnavExpandBtn');
+              if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
+            } else if(cfg.pos&&cfg.pos.left){
+              bar.style.transform='none';
+              bar.style.left=cfg.pos.left;
+              if(cfg.pos.top) bar.style.top=cfg.pos.top;
+            }
+          } else {
+            /* body/bar not ready — retry once next frame */
+            requestAnimationFrame(function(){
+              var b2=document.getElementById('bottomNavBar');
+              if(!b2) return;
+              initBnavDrag();
+              if(cfg.fullwidth){
+                _navFullwidth=true;
+                b2.classList.add('fullwidth');
+                document.body.classList.add('nav-fullwidth');
+              }
+            });
           }
-        },150);
+        })();
       }
     } else {
-      // First load default — bottom docked fullwidth, top bar visible
-      setTimeout(function(){
-        var bar=document.getElementById('bottomNavBar');
-        if(!bar) return;
+      // First load default — bottom docked fullwidth (immediate, no 150ms gap)
+      (function(){
         _navAtBottom=true;
         _navFullwidth=true;
         document.body.classList.add('bottom-nav');
         document.body.classList.add('nav-fullwidth');
-        bar.classList.add('fullwidth');
-        initBnavDrag();
-        var btn=document.getElementById('bnavExpandBtn');
-        if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
-        // Keep first-launch / user preference for top-right icons (do not force visible)
+        document.documentElement.classList.add('early-bottom-nav');
+        var bar=document.getElementById('bottomNavBar');
+        if(bar){
+          bar.classList.add('fullwidth');
+          initBnavDrag();
+          var btn=document.getElementById('bnavExpandBtn');
+          if(btn){btn.textContent='⊠';btn.title='Collapse to pill';}
+        }
         try{ if(typeof _applyTopBarHiddenState === 'function') _applyTopBarHiddenState(); }catch(eTb2){}
-      },150);
+      })();
     }
   }catch(e){}
 }
@@ -9324,7 +10438,7 @@ function renderIconRail(){
     whiteboard: {icon:'🎨', label:'Whiteboard',      fn:"goWhiteboard()"},
     notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
-    chat:       {icon:'💬', label:'New Chat',        fn:"newChat()"},
+    chat:       {icon:'💬', label:'New Chat',        fn:"newChat({forceAsk:true})"},
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"},
     tour:       {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:"window.startTourFromNav&&window.startTourFromNav()"}
   };
@@ -9428,6 +10542,640 @@ function renderImageGenTemplates(){
   });
 }
 
+/** Thumb helper — reuses baked style art so explore galleries stay instant (no network). */
+function _studioThumb(key){
+  try{
+    for(var i = 0; i < IMAGE_GEN_TEMPLATES.length; i++){
+      if(IMAGE_GEN_TEMPLATES[i].key === key) return IMAGE_GEN_TEMPLATES[i].thumb || '';
+    }
+  }catch(_e){}
+  return '';
+}
+
+/**
+ * PC Studio empty landing — Runway-inspired browse page:
+ * multi-image featured strip + feature cards + tabbed starters.
+ */
+/**
+ * Local landing art: studio-land/*.jpg small thumbs only.
+ * TWO DISJOINT sets — Featured/New/Get-started never reuse Community rail art.
+ *   Featured set: cyber, year10k, ghost, ship, album, wide, silver, nature, peak, vanta, open, scene
+ *   Community set: com1 … com16 only
+ */
+function _studioLandAsset(name){
+  try{ return 'studio-land/' + name; }catch(_e){ return ''; }
+}
+function _studioLandKey(k){ return _studioLandAsset(k + '.jpg'); }
+
+/** Left-column product art (Featured + New + apps) — never used in Community rail */
+function _studioLandFeaturedMedia(){
+  return {
+    f: _studioThumb('fantasy'),
+    c: _studioThumb('cyberpunk'),
+    a: _studioThumb('anime'),
+    r: _studioThumb('retro'),
+    cyber: _studioLandKey('cyber'),
+    year10k: _studioLandKey('year10k'),
+    ghost: _studioLandKey('ghost'),
+    ship: _studioLandKey('ship'),
+    album: _studioLandKey('album'),
+    wide: _studioLandKey('wide'),
+    silver: _studioLandKey('silver'),
+    nature: _studioLandKey('nature'),
+    peak: _studioLandKey('peak'),
+    vanta: _studioLandKey('vanta'),
+    open: _studioLandKey('open'),
+    scene: _studioLandKey('scene')
+  };
+}
+/**
+ * Right-rail Community — different files from Featured, with labels matching the art.
+ * Dropped non-art UI shots (pulse logo, screenplay docs, etc.). When you add a new
+ * folder of art we can re-point these keys.
+ */
+function _studioLandCommunityMedia(){
+  return [
+    { key:'com1',  label:'Perfect life',   prompt:'A dreamy lifestyle scene of ' },
+    { key:'com2',  label:'Quiet moment',   prompt:'A quiet cinematic moment of ' },
+    { key:'com4',  label:'Deep space',     prompt:'A vast cosmic space vista of ' },
+    { key:'com5',  label:'Golden hour',    prompt:'A golden sunset photograph of ' },
+    { key:'com6',  label:'Clouds',         prompt:'Soft clouds drifting over ' },
+    { key:'com7',  label:'Gold king',      prompt:'A regal gold-toned portrait of ' },
+    { key:'com8',  label:'Dark hero',      prompt:'A dark cinematic superhero scene of ' },
+    { key:'com9',  label:'Mega mall',      prompt:'A vast futuristic indoor city of ' },
+    { key:'com11', label:'Future city',    prompt:'A far-future cityscape of ' },
+    { key:'com12', label:'VR world',       prompt:'An immersive VR landscape of ' },
+    { key:'com13', label:'Portrait',       prompt:'A striking character portrait of ' },
+    { key:'com14', label:'Concept art',    prompt:'Detailed concept art of ' },
+    { key:'com15', label:'Storytime',      prompt:'A storybook cinematic scene of ' },
+    { key:'com16', label:'Soft glow',      prompt:'A softly glowing atmospheric scene of ' }
+  ].map(function(it){
+    return {
+      src: _studioLandKey(it.key),
+      label: it.label,
+      prompt: it.prompt
+    };
+  });
+}
+function _studioLandGrad(g){
+  return '<div class="studio-feat-grad" style="background:'+(g || 'linear-gradient(135deg,#1a1a22,#2a2a38)')+'"></div>';
+}
+/** Featured/news thumbs — solid plate bg; no lazy/async (those phase-flash on paint). */
+function _studioLandThumbHtml(thumb, grad, eager){
+  if(!thumb) return _studioLandGrad(grad);
+  var prio = eager ? ' fetchpriority="high"' : '';
+  return '<img class="studio-land-img" src="'+thumb+'" alt="" draggable="false" loading="eager" decoding="sync"'+prio+
+    ' style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:#1c1c24;border:0;" />';
+}
+
+/** Warm the image cache so community/featured don’t decode mid-scroll (phase stutter). */
+function _studioLandPreload(urls, done){
+  var list = [];
+  var seen = {};
+  for(var i = 0; i < (urls || []).length; i++){
+    var u = urls[i];
+    if(!u || seen[u]) continue;
+    seen[u] = true;
+    list.push(u);
+  }
+  if(!list.length){ if(done) done(); return; }
+  var left = list.length;
+  var finish = function(){ left--; if(left <= 0 && done) done(); };
+  for(var j = 0; j < list.length; j++){
+    var im = new Image();
+    im.onload = finish;
+    im.onerror = finish;
+    im.decoding = 'sync';
+    try{ im.src = list[j]; }catch(_e){ finish(); }
+  }
+}
+
+/** Community rail — curated art thumbs only (not live social / UI screenshots). */
+function _studioLandGalleryItems(){
+  return _studioLandCommunityMedia().slice(0, 12);
+}
+
+function _studioLandData(){
+  var m = _studioLandFeaturedMedia();
+  return {
+    /* Featured — product set only */
+    featured: [
+      { name:'Neon City', prompt:'A neon-lit cyberpunk cityscape scene of ', thumb:m.cyber, styleKey:'cyberpunk' },
+      { name:'Year 10k', prompt:'A far-future civilization scene of ', thumb:m.year10k, styleKey:null },
+      { name:'Ghost halls', prompt:'An eerie endless hallway scene of ', thumb:m.ghost, styleKey:null },
+      { name:'Spaceship', prompt:'A detailed spaceship concept of ', thumb:m.ship, styleKey:null },
+      { name:'Album art', prompt:'Bold album cover art for ', thumb:m.album, styleKey:null },
+      { name:'Wide landscape', prompt:'A wide cinematic landscape of ', thumb:m.wide, styleKey:null },
+      { name:'Silver hair', prompt:'An anime character with silver hair, ', thumb:m.silver, styleKey:'anime' },
+      { name:'Nature', prompt:'A beautiful nature scene with ', thumb:m.nature, styleKey:null }
+    ],
+    /* New in Studio — same Featured pool, no Community com* files */
+    news: [
+      { name:'DreamShaper 8', desc:'Fast everyday images — great default for most prompts.', cta:'Try it now', action:'model', value:'dreamshaper', thumb:m.peak },
+      { name:'Flux 1', desc:'Sharp photoreal detail when you need cleaner renders.', cta:'Try it now', action:'model', value:'flux', thumb:m.open },
+      { name:'Video mode', desc:'Switch Studio to video settings, refs, and duration.', cta:'Open video', action:'mode', value:'video', thumb:m.vanta },
+      { name:'Style templates', desc:'Fantasy, cyberpunk, anime, retro — one tap starters.', cta:'Browse styles', action:'styles', value:null, thumb:m.scene },
+      { name:'GPT Image 2', desc:'Strong text & creative control for graphic ideas.', cta:'Try it now', action:'model', value:'gpt-image-2', thumb:m.album },
+      { name:'Community', desc:'See what people are posting — jump into the gallery tab.', cta:'Open community', action:'community', value:null, thumb:m.wide }
+    ],
+    appTabs: [
+      { id:'image', label:'Image' },
+      { id:'video', label:'Video' },
+      { id:'styles', label:'Styles' },
+      { id:'product', label:'Product' },
+      { id:'character', label:'Character' },
+      { id:'art', label:'Art' }
+    ],
+    /* Get started — style-template thumbs / gradients only (not Community rail art) */
+    apps: {
+      image: [
+        { name:'Cinematic still', desc:'Wide dramatic lighting and film color.', prompt:'A cinematic still of ', thumb:m.f },
+        { name:'Product shot', desc:'Clean studio packshot lighting.', prompt:'A glossy product photography shot of ', thumb:null, grad:'linear-gradient(135deg,#111114,#2a2a32,#9ca3af)' },
+        { name:'Food photo', desc:'Editorial restaurant-style plating.', prompt:'An appetizing editorial food photo of ', thumb:m.r },
+        { name:'Architecture', desc:'Minimal modern exterior or interior.', prompt:'A striking minimal architecture photograph of ', thumb:null, grad:'linear-gradient(145deg,#0c0c10,#374151,#d1d5db)' }
+      ],
+      video: [
+        { name:'Seedance clip', desc:'Describe a short motion scene.', prompt:'A short cinematic video of ', action:'mode', value:'video', thumb:null, grad:'linear-gradient(135deg,#0c1020,#1e1b4b,#6366f1)' },
+        { name:'Rainy street B-roll', desc:'Neon rain reflections, slow pan.', prompt:'A rainy neon street at night, slow camera move, ', action:'mode', value:'video', thumb:m.c },
+        { name:'Portrait motion', desc:'Subtle wind / breath / look-away.', prompt:'A soft portrait video with subtle motion of ', action:'mode', value:'video', thumb:m.a },
+        { name:'Landscape drone', desc:'Wide aerial sweep feel.', prompt:'An aerial landscape video sweeping over ', action:'mode', value:'video', thumb:m.f }
+      ],
+      styles: [
+        { name:'Fantasy Portrait', desc:'Cinematic fantasy look.', prompt:'A cinematic fantasy portrait of ', styleKey:'fantasy', thumb:m.f },
+        { name:'Cyberpunk', desc:'Neon rain city.', prompt:'A neon-lit cyberpunk cityscape scene of ', styleKey:'cyberpunk', thumb:m.c },
+        { name:'Anime Style', desc:'Vibrant illustration.', prompt:'A vibrant anime-style illustration of ', styleKey:'anime', thumb:m.a },
+        { name:'Retro Film', desc:'35mm grain golden hour.', prompt:'A grainy retro 35mm film photo of ', styleKey:'retro', thumb:m.r }
+      ],
+      product: [
+        { name:'Packshot', desc:'Centered product, soft shadows.', prompt:'A clean studio packshot of ', thumb:null, grad:'linear-gradient(135deg,#111114,#333,#bbb)' },
+        { name:'Lifestyle product', desc:'In-use scene, natural light.', prompt:'A lifestyle product photo of ', thumb:null, grad:'linear-gradient(135deg,#1c1410,#5c3d2e,#e8b86d)' },
+        { name:'Tech gadget', desc:'Sleek dark reflective surface.', prompt:'A sleek tech product render of ', thumb:null, grad:'linear-gradient(135deg,#0a0a12,#1e293b,#64748b)' },
+        { name:'Beauty bottle', desc:'Soft pastel, macro detail.', prompt:'A beauty product macro photo of ', thumb:null, grad:'linear-gradient(135deg,#1a1020,#7c3aed,#f9a8d4)' }
+      ],
+      character: [
+        { name:'Character sheet', desc:'Full-body turnaround vibe.', prompt:'A full-body character design sheet of ', thumb:m.a },
+        { name:'Hero portrait', desc:'Dramatic face close-up.', prompt:'A heroic character portrait of ', thumb:m.f },
+        { name:'Creature concept', desc:'Original creature design.', prompt:'A detailed creature concept art of ', thumb:m.c },
+        { name:'Fashion look', desc:'Editorial character styling.', prompt:'A high-fashion editorial photo of ', thumb:m.r }
+      ],
+      art: [
+        { name:'Oil painting', desc:'Classical brushwork.', prompt:'An oil painting in classical style of ', thumb:null, grad:'linear-gradient(135deg,#3a2a18,#8b5a2b,#d4a574)' },
+        { name:'Watercolor', desc:'Soft wash paper texture.', prompt:'A delicate watercolor painting of ', thumb:null, grad:'linear-gradient(135deg,#2a3a4a,#6a9bb8,#e8d5c4)' },
+        { name:'Pixel art', desc:'Game-ready retro pixels.', prompt:'A detailed pixel-art scene of ', thumb:null, grad:'linear-gradient(135deg,#1a1028,#7c3aed,#f472b6)' },
+        { name:'Poster art', desc:'Bold graphic poster.', prompt:'A bold graphic poster design for ', thumb:null, grad:'linear-gradient(135deg,#150a20,#be123c,#fbbf24)' }
+      ]
+    }
+  };
+}
+
+function applyStudioExploreItem(item){
+  if(!item) return;
+  if(item.action === 'model' && item.value){
+    if(typeof selectImageGenOption === 'function') selectImageGenOption('model', item.value);
+    else {
+      var sel = document.getElementById('imageGenModel');
+      if(sel){ sel.value = item.value; if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects(); }
+    }
+    if(typeof showToast === 'function') showToast('Model set — type a prompt below');
+    return;
+  }
+  if(item.action === 'mode'){
+    if(typeof setStudioGenMode === 'function') setStudioGenMode(item.value === 'video' ? 'video' : 'image');
+    if(item.prompt){
+      var p0 = document.getElementById('imageGenPrompt');
+      if(p0){ p0.value = item.prompt; p0.focus(); try{ p0.setSelectionRange(item.prompt.length, item.prompt.length); }catch(_e){} }
+    }
+    if(typeof showToast === 'function') showToast(item.value === 'video' ? 'Video mode on' : 'Image mode on');
+    return;
+  }
+  if(item.action === 'styles'){
+    if(typeof toggleImageGenTemplateRow === 'function'){
+      var row = document.getElementById('imageGenTemplateRow');
+      if(row && row.style.display !== 'flex') toggleImageGenTemplateRow();
+    }
+    if(typeof showToast === 'function') showToast('Style templates open');
+    return;
+  }
+  if(item.action === 'community'){
+    if(typeof switchStudioTab === 'function') switchStudioTab('community');
+    return;
+  }
+  var promptEl = document.getElementById('imageGenPrompt');
+  if(promptEl && item.prompt){
+    promptEl.value = item.prompt;
+    promptEl.focus();
+    var len = promptEl.value.length;
+    try{ promptEl.setSelectionRange(len, len); }catch(_e){}
+  }
+  if(item.styleKey) _imageGenActiveStyleKey = item.styleKey;
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
+  if(typeof showToast === 'function') showToast('Prompt loaded — finish the idea & hit ↑');
+}
+
+function _buildStudioExploreHtml(){
+  var d = _studioLandData();
+  var html = '';
+
+  /* Featured multi-image strip */
+  html +=
+    '<section class="studio-land-section" aria-label="Featured looks">' +
+      '<div class="studio-sec-head"><div class="studio-sec-title">Featured looks</div></div>' +
+      '<div class="studio-feat-wrap">' +
+        '<button type="button" class="studio-feat-nav prev" id="studioFeatPrev" aria-label="Previous">‹</button>' +
+        '<button type="button" class="studio-feat-nav next" id="studioFeatNext" aria-label="Next">›</button>' +
+        '<div class="studio-feat-track" id="studioFeatTrack">';
+  for(var i = 0; i < d.featured.length; i++){
+    var f = d.featured[i];
+    html +=
+      '<button type="button" class="studio-feat-card" data-kind="feat" data-idx="'+i+'">' +
+        _studioLandThumbHtml(f.thumb, f.grad, i < 3) +
+        '<span class="studio-feat-shade"></span>' +
+        '<span class="studio-feat-label">'+f.name+'</span>' +
+      '</button>';
+  }
+  html += '</div></div></section>';
+
+  /* New in Studio cards */
+  html +=
+    '<section class="studio-land-section" aria-label="New in Studio">' +
+      '<div class="studio-sec-head"><div class="studio-sec-title">New in Studio</div></div>' +
+      '<div class="studio-new-grid">';
+  for(var n = 0; n < d.news.length; n++){
+    var card = d.news[n];
+    html +=
+      '<button type="button" class="studio-new-card" data-kind="news" data-idx="'+n+'">' +
+        '<div class="studio-new-top">' +
+          '<div class="studio-new-copy">' +
+            '<div class="studio-new-name">'+card.name+'</div>' +
+            '<p class="studio-new-desc">'+card.desc+'</p>' +
+          '</div>' +
+          '<div class="studio-new-thumb">'+_studioLandThumbHtml(card.thumb, card.grad)+'</div>' +
+        '</div>' +
+        '<span class="studio-new-cta">'+(card.cta || 'Try it')+'</span>' +
+      '</button>';
+  }
+  html += '</div></section>';
+
+  /* Get started tabs + apps */
+  html +=
+    '<section class="studio-land-section" aria-label="Get started">' +
+      '<div class="studio-apps-head">' +
+        '<div class="studio-sec-title">Get started</div>' +
+        '<div class="studio-apps-tabs" id="studioAppsTabs" role="tablist">';
+  for(var t = 0; t < d.appTabs.length; t++){
+    var tab = d.appTabs[t];
+    html += '<button type="button" class="studio-apps-tab'+(t===0?' on':'')+'" role="tab" data-tab="'+tab.id+'" aria-selected="'+(t===0?'true':'false')+'">'+tab.label+'</button>';
+  }
+  html +=
+        '</div>' +
+      '</div>' +
+      '<div class="studio-apps-grid" id="studioAppsGrid"></div>' +
+    '</section>';
+
+  return html;
+}
+
+function _buildStudioLandRailHtml(){
+  return (
+    '<aside class="studio-empty-rail" id="studioEmptyRail" aria-label="Community gallery">' +
+      '<div class="studio-rail-head">' +
+        '<div class="studio-rail-title">Community</div>' +
+        '<button type="button" class="studio-rail-more" id="studioRailSeeAll">See all</button>' +
+      '</div>' +
+      '<div class="studio-rail-feed" id="studioRailFeed"></div>' +
+    '</aside>'
+  );
+}
+
+function _mountStudioLandRail(){
+  var feed = document.getElementById('studioRailFeed');
+  var rail = document.getElementById('studioEmptyRail');
+  var seeAll = document.getElementById('studioRailSeeAll');
+  if(seeAll){
+    seeAll.onclick = function(){
+      if(typeof switchStudioTab === 'function') switchStudioTab('community');
+    };
+  }
+  if(!feed) return;
+  try{
+    if(feed._marqueeRaf){ cancelAnimationFrame(feed._marqueeRaf); feed._marqueeRaf = 0; }
+    if(feed._marqueeTimer){ clearInterval(feed._marqueeTimer); feed._marqueeTimer = 0; }
+  }catch(_c){}
+
+  var items = _studioLandGalleryItems();
+  if(!items.length){
+    feed.innerHTML = '<div style="width:100%;font-size:12px;color:rgba(180,180,195,0.45);padding:12px 4px;">No images yet</div>';
+    return;
+  }
+
+  /*
+   * Transform-only motion (no scrollTop).
+   * scrollTop re-rasterizes tiles every frame → “phase flash” as they enter view.
+   * translate3d moves GPU layers only. Wheel still works by adjusting y.
+   * Manual max clamps to first set so the duplicate loop copy is never visible.
+   */
+  var feedH = 420;
+  try{
+    var railH = (rail && rail.clientHeight) ? rail.clientHeight : 0;
+    var head = rail ? rail.querySelector('.studio-rail-head') : null;
+    var headH = head ? head.offsetHeight + 12 : 36;
+    var vh = Math.max(280, Math.min(window.innerHeight * 0.55, 520));
+    feedH = railH > 80 ? Math.max(200, railH - headH) : vh;
+  }catch(_h){}
+
+  feed.style.cssText =
+    'display:block;overflow:hidden;position:relative;' +
+    'box-sizing:border-box;padding:0 6px 0 0;' +
+    'height:' + feedH + 'px;max-height:' + feedH + 'px;min-height:' + feedH + 'px;flex:0 0 auto;';
+
+  function tileHtml(it, idx){
+    var lab = (it.label || '').replace(/"/g, '');
+    return (
+      '<button type="button" class="studio-rail-tile" data-idx="'+idx+'" title="'+lab+'" ' +
+        'style="position:relative;display:block;box-sizing:border-box;width:calc(50% - 4px);flex:0 0 calc(50% - 4px);' +
+        'height:148px;min-height:148px;max-height:148px;margin:0;padding:0;border:1px solid rgba(255,255,255,0.1);' +
+        'border-radius:14px;overflow:hidden;background:#1c1c24;cursor:pointer;line-height:0;">' +
+        '<img class="studio-land-img" src="'+it.src+'" alt="" draggable="false" ' +
+          'style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;margin:0;border:0;' +
+          'pointer-events:none;background:#1c1c24;" />' +
+        '<span class="studio-rail-tile-cap" style="position:absolute;left:0;right:0;bottom:0;padding:14px 8px 7px;' +
+          'background:linear-gradient(180deg,transparent,rgba(0,0,0,0.58));font-size:10px;font-weight:650;line-height:1.2;' +
+          'color:rgba(255,255,255,0.9);text-align:left;pointer-events:none;white-space:nowrap;overflow:hidden;' +
+          'text-overflow:ellipsis;z-index:2;box-sizing:border-box;">'+(it.label || '')+'</span>' +
+      '</button>'
+    );
+  }
+
+  /* ONE set of tiles only — no duplicate strip (avoids upward-scroll into repeats + hover jump) */
+  var setHtml = '';
+  var urls = [];
+  for(var i = 0; i < items.length; i++){
+    if(!items[i].src) continue;
+    setHtml += tileHtml(items[i], i);
+    urls.push(items[i].src);
+  }
+
+  feed.innerHTML =
+    '<div class="studio-rail-marquee" id="studioRailMarquee" ' +
+      'style="display:flex;flex-wrap:wrap;gap:10px 8px;width:100%;box-sizing:border-box;will-change:transform;">' +
+      setHtml +
+    '</div>' +
+    '<div class="studio-rail-fakebar" id="studioRailFakeBar" aria-hidden="true" ' +
+      'style="position:absolute;top:4px;right:0;bottom:4px;width:6px;border-radius:99px;pointer-events:none;">' +
+      '<div id="studioRailFakeThumb" style="position:absolute;left:0;width:6px;border-radius:99px;' +
+        'background:transparent;min-height:24px;"></div>' +
+    '</div>';
+
+  var marquee = document.getElementById('studioRailMarquee');
+  var fakeThumb = document.getElementById('studioRailFakeThumb');
+  if(!marquee) return;
+
+  var tiles = marquee.querySelectorAll('.studio-rail-tile');
+  for(var t = 0; t < tiles.length; t++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        var item = items[idx];
+        if(!item) return;
+        if(item.prompt) applyStudioExploreItem({ prompt: item.prompt });
+        else if(typeof switchStudioTab === 'function') switchStudioTab('community');
+      });
+    })(tiles[t]);
+  }
+
+  var paused = false;
+  var y = 0;
+  var contentH = 0; /* full list height (one set) */
+  var viewH = feedH;
+  var pxPerSec = 13;
+  var lastTs = 0;
+  var bottomHoldMs = 0; /* dwell at bottom before looping (never snap on mouse-leave) */
+  var reduced = false;
+  try{ reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(_m){}
+
+  function measure(){
+    contentH = marquee.scrollHeight || 0;
+    viewH = feed.clientHeight || feedH;
+    return contentH;
+  }
+  /** Max offset: last tile flush with bottom — no empty / no wrap into a second copy */
+  function scrollMax(){
+    if(contentH < 40) measure();
+    var m = contentH - viewH;
+    return m > 0 ? m : 0;
+  }
+  function clampY(){
+    var max = scrollMax();
+    if(y > max) y = max;
+    if(y < 0) y = 0;
+  }
+  function applyY(){
+    marquee.style.transform = 'translate3d(0,' + (-y) + 'px,0)';
+    if(fakeThumb && contentH > viewH){
+      var max = scrollMax();
+      var track = Math.max(1, viewH - 8);
+      var thumbH = Math.max(24, Math.round(track * (viewH / contentH)));
+      var maxTop = Math.max(0, track - thumbH);
+      var top = max > 0 ? (y / max) * maxTop : 0;
+      if(top < 0) top = 0;
+      if(top > maxTop) top = maxTop;
+      fakeThumb.style.height = thumbH + 'px';
+      fakeThumb.style.transform = 'translate3d(0,' + top + 'px,0)';
+    }
+  }
+  function setBar(manual){
+    if(manual){
+      feed.classList.add('is-manual-scroll');
+      feed.classList.remove('is-auto-scroll');
+      if(fakeThumb) fakeThumb.style.background = 'rgba(255,255,255,0.18)';
+    } else {
+      feed.classList.add('is-auto-scroll');
+      feed.classList.remove('is-manual-scroll');
+      if(fakeThumb) fakeThumb.style.background = 'transparent';
+    }
+  }
+
+  measure();
+  requestAnimationFrame(function(){ measure(); applyY(); });
+  setTimeout(function(){ measure(); applyY(); }, 100);
+  setBar(false);
+
+  function tick(ts){
+    feed._marqueeRaf = 0;
+    if(!feed.isConnected) return;
+    if(!lastTs) lastTs = ts || performance.now();
+    var now = ts || performance.now();
+    var dt = Math.min(40, Math.max(0, now - lastTs));
+    lastTs = now;
+
+    if(!paused && !reduced){
+      if(contentH < 40) measure();
+      var max = scrollMax();
+      if(max > 8){
+        /* Continue from current y — never jump to 0 just because user left hover at bottom */
+        if(y < max - 0.5){
+          bottomHoldMs = 0;
+          y += (pxPerSec * dt) / 1000;
+          if(y > max) y = max;
+        } else {
+          /* At bottom: hold ~2s of auto time, then loop to top (only while auto-running) */
+          y = max;
+          bottomHoldMs += dt;
+          if(bottomHoldMs >= 2000){
+            y = 0;
+            bottomHoldMs = 0;
+          }
+        }
+        applyY();
+      }
+    }
+    feed._marqueeRaf = requestAnimationFrame(tick);
+  }
+
+  var hoverEl = rail || feed;
+  /* Hover: pause only — keep exact y (no jump to top) */
+  hoverEl.addEventListener('pointerenter', function(){
+    paused = true;
+    bottomHoldMs = 0;
+    setBar(true);
+  });
+  hoverEl.addEventListener('pointerleave', function(){
+    paused = false;
+    lastTs = 0;
+    bottomHoldMs = 0; /* resume from same y; if at bottom, will dwell then loop */
+    setBar(false);
+  });
+
+  /* Wheel: clamp BOTH directions — no wrap up or down into a fake second list */
+  feed.addEventListener('wheel', function(e){
+    e.preventDefault();
+    paused = true;
+    bottomHoldMs = 0;
+    if(contentH < 40) measure();
+    y += e.deltaY;
+    clampY();
+    applyY();
+    setBar(true);
+    clearTimeout(feed._wheelResumeT);
+    feed._wheelResumeT = setTimeout(function(){
+      try{ if(hoverEl.matches && hoverEl.matches(':hover')) return; }catch(_h){}
+      paused = false;
+      lastTs = 0;
+      bottomHoldMs = 0;
+      setBar(false);
+    }, 1100);
+  }, { passive: false });
+
+  try{ _studioLandPreload(urls, function(){}); }catch(_p){}
+
+  if(!reduced) feed._marqueeRaf = requestAnimationFrame(tick);
+  else { setBar(true); clampY(); applyY(); }
+}
+
+function _renderStudioAppsGrid(tabId){
+  var grid = document.getElementById('studioAppsGrid');
+  if(!grid) return;
+  var d = _studioLandData();
+  var list = (d.apps && d.apps[tabId]) ? d.apps[tabId] : d.apps.image;
+  var html = '';
+  for(var i = 0; i < list.length; i++){
+    var a = list[i];
+    html +=
+      '<button type="button" class="studio-app-row" data-kind="app" data-tab="'+tabId+'" data-idx="'+i+'">' +
+        '<div class="studio-app-ico">'+_studioLandThumbHtml(a.thumb, a.grad)+'</div>' +
+        '<div class="studio-app-meta">' +
+          '<div class="studio-app-name">'+a.name+'</div>' +
+          '<p class="studio-app-desc">'+a.desc+'</p>' +
+        '</div>' +
+        (a.badge ? '<span class="studio-app-badge">'+a.badge+'</span>' : '') +
+      '</button>';
+  }
+  grid.innerHTML = html;
+  var rows = grid.querySelectorAll('.studio-app-row');
+  for(var r = 0; r < rows.length; r++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var tab = btn.getAttribute('data-tab');
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        var item = d.apps[tab] && d.apps[tab][idx];
+        if(item) applyStudioExploreItem(item);
+      });
+    })(rows[r]);
+  }
+}
+
+function _mountStudioExplore(root){
+  if(!root) return;
+  var d = _studioLandData();
+
+  /* Preload Featured + New thumbs so they never decode mid-paint (phase flash) */
+  try{
+    var warm = [];
+    var fi, ni;
+    for(fi = 0; fi < (d.featured || []).length; fi++){
+      if(d.featured[fi].thumb) warm.push(d.featured[fi].thumb);
+    }
+    for(ni = 0; ni < (d.news || []).length; ni++){
+      if(d.news[ni].thumb) warm.push(d.news[ni].thumb);
+    }
+    _studioLandPreload(warm, function(){});
+  }catch(_w){}
+
+  /* Featured strip clicks + nav */
+  var track = document.getElementById('studioFeatTrack');
+  var prev = document.getElementById('studioFeatPrev');
+  var next = document.getElementById('studioFeatNext');
+  if(track){
+    var feats = track.querySelectorAll('.studio-feat-card');
+    for(var i = 0; i < feats.length; i++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          var idx = parseInt(btn.getAttribute('data-idx'), 10);
+          if(d.featured[idx]) applyStudioExploreItem(d.featured[idx]);
+        });
+      })(feats[i]);
+    }
+    var step = function(dir){
+      var card = track.querySelector('.studio-feat-card');
+      var w = card ? card.offsetWidth + 12 : 232;
+      /* auto not smooth — smooth scroll re-rasterizes imgs → phase stutter */
+      track.scrollBy({ left: dir * w * 2, behavior: 'auto' });
+    };
+    if(prev) prev.addEventListener('click', function(){ step(-1); });
+    if(next) next.addEventListener('click', function(){ step(1); });
+  }
+
+  /* New cards */
+  var news = root.querySelectorAll('.studio-new-card');
+  for(var n = 0; n < news.length; n++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.getAttribute('data-idx'), 10);
+        if(d.news[idx]) applyStudioExploreItem(d.news[idx]);
+      });
+    })(news[n]);
+  }
+
+  /* Tabs */
+  var tabs = root.querySelectorAll('.studio-apps-tab');
+  for(var t = 0; t < tabs.length; t++){
+    (function(tabBtn){
+      tabBtn.addEventListener('click', function(){
+        for(var j = 0; j < tabs.length; j++){
+          tabs[j].classList.toggle('on', tabs[j] === tabBtn);
+          tabs[j].setAttribute('aria-selected', tabs[j] === tabBtn ? 'true' : 'false');
+        }
+        _renderStudioAppsGrid(tabBtn.getAttribute('data-tab'));
+      });
+    })(tabs[t]);
+  }
+  _renderStudioAppsGrid('image');
+  try{ _mountStudioLandRail(); }catch(_r){}
+}
+
+/** Currently applied style template key (or null). Dock chip shows its label, not "Styles". */
+var _imageGenActiveStyleKey = null;
+
 function applyImageGenTemplate(t){
   var promptEl = document.getElementById('imageGenPrompt');
   promptEl.value = t.prompt;
@@ -9435,8 +11183,10 @@ function applyImageGenTemplate(t){
   // Cursor at the end so the person can just keep typing the subject.
   var len = promptEl.value.length;
   try{ promptEl.setSelectionRange(len, len); }catch(e){}
+  _imageGenActiveStyleKey = t && t.key ? t.key : null;
   if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
   else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 
 function toggleImageGenTemplateRow(){
@@ -9459,6 +11209,7 @@ function toggleImageGenTemplateRow(){
     btn.style.borderWidth = '1px';
     btn.style.borderStyle = 'solid';
   }
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 
 /** Studio generate mode: 'image' (live) | 'video' (UI shell until gen ships) */
@@ -9502,6 +11253,7 @@ function setStudioGenMode(mode){
   if(prompt) prompt.placeholder = isVid ? 'Describe a video…' : 'Type to imagine…';
   if(imgBody) imgBody.setAttribute('aria-hidden', isVid ? 'true' : 'false');
   if(vidBody) vidBody.setAttribute('aria-hidden', isVid ? 'false' : 'true');
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 function selectVideoGenOption(kind, value){
   if(kind === 'duration'){
@@ -9521,6 +11273,7 @@ function selectVideoGenOption(kind, value){
     if(au) au.value = value;
     _paintImageGenPicker('vid-audio', value);
   }
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 function syncVideoGenPickersFromSelects(){
   var d = document.getElementById('videoGenDuration');
@@ -9531,6 +11284,7 @@ function syncVideoGenPickersFromSelects(){
   if(a) _paintImageGenPicker('vid-aspect', a.value);
   if(r) _paintImageGenPicker('vid-resolution', r.value);
   if(au) _paintImageGenPicker('vid-audio', au.value);
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 /** Video reference grid — up to 2 slots, fills the first empty one(s) with whatever's picked */
 var _videoGenRefSlots = [null, null]; // {file, url, kind} | null, index 0 = slot1, index 1 = slot2
@@ -9581,6 +11335,7 @@ function handleVideoGenRefSelect(event){
     _renderVideoGenRefSlot(emptyIdx);
   }
   event.target.value = ''; // allow re-picking the same file later
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 
 function clearVideoGenRefSlot(i){
@@ -9588,6 +11343,7 @@ function clearVideoGenRefSlot(i){
   if(data && data.url) URL.revokeObjectURL(data.url);
   _videoGenRefSlots[i] = null;
   _renderVideoGenRefSlot(i);
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 
 function clearVideoGenRef(){
@@ -9673,6 +11429,7 @@ function selectImageGenOption(kind, value){
   var sel = document.getElementById(idMap[kind]);
   if(sel) sel.value = value;
   _paintImageGenPicker(kind, value);
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 function syncImageGenPickersFromSelects(){
   var m = document.getElementById('imageGenModel');
@@ -9681,6 +11438,7 @@ function syncImageGenPickersFromSelects(){
   if(m) _paintImageGenPicker('model', m.value);
   if(a) _paintImageGenPicker('aspect', a.value);
   if(c) _paintImageGenPicker('count', c.value);
+  if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
 }
 function _paintImageGenPicker(kind, value){
   var nodes = document.querySelectorAll('[data-ig="'+kind+'"]');
@@ -9690,6 +11448,120 @@ function _paintImageGenPicker(kind, value){
     nodes[i].setAttribute('aria-selected', on ? 'true' : 'false');
   }
 }
+
+/** PC dock chips: live current values only — never category labels like "Style" / "Aspect" / "Mode" */
+function syncStudioDockChips(){
+  try{
+    var modelSel = document.getElementById('imageGenModel');
+    var aspectSel = document.getElementById('imageGenAspect');
+    var countSel = document.getElementById('imageGenCount');
+    var mode = (typeof getStudioGenMode === 'function') ? getStudioGenMode() : 'image';
+    var isVid = mode === 'video';
+
+    var modelLabels = {
+      flux: 'Flux 1',
+      dreamshaper: 'DreamShaper 8',
+      klein: 'Flux.2 Klein',
+      'gpt-image-2': 'GPT Image 2'
+    };
+    var aspectLabels = {
+      square: '1:1',
+      portrait: '3:4',
+      landscape: '16:9'
+    };
+    var videoAspectLabels = {
+      square: '1:1',
+      portrait: '9:16',
+      landscape: '16:9'
+    };
+    var styleShort = {
+      fantasy: 'Fantasy',
+      cyberpunk: 'Cyberpunk',
+      anime: 'Anime',
+      retro: 'Retro'
+    };
+
+    var chipModel = document.getElementById('studioDockChipModel');
+    var chipAspect = document.getElementById('studioDockChipAspect');
+    var chipMode = document.getElementById('studioDockChipMode');
+    var chipStyle = document.getElementById('studioDockChipStyle');
+
+    /* Mode chip = current mode (Image | Video), not the word "Mode" */
+    if(chipMode){
+      chipMode.textContent = isVid ? 'Video' : 'Image';
+      chipMode.title = isVid ? 'Mode: Video — tap to switch to Image' : 'Mode: Image — tap to switch to Video';
+    }
+
+    if(isVid){
+      var vAspect = document.getElementById('videoGenAspect');
+      var vModel = document.getElementById('videoGenModel');
+      var vRes = document.getElementById('videoGenResolution');
+      var vDur = document.getElementById('videoGenDuration');
+      if(chipModel){
+        var vm = vModel ? vModel.value : 'seedance-2.0';
+        chipModel.textContent = (vm === 'seedance-2.0') ? 'Seedance 2.0' : (vm || 'Video model');
+        chipModel.title = 'Model: ' + chipModel.textContent;
+      }
+      if(chipAspect){
+        var va = vAspect ? vAspect.value : 'landscape';
+        var vr = vRes ? vRes.value : '';
+        var vd = vDur ? vDur.value : '';
+        var aLab = videoAspectLabels[va] || va || '16:9';
+        /* Current aspect first; res/dur as secondary so the ratio is obvious */
+        chipAspect.textContent = aLab + (vr ? ' · ' + vr : '') + (vd ? ' · ' + vd + 's' : '');
+        chipAspect.title = 'Aspect ' + aLab + (vr ? ', ' + vr : '') + (vd ? ', ' + vd + 's' : '');
+      }
+      if(chipStyle){
+        var refCount = 0;
+        try{
+          if(typeof _videoGenRefSlots !== 'undefined' && _videoGenRefSlots){
+            for(var ri = 0; ri < _videoGenRefSlots.length; ri++){
+              if(_videoGenRefSlots[ri]) refCount++;
+            }
+          }
+        }catch(_r){}
+        chipStyle.textContent = refCount > 0 ? (refCount + ' ref' + (refCount > 1 ? 's' : '')) : 'No refs';
+        chipStyle.title = 'Video references — open settings';
+        chipStyle.onclick = function(){ toggleImageGenSettingsSheet(); };
+      }
+    } else {
+      if(chipModel){
+        var mv = modelSel ? modelSel.value : 'dreamshaper';
+        chipModel.textContent = modelLabels[mv] || (modelSel && modelSel.options[modelSel.selectedIndex]
+          ? modelSel.options[modelSel.selectedIndex].text.replace(/\s*[—–-].*$/, '').trim()
+          : 'Model');
+        chipModel.title = 'Model: ' + chipModel.textContent;
+      }
+      if(chipAspect){
+        var av = aspectSel ? aspectSel.value : 'square';
+        var cv = countSel ? countSel.value : '4';
+        var ratio = aspectLabels[av] || av || '1:1';
+        /* Show the ratio it's on (e.g. 16:9), plus count */
+        chipAspect.textContent = ratio + ' · ×' + cv;
+        chipAspect.title = 'Aspect ' + ratio + ', ' + cv + ' image' + (cv === '1' ? '' : 's');
+      }
+      if(chipStyle){
+        var sk = (typeof _imageGenActiveStyleKey !== 'undefined') ? _imageGenActiveStyleKey : null;
+        var sLab = null;
+        if(sk){
+          sLab = styleShort[sk] || null;
+          if(!sLab && typeof IMAGE_GEN_TEMPLATES !== 'undefined'){
+            for(var ti = 0; ti < IMAGE_GEN_TEMPLATES.length; ti++){
+              if(IMAGE_GEN_TEMPLATES[ti].key === sk){
+                sLab = IMAGE_GEN_TEMPLATES[ti].label;
+                break;
+              }
+            }
+          }
+        }
+        chipStyle.textContent = sLab || 'None';
+        chipStyle.title = sLab ? ('Style: ' + sLab + ' — tap for templates') : 'No style — tap for templates';
+        chipStyle.onclick = function(){ toggleImageGenTemplateRow(); };
+      }
+    }
+  }catch(_e){}
+}
+window.syncStudioDockChips = syncStudioDockChips;
 
 /** Clear studio image cache + grid — always asks first so history isn’t wiped by accident */
 function resetImageGenStudio(){
@@ -9803,10 +11675,94 @@ function clearStudioImageHistoryAndUi(){
   if(typeof showToast === 'function') showToast('Studio history cleared');
 }
 
+function _studioIsOpen(){
+  try{
+    var m = document.getElementById('imageGenModal');
+    return !!(m && m.style.display === 'flex');
+  }catch(_e){ return false; }
+}
+window._studioIsOpen = _studioIsOpen;
+
+/** Force-hide SynBot while Studio is open (toggle may still be ON) */
+function _synBotHideForStudio(){
+  try{ document.body.classList.add('studio-open'); }catch(_b){}
+  try{
+    var tip = document.getElementById('robotTooltip');
+    if(tip){
+      tip.classList.add('rt-hidden');
+      tip.classList.remove('rt-visible');
+      tip.style.opacity = '0';
+      tip.style.visibility = 'hidden';
+      tip.style.pointerEvents = 'none';
+    }
+  }catch(_t){}
+  try{
+    var chat = document.getElementById('synBotChat');
+    if(chat) chat.style.display = 'none';
+  }catch(_c){}
+  try{
+    var tc = document.getElementById('tinyBotCanvas');
+    if(tc){ tc.style.opacity = '0'; tc.style.visibility = 'hidden'; tc.style.pointerEvents = 'none'; }
+  }catch(_k){}
+  try{
+    var rp = document.getElementById('synBotRephrasePopup');
+    if(rp) rp.style.display = 'none';
+  }catch(_r){}
+  try{ document.body.classList.remove('synbot-terminal-open'); }catch(_s){}
+}
+function _synBotRestoreAfterStudio(){
+  try{ document.body.classList.remove('studio-open'); }catch(_b){}
+  /* Only bring bot back if user still has SynBot enabled */
+  try{
+    var on = true;
+    if(typeof window._synBotIsOn === 'function') on = window._synBotIsOn();
+    else if(typeof _synBotIsOn === 'function') on = _synBotIsOn();
+    else {
+      var v = localStorage.getItem('synapses_synbot_enabled');
+      on = (v === null) ? false : (v === '1');
+    }
+    if(on && typeof showRobot === 'function') showRobot();
+    else if(on && typeof window._tinyBotSync === 'function') window._tinyBotSync();
+  }catch(_e){}
+}
+
+/** Reparents the shared #deepSpaceLayer aurora inside Studio's Generate tab so it
+ *  reads as this page's own background — contained, opaque, nothing from the page
+ *  underneath leaks through. Only does anything in True Black theme; no-op otherwise.
+ *  Remembers its original spot in <body> so it can be moved back cleanly. */
+var _studioDeepSpaceHome = null; // { parent, nextSibling } — where it lives outside Studio
+function _studioMountDeepSpace(){
+  try{
+    var theme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('_appTheme') || '';
+    if(theme !== 'trueblack') return;
+    var layer = document.getElementById('deepSpaceLayer');
+    var modal = document.getElementById('imageGenModal');
+    if(!layer || !modal) return;
+    if(layer.parentNode === modal) return; // already mounted
+    _studioDeepSpaceHome = { parent: layer.parentNode, nextSibling: layer.nextSibling };
+    modal.insertBefore(layer, modal.firstChild);
+  }catch(e){}
+}
+function _studioUnmountDeepSpace(){
+  try{
+    var layer = document.getElementById('deepSpaceLayer');
+    if(!layer || !_studioDeepSpaceHome) return;
+    var home = _studioDeepSpaceHome;
+    _studioDeepSpaceHome = null;
+    if(home.nextSibling && home.nextSibling.parentNode === home.parent){
+      home.parent.insertBefore(layer, home.nextSibling);
+    } else {
+      home.parent.appendChild(layer);
+    }
+  }catch(e){}
+}
+
 function openImageGenModal(){
   closeMobileMore();
   renderImageGenTemplates();
-  switchStudioTab('generate');
+  // Restore whichever tab (generate/community) was active when Studio was last
+  // closed, instead of always snapping back to Generate.
+  switchStudioTab(window._studioLastTab || 'generate');
   // Always re-read local IDB + cloud (if logged in) — never assume empty after HTML update
   _imageGenFeedLoaded = false;
   renderImageGenDefaultFeed();
@@ -9820,7 +11776,14 @@ function openImageGenModal(){
   try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(true); }catch(_s){}
   // STS mic flies to Studio icon cluster in the same open animation
   if(typeof window._tnvEscapeAboveModal === 'function') window._tnvEscapeAboveModal();
+  /* SynBot stays off this page even when the toggle is ON */
+  try{ _synBotHideForStudio(); }catch(_sb){}
   requestAnimationFrame(function(){ modal.style.opacity = '1'; });
+  /* Paint live model / style / aspect / mode on the PC dock chips */
+  if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
+  else if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
+  // True Black: bring the aurora inside Studio's own Generate tab (contained — see fn doc)
+  try{ _studioMountDeepSpace(); }catch(_ds){}
 }
 function closeImageGenModal(){
   var modal = document.getElementById('imageGenModal');
@@ -9832,6 +11795,8 @@ function closeImageGenModal(){
   try{ modal.style.display = 'none'; }catch(_d){}
   // Restore solid main/home status bar (not transparent)
   try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(false); }catch(_s){}
+  try{ _synBotRestoreAfterStudio(); }catch(_sb){}
+  try{ _studioUnmountDeepSpace(); }catch(_ds){}
   setTimeout(function(){
     modal.style.display = 'none';
     if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
@@ -9969,13 +11934,8 @@ async function submitImageGen(){
     errEl.style.display = 'block';
     return;
   }
-  // Video mode is UI-only for now — keep path ready without calling image API
   if(typeof getStudioGenMode === 'function' && getStudioGenMode() === 'video'){
-    if(typeof showToast === 'function') showToast('Video generation is coming soon');
-    else {
-      errEl.textContent = 'Video generation is coming soon — flip back to Image to generate photos.';
-      errEl.style.display = 'block';
-    }
+    await submitVideoGen(prompt, errEl, resultsEl, btn);
     return;
   }
   var aspect = document.getElementById('imageGenAspect').value;
@@ -9990,6 +11950,7 @@ async function submitImageGen(){
   // same feed instead of replacing the previous batch.
   document.getElementById('imageGenEmptyState').style.display = 'none';
   resultsEl.style.display = 'grid';
+  if(typeof _setStudioShowingResults === 'function') _setStudioShowingResults(true);
   try{
     var uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : (localStorage.getItem('synapses_anon_id') || '');
     var res = await fetch(GROQ_PROXY + '/generate-image', {
@@ -10021,6 +11982,83 @@ async function submitImageGen(){
       errEl.style.display = 'block';
       if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
     }
+  }catch(e){
+    errEl.textContent = e.message || 'Something went wrong.';
+    errEl.style.display = 'block';
+    if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = origLabel;
+  }
+}
+
+function _fileToDataUrl(file){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(r.result); };
+    r.onerror = function(){ reject(r.error || new Error('file read failed')); };
+    r.readAsDataURL(file);
+  });
+}
+
+async function submitVideoGen(prompt, errEl, resultsEl, btn){
+  var origLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="width:12px;height:12px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;"></span>';
+  if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
+  else { try{ document.getElementById('imageGenSettingsSheet').style.display = 'none'; }catch(_e){} }
+  document.getElementById('imageGenEmptyState').style.display = 'none';
+  resultsEl.style.display = 'grid';
+  if(typeof _setStudioShowingResults === 'function') _setStudioShowingResults(true);
+  try{
+    var model = document.getElementById('videoGenModel').value;
+    var audio = document.getElementById('videoGenAudio').value;
+    var aspect = document.getElementById('videoGenAspect').value;
+    var resolution = document.getElementById('videoGenResolution').value;
+    var duration = document.getElementById('videoGenDuration').value;
+    var uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : (localStorage.getItem('synapses_anon_id') || '');
+
+    // Convert any attached reference files (image/video/audio) to base64 for the backend
+    var refs = [];
+    for(var i = 0; i < _videoGenRefSlots.length; i++){
+      var slot = _videoGenRefSlots[i];
+      if(!slot || !slot.file) continue;
+      var dataUrl = await _fileToDataUrl(slot.file);
+      refs.push({ dataUrl: dataUrl, kind: slot.kind, name: slot.file.name });
+    }
+
+    // Backend: POST /generate-video on Render (server.js Vast.ai + ComfyUI).
+    // Field `references` is canonical; `referenceFiles` kept for older servers.
+    var res = await fetch(GROQ_PROXY + '/generate-video', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        prompt: prompt,
+        model: model,
+        audio: audio,
+        aspect: aspect,
+        resolution: resolution,
+        duration: duration,
+        references: refs,
+        referenceFiles: refs,
+        userId: uid
+      })
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if(!res.ok){
+      throw new Error((data && data.error) || ('Video generation failed (HTTP ' + res.status + ').'));
+    }
+    var videoUrl = data.videoUrl || data.video || (data.videos && data.videos[0]) || '';
+    if(!videoUrl){
+      errEl.textContent = 'No video came back — try again.';
+      errEl.style.display = 'block';
+      if(!resultsEl.childElementCount) renderImageGenDefaultFeed();
+      return;
+    }
+    var card = _buildStudioVideoCard({ src: videoUrl, prompt: prompt, filename: 'synapses-video-' + Date.now() + '.mp4' });
+    resultsEl.insertBefore(card, resultsEl.firstChild);
+    saveGeneratedVideoToHistory(videoUrl, { prompt: prompt, model: model, aspect: aspect, duration: duration });
+    clearVideoGenRef();
   }catch(e){
     errEl.textContent = e.message || 'Something went wrong.';
     errEl.style.display = 'block';
@@ -10123,6 +12161,137 @@ function openStudioImageLightbox(src, meta){
   document.body.appendChild(lb);
 }
 window.openStudioImageLightbox = openStudioImageLightbox;
+
+/** Build a studio grid card for video: tap = full-size w/ controls, ⬇ = save to device */
+function _buildStudioVideoCard(opts){
+  opts = opts || {};
+  var src = opts.src || '';
+  var prompt = opts.prompt || '';
+  var filename = opts.filename || ('synapses-video-' + Date.now() + '.mp4');
+  var card = document.createElement('div');
+  card.style.cssText = 'position:relative;overflow:hidden;background:var(--surface);cursor:pointer;';
+  card.title = prompt || 'Open full size';
+  var vid = document.createElement('video');
+  vid.src = src;
+  vid.muted = true;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.preload = 'metadata';
+  vid.style.cssText = 'width:100%;display:block;aspect-ratio:3/4;object-fit:cover;pointer-events:none;';
+  card.onmouseenter = function(){ try{ vid.play(); }catch(_p){} };
+  card.onmouseleave = function(){ try{ vid.pause(); vid.currentTime = 0; }catch(_p){} };
+  var badge = document.createElement('div');
+  badge.innerHTML = '▶';
+  badge.style.cssText = 'position:absolute;bottom:6px;left:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;';
+  var dl = document.createElement('button');
+  dl.type = 'button';
+  dl.innerHTML = '⬇';
+  dl.title = 'Download to device';
+  dl.setAttribute('aria-label', 'Download video');
+  dl.style.cssText = 'position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;';
+  dl.onclick = function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    downloadGeneratedVideo(src, filename);
+  };
+  card.onclick = function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    openStudioVideoLightbox(src, { prompt: prompt, filename: filename });
+  };
+  card.appendChild(vid);
+  card.appendChild(badge);
+  card.appendChild(dl);
+  return card;
+}
+
+/** Full-size viewer for Studio videos, with playback controls + download */
+function openStudioVideoLightbox(src, meta){
+  meta = meta || {};
+  if(!src) return;
+  var ex = document.getElementById('_studioVidLightbox');
+  if(ex) ex.remove();
+
+  var lb = document.createElement('div');
+  lb.id = '_studioVidLightbox';
+  lb.style.cssText = 'position:fixed;inset:0;z-index:700;background:rgba(0,0,0,0.94);display:flex;align-items:center;justify-content:center;cursor:zoom-out;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:env(safe-area-inset-top,0) 12px env(safe-area-inset-bottom,0);box-sizing:border-box;';
+
+  var vid = document.createElement('video');
+  vid.src = src;
+  vid.controls = true;
+  vid.autoplay = true;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.style.cssText = 'max-width:min(96vw,920px);max-height:86vh;border-radius:12px;object-fit:contain;box-shadow:0 28px 80px rgba(0,0,0,0.65);cursor:default;';
+
+  var closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.title = 'Close';
+  closeBtn.style.cssText = 'position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:702;';
+
+  var dlBtn = document.createElement('button');
+  dlBtn.type = 'button';
+  dlBtn.innerHTML = '<span style="opacity:0.7;font-size:12px;line-height:1;">↓</span><span>Download</span>';
+  dlBtn.title = 'Save video to device';
+  dlBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:702;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.72);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:none;letter-spacing:0.01em;';
+
+  function close(){
+    lb.style.opacity = '0';
+    lb.style.transition = 'opacity .15s';
+    document.removeEventListener('keydown', onKey);
+    try{ vid.pause(); }catch(_p){}
+    setTimeout(function(){ if(lb.parentNode) lb.parentNode.removeChild(lb); }, 160);
+  }
+  function onKey(e){ if(e.key === 'Escape') close(); }
+
+  lb.onclick = close;
+  closeBtn.onclick = function(e){ e.stopPropagation(); close(); };
+  vid.onclick = function(e){ e.stopPropagation(); };
+  dlBtn.onclick = function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    downloadGeneratedVideo(src, meta.filename || ('synapses-video-' + Date.now() + '.mp4'));
+  };
+
+  document.addEventListener('keydown', onKey);
+  lb.appendChild(vid);
+  lb.appendChild(closeBtn);
+  lb.appendChild(dlBtn);
+  document.body.appendChild(lb);
+}
+window.openStudioVideoLightbox = openStudioVideoLightbox;
+
+/** Download a generated video — fetch+blob so mobile browsers save instead of just navigating */
+function downloadGeneratedVideo(src, filename){
+  if(!src) return;
+  filename = filename || ('synapses-video-' + Date.now() + '.mp4');
+  function fail(){ if(typeof showToast === 'function') showToast('Could not save — long-press the video to save it instead'); }
+  if(/^data:/i.test(src)){
+    try{
+      var a0 = document.createElement('a');
+      a0.href = src; a0.download = filename;
+      document.body.appendChild(a0); a0.click(); a0.remove();
+      if(typeof showToast === 'function') showToast('Saved');
+    }catch(_d){ fail(); }
+    return;
+  }
+  if(typeof showToast === 'function') showToast('Saving…');
+  fetch(src).then(function(r){
+    if(!r.ok) throw new Error('fetch failed');
+    return r.blob();
+  }).then(function(blob){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    if(typeof showToast === 'function') showToast('Saved');
+  }).catch(function(){
+    try{ window.open(src, '_blank'); }catch(_o){}
+    fail();
+  });
+}
 
 /**
  * Studio download — ACTUALLY save to device Photos / Downloads.
@@ -10730,6 +12899,93 @@ function saveGeneratedImageToHistory(src, meta){
   }catch(e){ console.error('saveGeneratedImageToHistory error:', e); }
 }
 
+// Video history: reuses the same IDB store as images (rows are tagged kind:'video')
+// but keeps its own localStorage index so it doesn't collide with the image grid/history
+// sheet, which don't know how to render a <video> yet. No Supabase sync yet either —
+// there's no generated_videos table/bucket set up server-side. Flagging that as a
+// follow-up rather than silently faking it.
+var STUDIO_VIDEO_CACHE_KEY = 'synapses_studio_video_cache_v1';
+var STUDIO_VIDEO_CACHE_MAX = 20;
+
+function saveGeneratedVideoToHistory(src, meta){
+  try{
+    meta = meta || {};
+    if(!src) return;
+    var id = 'vid_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    var ts = Date.now();
+    var row = {
+      id: id,
+      src: src,
+      prompt: meta.prompt || '',
+      model: meta.model || '',
+      aspect: meta.aspect || '',
+      duration: meta.duration || '',
+      ts: ts,
+      blob: null,
+      kind: 'video'
+    };
+    if(/^data:/i.test(src)){
+      try{ row.blob = _dataUrlToBlob(src); }catch(_b){}
+    }
+    _studioIdbPut(row).then(function(){
+      var light = _readStudioVideoCache();
+      light.unshift({
+        id: id,
+        src: (/^https?:/i.test(src) ? src : (row.blob ? '' : src)),
+        prompt: row.prompt,
+        model: row.model,
+        aspect: row.aspect,
+        duration: row.duration,
+        ts: ts
+      });
+      _writeStudioVideoCache(light);
+    }).catch(function(err){
+      console.warn('Studio video IDB save failed, using localStorage fallback', err);
+      var hist = _readStudioVideoCache();
+      hist.unshift({ id: id, src: src, prompt: row.prompt, model: row.model, aspect: row.aspect, duration: row.duration, ts: ts });
+      _writeStudioVideoCache(hist);
+    });
+  }catch(e){ console.error('saveGeneratedVideoToHistory error:', e); }
+}
+
+function _readStudioVideoCache(){
+  var hist = [];
+  try{ hist = JSON.parse(localStorage.getItem(STUDIO_VIDEO_CACHE_KEY) || '[]'); }catch(e){ hist = []; }
+  if(!Array.isArray(hist)) return [];
+  return hist.filter(function(it){
+    if(!it) return false;
+    if(it.id) return true;
+    if(!it.src) return false;
+    if(/^data:/i.test(it.src) && it.src.length > 4000) return false;
+    return true;
+  });
+}
+
+function _writeStudioVideoCache(hist){
+  if(!Array.isArray(hist)) hist = [];
+  if(hist.length > STUDIO_VIDEO_CACHE_MAX) hist = hist.slice(0, STUDIO_VIDEO_CACHE_MAX);
+  var light = hist.map(function(it){
+    var src = (it && it.src) || '';
+    if(/^data:/i.test(src) && src.length > 4000) src = '';
+    return {
+      id: (it && it.id) || '',
+      src: src,
+      prompt: (it && it.prompt) || '',
+      model: (it && it.model) || '',
+      aspect: (it && it.aspect) || '',
+      duration: (it && it.duration) || '',
+      ts: (it && it.ts) || 0
+    };
+  }).filter(function(it){ return it.src || it.id; });
+  try{
+    localStorage.setItem(STUDIO_VIDEO_CACHE_KEY, JSON.stringify(light));
+    return true;
+  }catch(e){
+    try{ localStorage.removeItem(STUDIO_VIDEO_CACHE_KEY); }catch(_r){}
+    return false;
+  }
+}
+
 async function loadImageGenHistory(){
   try{
     // 1) IDB (primary local) + one-time migrate from old LS
@@ -10883,6 +13139,91 @@ function reuseHistoryImage(it){
 // Studio never opens to an empty box and nothing ever disappears — every
 // new generation joins the top of this same feed instead of replacing it.
 var _imageGenFeedLoaded = false;
+/** Header Home icon glyphs — house (tap to go home) vs. a small image frame
+ *  (tap to jump back to what you were generating), swapped based on which
+ *  screen is currently showing. */
+var STUDIO_HOME_ICON_HOUSE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>';
+var STUDIO_HOME_ICON_GEN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>';
+function _setStudioHomeBtnIcon(showingHome){
+  var btn = document.getElementById('studioHomeBtn');
+  if(!btn) return;
+  // On the home screen the button's job is "take me back to generating" → image icon.
+  // On the results/generation screen its job is "take me home" → house icon.
+  btn.innerHTML = showingHome ? STUDIO_HOME_ICON_GEN : STUDIO_HOME_ICON_HOUSE;
+}
+
+/** Paints the Studio "home" screen (Featured looks / New in Studio / Apps browse on PC,
+ *  simple empty copy on mobile) into #imageGenEmptyState. Pure render — does not touch
+ *  #imageGenResults visibility, so callers control whether results stay mounted underneath. */
+function _renderStudioHomeMarkup(emptyEl){
+  if(!emptyEl) return;
+  var isPcStudio = (typeof window !== 'undefined' && window.innerWidth > 768);
+  if(isPcStudio){
+    emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;min-height:260px;color:var(--muted);text-align:left;padding:0;box-sizing:border-box;';
+    /* PC only landing — mobile keeps original compact empty copy (no layout/bg side-effects) */
+    emptyEl.innerHTML =
+      '<div class="studio-empty-stage">' +
+        '<div class="studio-empty-main" id="studioEmptyExplore">' +
+          '<div class="studio-empty-hero-wrap">' +
+            '<div class="studio-empty-hero">Everything you need to make anything you want</div>' +
+            '<div class="studio-empty-sub">Browse looks and starters — or type a scene in the dock.</div>' +
+            '<div class="studio-empty-chips" aria-hidden="true">' +
+              '<span class="studio-empty-chip studio-empty-chip-on">DreamShaper 8</span>' +
+              '<span class="studio-empty-chip">Flux 1</span>' +
+              '<span class="studio-empty-chip">Flux.2 Klein</span>' +
+              '<span class="studio-empty-chip">GPT Image 2</span>' +
+            '</div>' +
+          '</div>' +
+          _buildStudioExploreHtml() +
+        '</div>' +
+        _buildStudioLandRailHtml() +
+      '</div>';
+    try{ _mountStudioExplore(document.getElementById('studioEmptyExplore')); }catch(_ex){}
+  } else {
+    emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
+    emptyEl.innerHTML =
+      '<div style="font-size:13px;">Nothing generated yet.</div>' +
+      '<div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
+  }
+}
+
+/** Tracks whether the results grid (vs the Studio home screen) is the active view,
+ *  purely so the header Home icon knows which way to toggle. */
+var _studioHomeShowing = false;
+function _setStudioShowingResults(showing){
+  var modal = document.getElementById('imageGenModal');
+  if(modal) modal.classList.toggle('studio-showing-results', !!showing);
+  _studioHomeShowing = false;
+  _setStudioHomeBtnIcon(false);
+}
+
+/** Header Home icon: jump back to the Studio browse/home screen without touching
+ *  any saved history. Tapping again (icon swaps to a generation-page glyph) returns
+ *  to the results grid the person was just looking at. This is the ONLY thing that
+ *  used to require "Clear studio history" (which deletes everything) to get back to. */
+function toggleStudioHome(){
+  var emptyEl = document.getElementById('imageGenEmptyState');
+  var resultsEl = document.getElementById('imageGenResults');
+  var btn = document.getElementById('studioHomeBtn');
+  if(!emptyEl || !resultsEl) return;
+  if(_studioHomeShowing){
+    // Return to the results/generation grid.
+    _studioHomeShowing = false;
+    emptyEl.style.display = 'none';
+    resultsEl.style.display = resultsEl.childElementCount ? 'grid' : 'none';
+    if(btn) btn.title = 'Studio home';
+    _setStudioHomeBtnIcon(false);
+  } else {
+    // Show the home/browse screen, keeping the results grid intact underneath.
+    _studioHomeShowing = true;
+    resultsEl.style.display = 'none';
+    _renderStudioHomeMarkup(emptyEl);
+    emptyEl.style.display = 'flex';
+    if(btn) btn.title = 'Back to your generation';
+    _setStudioHomeBtnIcon(true);
+  }
+}
+
 async function renderImageGenDefaultFeed(){
   var resultsEl = document.getElementById('imageGenResults');
   var emptyEl = document.getElementById('imageGenEmptyState');
@@ -10892,13 +13233,10 @@ async function renderImageGenDefaultFeed(){
   if(!items.length){
     resultsEl.style.display = 'none';
     resultsEl.innerHTML = '';
-    if(emptyEl){
-      emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
-      emptyEl.innerHTML = '<div style="font-size:13px;">Nothing generated yet.</div><div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
-    }
+    _renderStudioHomeMarkup(emptyEl);
+    _setStudioShowingResults(false);
     return;
   }
-  if(emptyEl) emptyEl.style.display = 'none';
   resultsEl.style.display = 'grid';
   resultsEl.innerHTML = '';
   items.forEach(function(it, idx){
@@ -10908,6 +13246,20 @@ async function renderImageGenDefaultFeed(){
       filename: 'synapses-image-' + (idx + 1) + '.jpg'
     }));
   });
+  // If the person was browsing the Studio home/explore screen when they last left
+  // (via toggleStudioHome), re-opening Studio should NOT yank them onto the results
+  // grid — keep showing home, with results populated underneath for the back-toggle.
+  if(_studioHomeShowing){
+    resultsEl.style.display = 'none';
+    _renderStudioHomeMarkup(emptyEl);
+    if(emptyEl) emptyEl.style.display = 'flex';
+    var modalEl = document.getElementById('imageGenModal');
+    if(modalEl) modalEl.classList.add('studio-showing-results');
+    _setStudioHomeBtnIcon(true);
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+  _setStudioShowingResults(true);
 }
 
 async function openImageGenHistory(){
@@ -11027,7 +13379,9 @@ function switchStudioTab(tab){
   if(tab === 'community' && comView.style.display === 'flex'){
     tab = 'generate';
   }
+  window._studioLastTab = tab; // remember so re-opening Studio restores this tab
   if(tab === 'community'){
+    try{ _studioUnmountDeepSpace(); }catch(_ds){}
     genView.style.display = 'none';
     comView.style.display = 'flex';
     comView.style.opacity = '0';
@@ -11104,6 +13458,7 @@ function switchStudioTab(tab){
       comView.style.display = 'none';
       genView.style.display = 'flex';
     }, 240);
+    try{ _studioMountDeepSpace(); }catch(_ds){}
   }
 }
 
@@ -12484,6 +14839,13 @@ function showCyberpunkGreeting(name){
   var ex=document.getElementById('cyberGreeting');
   if(ex) ex.remove();
 
+  /* True Black / Night: OLED mono chrome (no purple glass) */
+  var isTB = false;
+  try {
+    var th = document.documentElement.getAttribute('data-theme') || localStorage.getItem('_appTheme') || '';
+    isTB = (th === 'trueblack' || th === 'pitchblack');
+  } catch(_t){}
+
   var hour=new Date().getHours();
   var msgs=[
     'neural link established. welcome back.',
@@ -12497,59 +14859,72 @@ function showCyberpunkGreeting(name){
 
   var wrap=document.createElement('div');
   wrap.id='cyberGreeting';
+  if(isTB) wrap.classList.add('cg-tb');
   wrap.style.cssText='position:fixed;bottom:28px;right:28px;z-index:99999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;animation:cgSlideIn .5s cubic-bezier(0.16,1,0.3,1) both;';
+
+  var bubBg = isTB ? 'rgba(8,8,10,0.92)' : 'rgba(124,106,247,0.1)';
+  var bubBorder = isTB ? 'rgba(255,255,255,0.12)' : 'rgba(124,106,247,0.2)';
+  var bubShadow = isTB
+    ? '0 8px 32px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.04)'
+    : '0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.2)';
+  var tagCol = isTB ? 'rgba(255,255,255,0.4)' : 'rgba(124,106,247,0.7)';
+  var nameCol = isTB ? '#ffffff' : '#f0f0ff';
+  var msgCol = isTB ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.45)';
+  var dotBg = isTB ? 'rgba(255,255,255,0.85)' : '#00d9a8';
+  var dotGlow = isTB ? '0 0 6px rgba(255,255,255,0.45)' : '0 0 6px #00d9a8';
+  var dotAnim = isTB ? 'cgGlowTB' : 'cgGlow';
 
   // Speech bubble
   var bubble=
-    '<div style="'+
-      'background:rgba(124,106,247,0.1);'+
+    '<div class="cg-bubble" style="'+
+      'background:'+bubBg+';'+
       'backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);'+
-      'border:1px solid rgba(124,106,247,0.2);border-radius:16px 16px 4px 16px;'+
+      'border:1px solid '+bubBorder+';border-radius:16px 16px 4px 16px;'+
       'padding:14px 18px;max-width:230px;pointer-events:auto;'+
-      'box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba(124,106,247,0.2);'+
+      'box-shadow:'+bubShadow+';'+
       'animation:cgBubbleIn .4s cubic-bezier(0.16,1,0.3,1) .15s both;'+
       'position:relative;'+
     '">'+
-    '<div style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px #00d9a8;animation:cgGlow 2s ease-in-out infinite;"></div>'+
-    '<div style="font-size:9px;letter-spacing:.2em;color:rgba(124,106,247,0.7);text-transform:uppercase;font-weight:700;margin-bottom:5px;">'+timeHint+' // 2026</div>'+
-    '<div style="font-size:13px;font-weight:700;color:#f0f0ff;margin-bottom:3px;">hey, '+esc(name)+'</div>'+
-    '<div style="font-size:11px;color:rgba(255,255,255,0.45);line-height:1.5;">'+msg+'</div>'+
+    '<div class="cg-dot" style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:'+dotBg+';box-shadow:'+dotGlow+';animation:'+dotAnim+' 2s ease-in-out infinite;"></div>'+
+    '<div class="cg-tag" style="font-size:9px;letter-spacing:.2em;color:'+tagCol+';text-transform:uppercase;font-weight:700;margin-bottom:5px;">'+timeHint+' // 2026</div>'+
+    '<div class="cg-name" style="font-size:13px;font-weight:700;color:'+nameCol+';margin-bottom:3px;">hey, '+esc(name)+'</div>'+
+    '<div class="cg-msg" style="font-size:11px;color:'+msgCol+';line-height:1.5;">'+msg+'</div>'+
     '</div>';
+
+  /* Robot strokes — purple default; True Black = OLED grey/white */
+  var rFill = isTB ? '#0a0a0a' : '#1a1030';
+  var rHead = isTB ? '#0c0c0e' : '#1e1040';
+  var rStroke = isTB ? 'rgba(200,200,210,0.5)' : '#7c6af7';
+  var rLine = isTB ? 'rgba(255,255,255,0.18)' : 'rgba(124,106,247,0.3)';
+  var rLine2 = isTB ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.2)';
+  var rEye = isTB ? 'rgba(255,255,255,0.88)' : '#00d9a8';
+  var rMouth = isTB ? 'rgba(255,255,255,0.28)' : 'rgba(124,106,247,0.5)';
+  var rGlow = isTB ? 'rgba(255,255,255,0.12)' : 'rgba(124,106,247,0.25)';
+  var rFillSoft = isTB ? 'rgba(200,200,210,0.55)' : '#7c6af7';
 
   // SVG Robot character
   var robot=
     '<div style="width:72px;height:72px;position:relative;animation:cgBobble 2.5s ease-in-out 0.6s infinite;cursor:pointer;" onclick="var el=document.getElementById(\"cyberGreeting\");if(el){el.style.animation=\"cgSlideOut .3s ease-in both\";setTimeout(function(){el.remove();},300);}">'+
     '<svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" width="72" height="72">'+
-      // Glow base
-      '<ellipse cx="36" cy="68" rx="18" ry="3" fill="rgba(124,106,247,0.25)"/>'+
-      // Body
-      '<rect x="20" y="34" width="32" height="26" rx="6" fill="#1a1030" stroke="#7c6af7" stroke-width="1.5"/>'+
-      // Body detail lines
-      '<line x1="26" y1="42" x2="46" y2="42" stroke="rgba(124,106,247,0.3)" stroke-width="1"/>'+
-      '<line x1="26" y1="47" x2="40" y2="47" stroke="rgba(124,106,247,0.2)" stroke-width="1"/>'+
-      // Chest light
-      '<circle cx="36" cy="51" r="4" fill="none" stroke="#7c6af7" stroke-width="1.2"/>'+
-      '<circle cx="36" cy="51" r="2" fill="#7c6af7" opacity="0.8"/>'+
-      // Head
-      '<rect x="22" y="14" width="28" height="22" rx="8" fill="#1e1040" stroke="#7c6af7" stroke-width="1.5"/>'+
-      // Eyes
-      '<rect x="27" y="20" width="6" height="6" rx="2" fill="#00d9a8" style="animation:cgEyeBlink 3s ease-in-out infinite;transform-origin:30px 23px;"/>'+
-      '<rect x="39" y="20" width="6" height="6" rx="2" fill="#00d9a8" style="animation:cgEyeBlink 3s ease-in-out .15s infinite;transform-origin:42px 23px;"/>'+
-      // Mouth
-      '<rect x="29" y="29" width="14" height="3" rx="1.5" fill="rgba(124,106,247,0.5)"/>'+
-      // Antenna
-      '<line x1="36" y1="14" x2="36" y2="8" stroke="#7c6af7" stroke-width="1.5" stroke-linecap="round"/>'+
-      '<circle cx="36" cy="7" r="2.5" fill="#7c6af7"/>'+
-      // Left arm (static)
-      '<rect x="10" y="36" width="10" height="6" rx="3" fill="#1a1030" stroke="#7c6af7" stroke-width="1.2"/>'+
-      // Right arm (waving) - wrapped in animated group
+      '<ellipse cx="36" cy="68" rx="18" ry="3" fill="'+rGlow+'"/>'+
+      '<rect x="20" y="34" width="32" height="26" rx="6" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1.5"/>'+
+      '<line x1="26" y1="42" x2="46" y2="42" stroke="'+rLine+'" stroke-width="1"/>'+
+      '<line x1="26" y1="47" x2="40" y2="47" stroke="'+rLine2+'" stroke-width="1"/>'+
+      '<circle cx="36" cy="51" r="4" fill="none" stroke="'+rStroke+'" stroke-width="1.2"/>'+
+      '<circle cx="36" cy="51" r="2" fill="'+rFillSoft+'" opacity="0.85"/>'+
+      '<rect x="22" y="14" width="28" height="22" rx="8" fill="'+rHead+'" stroke="'+rStroke+'" stroke-width="1.5"/>'+
+      '<rect x="27" y="20" width="6" height="6" rx="2" fill="'+rEye+'" style="animation:cgEyeBlink 3s ease-in-out infinite;transform-origin:30px 23px;"/>'+
+      '<rect x="39" y="20" width="6" height="6" rx="2" fill="'+rEye+'" style="animation:cgEyeBlink 3s ease-in-out .15s infinite;transform-origin:42px 23px;"/>'+
+      '<rect x="29" y="29" width="14" height="3" rx="1.5" fill="'+rMouth+'"/>'+
+      '<line x1="36" y1="14" x2="36" y2="8" stroke="'+rStroke+'" stroke-width="1.5" stroke-linecap="round"/>'+
+      '<circle cx="36" cy="7" r="2.5" fill="'+rFillSoft+'"/>'+
+      '<rect x="10" y="36" width="10" height="6" rx="3" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1.2"/>'+
       '<g style="transform-origin:52px 39px;animation:cgWaveArm 1.4s ease-in-out .5s 3">'+
-        '<rect x="52" y="36" width="10" height="6" rx="3" fill="#1a1030" stroke="#7c6af7" stroke-width="1.2"/>'+
-        '<rect x="59" y="34" width="5" height="5" rx="2" fill="#1a1030" stroke="#7c6af7" stroke-width="1"/>'+
+        '<rect x="52" y="36" width="10" height="6" rx="3" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1.2"/>'+
+        '<rect x="59" y="34" width="5" height="5" rx="2" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1"/>'+
       '</g>'+
-      // Legs
-      '<rect x="24" y="58" width="8" height="10" rx="3" fill="#1a1030" stroke="#7c6af7" stroke-width="1.2"/>'+
-      '<rect x="40" y="58" width="8" height="10" rx="3" fill="#1a1030" stroke="#7c6af7" stroke-width="1.2"/>'+
+      '<rect x="24" y="58" width="8" height="10" rx="3" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1.2"/>'+
+      '<rect x="40" y="58" width="8" height="10" rx="3" fill="'+rFill+'" stroke="'+rStroke+'" stroke-width="1.2"/>'+
     '</svg>'+
     '</div>';
 
@@ -12820,16 +15195,21 @@ if(_isVidMode){
 }if(canRecruit(currentUser))document.getElementById('postJobBtnMain').style.display='inline-flex';renderRecentChats();renderSavedChats();initRoom();loadJobs();showCyberpunkGreeting(currentUser.name);loadSavedTools();renderSavedToolsSidebar();startFakeNotifs();setTimeout(loadCoverVideo,300);setTimeout(checkOnboarding,800);chatHistory=[];activeSession=null;if(document.getElementById('chatContainer'))document.getElementById('chatContainer').innerHTML='';if(typeof updateBeamsVisibility==='function')setTimeout(updateBeamsVisibility,50);setTimeout(function(){
   var _lastSec=null;
   try{_lastSec=localStorage.getItem('synapses_last_section');}catch(e){}
+  /* Boot/refresh: empty home respects synapses_askbar_open (fingerprint if off). */
+  function _bootChatHome(){
+    if(typeof newChat==='function') newChat({ forceAsk: false });
+    else if(typeof _restoreEmptyChatHome==='function') _restoreEmptyChatHome();
+  }
   if(!_lastSec){
-    // True first-ever launch — nothing saved yet, default cleanly to Home/new chat
-    if(typeof newChat==='function')newChat();
+    // True first-ever launch — nothing saved yet, default cleanly to Home/empty chat
+    _bootChatHome();
     document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active');b.classList.remove('nav-glow');b.classList.remove('nav-glow-hold');b.style.boxShadow='';b.style.animation='';});
     var _nbHome=document.getElementById('nav-home');if(_nbHome)_nbHome.classList.add('active');
   } else {
     // Returning user — restore whatever they last had open/pinned
-    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){if(typeof newChat==='function')newChat();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){if(typeof newChat==='function')newChat();}};
+    var secMap={'sec-hub':function(){goHub('feed');},'sec-room':function(){goRoom();},'sec-jobs':function(){goJobs();},'sec-profile':function(){goProfile();},'sec-tools':function(){showTools('all');},'sec-human':function(){goHuman();},'sec-world':function(){goWorld();},'sec-welcome':function(){_bootChatHome();},'sec-chat':function(){_bootChatHome();},'sec-whiteboard':function(){if(typeof goWhiteboard==='function')goWhiteboard();},'sec-notes':function(){_bootChatHome();}};
     var fn=secMap[_lastSec];
-    if(fn){fn();}else if(typeof newChat==='function'){newChat();}
+    if(fn){fn();}else{_bootChatHome();}
   }
 },50);
   _restoreSidebarChoices();
@@ -12848,7 +15228,8 @@ var _currentViewId=null;function setView(id){
   if(id === 'sec-chat'){
     var _ntb = _ensureNotesToggleBtn();
     if(_ntb) _ntb.style.display = 'flex';
-    try{ if(typeof window.refreshHomeGreeting === 'function') setTimeout(function(){ window.refreshHomeGreeting({ animate: true }); }, 40); }catch(eHg){}
+    /* Re-apply settled greeting only — never rotate here (was fighting boot) */
+    try{ if(typeof window.refreshHomeGreeting === 'function') setTimeout(function(){ window.refreshHomeGreeting({ animate: false }); }, 40); }catch(eHg){}
   } else {
     var _ntb = document.getElementById('notesToggleBtn');
     if(_ntb) _ntb.style.display = 'none';
@@ -12997,7 +15378,7 @@ var _ncmdItems = [
   {ic:'📅',label:'Days Until',cat:'Tools',fn:function(){_toolDaysUntil();}},
   {ic:'🎧',label:'DJ App',cat:'Tools',fn:function(){_toolDJApp();}},
   {ic:'🏭',label:'Sourcing Agent',cat:'Tools',fn:function(){openSourcingAgent();}},
-  {ic:'💬',label:'New Chat',cat:'Actions',fn:function(){newChat();}},
+  {ic:'💬',label:'New Chat',cat:'Actions',fn:function(){newChat({forceAsk:true});}},
   {ic:'💾',label:'Saved Chats',cat:'Actions',fn:function(){setView('sec-saved');}},
   {ic:'⚙️',label:'Settings',cat:'Actions',fn:function(){goProfile();}},
 ];
@@ -17081,15 +19462,22 @@ function runHeroBarLaser(bar, onDone) {
   function _setGreetingText(text, animate){
     var el = _greetingEl();
     if(!el || !text) return false;
-    if(el.textContent === text) return true;
+    if(el.textContent === text){
+      el.style.opacity = '1';
+      return true;
+    }
+    /* Cancel in-flight fade so rapid callers cannot mid-swap text */
+    if(el._greetFadeTimer){ try{ clearTimeout(el._greetFadeTimer); }catch(_t){} el._greetFadeTimer = 0; }
     if(animate){
       el.style.transition = 'opacity .28s ease';
       el.style.opacity = '0';
-      setTimeout(function(){
+      el._greetFadeTimer = setTimeout(function(){
+        el._greetFadeTimer = 0;
         el.textContent = text;
         el.style.opacity = '1';
       }, 180);
     } else {
+      el.style.transition = 'none';
       el.textContent = text;
       el.style.opacity = '1';
     }
@@ -17154,13 +19542,25 @@ function runHeroBarLaser(bar, onDone) {
     btn.classList.toggle('syn-skip-visible', _greetMode === 'live' && _newsHeadlines.length > 1);
   }
 
-  /** Rotate: classic "What's on your mind?" <-> Claude-style Good X, Name.
-      No-ops while the live feed is showing — it shouldn't get clobbered by
-      unrelated calls (e.g. after login) elsewhere in the app. */
+  /**
+   * Classic "What's on your mind?" <-> Claude-style Good X, Name.
+   * IMPORTANT: only advances (flips) when opts.rotate is true — otherwise
+   * re-applies the current line. On load many paths used to call this and
+   * each flip fought the last (ms flash between variants).
+   * No-ops while live feed is showing unless forceNormal.
+   */
   function refreshHomeGreeting(opts){
     opts = opts || {};
     if(_greetMode === 'live' && !opts.forceNormal) return _lastGreeting;
     try {
+      var wantRotate = !!opts.rotate || !!opts.forceClaude || !!opts.forceClassic || !!opts.forceNormal;
+      /* Re-apply settled line — no flip (setView / beams / boot re-entry) */
+      if(_lastGreeting && !wantRotate){
+        _setGreetingText(_lastGreeting, !!opts.animate);
+        _setLiveClickable(null);
+        return _lastGreeting;
+      }
+
       _modeFlip = (_modeFlip + 1) % 2;
       var line;
       if(opts.forceClaude) line = _claudeStyleGreeting();
@@ -17168,7 +19568,7 @@ function runHeroBarLaser(bar, onDone) {
       else if(_modeFlip === 0) line = _classicGreeting();
       else line = _claudeStyleGreeting();
 
-      /* avoid same line twice when possible */
+      /* avoid same line twice when deliberately rotating */
       if(line === _lastGreeting && !opts.forceClassic && !opts.forceClaude){
         line = (_modeFlip === 0) ? _claudeStyleGreeting() : _classicGreeting();
       }
@@ -17176,7 +19576,8 @@ function runHeroBarLaser(bar, onDone) {
       var ok = _setGreetingText(line, !!opts.animate);
       _setLiveClickable(null);
       if(!ok){
-        setTimeout(function(){ refreshHomeGreeting(opts); }, 120);
+        /* Retry same line only — do not flip again */
+        setTimeout(function(){ _setGreetingText(_lastGreeting, false); }, 120);
         return line;
       }
       return line;
@@ -17308,24 +19709,33 @@ function runHeroBarLaser(bar, onDone) {
     });
   }
 
+  var _greetBooted = false;
   function boot(){
     wireLiveToggleBtn();
     _wireGreetingClick();
     _wireSkipBtn();
+    /* Only pick once per page load — re-entry only re-wires buttons */
+    if(_greetBooted) return;
+    _greetBooted = true;
     if(_greetMode === 'live') refreshLiveGreeting(false);
-    else refreshHomeGreeting({ animate: false });
+    else {
+      /* One deliberate pick (classic or Claude), no later boot/setView flip */
+      refreshHomeGreeting({ animate: false, rotate: true });
+    }
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
-  setTimeout(boot, 80);
-  setTimeout(boot, 400);
+  /* Late wire for buttons injected after first paint — does not re-pick greeting */
+  setTimeout(function(){ wireLiveToggleBtn(); _wireGreetingClick(); _wireSkipBtn(); }, 80);
+  setTimeout(function(){ wireLiveToggleBtn(); _wireGreetingClick(); _wireSkipBtn(); }, 400);
   document.addEventListener('visibilitychange', function(){
     if(document.hidden) return;
     if(_greetMode === 'live'){
       if(_newsHeadlines.length && _newsFetchedDay === String(_daySeed())){ _startNewsRotation(); _updateSkipVisibility(); }
       else refreshLiveGreeting(true);
     }
-    else refreshHomeGreeting({ animate: true });
+    /* Tab back: keep same greeting — rotate only when returning from a chat */
+    else refreshHomeGreeting({ animate: false });
   });
 })();
 
@@ -17853,12 +20263,42 @@ function _saveAskBarPref(on){
 /**
  * Return to empty chat home.
  * withAsk undefined → restore last saved toggle (survives app kill/reopen).
- * withAsk true/false → force that UI state; true also saves (user opened Ask).
+ * withAsk true/false → force that UI state.
+ * opts.silent true → never write synapses_askbar_open (e.g. + new chat opens Ask without flipping toggle pref).
+ * When forced open without silent, saves pref on (user opened Ask via activateAskMe).
  */
-function _restoreEmptyChatHome(withAsk){
+function _restoreEmptyChatHome(withAsk, opts){
+  opts = opts || {};
   var forced = (withAsk !== undefined);
   if(!forced) withAsk = _prefAskBarOpen();
+  /* opts.silent wins; else forced open saves, pure restore is silent */
+  var openSilent = (opts.silent === true) ? true : !forced;
   window._fpSlotTop = null; /* drop stale mid-chat measurements */
+
+  var sec = document.getElementById('sec-chat');
+  var btn = document.getElementById('bnavAskBtn');
+  /*
+   * Snap ask/fingerprint BEFORE empty home is revealed.
+   * Mid-chat always has askbar-on (bar visible). If we unhide empty state
+   * first, one paint shows the Ask bar on home, then a 0.28s fade-out —
+   * the flash users see when Ask is toggled off. Force askbar-off + no
+   * transitions before stripping messages / showing empty state.
+   */
+  if(sec){
+    sec.classList.add('askbar-snap');
+    sec.classList.remove('askbar-on');
+    sec.classList.add('askbar-off');
+    window._askBarOpen = false;
+    if(btn) btn.classList.remove('active');
+    var areaPre = sec.querySelector('.input-area');
+    if(areaPre){
+      areaPre.style.removeProperty('top');
+      areaPre.style.removeProperty('left');
+      areaPre.style.removeProperty('right');
+      areaPre.style.removeProperty('bottom');
+    }
+  }
+
   chatHistory = [];
   activeSession = null;
   var cc = document.getElementById('chatContainer');
@@ -17875,21 +20315,25 @@ function _restoreEmptyChatHome(withAsk){
   if(_wasActiveConvo && typeof window.restartEmptyStateAnims === 'function') window.restartEmptyStateAnims(1);
   try{ if(typeof _syncNotesToggleVisibility === 'function') _syncNotesToggleVisibility(); }catch(_s){}
   setView('sec-chat');
-  /* Pad visible first → measure → then restore Ask. silent: do not clobber saved pref mid-restore */
-  setAskBarVisible(false, { silent: true });
+  /* Keep fingerprint pad path; silent so we don't clobber saved pref */
+  setAskBarVisible(false, { silent: true, snap: true });
   function finish(){
     try{ _cacheFingerprintSlotTop(); }catch(_c){}
     if(withAsk){
-      /* forced open from Ask button → save on; pure restore → silent (pref already correct) */
-      setAskBarVisible(true, { silent: !forced });
+      setAskBarVisible(true, { silent: openSilent });
     } else if(typeof _positionAskBarAtFingerprint === 'function') {
       _positionAskBarAtFingerprint();
     }
   }
+  function endSnap(){
+    if(sec) sec.classList.remove('askbar-snap');
+  }
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
       finish();
-      setTimeout(finish, 60);
+      /* Drop snap after paint so user toggles still animate later */
+      requestAnimationFrame(endSnap);
+      if(withAsk) setTimeout(finish, 60);
       setTimeout(function(){
         if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
       }, 180);
@@ -17986,6 +20430,7 @@ function setAskBarVisible(on, opts){
   var sec = document.getElementById('sec-chat');
   var btn = document.getElementById('bnavAskBtn');
   if(!sec) return;
+  if(opts.snap) sec.classList.add('askbar-snap');
   /* Active conversation: bar always on (bottom layout, no fingerprint swap).
      Do NOT rewrite empty-home ask pref here. */
   if(!_isChatEmptyHome()){
@@ -18000,6 +20445,7 @@ function setAskBarVisible(on, opts){
       areaChat.style.removeProperty('right');
       areaChat.style.removeProperty('bottom');
     }
+    if(opts.snap) requestAnimationFrame(function(){ sec.classList.remove('askbar-snap'); });
     return;
   }
   /* Cache fingerprint Y BEFORE askbar-on collapses the pad (height → 0) */
@@ -18031,6 +20477,9 @@ function setAskBarVisible(on, opts){
     var area = sec.querySelector('.input-area');
     if(area){
       area.style.removeProperty('top');
+      area.style.removeProperty('left');
+      area.style.removeProperty('right');
+      area.style.removeProperty('bottom');
     }
     /* Re-cache pad slot once it's visible again */
     requestAnimationFrame(function(){
@@ -18040,6 +20489,11 @@ function setAskBarVisible(on, opts){
       var ib2 = document.getElementById('inputBox');
       if(ib2) ib2.blur();
     } catch(eB){}
+  }
+  if(opts.snap){
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ sec.classList.remove('askbar-snap'); });
+    });
   }
 }
 /* Keep Ask bar aligned to fingerprint slot on rotate / resize; refresh cache when pad visible */
@@ -18097,8 +20551,19 @@ function activateAskMe(){
 window.activateAskMe = activateAskMe;
 window.setAskBarVisible = setAskBarVisible;
 
-function newChat(){
-  // Do NOT close past chats if already open — stay open on empty "ask me anything" home
+/**
+ * Empty chat home.
+ * Default: honor synapses_askbar_open (fingerprint if Ask is toggled off).
+ *   Used for logo/home, boot/refresh, return from saved chat / other pages.
+ * opts.forceAsk === true: + / "New Chat" only — open Ask so user can type (silent; does not flip saved toggle).
+ * Inline onclick may pass a MouseEvent as first arg — treat as default (respect pref).
+ */
+function newChat(opts){
+  if(!opts || typeof opts !== 'object' || typeof opts.preventDefault === 'function' || opts instanceof Event){
+    opts = {};
+  }
+  var forceAsk = opts.forceAsk === true;
+  // Do NOT close past chats if already open — stay open on empty home
   var _tt=document.getElementById('topTitle');
   if(_tt){
     _tt.style.transition='none';
@@ -18118,10 +20583,15 @@ function newChat(){
     if(activeSession) _keepGo[activeSession]=1;
     Object.keys(chatSessions||{}).forEach(function(k){ if(!_keepGo[k]) delete chatSessions[k]; });
   }catch(_cg){}
-  /* Empty home; Ask bar only if user left it on (default off on first install) */
   window._chpAutoOpenAfterReply = false;
-  _restoreEmptyChatHome();
-  // newChat / empty home: leave past chats as-is only if still open (don't re-open)
+  if(forceAsk){
+    /* + / New Chat: open Ask without writing toggle pref */
+    _restoreEmptyChatHome(true, { silent: true });
+  } else {
+    /* Home / logo / boot / leave saved chat: restore saved toggle */
+    _restoreEmptyChatHome();
+  }
+  // leave past chats as-is only if still open (don't re-open)
   try{
     var _sbKeep=document.getElementById('chpSidebar');
     if(_sbKeep&&(_sbKeep.classList.contains('open')||_sbKeep.classList.contains('fade-open'))){
@@ -18131,12 +20601,11 @@ function newChat(){
     }
   }catch(_k){}
 }
-// Past chats "+" / blank new chat → empty ask-me-anything home; keep past chats open
+// Past chats "+" → empty home with Ask open for typing (does not flip saved toggle)
 function blankNewChat(){
-  if(typeof newChat === 'function'){ newChat(); return; }
-  // Fallback if newChat missing: restore empty home without closing drawer
+  if(typeof newChat === 'function'){ newChat({ forceAsk: true }); return; }
   try{
-    if(typeof _restoreEmptyChatHome === 'function') _restoreEmptyChatHome();
+    if(typeof _restoreEmptyChatHome === 'function') _restoreEmptyChatHome(true, { silent: true });
     var _sb=document.getElementById('chpSidebar');
     if(_sb&&(_sb.classList.contains('open')||_sb.classList.contains('fade-open'))){
       if(typeof refreshChpList==='function') refreshChpList();
@@ -18202,7 +20671,7 @@ function goHuman(autoSkip){mobileAutoCollapse();setView('sec-human');var _nb=doc
 var SYNAPSES_KB = {
   pages: {
     home:    {label:'Home',        nav:'goHome()',          desc:'AI tools hub, main search, quick actions'},
-    chat:    {label:'New Chat',    nav:'newChat()',         desc:'General AI assistant, tools discovery, workflows'},
+    chat:    {label:'New Chat',    nav:'newChat({forceAsk:true})', desc:'General AI assistant, tools discovery, workflows'},
     feed:    {label:'Builder Feed',nav:"goHub('feed')",    desc:'Find collaborators, post projects, offer skills, launch ideas'},
     match:   {label:'Match & Connect',nav:"goHub('match')",desc:'AI-matched cofounders, collaborators, team building'},
     udev:    {label:'User Development',nav:"goHub('udev')",desc:'Career sprints, skill ladders, smart growth plans'},
@@ -21704,7 +24173,7 @@ async function sendMessage(){
   // Treat as first whenever activeSession isn't already in recentChats.
   var isFirst = !activeSession || !recentChats.find(function(c){return c.key===activeSession;});
   if(isFirst) activeSession='session_'+Date.now();
-  if(isFirst){var _tt3=document.getElementById('topTitle');_tt3.style.transition='none';_tt3.style.opacity='0';_tt3.innerHTML='Synapses';_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';requestAnimationFrame(function(){_tt3.style.opacity='1';});}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
+  if(isFirst){var _tt3=document.getElementById('topTitle');var _tt3cur=(_tt3.innerText||_tt3.textContent||'').trim();_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';_tt3.style.opacity='1';if(_tt3cur!=='Synapses'){_tt3.innerHTML='Synapses';}}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   setView('sec-chat');
   // Fold any text-extracted attachments (pdf/txt/md/csv/json) into what the AI receives.
   var _textAttachBlock = '';
@@ -25643,7 +28112,8 @@ async function confirmWorldApproach(){
       // strips 'hidden' — see there for why this wasHidden check can't be
       // trusted to catch that specific path). Default 0.6s here.
       restartEmptyStateAnims();
-      try{ if(typeof window.refreshHomeGreeting === 'function') window.refreshHomeGreeting({ animate: true }); }catch(eG){}
+      /* Same settled greeting — rotating here caused ms flash on load/refresh */
+      try{ if(typeof window.refreshHomeGreeting === 'function') window.refreshHomeGreeting({ animate: false }); }catch(eG){}
       /* Drop stale mid-chat Ask Y and re-seat under greeting after layout */
       window._fpSlotTop = null;
       setTimeout(function(){
@@ -27338,18 +29808,38 @@ if (!_nb.expanded) _nb.expanded = {};
 
 var _NB_PAGE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b8fd9" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
 
+function _nbIsTrueBlack(){
+  try{
+    if(typeof _isTrueBlackTheme === 'function' && _isTrueBlackTheme()) return true;
+    var t = document.documentElement.getAttribute('data-theme') || localStorage.getItem('_appTheme') || '';
+    return t === 'trueblack' || t === 'pitchblack';
+  }catch(e){ return false; }
+}
+
 function _nbRenderNotebooks() {
   var el = document.getElementById('nbNotebookList');
   if (!el) return;
   el.innerHTML = '';
+  var tb = _nbIsTrueBlack();
+  var rowText = tb ? 'rgba(200,200,210,0.72)' : 'rgba(170,172,210,0.7)';
+  var countCol = tb ? 'rgba(255,255,255,0.32)' : 'rgba(99,102,195,0.35)';
+  var hoverBg = tb ? 'rgba(255,255,255,0.07)' : 'rgba(124,106,247,0.12)';
+  var prevBg = tb ? 'rgba(255,255,255,0.04)' : 'rgba(124,106,247,0.055)';
+  var prevBd = tb ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.14)';
+  var prevL = tb ? 'rgba(255,255,255,0.28)' : 'rgba(124,106,247,0.4)';
+  var prevTx = tb ? 'rgba(200,200,210,0.75)' : 'rgba(180,182,220,0.75)';
+  var prevHovBg = tb ? 'rgba(255,255,255,0.1)' : 'rgba(124,106,247,0.16)';
+  var prevHovBd = tb ? 'rgba(255,255,255,0.22)' : 'rgba(124,106,247,0.35)';
+  var prevHovTx = tb ? 'rgba(255,255,255,0.95)' : 'rgba(220,222,255,0.95)';
   _nb.data.forEach(function(notebook, i) {
     var active = (i === _nb.activeNb);
     var d = document.createElement('div');
-    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:rgba(170,172,210,0.7);';
+    d.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:8px 12px;cursor:pointer;border-radius:7px;margin:1px 6px;transition:background .15s;font-family:\'DM Sans\',sans-serif;font-size:13px;user-select:none;color:'+rowText+';';
+    var dotCol = tb ? (notebook.color && notebook.color !== '#7c6af7' ? notebook.color : 'rgba(255,255,255,0.55)') : (notebook.color||'#7c6af7');
     var _topRow = '<div style="display:flex;align-items:center;gap:9px;">' +
-      '<span style="width:8px;height:8px;border-radius:50%;background:' + (notebook.color||'#7c6af7') + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + (notebook.color||'#7c6af7') + '55;"></span>' +
+      '<span style="width:8px;height:8px;border-radius:50%;background:' + dotCol + ';flex-shrink:0;display:inline-block;box-shadow:0 0 5px ' + dotCol + '55;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(notebook.title) + '</span>' +
-      '<span style="font-size:10px;color:rgba(99,102,195,0.35);flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
+      '<span style="font-size:10px;color:'+countCol+';flex-shrink:0;">' + (notebook.pages||[]).length + '</span></div>';
     // Preview of the notebook's notes — each one its own clickable row, not just descriptive text
     var _previewPages = [];
     (notebook.pages||[]).forEach(function(p, pi){
@@ -27357,10 +29847,10 @@ function _nbRenderNotebooks() {
     });
     var _previewRow = _previewPages.length ? '<div style="padding-left:17px;display:flex;flex-direction:column;gap:3px;margin-top:2px;">' +
       _previewPages.map(function(item){
-        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\'rgba(124,106,247,0.16)\';this.style.borderColor=\'rgba(124,106,247,0.35)\';this.style.color=\'rgba(220,222,255,0.95)\'" onmouseout="this.style.background=\'rgba(124,106,247,0.055)\';this.style.borderColor=\'rgba(124,106,247,0.14)\';this.style.color=\'rgba(180,182,220,0.75)\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:rgba(180,182,220,0.75);cursor:pointer;padding:5px 8px;border-radius:6px;background:rgba(124,106,247,0.055);border:1px solid rgba(124,106,247,0.14);border-left:2px solid rgba(124,106,247,0.4);transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
+        return '<div onclick="nbOpenPreviewNote(' + i + ',' + item.pi + ',event)" onmouseover="this.style.background=\''+prevHovBg+'\';this.style.borderColor=\''+prevHovBd+'\';this.style.color=\''+prevHovTx+'\'" onmouseout="this.style.background=\''+prevBg+'\';this.style.borderColor=\''+prevBd+'\';this.style.color=\''+prevTx+'\'" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:'+prevTx+';cursor:pointer;padding:5px 8px;border-radius:6px;background:'+prevBg+';border:1px solid '+prevBd+';border-left:2px solid '+prevL+';transition:background .15s,border-color .15s,color .15s;">' + _nbEsc(item.p.title||'Untitled') + '</div>';
       }).join('') + '</div>' : '';
     d.innerHTML = _topRow + _previewRow;
-    d.onmouseover = function() { this.style.background='rgba(124,106,247,0.12)'; };
+    d.onmouseover = function() { this.style.background=hoverBg; };
     d.onmouseout  = function() { this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activeNb = i; _nb.activePg = 0;
@@ -27389,16 +29879,23 @@ function _nbRenderPages() {
   // Show/hide add button
   var addBtn = document.getElementById('nbAddPageBtn');
   if (addBtn) addBtn.style.visibility = '';
+  var tbP = _nbIsTrueBlack();
   nb.pages.forEach(function(page, i) {
     var active = (i === _nb.activePg);
     var d = document.createElement('div');
+    var actBg = tbP ? 'rgba(255,255,255,0.08)' : 'rgba(124,106,247,0.1)';
+    var actBd = tbP ? 'rgba(255,255,255,0.28)' : 'rgba(124,106,247,0.4)';
+    var actTx = tbP ? 'rgba(255,255,255,0.95)' : 'rgba(220,222,255,0.95)';
+    var idleTx = tbP ? 'rgba(190,190,200,0.7)' : 'rgba(175,177,220,0.7)';
+    var dateTx = tbP ? 'rgba(255,255,255,0.32)' : 'rgba(99,102,195,0.38)';
+    var hovBg = tbP ? 'rgba(255,255,255,0.05)' : 'rgba(124,106,247,0.08)';
     d.style.cssText = 'padding:7px 11px 6px;cursor:pointer;border-radius:6px;margin:1px 5px;transition:background .15s;' +
-      (active ? 'background:rgba(124,106,247,0.1);border-left:2px solid rgba(124,106,247,0.4);padding-left:9px;' : 'border-left:2px solid transparent;');
+      (active ? 'background:'+actBg+';border-left:2px solid '+actBd+';padding-left:9px;' : 'border-left:2px solid transparent;');
     d.innerHTML = '<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:' +
-      (active ? 'rgba(220,222,255,0.95)' : 'rgba(175,177,220,0.7)') +
+      (active ? actTx : idleTx) +
       ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _nbEsc(page.title||'Untitled') + '</div>' +
-      '<div style="font-size:10px;color:rgba(99,102,195,0.38);margin-top:1px;">' + (page.date||'') + '</div>';
-    d.onmouseover = function() { if(!active) this.style.background='rgba(124,106,247,0.08)'; };
+      '<div style="font-size:10px;color:'+dateTx+';margin-top:1px;">' + (page.date||'') + '</div>';
+    d.onmouseover = function() { if(!active) this.style.background=hovBg; };
     d.onmouseout  = function() { if(!active) this.style.background=''; };
     d.onclick = function() {
       _nbFlush(); _nb.activePg = i; _nbRenderPages(); _nbLoadEditor();
@@ -33019,11 +35516,64 @@ function _tnvEscapeAboveModal(){
   });
 }
 
-/** Reverse of fly-to-studio: glide left/top back to the pre-Studio rect, then settle. */
-function _tnvReturnFromModal(){
+/**
+ * Re-dock the Studio-parked mic into top-actions (or center) without a visible
+ * flight path. Used when STS turns OFF while parked — user wants it gone where
+ * it sits, not a buggy glide toward the top-right dock.
+ */
+function _tnvVanishEscapeInPlace(btn){
+  btn = btn || document.getElementById('topNavVoiceBtn');
+  if(!btn) return;
+  if(_tnvReturnTimer){ clearTimeout(_tnvReturnTimer); _tnvReturnTimer = null; }
+  _tnvEscaped = false;
+  _tnvReturnInProgress = false;
+  // Soft fade at current Studio grid position (no left/top motion)
+  try{
+    btn.style.transition = 'opacity .16s ease';
+    btn.style.opacity = '0';
+    btn.style.pointerEvents = 'none';
+  }catch(_o){}
+  _tnvReturnTimer = setTimeout(function(){
+    _tnvReturnTimer = null;
+    if(!btn || !btn.isConnected) return;
+    // Studio re-opened with live STS mid-fade — leave escape alone
+    if(_tnvEscaped && window._topNavVoiceActive) return;
+    btn.style.transition = 'none';
+    _tnvClearEscapeInline(btn);
+    btn.classList.remove('tnv-centered');
+    _tnvCentered = false;
+    try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e2){}
+    var home = document.querySelector('.top-bar .top-actions') || _tnvEscapeHomeParent;
+    if(home && home !== document.body){
+      try{
+        if(_tnvEscapeHomeNextSibling && _tnvEscapeHomeNextSibling.parentNode === home)
+          home.insertBefore(btn, _tnvEscapeHomeNextSibling);
+        else home.insertBefore(btn, home.firstChild);
+      }catch(_h){
+        try{ home.appendChild(btn); }catch(_h2){}
+      }
+    }
+    if(typeof _tnvResetMicBox === 'function') _tnvResetMicBox(btn);
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+    _tnvEscapeFromRect = null;
+  }, 170);
+}
+
+/** Reverse of fly-to-studio: glide left/top back to the pre-Studio rect, then settle.
+ *  opts.vanishInPlace / STS already off → fade out where parked (no top-right fly). */
+function _tnvReturnFromModal(opts){
+  opts = opts || {};
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || !_tnvEscaped) return;
   if(_tnvReturnTimer){ clearTimeout(_tnvReturnTimer); _tnvReturnTimer = null; }
+
+  /* Turning STS off while parked on Studio icons: disappear in place */
+  if(opts.vanishInPlace || !window._topNavVoiceActive){
+    _tnvVanishEscapeInPlace(btn);
+    return;
+  }
+
   _tnvEscaped = false;
   _tnvReturnInProgress = true;
 
@@ -33122,6 +35672,7 @@ function _tnvReturnFromModal(){
     _tnvEscapeFromRect = null;
   }, 430);
 }
+window._tnvVanishEscapeInPlace = _tnvVanishEscapeInPlace;
 window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
 window._tnvReturnFromModal = _tnvReturnFromModal;
 
@@ -33359,6 +35910,12 @@ function _dntSetIcon(el, kind, stroke){
   el.setAttribute('data-dnt-kind', kind);
   el.setAttribute('data-dnt-stroke', stroke);
   el.alt = '';
+  // Paint the plain (un-smoothed) SVG synchronously first so the <img> is never
+  // empty/broken between DOM insertion and the async canvas-bake finishing —
+  // that gap is what showed up as two blank white boxes on refresh.
+  var body = (kind === 'moon') ? _DNT_MOON : _DNT_SUN;
+  var rawSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="'+stroke+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+body+'</svg>';
+  el.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rawSvg);
   _dntBakePng(kind, stroke, 14, function(src){
     // Ignore stale paints if toggle flipped mid-bake
     if(el.getAttribute('data-dnt-kind') !== kind || el.getAttribute('data-dnt-stroke') !== stroke) return;
@@ -35707,6 +38264,12 @@ function _neuInjectDownloadInterceptor(frame){
     if(document.getElementById('cyberGreeting')) return;
     var authModal = document.getElementById('authModal');
     if(authModal && authModal.style.display !== 'none') return;
+    /* Studio — keep SynBot off this page even when enabled */
+    try{
+      if(document.body && document.body.classList.contains('studio-open')) return;
+      var igTip = document.getElementById('imageGenModal');
+      if(igTip && igTip.style.display === 'flex') return;
+    }catch(_ig){}
     if(typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return;
     var tip = TIPS[id];
     if(!tip) return;
@@ -36429,6 +38992,13 @@ function _neuInjectDownloadInterceptor(frame){
     }
     function _synBotAllowed(){
       if (typeof _synBotEnabled !== 'undefined' && !_synBotEnabled) return false;
+      /* Never on Studio (image gen modal), even if SynBot toggle is on */
+      try {
+        if (typeof window._studioIsOpen === 'function' && window._studioIsOpen()) return false;
+        var ig = document.getElementById('imageGenModal');
+        if (ig && ig.style.display === 'flex') return false;
+        if (document.body && document.body.classList.contains('studio-open')) return false;
+      } catch (eSt) {}
       /* Only hide BR while tour UI is actually live and bot is not in guide mode yet */
       try {
         var rA = document.getElementById('synTourRoot');
@@ -36721,6 +39291,7 @@ function _neuInjectDownloadInterceptor(frame){
       return v === '1';
     } catch (e) { return false; }
   }
+  window._synBotIsOn = _synBotIsOn;
   /** Bot must be visibly expanded before corner taps open chat */
   function _synBotIsExpanded(){
     var tip = document.getElementById('robotTooltip');
@@ -36851,6 +39422,13 @@ function _neuInjectDownloadInterceptor(frame){
 
   function showRobot(){
     if(!tooltip) return;
+    /* Studio page — never show SynBot here even if toggle is on */
+    try{
+      if(document.body && document.body.classList.contains('studio-open')) return;
+      if(typeof window._studioIsOpen === 'function' && window._studioIsOpen()) return;
+      var igM = document.getElementById('imageGenModal');
+      if(igM && igM.style.display === 'flex') return;
+    }catch(_st){}
     /* Terminal open — never re-summon toast under the glass (causes fog) */
     if(chat && chat.style.display === 'flex') return;
     /* Already landed — do nothing */
@@ -39024,7 +41602,7 @@ function synBotReply(msg){
 
   // ── Actions: New chat ──
   if(m.includes('new chat')||m.includes('start a chat')||m.includes('clear chat')||m.includes('fresh chat')){
-    return {text:'starting a fresh chat ✨', action:function(){ if(typeof newChat==='function') newChat(); }};
+    return {text:'starting a fresh chat ✨', action:function(){ if(typeof newChat==='function') newChat({forceAsk:true}); }};
   }
 
   // ── Actions: Sprint with goal ──
@@ -43040,7 +45618,8 @@ function speakVoiceReply(text) {
 
     var _navCmds = [
       [/\b(go\s+home|home\s+page|take\s+me\s+home|open\s+home)\b/i,          function(){ if(typeof goHome==='function') goHome(); },           'Home'],
-      [/\b(open\s+chat|new\s+chat|start\s+a?\s*chat|go\s+to\s+chat)\b/i,     function(){ if(typeof newChat==='function') newChat(); },          'Chat'],
+      [/\b(new\s+chat|start\s+a?\s*chat)\b/i,     function(){ if(typeof newChat==='function') newChat({forceAsk:true}); },          'Chat'],
+      [/\b(open\s+chat|go\s+to\s+chat)\b/i,       function(){ if(typeof newChat==='function') newChat({forceAsk:false}); },         'Chat'],
       [/\b(open|go\s+to|take\s+me\s+to|show\s+me)\s+(the\s+)?(builder\s+hub|dev\s+hub|user\s+dev|development\s+hub)\b/i,  function(){ if(typeof goHub==='function') goHub('feed'); },        'Builder Hub'],
       [/\b(open|go\s+to|take\s+me\s+to|show\s+me)\s+(the\s+)?(health(\s+ai)?|human\s+hub|wellness)\b/i,   function(){ if(typeof goHuman==='function') goHuman(true); },       'Health AI'],
       [/\b(open|go\s+to|take\s+me\s+to|show\s+me)\s+(the\s+)?(chatroom|chat\s+room|live\s+chat)\b/i,          function(){ if(typeof goRoom==='function') goRoom(); },            'Chatroom'],
