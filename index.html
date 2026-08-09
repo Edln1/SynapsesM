@@ -36036,7 +36036,7 @@ function _syncDayNightToggle(t){
       localStorage.removeItem(KEY);
     }catch(e){}
   }
-  function isOn(scope){ try{ return localStorage.getItem(scopedKey(scope || currentScope())) === '1'; }catch(e){ return false; } }
+  function isOn(scope){ try{ var v = localStorage.getItem(scopedKey(scope || currentScope())); return v === null ? true : v === '1'; }catch(e){ return true; } }
   function isNight(){ return (localStorage.getItem('_appTheme') || 'trueblack') === 'trueblack'; }
   function active(){ return isOn() && isNight(); }
 
