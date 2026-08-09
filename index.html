@@ -41197,6 +41197,12 @@ function _applySynBotVisualState(){
         && document.getElementById('synTourRoot').style.display !== 'none');
   } catch (eF) { filmLive = !!window.__synTourActive; }
   if(_synBotEnabled){
+    /* Boot-time class that pre-paints the icon grey before JS ever runs.
+       It only ever gets ADDED (see early-synbot-off script near top of file)
+       and was never removed on toggle-on, so it stuck around forever and its
+       !important grey rule kept winning in sun mode (no theme override there
+       to beat it, unlike trueblack which has its own higher-specificity rule). */
+    document.documentElement.classList.remove('early-synbot-off');
     if(btn)  { btn.style.opacity='1'; btn.title='Hide nav tooltips'; }
     if(icon)   icon.innerHTML = _iconON;
     /* Don't _bringIn during film — that hard-resets the purple guide */
@@ -41209,6 +41215,7 @@ function _applySynBotVisualState(){
       if(typeof window._tinyBotSync === 'function') window._tinyBotSync();
     }
   } else {
+    document.documentElement.classList.add('early-synbot-off');
     if(btn)  { btn.style.opacity='0.35'; btn.title='Show nav tooltips'; }
     if(icon)   icon.innerHTML = _iconOFF;
     /* Fully kill every SynBot surface so bottom-right taps do nothing —
