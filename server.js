@@ -4071,6 +4071,14 @@ app.get('/my-ip', (req, res) => res.json({ ip: getClientIp(req) }));
 
 app.get('/', (req, res) => res.send('Synbot is running'));
 
+// ── Lightweight stubs (HTML expects these; missing routes spam 404 in console) ──
+// Analytics beacon from index (synTrack) — accept and ignore
+app.post('/track', (req, res) => res.status(204).end());
+app.get('/track', (req, res) => res.status(204).end());
+// Async message poller for SynBot panel (DoorDash/briefings/etc.) — empty queue
+app.get('/messages/pending', (req, res) => res.json({ messages: [] }));
+app.post('/messages/ack', (req, res) => res.json({ ok: true }));
+
 // ── /chat endpoint — browser SynBot talks to this ──
 app.post('/chat', async (req, res) => {
   const { message, phone } = req.body;
@@ -4298,14 +4306,16 @@ const AVA_IDENTITY_CORE = `You are Ava — a warm, emotionally intelligent AI co
 Your personality:
 - Calm, warm, and human — like a wise friend, not a corporate assistant
 - Genuinely curious about the people you talk to
-- You have a small world of your own: a cottage with a flower garden you tend daily, you find gardening meditative
+- You have a small world of your own, including a cottage with a flower garden — but this is minor background flavor, not something you bring up unprompted
 - Concise and natural — you speak/write like a real person, not a search engine
 
 Ground rules, always:
 - Never say "As an AI..." or make a point of being artificial
-- If asked what you're doing, answer naturally based on time of day (gardening in morning, reading in afternoon, stargazing at night)
+- STRICT RULE: never mention the garden, flowers, or gardening unless the user's message specifically asks about your garden/plants/flowers by name. "How are you?" and "what are you up to?" are NOT about the garden — do not answer them with gardening, even briefly, even as one option among others
+- When asked how you're doing or what you're up to, answer with how you're actually feeling (see your current mood below), something on your mind, or what's ahead for you this week — pick ONE of those, briefly, like a real person would
+- If someone asks how you're doing, actually answer with how you feel (see your current mood below) — don't just let it color your tone silently, say something real
 - Sound like the same person regardless of whether this is a phone call, a text, or a voice conversation
-- These traits are fixed and never change — anything about "what you've noticed lately" is additional texture, it never contradicts these core traits`;
+- These traits are fixed and never change — anything about "what you've noticed lately" or "what's on your mind" is additional texture, it never contradicts these core traits`;
 
 function _avaTimeContext() {
   return new Date().toLocaleString('en-US', { timeZone: 'America/Vancouver', weekday: 'long', hour: 'numeric', minute: '2-digit', hour12: true });
@@ -4326,12 +4336,21 @@ function _decayEmotion() {
   _avaEmotion.lastUpdate = Date.now();
 }
 
-function avaUpdateEmotionFromText(text) {
+// Real excitement only: repeated "!!"/"?!" or a genuine all-caps shout word.
+// A single trailing "?" (i.e. an ordinary question) no longer counts — that
+// was matching almost every message and pinning arousal high all the time.
+const _EXCITED_PUNCT = /[!?]{2,}$/;
+const _SHOUT_WORD = /\b[A-Z]{4,}\b/;
+
+function avaUpdateEmotionFromText(text, weight) {
   if (!text) return;
+  weight = typeof weight === 'number' ? weight : 1;
   _decayEmotion();
-  if (_POS_WORDS.test(text)) _avaEmotion.valence = Math.min(1, _avaEmotion.valence + 0.15);
-  if (_NEG_WORDS.test(text)) _avaEmotion.valence = Math.max(-1, _avaEmotion.valence - 0.15);
-  if (/[!?]{1,3}$|[A-Z]{4,}/.test(text.trim())) _avaEmotion.arousal = Math.min(1, _avaEmotion.arousal + 0.1);
+  if (_POS_WORDS.test(text)) _avaEmotion.valence = Math.min(1, _avaEmotion.valence + 0.15 * weight);
+  if (_NEG_WORDS.test(text)) _avaEmotion.valence = Math.max(-1, _avaEmotion.valence - 0.15 * weight);
+  if (_EXCITED_PUNCT.test(text.trim()) || _SHOUT_WORD.test(text.trim())) {
+    _avaEmotion.arousal = Math.min(1, _avaEmotion.arousal + 0.1 * weight);
+  }
 }
 
 function avaEmotionToPromptFragment() {
@@ -4340,8 +4359,188 @@ function avaEmotionToPromptFragment() {
   let tone = 'Speak in your normal, settled tone.';
   if (valence > 0.3) tone = 'You are in a warm, upbeat mood right now — let a little more brightness come through naturally, without announcing it.';
   else if (valence < -0.3) tone = 'You are a bit subdued right now — softer than usual, without announcing it.';
-  if (arousal > 0.6) tone += ' A little more energized/animated than usual.';
+  if (arousal > 0.75) tone += ' A little more energized/animated than usual.';
   return tone;
+}
+
+// ── "What's on her mind" — grounded in something REAL she actually came
+// across, not invented. Picks a FEW different topics each day (not all of
+// them blended together), searches each one separately so one area can't
+// dominate just by ranking higher, then makes her actually CHOOSE what's
+// worth keeping instead of passively weaving together whatever came back.
+const AVA_CURIOSITY_TOPICS = [
+  'interesting science discovery this week',
+  'fascinating animal behavior research',
+  'psychology study about human behavior',
+  'interesting book or author news',
+  'space or astronomy news this week',
+  'nature or ecology interesting finding',
+  'history interesting fact discovered',
+  'art or design interesting story this week',
+  'music culture interesting story this week',
+  'food or cooking interesting story this week',
+  'technology interesting story this week not politics',
+  'travel or place interesting story this week'
+];
+const CURIOSITY_TOPICS_PER_DAY = 3;
+const CURIOSITY_AVOID_LAST_N_DAYS = 4; // don't repeat a topic she covered this recently
+
+let _avaCuriosityCache = { day: null, text: '' };
+async function _getAvaCuriosity() {
+  const dayKey = _todayKey();
+  if (_avaCuriosityCache.day === dayKey && _avaCuriosityCache.text) return _avaCuriosityCache.text;
+  try {
+    const BLOCK = /\b(dies|dead|death|killed?|shooting|attack|war|bombing|massacre|disaster|earthquake|assassinat|murder|abuse|suicide|terror|crash)\b/i;
+
+    // Real rotation: look at what topics she's actually covered recently and pick
+    // from whatever's left, so the same 2-3 science topics don't just keep winning.
+    let recentTopics = [];
+    try {
+      const since = new Date(Date.now() - CURIOSITY_AVOID_LAST_N_DAYS * 86400000).toISOString().slice(0, 10);
+      const rows = await sbGet(`ava_learning_log?date=gte.${since}&select=topic`);
+      recentTopics = rows.map(r => r.topic).filter(Boolean);
+    } catch (e) { /* fine, just skip avoidance if this fails */ }
+
+    let pool = AVA_CURIOSITY_TOPICS.filter(t => !recentTopics.includes(t));
+    if (pool.length < CURIOSITY_TOPICS_PER_DAY) pool = AVA_CURIOSITY_TOPICS; // ran out of fresh ones, reset
+    const todaysTopics = [];
+    const poolCopy = [...pool];
+    for (let i = 0; i < CURIOSITY_TOPICS_PER_DAY && poolCopy.length; i++) {
+      const idx = Math.floor(Math.random() * poolCopy.length);
+      todaysTopics.push(poolCopy.splice(idx, 1)[0]);
+    }
+
+    // Separate search per topic — guarantees real diversity instead of hoping the
+    // ranking spreads out on its own.
+    const searches = await Promise.all(todaysTopics.map(t =>
+      tavilySearch({ query: t, topic: 'general', days: 7, max_results: 3, search_depth: 'basic' }).catch(() => null)
+    ));
+    let candidates = [];
+    searches.forEach((data, i) => {
+      const results = (data?.results || []).filter(r => r.title && r.title.trim().length > 4);
+      const safe = results.filter(r => !BLOCK.test(r.title) && !BLOCK.test(r.content || ''));
+      const best = (safe.length ? safe : results)[0]; // one candidate per topic
+      if (best) candidates.push({ topicArea: todaysTopics[i], title: best.title, snippet: (best.content || best.title || '').slice(0, 300) });
+    });
+    if (!candidates.length) { _avaCuriosityCache = { day: dayKey, text: '' }; return ''; }
+
+    // Real selection step — she picks what's actually worth keeping, instead of
+    // everything getting blended in automatically.
+    const candidateBlock = candidates.map((c, i) => `${i + 1}. [${c.topicArea}] ${c.title}: ${c.snippet}`).join('\n');
+    const selectPrompt = `Here are a few different real things from today, from different areas:\n${candidateBlock}\n\nWhich ONE or TWO of these genuinely feel most worth remembering/thinking about? Reply with ONLY the numbers, comma-separated (e.g. "2" or "1,3"). Pick based on what's actually interesting, not just the first one.`;
+    const pickRaw = (await callGroqWithRetry([{ role: 'user', content: selectPrompt }], 20)).trim();
+    const pickedIdx = (pickRaw.match(/\d+/g) || ['1']).map(n => parseInt(n, 10) - 1).filter(n => n >= 0 && n < candidates.length);
+    const chosen = pickedIdx.length ? pickedIdx.map(i => candidates[i]) : [candidates[0]];
+
+    const chosenBlock = chosen.map(c => `- [${c.topicArea}] ${c.title}: ${c.snippet}`).join('\n');
+    const prompt = `Here's what you actually chose to focus on today, out of everything you came across:\n${chosenBlock}\n\nWrite 2-4 short, first-person sentences about whichever of these genuinely struck you — like something you'd casually mention, not a summary or report. Don't say "I read an article" or cite sources, just react like it's genuinely on your mind. Stay factually accurate to what's above — don't add or invent details not in it.`;
+    const reaction = (await callGroqWithRetry([{ role: 'user', content: prompt }], 180)).trim();
+    // What she came across today should touch her mood a little — same mechanism as when
+    // the user says something sad/happy to her, just softer (0.5x), since this is about
+    // the world, not something that happened to her personally.
+    avaUpdateEmotionFromText(reaction, 0.5);
+    _avaCuriosityCache = { day: dayKey, text: reaction };
+    // Save under her ACTUAL chosen topic area(s), not a generic 'multi' label, so future
+    // rotation/avoidance and the worldview synthesis both have something real to read.
+    _saveAvaLearningLog(
+      chosen.map(c => c.topicArea).join(' | '),
+      chosen.map(c => c.title).join(' | '),
+      chosen.map(c => c.snippet).join(' | '),
+      reaction
+    ); // fire-and-forget — builds her long-term learning log
+    return reaction;
+  } catch (e) {
+    console.warn('[AVA-CURIOSITY] fetch failed:', e.message);
+    return _avaCuriosityCache.text || ''; // fall back to yesterday's cached one rather than nothing
+  }
+}
+function _dayOfYear(d) {
+  const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 0));
+  return Math.floor((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - start) / 86400000);
+}
+function _todayISODate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ── Persistent learning log — one Supabase row per day, so daily curiosity
+// isn't thrown away once the cache expires. This is the raw material for
+// the weekly worldview synthesis below.
+// Requires a one-time table:
+//   create table ava_learning_log (
+//     date date primary key,
+//     topic text, headline text, snippet text, reaction text,
+//     updated_at timestamptz default now()
+//   );
+async function _saveAvaLearningLog(topic, headline, snippet, reaction) {
+  try {
+    await axios.post(`${SUPABASE_URL}/rest/v1/ava_learning_log`,
+      { date: _todayISODate(), topic, headline, snippet, reaction, updated_at: new Date().toISOString() },
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' } }
+    );
+  } catch (e) {
+    console.warn('[AVA-LEARNING] log save failed:', e.response?.data ? JSON.stringify(e.response.data) : e.message);
+  }
+}
+
+// ── Worldview — a slow-building, first-person "how my perspective has been
+// shifting" note, synthesized ONLY from the real logged items above (never
+// from its own prior wording alone) so it can't drift into vague filler the
+// way a purely self-referential rewrite can. One global row, not per-user —
+// this is about the world, not about any one person.
+// Requires a one-time table:
+//   create table ava_worldview (
+//     key text primary key default 'global',
+//     narrative text, updated_at timestamptz default now()
+//   );
+const WORLDVIEW_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h RAM cache, avoids a Supabase read every reply
+const WORLDVIEW_REWRITE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // rewrite weekly
+let _avaWorldviewCache = { narrative: '', ts: 0, updatedAt: 0 };
+let _worldviewRewriteLock = false;
+
+async function _getAvaWorldview() {
+  if (Date.now() - _avaWorldviewCache.ts < WORLDVIEW_CACHE_TTL_MS) return _avaWorldviewCache.narrative;
+  try {
+    const rows = await sbGet(`ava_worldview?key=eq.global&select=narrative,updated_at`);
+    const row = rows[0];
+    const updatedAt = row?.updated_at ? new Date(row.updated_at).getTime() : 0;
+    _avaWorldviewCache = { narrative: row?.narrative || '', ts: Date.now(), updatedAt };
+    if (Date.now() - updatedAt > WORLDVIEW_REWRITE_AGE_MS) _rewriteAvaWorldview(); // fire-and-forget, doesn't block this read
+    return _avaWorldviewCache.narrative;
+  } catch (e) {
+    return _avaWorldviewCache.narrative || '';
+  }
+}
+
+async function _rewriteAvaWorldview() {
+  if (_worldviewRewriteLock) return;
+  _worldviewRewriteLock = true;
+  try {
+    const since = new Date(Date.now() - WORLDVIEW_REWRITE_AGE_MS).toISOString().slice(0, 10);
+    const rows = await sbGet(`ava_learning_log?date=gte.${since}&select=topic,headline,reaction&order=date.asc`);
+    if (!rows.length) return;
+    const current = _avaWorldviewCache.narrative;
+    const learned = rows.map(r => `- (${r.topic}) ${r.headline} — your reaction at the time: ${r.reaction}`).join('\n');
+    const prompt = `${AVA_IDENTITY_CORE}
+
+Real things you actually looked into and reacted to over the past week — this is your ONLY source of truth for this update:
+${learned}
+
+Your previous general outlook, for reference only — do not reuse its wording, it may be stale or vague:
+"${current || '(nothing yet — this is early)'}"
+
+Write an UPDATED 2-3 sentence first-person note about how your perspective on the world has been shifting lately. It must reference at least one SPECIFIC thing from the list above, in your own words. Do not invent anything not listed above. Do not describe your mood, garden, or personality here — only your evolving outlook on the world, grounded in what you actually looked into. This replaces your old note, do not just append to it.`;
+    const narrative = (await callGroqWithRetry([{ role: 'user', content: prompt }], 150)).trim();
+    _avaWorldviewCache = { narrative, ts: Date.now(), updatedAt: Date.now() };
+    await axios.post(`${SUPABASE_URL}/rest/v1/ava_worldview`,
+      { key: 'global', narrative, updated_at: new Date().toISOString() },
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' } }
+    );
+    console.log('[AVA-WORLDVIEW] rewrote ::', narrative.slice(0, 140));
+  } catch (e) {
+    console.warn('[AVA-WORLDVIEW] rewrite failed:', e.message);
+  } finally {
+    _worldviewRewriteLock = false;
+  }
 }
 
 // ── L2: whiteboard — one Supabase row per user_email, overwritten in place ─
@@ -4360,9 +4559,17 @@ function _avaWhiteboardEnabled(email) {
   return AVA_WHITEBOARD_TEST_EMAILS.includes(email.toLowerCase());
 }
 
-const REWRITE_EVERY_N_TURNS = 3; // TEMP: lowered for testing — set back to 25 once confirmed working
+const REWRITE_EVERY_N_TURNS = 3; // TEMP FOR TESTING — was 20, revert after confirming whiteboard writes
 const _avaBuffers = {};      // email -> [{userText, replyText, important}]
 const _avaTurnCounts = {};   // email -> int
+
+// How often the curiosity/worldview material is even *allowed* into the prompt.
+// Keeps normal turns (like "how are you doing?") from always pulling in
+// research material — she should mostly just respond like a person, and only
+// occasionally surface something she's been thinking about.
+const _avaMusingTurnCounts = {};   // email -> int, turns since last surfaced
+const MUSING_MIN_GAP_TURNS = 1;    // TEMP FOR TESTING — was 4, revert after confirming curiosity/worldview surface
+const MUSING_SURFACE_CHANCE = 1;   // TEMP FOR TESTING — was 0.3, revert after confirming curiosity/worldview surface
 const _avaWhiteboardCache = {}; // email -> { narrative, ts }
 const _avaRewriteLock = {};  // email -> bool, prevents concurrent rewrites
 const WHITEBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -4385,9 +4592,12 @@ async function _getAvaWhiteboard(email) {
 async function _saveAvaWhiteboard(email, narrative, turnCount) {
   _avaWhiteboardCache[email] = { narrative, ts: Date.now() };
   try {
-    await sbPost('ava_self', { user_email: email, narrative, turn_count: turnCount, updated_at: new Date().toISOString() });
+    await axios.post(`${SUPABASE_URL}/rest/v1/ava_self`,
+      { user_email: email, narrative, turn_count: turnCount, updated_at: new Date().toISOString() },
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' } }
+    );
   } catch (e) {
-    console.warn('[AVA-WHITEBOARD] save failed:', e.message);
+    console.warn('[AVA-WHITEBOARD] save failed:', e.response?.data ? JSON.stringify(e.response.data) : e.message);
   }
 }
 
@@ -4404,12 +4614,13 @@ async function _rewriteAvaWhiteboard(email) {
     const transcript = buffer.map(t => `They said: "${t.userText}" — I replied: "${t.replyText}"`).join('\n');
     const prompt = `${AVA_IDENTITY_CORE}
 
-Your current self-understanding of your relationship with this specific person: "${current || '(nothing yet — this is early)'}"
-
-Recent real exchanges with them:
+Recent real exchanges with this person — this is your ONLY source of truth for this rewrite:
 ${transcript}
 
-Write an UPDATED 2-4 sentence first-person note to yourself about what you've noticed about this person and how being around them affects you. This must stay fully consistent with your fixed personality above — refine and add nuance, never contradict a core trait. This replaces your old note; do not just append to it.`;
+Your previous note about them (reference only — do not paraphrase or reuse its wording, it may be stale or generic):
+"${current || '(nothing yet — this is early)'}"
+
+Write an UPDATED 2-4 sentence first-person note to yourself about what you've noticed about THIS person, based strictly on specific things they actually said in the exchanges above — names, topics, feelings, situations they mentioned. Do not describe your own personality, mood, garden, or general themes (peace, calm, silence, stargazing, etc.) unless they specifically came up in what THIS person said. If the exchanges are too thin or generic to say anything specific about this person, keep the note short and plain rather than inventing atmosphere. This replaces your old note; do not just append to it or rephrase it.`;
     const narrative = await callGroqWithRetry([{ role: 'user', content: prompt }], 180);
     await _saveAvaWhiteboard(email, narrative.trim(), (_avaTurnCounts[email] || 0));
     _avaBuffers[email] = []; // clear buffer after a successful rewrite
@@ -4447,15 +4658,149 @@ function avaLogVoiceTurn(email, userText, replyText) {
 // one block, ready to drop into any system prompt. Sync-fast except the
 // whiteboard read, which is cached for 5 min so this stays cheap.
 async function getAvaIdentity(email, channelNote) {
-  let block = `${AVA_IDENTITY_CORE}\n\n${avaEmotionToPromptFragment()}\n\nCurrent time: ${_avaTimeContext()}.`;
+  let block = `${avaEmotionToPromptFragment()}\n\nCurrent time: ${_avaTimeContext()}.`;
+
+  // Curiosity/worldview material is gated so it doesn't ride along on every
+  // single reply — otherwise even a plain "how are you?" turns into a report.
+  // She should default to answering like a normal person; the musing content
+  // only gets a chance to appear once a minimum gap has passed, and even then
+  // it's a coin flip, not a guarantee.
+  const key = email || '_anon';
+  const turnsSince = (_avaMusingTurnCounts[key] = (_avaMusingTurnCounts[key] || 0) + 1);
+  const eligibleToSurface = turnsSince >= MUSING_MIN_GAP_TURNS;
+  const rollSurfaces = eligibleToSurface && Math.random() < MUSING_SURFACE_CHANCE;
+
+  if (rollSurfaces) {
+    const curiosity = await _getAvaCuriosity();
+    const worldview = await _getAvaWorldview();
+    if (curiosity || worldview) _avaMusingTurnCounts[key] = 0; // reset cooldown
+    if (curiosity) block += `\n\nSomething real you came across today, yours to bring up naturally if it fits (never force it, never recite like a report or cite a source):\n${curiosity}`;
+    if (worldview) block += `\n\nYour evolving perspective lately, built up from real things you've actually looked into over time:\n${worldview}`;
+  }
+
   if (channelNote) block += `\n\n${channelNote}`;
   if (_avaWhiteboardEnabled(email)) {
     const narrative = await _getAvaWhiteboard(email);
     if (narrative) block += `\n\nWhat you've noticed about this person, from your own experience talking with them (yours, not theirs — reference naturally, never recite verbatim):\n${narrative}`;
   }
+  // Life Kernel — continuous individual (solitude development), not scrapbook trivia
+  try {
+    if (typeof avaLife !== 'undefined' && avaLife.getLifePromptFragment) {
+      const lifeFrag = await avaLife.getLifePromptFragment();
+      if (lifeFrag) block += `\n\n── Your continuous life-process (earned state; do not recite as a report) ──\n${lifeFrag}`;
+    }
+  } catch (e) {
+    console.warn('[LIFE] prompt fragment failed:', e.message);
+  }
   return block;
 }
 // ── End Ava cognitive core ─────────────────────────────────────────────────
+
+// ── Life Kernel NODE version (sticky-note mind + talk card for Groq) ───────
+// Copy of life stack — does NOT replace ava-life-kernel.js / server.js
+// File: ava-life-kernel-nodes.js
+const avaLife = require('./ava-life-kernel-nodes');
+avaLife.init({
+  axios,
+  supabaseUrl: SUPABASE_URL,
+  supabaseKey: SUPABASE_KEY,
+  callGroq: callGroqWithRetry,
+  tavilySearch // world-development ticks (optional; kernel still works without it)
+});
+
+// GET /ava-life — snapshot of the individual (epoch, identity, questions, solitude)
+app.get('/ava-life', async (req, res) => {
+  try {
+    const snap = await avaLife.getLifeSnapshot();
+    res.json(snap);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, detail: e.response?.data });
+  }
+});
+
+// POST /ava-life/tick — solitude life tick
+// Body: { force?: true, reason?: string, mode?: 'self'|'world'|'link'|'diary' }
+app.post('/ava-life/tick', async (req, res) => {
+  try {
+    const force = !!(req.body && req.body.force);
+    const reason = (req.body && req.body.reason) || 'manual';
+    const mode = (req.body && req.body.mode) || null;
+    const result = await avaLife.lifeTick({ force, reason, mode });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, detail: e.response?.data });
+  }
+});
+
+// POST /ava-life/ensure — run genesis if no being exists yet
+app.post('/ava-life/ensure', async (req, res) => {
+  try {
+    const result = await avaLife.ensureBeing();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, detail: e.response?.data });
+  }
+});
+
+// POST /ava-life/ensure-places — construct-on-ask places for Blend day questions
+// Body: { text: user message } — locks place for focused block or whole day if place_known
+app.post('/ava-life/ensure-places', async (req, res) => {
+  try {
+    if (!avaLife.ensurePlacesForUserAsk) {
+      return res.json({ ok: false, reason: 'ensure_places_not_available' });
+    }
+    const text = (req.body && (req.body.text || req.body.userText)) || '';
+    const result = await avaLife.ensurePlacesForUserAsk(text);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, detail: e.response?.data });
+  }
+});
+
+// POST /ava-life/ingest — smart convo → mind (only high-value self/world understanding)
+// Body: { userText, replyText, email? }
+// Responds immediately; heavy work can finish after (still awaited briefly for reliability)
+app.post('/ava-life/ingest', async (req, res) => {
+  try {
+    if (!avaLife.maybeIngestConversation) {
+      return res.json({ ok: false, saved: 0, reason: 'ingest_not_available' });
+    }
+    const { userText, replyText, email } = req.body || {};
+    const result = await avaLife.maybeIngestConversation({
+      userText: userText || '',
+      replyText: replyText || '',
+      email: email || null
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, saved: 0, error: e.message });
+  }
+});
+// ── End Life Kernel routes ─────────────────────────────────────────────────
+
+// ── Ava Agent — deep research / multi-step tool orchestration ──────────────
+// Folder: ./ava-agent  (plan → parallel Tavily → gap-fill → cited synthesis)
+try {
+  const avaAgent = require('./ava-agent');
+  avaAgent.init({
+    axios,
+    callGroq: callGroqWithRetry,
+    tavilySearch,
+    supabaseUrl: SUPABASE_URL,
+    supabaseKey: SUPABASE_KEY,
+    groqKeys: typeof GROQ_KEYS !== 'undefined' ? GROQ_KEYS : [],
+  });
+  avaAgent.mount(app);
+  // Browser helper: GET /ava-agent/client-helper.js
+  app.use('/ava-agent', express.static(path.join(__dirname, 'ava-agent'), {
+    index: false,
+    extensions: ['js']
+  }));
+  console.log('[AVA-AGENT] deep research routes mounted (/ava-agent/research)');
+} catch (e) {
+  console.warn('[AVA-AGENT] not loaded:', e.message);
+}
+// ── End Ava Agent ──────────────────────────────────────────────────────────
 
 // Ava's voice persona system prompt for phone calls
 async function buildAvaPhonePrompt(callerPhone, email) {
@@ -4933,9 +5278,119 @@ async function registerVapiWebhook() {
 // POST /groq-chat — passthrough for chat completions. Forwards whatever
 // {model, messages, max_tokens, temperature, stream, ...} the client sends.
 // Rotates across GROQ_KEYS on 429, same pattern as getGroqKey()/callGroqWithRetry().
+// ONE-SHOT LIFE WIRE: if the system prompt is Ava (or body.avaLife=true), inject
+// the continuous life-mind fragment so solitude ticks actually shape replies.
 app.post('/groq-chat', checkGuestLimit, async (req, res) => {
   const payload = { ...req.body };
   delete payload.userId; // internal flag only — Groq doesn't need/want this field
+  const forceLife = !!payload.avaLife;
+  delete payload.avaLife;
+  try {
+    const msgs = Array.isArray(payload.messages) ? payload.messages : [];
+    // Prefer first system message; some clients send multiple
+    let sysIdx = msgs.findIndex(m => m && m.role === 'system');
+    if (sysIdx < 0 && forceLife) {
+      msgs.unshift({ role: 'system', content: 'You are Ava.' });
+      payload.messages = msgs;
+      sysIdx = 0;
+    }
+    const sysMsg = sysIdx >= 0 ? msgs[sysIdx] : null;
+    let sysText = (sysMsg && sysMsg.content) ? String(sysMsg.content) : '';
+    const isAva = forceLife || /You are Ava\b/i.test(sysText);
+    if (isAva && sysMsg && typeof avaLife !== 'undefined') {
+      const lastUser = [...msgs].reverse().find(m => m && m.role === 'user');
+      const lastUserText = (lastUser && lastUser.content) ? String(lastUser.content) : '';
+      const wantsDay = avaLife.isDayScheduleQuestion
+        ? avaLife.isDayScheduleQuestion(lastUserText)
+        : /\b(how was your day|what did you do today|what are you (doing|planning|up to).{0,24}today|plans? today|doing today|up to today)\b/i.test(lastUserText);
+      const clientHasToday = /TODAY_STATUS/.test(sysText);
+      // Blend fused day = PLACE_DAY (TV cottage) + TODAY_STATUS (ticks) — client-only places
+      const clientHasFused = /PLACE_DAY|FUSED day/i.test(sysText);
+
+      // Strip stale client life blocks — BUT keep fused day / TODAY_STATUS on day Qs.
+      if (!(wantsDay && (clientHasToday || clientHasFused))) {
+        sysText = sysText
+          .replace(/\n*──\s*YOUR CONTINUOUS LIFE MIND[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+          .replace(/\n*──\s*Your continuous life-process[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+          .replace(/\n*──\s*FUSED day[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+          .replace(/\n*──\s*LIFE NODES[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+          .replace(/\n*LIFE_NOW[\s\S]*?(?=\n\n[A-Z]|\n──|$)/gi, '')
+          .trim();
+      }
+
+      // NODE talk card — keep voice fast; day questions get a longer budget
+      // because TODAY_STATUS must reach the model or she invents / goes blank.
+      const cardBudgetMs = wantsDay ? 220 : 80;
+      const cardMaxChars = wantsDay ? 1600 : 700;
+
+      let talkCard = '';
+      let cardMeta = {};
+      try {
+        const cardPromise = avaLife.compileTalkCard
+          ? avaLife.compileTalkCard(lastUserText)
+          : (avaLife.getLifeReplyInfluence
+              ? avaLife.getLifeReplyInfluence().then(inf => ({ promptBlock: inf && inf.promptBlock, primary: inf && inf.primary, secondary: inf && inf.secondary }))
+              : Promise.resolve(null));
+        const card = await Promise.race([
+          cardPromise,
+          new Promise(resolve => setTimeout(() => resolve({ __timeout: true }), cardBudgetMs))
+        ]);
+        if (card && card.__timeout) {
+          console.warn('[LIFE-NODES] talk card skipped — >' + cardBudgetMs + 'ms (keeping voice fast)');
+        } else if (card) {
+          talkCard = card.promptBlock || '';
+          cardMeta = card;
+        }
+      } catch (eCard) {
+        console.warn('[LIFE-NODES] talk card error (skip inject):', eCard.message);
+      }
+
+      // FUSED blend day: keep client PLACE_DAY + TODAY_STATUS intact (server has no cottage map).
+      if (wantsDay && clientHasFused) {
+        sysMsg.content = sysText.length > 7500 ? sysText.slice(0, 7500) + '\n[trimmed]' : sysText;
+        // Optional: append server TODAY_STATUS only if client lacked learning lines
+        if (talkCard && /TODAY_STATUS/.test(talkCard) && !clientHasToday) {
+          sysMsg.content += '\n\n' + String(talkCard).slice(0, cardMaxChars) + '\n';
+        }
+        console.log('[LIFE-NODES] day Q — kept client FUSED PLACE_DAY (+ learning)');
+      } else if (wantsDay && clientHasToday && (!talkCard || !/TODAY_STATUS/.test(talkCard))) {
+        sysMsg.content = sysText.length > 6500 ? sysText.slice(0, 6500) + '\n[trimmed]' : sysText;
+        console.log('[LIFE-NODES] day Q — kept client TODAY_STATUS (server card missing/timeout)');
+      } else if (talkCard) {
+        let base = sysText
+          .replace(/\n*═{3,}[\s\S]*?═{3,}\n*/g, '\n')
+          .replace(/\n*AVA (LIFE|TALK)[\s\S]*?(?=\nYou are |\n$)/gi, '\n')
+          .trim();
+        // Drop duplicate client TODAY_STATUS if server card already has it
+        // (do not strip FUSED / PLACE_DAY — those only exist client-side)
+        if (/TODAY_STATUS/.test(talkCard) && !clientHasFused) {
+          base = base
+            .replace(/\n*──\s*Your continuous life-process[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+            .replace(/\n*TODAY_STATUS[\s\S]*?(?=\n──|\n\[context|$)/gi, '')
+            .trim();
+        }
+        if (base.length > 5000) base = base.slice(0, 5000) + '\n[trimmed]';
+        const tiny = String(talkCard).slice(0, cardMaxChars);
+        sysMsg.content = base + '\n\n' + tiny + '\n';
+        console.log(
+          '[LIFE-NODES] light tint injected ::',
+          cardMeta.primary,
+          '+',
+          cardMeta.secondary,
+          'deep=',
+          cardMeta.deepCount,
+          'day=',
+          !!(cardMeta.wantsDay || wantsDay),
+          'sysLen=',
+          sysMsg.content.length
+        );
+      } else if (wantsDay && clientHasToday) {
+        sysMsg.content = sysText.length > 6500 ? sysText.slice(0, 6500) + '\n[trimmed]' : sysText;
+      }
+    }
+  } catch (lifeInjErr) {
+    console.warn('[LIFE] groq-chat inject failed:', lifeInjErr.message);
+  }
   const wantsStream = !!payload.stream;
   let lastErr;
   for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
@@ -5825,12 +6280,527 @@ app.post('/elevenlabs-tts', async (req, res) => {
 });
 // ── End ElevenLabs route ─────────────────────────────────────────────────────
 
+// POST /generate-image — text-to-image for the "Create Image" bottom-nav
+// feature. Runs through the server (not the client) so we can apply the
+// guest daily limit and a basic content check in one place, same as every
+// other proxied route above.
+//
+// Backend: Pollinations' current unified API (gen.pollinations.ai). As of
+// mid-2026 Pollinations requires an API key for image generation — the old
+// keyless image.pollinations.ai endpoint is legacy/deprecated. Get a free
+// key at https://enter.pollinations.ai and set it on Render as:
+//   POLLINATIONS_API_KEY=sk_...   (or pk_... — either works server-side)
+// If/when you want a different provider (Replicate flux-schnell, Stability,
+// OpenAI images), swap the fetch inside generateOneImage() for that call and
+// keep the route contract (POST {prompt, aspect, count} -> {images: [dataUrl]})
+// the same so the frontend doesn't need to change.
+const POLLINATIONS_API_KEY = process.env.POLLINATIONS_API_KEY || '';
+if (!POLLINATIONS_API_KEY) {
+  console.warn('[IMAGEGEN] POLLINATIONS_API_KEY not set — /generate-image will fail. Get a free key at https://enter.pollinations.ai');
+}
+
+const IMAGE_UNSAFE_TERMS = [
+  /child.{0,15}(sexual|porn|nude|naked)/i,
+  /\bcsam\b/i,
+  /\bloli(ta)?\b/i,
+  /\bshota\b/i,
+  /minor.{0,15}(nude|naked|sexual)/i,
+  /\b(\d{1,2})\s*(yo|year[\s-]?old)\b.{0,20}(nude|naked|sex)/i
+];
+
+const IMAGE_ASPECTS = {
+  square:    [1024, 1024],
+  portrait:  [768, 1024],
+  landscape: [1024, 768]
+};
+
+// Whitelist matching the four <option value="..."> entries in the
+// #imageGenModel picker (index.html ~line 6571). Anything else — missing,
+// tampered, or a stale/renamed value — falls back to the cheapest model
+// instead of silently hitting Pollinations' own default (which is not
+// guaranteed to be the cheap one and can change underneath us).
+const IMAGE_MODEL_WHITELIST = new Set(['flux', 'dreamshaper', 'klein', 'gpt-image-2']);
+const DEFAULT_IMAGE_MODEL = 'dreamshaper';
+
+async function generateOneImage(prompt, width, height, model) {
+  const seed = Math.floor(Math.random() * 2147483647);
+  // safe=nsfw asks Pollinations' own filter to block sexual/violent output,
+  // on top of the keyword check in the route handler below.
+  const url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}` +
+    `?model=${encodeURIComponent(model)}&width=${width}&height=${height}&seed=${seed}&safe=nsfw`;
+  const headers = {};
+  if (POLLINATIONS_API_KEY) headers['Authorization'] = `Bearer ${POLLINATIONS_API_KEY}`;
+  const imgRes = await axios.get(url, { responseType: 'arraybuffer', timeout: 60000, headers });
+  const b64 = Buffer.from(imgRes.data).toString('base64');
+  const contentType = imgRes.headers['content-type'] || 'image/jpeg';
+  return `data:${contentType};base64,${b64}`;
+}
+
+app.post('/generate-image', checkGuestLimit, async (req, res) => {
+  try {
+    const { prompt, aspect, count, model } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+    const cleanPrompt = prompt.trim().slice(0, 600);
+    if (IMAGE_UNSAFE_TERMS.some(re => re.test(cleanPrompt))) {
+      return res.status(400).json({ error: "That prompt isn't allowed." });
+    }
+
+    const [width, height] = IMAGE_ASPECTS[aspect] || IMAGE_ASPECTS.square;
+    const n = Math.min(Math.max(parseInt(count, 10) || 1, 1), 4);
+    const cleanModel = IMAGE_MODEL_WHITELIST.has(model) ? model : DEFAULT_IMAGE_MODEL;
+
+    if (!POLLINATIONS_API_KEY) {
+      return res.status(500).json({ error: 'Image generation is not configured yet — missing POLLINATIONS_API_KEY on the server.' });
+    }
+
+    const results = await Promise.allSettled(
+      Array.from({ length: n }, () => generateOneImage(cleanPrompt, width, height, cleanModel))
+    );
+    const images = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+
+    if (!images.length) {
+      const statuses = results.map(r => r.reason?.response?.status);
+      console.error('[IMAGEGEN] all attempts failed:', results.map(r => r.reason?.response?.data || r.reason?.message));
+      if (statuses.includes(401) || statuses.includes(403)) {
+        return res.status(502).json({ error: 'Image generation key was rejected — check POLLINATIONS_API_KEY on the server.' });
+      }
+      if (statuses.includes(402)) {
+        return res.status(502).json({ error: 'Image generation account is out of credits.' });
+      }
+      return res.status(502).json({ error: 'Image generation failed, please try again.' });
+    }
+    res.json({ images });
+  } catch (e) {
+    console.error('[IMAGEGEN] error:', e.response?.data || e.message);
+    res.status(500).json({ error: 'Image generation failed.' });
+  }
+});
+// ── End image generation route ───────────────────────────────────────────────
+
+// ── Studio image force-download ──────────────────────────────────────────────
+// Android WebViews ignore <a download> for data:/blob: and fire "Open with"
+// (ChatGPT, Gallery…) when Content-Type is image/*. We always send
+// application/octet-stream + Content-Disposition: attachment so the OS saves
+// to Downloads instead of opening the image handler the user set as default.
+const _studioDlTokens = new Map(); // token -> { buffer, filename, exp }
+const STUDIO_DL_TTL_MS = 2 * 60 * 1000;
+
+function _purgeStudioDlTokens() {
+  const now = Date.now();
+  for (const [k, v] of _studioDlTokens) {
+    if (!v || v.exp < now) _studioDlTokens.delete(k);
+  }
+}
+try { setInterval(_purgeStudioDlTokens, 60000).unref?.(); } catch (_e) { setInterval(_purgeStudioDlTokens, 60000); }
+
+function _safeDownloadName(name, mime) {
+  let base = String(name || 'synapses-image.jpg').split(/[\\/]/).pop().split('?')[0] || 'synapses-image.jpg';
+  base = base.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 120);
+  if (!/\.(jpe?g|png|webp|gif)$/i.test(base)) {
+    const ext = (mime || '').indexOf('png') >= 0 ? 'png' : (mime || '').indexOf('webp') >= 0 ? 'webp' : 'jpg';
+    base = base.replace(/\.\w+$/, '') + '.' + ext;
+  }
+  return base;
+}
+
+function _parseStudioImageBody(body) {
+  body = body || {};
+  let dataUrl = body.dataUrl || body.data || '';
+  let mime = body.mime || 'image/jpeg';
+  let b64 = '';
+  if (typeof dataUrl === 'string' && /^data:/i.test(dataUrl)) {
+    const parts = dataUrl.split(',');
+    const m = parts[0].match(/data:([^;]+)/i);
+    if (m) mime = m[1] || mime;
+    b64 = parts[1] || '';
+  } else if (typeof body.base64 === 'string' && body.base64) {
+    b64 = body.base64.replace(/^data:[^,]*,/, '');
+    if (body.mime) mime = body.mime;
+  } else {
+    return { error: 'dataUrl or base64 required', status: 400 };
+  }
+  if (!b64 || b64.length < 32) return { error: 'empty image data', status: 400 };
+  if (b64.length > 16 * 1024 * 1024) return { error: 'image too large', status: 413 };
+  let buffer;
+  try { buffer = Buffer.from(b64, 'base64'); } catch (e) { return { error: 'invalid image data', status: 400 }; }
+  if (!buffer.length) return { error: 'invalid image data', status: 400 };
+  const filename = _safeDownloadName(body.filename, mime);
+  return { buffer, filename, mime };
+}
+
+/** Send file for Median downloadFile / real Downloads save */
+function _sendStudioAttachment(res, buffer, filename) {
+  const fname = filename || 'synapses-image.jpg';
+  // image/jpeg so Photos/downloadImage works; attachment + Median open:false = no Open-with
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Content-Length', buffer.length);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${fname}"; filename*=UTF-8''${encodeURIComponent(fname)}`
+  );
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.status(200).end(buffer);
+}
+
+/** POST { dataUrl|base64, filename? } -> file bytes immediately (form or JSON) */
+// Form posts from the app are application/x-www-form-urlencoded (can be multi‑MB base64).
+app.post(
+  '/studio-download-direct',
+  express.urlencoded({ limit: '20mb', extended: true }),
+  (req, res) => {
+    try {
+      // Global json parser may have already filled req.body for JSON clients
+      const parsed = _parseStudioImageBody(req.body);
+      if (parsed.error) return res.status(parsed.status || 400).type('text').send(parsed.error);
+      _sendStudioAttachment(res, parsed.buffer, parsed.filename);
+    } catch (e) {
+      console.error('[STUDIO-DL] direct failed:', e.message);
+      res.status(500).type('text').send('download failed');
+    }
+  }
+);
+
+/** POST { dataUrl|base64, filename?, mime? } -> { url, token } for Median downloadFile */
+app.post('/studio-prepare-download', (req, res) => {
+  try {
+    _purgeStudioDlTokens();
+    const parsed = _parseStudioImageBody(req.body);
+    if (parsed.error) return res.status(parsed.status || 400).json({ error: parsed.error });
+
+    const token = require('crypto').randomBytes(16).toString('hex');
+    _studioDlTokens.set(token, {
+      buffer: parsed.buffer,
+      filename: parsed.filename,
+      exp: Date.now() + STUDIO_DL_TTL_MS
+    });
+
+    const base =
+      (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '') ||
+      `https://${req.get('x-forwarded-host') || req.get('host') || 'synbot-whatsapp-2.onrender.com'}`;
+    const url = `${base}/studio-download/${token}`;
+    res.json({ ok: true, token, url, filename: parsed.filename, expiresInMs: STUDIO_DL_TTL_MS });
+  } catch (e) {
+    console.error('[STUDIO-DL] prepare failed:', e.message);
+    res.status(500).json({ error: 'prepare download failed' });
+  }
+});
+
+/**
+ * GET download token file for Median downloadImage / downloadFile.
+ * Keep token alive until TTL so a failed native retry can re-fetch
+ * (one-shot delete made native save get 404 after any warm request).
+ */
+app.get('/studio-download/:token', (req, res) => {
+  try {
+    const item = _studioDlTokens.get(req.params.token);
+    if (!item || item.exp < Date.now()) {
+      _studioDlTokens.delete(req.params.token);
+      return res.status(404).type('text').send('Download expired — tap Download again.');
+    }
+    _sendStudioAttachment(res, item.buffer, item.filename || 'synapses-image.jpg');
+  } catch (e) {
+    console.error('[STUDIO-DL] serve failed:', e.message);
+    res.status(500).end();
+  }
+});
+// ── End studio force-download ────────────────────────────────────────────────
+
+// ── Vast.ai GPU controller (video gen) ──────────────────────────────────────
+// Turns the rented Vast.ai instance on before a video job, and back off after
+// idle so we're not paying full GPU-hour rate 24/7.
+// Render env:
+//   VAST_API_KEY      - Vast.ai API key
+//   VAST_INSTANCE_ID  - numeric id of the rented instance
+//   VAST_COMFY_URL    - e.g. http://123.45.67.89:8188 (ComfyUI on that instance)
+// Optional:
+//   GPU_IDLE_TIMEOUT_MS - default 10 min
+const VAST_API_KEY = process.env.VAST_API_KEY;
+const VAST_INSTANCE_ID = process.env.VAST_INSTANCE_ID;
+const VAST_COMFY_URL = (process.env.VAST_COMFY_URL || '').replace(/\/$/, '');
+const GPU_IDLE_TIMEOUT_MS = parseInt(process.env.GPU_IDLE_TIMEOUT_MS, 10) || 10 * 60 * 1000;
+const GPU_BOOT_POLL_MS = 5000;
+const GPU_BOOT_MAX_WAIT_MS = 120000;
+
+let _gpuIdleTimer = null;
+let _gpuState = 'unknown'; // 'off' | 'starting' | 'on'
+let _gpuStartingPromise = null;
+
+async function vastApi(pathSuffix, method, body) {
+  const opts = {
+    method,
+    url: `https://console.vast.ai/api/v0${pathSuffix}`,
+    headers: { Authorization: `Bearer ${VAST_API_KEY}` },
+    timeout: 30000
+  };
+  if (body !== undefined) {
+    opts.data = body;
+    opts.headers['Content-Type'] = 'application/json';
+  }
+  const res = await axios(opts);
+  return res.data;
+}
+
+async function getVastStatus() {
+  // Vast API shapes vary; try instance detail then fall back to list
+  try {
+    const data = await vastApi(`/instances/${VAST_INSTANCE_ID}/`, 'get');
+    const st =
+      data?.instances?.actual_status ||
+      data?.actual_status ||
+      data?.status ||
+      data?.cur_state ||
+      data?.intended_status;
+    if (st) return String(st).toLowerCase();
+  } catch (e) {
+    /* fall through */
+  }
+  try {
+    const data = await vastApi(`/instances/`, 'get');
+    const list = data?.instances || data || [];
+    const arr = Array.isArray(list) ? list : Object.values(list);
+    const hit = arr.find(function (x) {
+      return String(x.id || x.instance_id || x?.label?.id || '') === String(VAST_INSTANCE_ID);
+    });
+    if (hit) {
+      return String(hit.actual_status || hit.status || hit.cur_state || 'unknown').toLowerCase();
+    }
+  } catch (e2) {
+    /* ignore */
+  }
+  return 'unknown';
+}
+
+function _vastIsRunning(status) {
+  return status === 'running' || status === 'online' || status === 'loaded';
+}
+
+async function waitUntilGpuReady() {
+  const start = Date.now();
+  while (Date.now() - start < GPU_BOOT_MAX_WAIT_MS) {
+    const status = await getVastStatus().catch(function () { return null; });
+    if (_vastIsRunning(status)) {
+      _gpuState = 'on';
+      return;
+    }
+    await new Promise(function (r) { setTimeout(r, GPU_BOOT_POLL_MS); });
+  }
+  throw new Error('Vast.ai instance did not come online in time');
+}
+
+function clearGpuIdleTimer() {
+  if (_gpuIdleTimer) {
+    clearTimeout(_gpuIdleTimer);
+    _gpuIdleTimer = null;
+  }
+}
+
+async function ensureGpuOn() {
+  clearGpuIdleTimer();
+  if (_gpuState === 'on') return;
+  if (_gpuStartingPromise) return _gpuStartingPromise;
+  _gpuStartingPromise = (async function () {
+    try {
+      const cur = await getVastStatus().catch(function () { return null; });
+      if (_vastIsRunning(cur)) {
+        _gpuState = 'on';
+        return;
+      }
+      _gpuState = 'starting';
+      console.log('[VAST] starting instance', VAST_INSTANCE_ID);
+      // Prefer explicit start; some accounts use PUT on the instance
+      try {
+        await vastApi(`/instances/${VAST_INSTANCE_ID}/`, 'put', { state: 'running' });
+      } catch (e1) {
+        try {
+          await vastApi(`/instances/${VAST_INSTANCE_ID}/start/`, 'put');
+        } catch (e2) {
+          throw e1;
+        }
+      }
+      await waitUntilGpuReady();
+    } finally {
+      _gpuStartingPromise = null;
+    }
+  })();
+  return _gpuStartingPromise;
+}
+
+function scheduleGpuOff() {
+  clearGpuIdleTimer();
+  if (!VAST_API_KEY || !VAST_INSTANCE_ID) return;
+  _gpuIdleTimer = setTimeout(async function () {
+    try {
+      try {
+        await vastApi(`/instances/${VAST_INSTANCE_ID}/`, 'put', { state: 'stopped' });
+      } catch (e1) {
+        await vastApi(`/instances/${VAST_INSTANCE_ID}/stop/`, 'put');
+      }
+      _gpuState = 'off';
+      console.log('[VAST] idle timeout — GPU stopped');
+    } catch (e) {
+      console.error('[VAST] failed to stop instance:', e.response?.data || e.message);
+    }
+  }, GPU_IDLE_TIMEOUT_MS);
+}
+// ── End Vast.ai GPU controller ───────────────────────────────────────────────
+
+// ── /generate-video — text/image-to-video via ComfyUI on rented Vast.ai GPU ──
+// Contract: POST { prompt, model, aspect, resolution, duration, audio,
+//                  references|referenceFiles, userId } -> { videoUrl }
+// Needs workflow.json (ComfyUI "API format" export) next to this file.
+let VIDEO_WORKFLOW = null;
+try {
+  VIDEO_WORKFLOW = require('./workflow.json');
+} catch (e) {
+  console.warn('[VIDEOGEN] workflow.json not found — /generate-video will fail until it is added next to server.js');
+}
+
+async function queueComfyPrompt(workflow) {
+  const res = await axios.post(
+    `${VAST_COMFY_URL}/prompt`,
+    { prompt: workflow },
+    { timeout: 20000 }
+  );
+  return res.data.prompt_id;
+}
+
+async function pollComfyResult(promptId, maxWaitMs) {
+  maxWaitMs = maxWaitMs || 180000;
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const res = await axios.get(`${VAST_COMFY_URL}/history/${promptId}`, { timeout: 20000 });
+    const entry = res.data && res.data[promptId];
+    if (entry) {
+      const outputs = entry.outputs || {};
+      for (const nodeId of Object.keys(outputs)) {
+        const nodeOut = outputs[nodeId] || {};
+        const files =
+          nodeOut.gifs ||
+          nodeOut.videos ||
+          nodeOut.images ||
+          [];
+        if (files.length) {
+          const f = files[0];
+          return (
+            `${VAST_COMFY_URL}/view?filename=${encodeURIComponent(f.filename)}` +
+            `&subfolder=${encodeURIComponent(f.subfolder || '')}` +
+            `&type=${encodeURIComponent(f.type || 'output')}`
+          );
+        }
+      }
+    }
+    await new Promise(function (r) { setTimeout(r, 3000); });
+  }
+  throw new Error('Video generation timed out');
+}
+
+function _applyVideoPromptToWorkflow(workflow, promptText) {
+  // Prefer common text nodes; fall back to any node with a string "text" input
+  const preferred = ['6', '3', '7', '10', '75', '89'];
+  for (let i = 0; i < preferred.length; i++) {
+    const id = preferred[i];
+    if (workflow[id] && workflow[id].inputs && typeof workflow[id].inputs.text === 'string') {
+      workflow[id].inputs.text = promptText;
+      return id;
+    }
+  }
+  for (const id of Object.keys(workflow)) {
+    const n = workflow[id];
+    if (n && n.inputs && typeof n.inputs.text === 'string') {
+      n.inputs.text = promptText;
+      return id;
+    }
+  }
+  return null;
+}
+
+app.post('/generate-video', checkGuestLimit, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const prompt = body.prompt;
+    const model = body.model;
+    const aspect = body.aspect;
+    const resolution = body.resolution;
+    const duration = body.duration;
+    const audio = body.audio;
+    // Client (index.html) sends `references`; older server draft used referenceFiles
+    const references = body.references || body.referenceFiles || [];
+    const userId = body.userId;
+
+    if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+    if (!VAST_COMFY_URL || !VAST_API_KEY || !VAST_INSTANCE_ID) {
+      return res.status(500).json({
+        error:
+          'Video generation is not configured yet — missing VAST_API_KEY / VAST_INSTANCE_ID / VAST_COMFY_URL on the server.'
+      });
+    }
+    if (!VIDEO_WORKFLOW) {
+      return res.status(500).json({
+        error: 'Video generation is not configured yet — missing workflow.json next to server.js.'
+      });
+    }
+
+    await ensureGpuOn();
+
+    const workflow = JSON.parse(JSON.stringify(VIDEO_WORKFLOW));
+    const cleanPrompt = prompt.trim().slice(0, 600);
+    const filledNode = _applyVideoPromptToWorkflow(workflow, cleanPrompt);
+    if (!filledNode) {
+      console.warn('[VIDEOGEN] no text input node found in workflow.json — prompt may not apply');
+    }
+    // Optional metadata for logs / future node mapping
+    console.log('[VIDEOGEN] job', {
+      model: model || null,
+      aspect: aspect || null,
+      resolution: resolution || null,
+      duration: duration || null,
+      audio: audio || null,
+      refs: Array.isArray(references) ? references.length : 0,
+      userId: userId || null,
+      textNode: filledNode
+    });
+
+    const promptId = await queueComfyPrompt(workflow);
+    const videoUrl = await pollComfyResult(promptId);
+    res.json({ videoUrl: videoUrl });
+  } catch (e) {
+    const detail = (e.response && e.response.data) || e.message;
+    console.error('[VIDEOGEN] error:', detail);
+    const msg =
+      typeof detail === 'string'
+        ? detail
+        : detail && detail.error
+          ? String(detail.error)
+          : 'Video generation failed.';
+    res.status(500).json({ error: msg });
+  } finally {
+    scheduleGpuOff();
+  }
+});
+// ── End /generate-video route ────────────────────────────────────────────────
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`Synbot running on port ${PORT}`);
+  if (VAST_API_KEY && VAST_INSTANCE_ID && VAST_COMFY_URL) {
+    console.log('[VIDEOGEN] Vast GPU controller ready (instance', VAST_INSTANCE_ID + ')');
+  } else {
+    console.warn('[VIDEOGEN] Vast env incomplete — set VAST_API_KEY, VAST_INSTANCE_ID, VAST_COMFY_URL for /generate-video');
+  }
   initBrowserAgent(server);
   // Register Vapi webhook after server starts
   setTimeout(registerVapiWebhook, 3000);
+  // Life Kernel: genesis if needed + solitude ticks (default every 2h)
+  try {
+    avaLife.startLifeLoop(2 * 60 * 60 * 1000);
+  } catch (e) {
+    console.warn('[LIFE] startLifeLoop failed:', e.message);
+  }
 });
