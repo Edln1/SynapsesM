@@ -8810,6 +8810,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     <span>Deep Space Aurora</span>
     <span class="dsm-state" id="dsmAuroraState">Off</span>
   </button>
+  <button type="button" class="dsm-item" id="dsmToggleWarp" role="menuitem">
+    <span>Warp Speed</span>
+    <span class="dsm-state" id="dsmWarpState">Off</span>
+  </button>
   <div class="dsm-hint">Spaceship viewport — starfield &amp; horizon aurora on pure black.</div>
 </div>
   <main class="main" style="position:relative;z-index:1;">
@@ -35985,6 +35989,67 @@ function _syncDayNightToggle(t){
   var stars = [], dust = [], meteors = [];
   var t0 = performance.now();
   var grainCanvas = null, grainReady = false;
+  var focal = 500; // perspective constant, recomputed on resize() from h
+
+  // ── Explore camera — 360 look-around (drag) + forward/back travel (scroll/pinch) ──
+  // Stars live at real 3D world positions (X,Y,Z ahead of the camera). Looking
+  // around rotates the whole field into camera space before projecting (a true
+  // spherical look, not a flat 2D pan). Traveling forward/back moves the camera
+  // along Z; stars that pass behind get silently respawned far ahead (and vice
+  // versa going backward) so the field is effectively infinite in every
+  // direction — there's nothing to "run out of", so nothing ever skips/pops.
+  var cam = {
+    yaw: 0, pitch: 0,           // look direction, radians
+    yawVel: 0, pitchVel: 0,     // angular momentum from drag flicks
+    travelZ: 0,                 // accumulated forward distance
+    travelVel: 0                // current forward/back speed (eased, not instant)
+  };
+  var NEAR_Z = 4;
+
+  // Warp toggle: when on, travelVel is continuously eased toward WARP_SPEED
+  // instead of decaying to zero — same easing math stepCamera() already
+  // uses for scroll/pinch impulses, just given a standing target instead of
+  // a one-off nudge, so it feels like the same "hold the scroll key down"
+  // acceleration, sustained indefinitely.
+  var _warpOn = false;
+  var WARP_SPEED = 210;
+  var WARP_EASE = 0.045; // lower = slower spin-up to full speed
+
+  // ISOTROPIC FIELD: stars/dust are spawned in a cube of fixed radius
+  // centered on the camera's current position (0,0,travelZ), the same
+  // radius in every axis (x, y, AND z). This is the actual fix for the
+  // "empty in some directions, crowded in others" bug — the earlier model
+  // spawned a box stretched way out along the Z axis (FAR_Z=900,
+  // BEHIND_Z=500) but only WORLD_HALF=1500 sideways, so looking forward (Z)
+  // showed a full field while turning 90° to look sideways (X) showed
+  // almost nothing — direction-dependent density. A cube with the same
+  // radius on every axis has uniform point density in every direction by
+  // construction, so panning/turning/looking-around always shows roughly
+  // the same star count.
+  var STAR_FIELD_R = 600;
+  var DUST_FIELD_R = 300;
+
+  // A field with equal density in all directions only shows a fraction of
+  // its total population inside the camera's actual field of view at any
+  // moment (the rest is behind you, to the sides, etc — same as a real sky,
+  // you only ever see part of it). This multiplier inflates the raw counts
+  // so the portion actually on-screen lands back near the original flat
+  // field's density, instead of looking sparse. (Verified against the
+  // real projection math — mult=8 keeps ~400 stars / ~50 dust motes
+  // on-screen consistently across a full 360° turn.)
+  var DENSITY_MULT = 8;
+
+  // Typical distance from camera to a spawned particle (half the cube
+  // radius) — used to normalize proximity-based size/brightness so a
+  // particle at its typical depth renders the same size as it did in the
+  // original flat, non-zoom star field.
+  var STAR_BASE_Z = STAR_FIELD_R * 0.5;
+  var DUST_BASE_Z = DUST_FIELD_R * 0.5;
+  var _dragging = false, _dragLastX = 0, _dragLastY = 0, _dragMoved = false;
+  var _dragVX = 0, _dragVY = 0; // recent drag speed, for release momentum
+  var _pinchStartDist = 0, _pinchLastDist = 0;
+  var _camResetT = 0, _camResetting = false;
+  var _camFrom = { yaw: 0, pitch: 0 };
   // Dust-lane band gradient is expensive to rebuild (5 color stops) and its
   // values only ever depend on h — cache it and only rebuild on resize()
   // instead of recreating it 60x/sec in frame(). Rebuilding every frame was
@@ -36118,6 +36183,7 @@ function _syncDayNightToggle(t){
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    focal = h * 0.9;
     buildBandGradient();
     seed();
   }
@@ -36130,7 +36196,7 @@ function _syncDayNightToggle(t){
     // Density scales with area; floor lowered from 280→150 so phones
     // (~329k px²) land near their natural ~117 count instead of being
     // forced up to desktop-sized density.
-    var nStars = Math.min(900, Math.max(150, Math.floor(area / 2800)));
+    var nStars = Math.round(Math.min(900, Math.max(150, Math.floor(area / 2800))) * DENSITY_MULT);
     var i;
     for(i = 0; i < nStars; i++){
       var bright = Math.random();
@@ -36149,15 +36215,22 @@ function _syncDayNightToggle(t){
         : (depth === 1 ? (0.6 + Math.random() * 0.9) : (0.1 + Math.random() * 0.16));
       var driftAng = Math.random() * Math.PI * 2;
       stars.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
+        // Real 3D world position around the camera's current travel spot —
+        // an isotropic cube (same radius x/y/z), so density stays even in
+        // every look direction instead of being stretched forward-only.
+        wx: (Math.random() * 2 - 1) * STAR_FIELD_R,
+        wy: (Math.random() * 2 - 1) * STAR_FIELD_R,
+        wz: cam.travelZ + (Math.random() * 2 - 1) * STAR_FIELD_R,
         r: baseR,
         a: baseA * (depth === 0 ? 0.75 : 1),
         soft: soft,
         depth: depth,
         cool: Math.random() > 0.78,
-        vx: Math.cos(driftAng) * driftSpeed,
-        vy: Math.sin(driftAng) * driftSpeed * 0.5 - driftSpeed * 0.1,
+        // Gentle ambient drift still runs sideways in world space (independent
+        // of camera travel) so the field never looks perfectly static even
+        // while parked.
+        vx: Math.cos(driftAng) * driftSpeed * 0.4,
+        vy: Math.sin(driftAng) * driftSpeed * 0.4,
         flareAt: 0
       });
     }
@@ -36167,18 +36240,146 @@ function _syncDayNightToggle(t){
     // Dust used to be a flat 55 regardless of screen size — ~6x denser
     // per pixel on phones than desktop. Now scales with area, same idea
     // as nStars above (mobile ~15, desktop caps at 55).
-    var nDust = Math.min(55, Math.max(15, Math.floor(area / 22000)));
+    var nDust = Math.round(Math.min(55, Math.max(15, Math.floor(area / 22000))) * DENSITY_MULT);
     for(i = 0; i < nDust; i++){
       dust.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
+        wx: (Math.random() * 2 - 1) * DUST_FIELD_R,
+        wy: (Math.random() * 2 - 1) * DUST_FIELD_R,
+        wz: cam.travelZ + (Math.random() * 2 - 1) * DUST_FIELD_R,
         r: 0.5 + Math.random() * 1.4,
         a: 0.02 + Math.random() * 0.05,
-        vx: (Math.random() - 0.5) * 0.022,
-        vy: (Math.random() - 0.5) * 0.012,
+        vx: (Math.random() - 0.5) * 0.01,
+        vy: (Math.random() - 0.5) * 0.006,
         soft: 3 + Math.random() * 2
       });
     }
+  }
+
+  // Rotates a world-space point into camera space (yaw then pitch) and
+  // perspective-projects it to screen coordinates. Returns null if the point
+  // sits behind the camera plane (nothing to draw / would otherwise pop).
+  function project(wx, wy, wz){
+    var dz = wz - cam.travelZ;
+    var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    var x1 = wx * cy + dz * sy;
+    var z1 = -wx * sy + dz * cy;
+    var cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    var y2 = wy * cp + z1 * sp;
+    var z2 = -wy * sp + z1 * cp;
+    if(z2 < 0.08) return null; // behind the camera's view
+    var scale = focal / z2;
+    return {
+      sx: w * 0.5 + x1 * scale,
+      sy: h * 0.5 + y2 * scale,
+      z: z2,
+      scale: scale,
+      // Fade in over the last bit before the camera plane instead of a hard
+      // cutoff, so stars entering/leaving the visible hemisphere as you look
+      // around never pop — they ease in/out.
+      edgeFade: Math.min(1, (z2 - 0.08) / 0.35)
+    };
+  }
+
+  // Same rotation as project(), but for a fixed direction rather than a
+  // world position with distance — used for things treated as effectively
+  // infinitely far away (the dust-lane band), so panning slides them
+  // laterally the way turning your head really does, instead of the fake
+  // "spin around the screen center" a flat 2D rotate produces.
+  function projectDir(dx, dy, dz){
+    var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    var x1 = dx * cy + dz * sy;
+    var z1 = -dx * sy + dz * cy;
+    var cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    var y2 = dy * cp + z1 * sp;
+    var z2 = -dy * sp + z1 * cp;
+    if(z2 < 0.05) return null;
+    return {
+      sx: w * 0.5 + (x1 / z2) * focal,
+      sy: h * 0.5 + (y2 / z2) * focal,
+      edgeFade: Math.min(1, (z2 - 0.05) / 0.25)
+    };
+  }
+
+  // The dust-lane band is a fixed world-space line (anchor + tangent),
+  // projected through the same camera rotation as everything else. At
+  // cam.yaw=0/cam.pitch=0 this reduces to exactly the original static
+  // composition (centered, tilted BAND_TILT) — it only shifts/tilts as you
+  // actually look around, instead of either spinning (old flat-rotate bug)
+  // or looking like a different shape entirely (blob-based attempt).
+  var BAND_TILT = -0.26;
+  var BAND_A = { x: 0, y: 0, z: 1 };                                   // straight ahead
+  var BAND_T = { x: Math.cos(BAND_TILT), y: Math.sin(BAND_TILT), z: 0 }; // tangent at rest
+  function drawBand(bandEase){
+    if(bandEase <= 0 || !bandGradient) return;
+    var center = projectDir(BAND_A.x, BAND_A.y, BAND_A.z);
+    if(!center) return;
+    // A tiny step along the tangent gives the true on-screen angle at the
+    // current view (accounts for perspective, not just a fixed constant).
+    var EPS = 0.01;
+    var nx = BAND_A.x + BAND_T.x * EPS, ny = BAND_A.y + BAND_T.y * EPS, nz = BAND_A.z + BAND_T.z * EPS;
+    var len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    var near = projectDir(nx / len, ny / len, nz / len);
+    if(!near) return;
+    var angle = Math.atan2(near.sy - center.sy, near.sx - center.sx);
+
+    var bandHalfW = w * 0.8 * bandEase;
+    if(bandHalfW <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = center.edgeFade;
+    ctx.translate(center.sx, center.sy);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.rect(-bandHalfW, -h * 0.12, bandHalfW * 2, h * 0.24);
+    ctx.clip();
+    ctx.fillStyle = bandGradient;
+    ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
+    ctx.restore();
+  }
+
+  // Advances camera physics: angular momentum from a drag flick decays with
+  // friction (real "look around and it drifts to a stop"), and travel speed
+  // eases toward its target rather than jumping, so scroll/pinch never
+  // produces a visible skip — just continuous acceleration/deceleration.
+  function stepCamera(now, dt){
+    if(dt <= 0) return;
+
+    if(_camResetting){
+      var rt = Math.min(1, (now - _camResetT) / 500);
+      var re = 1 - Math.pow(1 - rt, 3); // ease-out cubic
+      cam.yaw = _camFrom.yaw * (1 - re);
+      cam.pitch = _camFrom.pitch * (1 - re);
+      if(rt >= 1){ _camResetting = false; cam.yawVel = 0; cam.pitchVel = 0; }
+    } else if(!_dragging){
+      cam.yaw += cam.yawVel * dt;
+      cam.pitch += cam.pitchVel * dt;
+      var friction = Math.pow(0.02, dt); // exponential decay, framerate-independent
+      cam.yawVel *= friction;
+      cam.pitchVel *= friction;
+      if(Math.abs(cam.yawVel) < 0.001) cam.yawVel = 0;
+      if(Math.abs(cam.pitchVel) < 0.001) cam.pitchVel = 0;
+    }
+    var PITCH_LIMIT = 1.35;
+    if(cam.pitch > PITCH_LIMIT) cam.pitch = PITCH_LIMIT;
+    if(cam.pitch < -PITCH_LIMIT) cam.pitch = -PITCH_LIMIT;
+
+    // Forward/back travel: velocity eases toward zero (or toward whatever the
+    // last scroll/pinch impulse set it to) rather than the position jumping —
+    // this is what makes the dive feel continuous instead of stepped.
+    cam.travelZ += cam.travelVel * dt;
+    if(_warpOn){
+      // Sustained auto-cruise: ease toward a standing target speed instead
+      // of decaying toward zero, so it keeps accelerating on its own like
+      // the user is holding scroll-up, then holds steady at WARP_SPEED.
+      cam.travelVel += (WARP_SPEED - cam.travelVel) * Math.min(1, WARP_EASE * dt * 60);
+    } else {
+      cam.travelVel *= Math.pow(0.055, dt);
+      if(Math.abs(cam.travelVel) < 0.01) cam.travelVel = 0;
+    }
+  }
+
+  function toggleWarp(){
+    _warpOn = !_warpOn;
+    updateMenuUi();
   }
 
   function spawnMeteor(){
@@ -36197,10 +36398,7 @@ function _syncDayNightToggle(t){
   }
 
   // Soft blob only — never a hard disc (that’s what made them look stickers)
-  function drawSoftStar(s, a, rx, ry){
-    if(rx === undefined) rx = s.x;
-    if(ry === undefined) ry = s.y;
-    var R = s.r * s.soft;
+  function drawSoftStar(s, a, rx, ry, R){
     var g = ctx.createRadialGradient(rx, ry, 0, rx, ry, R);
     // Cool tint toward blue-grey so they pick up the void, not pure UI-white
     var c0 = s.cool ? '210,222,245' : '235,238,248';
@@ -36215,20 +36413,58 @@ function _syncDayNightToggle(t){
     ctx.fill();
   }
 
+  // Respawns a star/dust particle far ahead of (or, if traveling backward,
+  // Respawns a star/dust particle far ahead of the camera's current travel
+  // position (used once it's drifted too far behind), or — traveling
+  // backward — brings one back in close behind instead. Either way it's a
+  // fresh random lateral spot, always outside the visible range so the swap
+  // is invisible. Between these two triggers, particles now spend real time
+  // both ahead of AND behind the camera as you travel, so turning around
+  // shows a trailing field instead of an empty gap.
+  function respawnAhead(p, isDust){
+    var R = isDust ? DUST_FIELD_R : STAR_FIELD_R;
+    p.wz = cam.travelZ + R * (0.85 + Math.random() * 0.15);
+    p.wx = (Math.random() * 2 - 1) * R;
+    p.wy = (Math.random() * 2 - 1) * R;
+  }
+  function respawnBehindTravel(p, isDust){
+    var R = isDust ? DUST_FIELD_R : STAR_FIELD_R;
+    p.wz = cam.travelZ - R * (0.85 + Math.random() * 0.15);
+    p.wx = (Math.random() * 2 - 1) * R;
+    p.wy = (Math.random() * 2 - 1) * R;
+  }
+
   function renderStar(s, t, dt){
-    // Autonomous drift, wrapping at the edges — a continuous field flowing
-    // past rather than a static, frozen sky.
-    s.x += s.vx * dt;
-    s.y += s.vy * dt;
-    if(s.x < -20) s.x = w + 20; else if(s.x > w + 20) s.x = -20;
-    if(s.y < -20) s.y = h + 20; else if(s.y > h + 20) s.y = -20;
+    // Slow ambient lateral drift in world space, independent of camera travel.
+    s.wx += s.vx * dt;
+    s.wy += s.vy * dt;
+    if(s.wx < -STAR_FIELD_R) s.wx = STAR_FIELD_R; else if(s.wx > STAR_FIELD_R) s.wx = -STAR_FIELD_R;
+    if(s.wy < -STAR_FIELD_R) s.wy = STAR_FIELD_R; else if(s.wy > STAR_FIELD_R) s.wy = -STAR_FIELD_R;
+
+    var relZ = s.wz - cam.travelZ;
+    if(relZ < -STAR_FIELD_R) { respawnAhead(s, false); return; }
+    if(relZ > STAR_FIELD_R + 40) { respawnBehindTravel(s, false); return; }
+
+    var p = project(s.wx, s.wy, s.wz);
+    if(!p) return;
+    if(p.sx < -80 || p.sx > w + 80 || p.sy < -80 || p.sy > h + 80) return;
+
+    // Proximity drives both size and brightness — closer reads as bigger and
+    // brighter, exactly like actually approaching it. Normalized around
+    // STAR_BASE_Z (the field's average spawn distance) so a star sitting at
+    // its "typical" depth renders at prox≈1 — i.e. the same size/brightness
+    // as the original flat (non-zoom) star field — with only a mild boost/
+    // dip as it passes nearer or farther, rather than the raw focal/z ratio
+    // which could swing stars up to 2.6x bigger or shrink them arbitrarily.
+    var prox = Math.min(1.6, Math.max(0.65,
+      (STAR_BASE_Z + focal * 0.12) / (p.z + focal * 0.12)));
 
     // No atmosphere out here, so no scintillation/sparkle — real stars in
     // space burn as steady, unwavering points of light. Brightness stays
     // fixed; only the closest, brightest stars ever get a genuine flare,
     // and rarely — a handful across the whole field per minute, not a
     // constant flicker.
-    var aVal = s.a;
+    var aVal = s.a * prox;
     if(s.depth === 2){
       if(!s.flareAt && Math.random() < 0.000004) s.flareAt = t;
       if(s.flareAt){
@@ -36237,9 +36473,10 @@ function _syncDayNightToggle(t){
         else aVal *= 1 + Math.sin((age / 0.6) * Math.PI) * 1.6;
       }
     }
+    aVal *= p.edgeFade;
     if(aVal <= 0.015) return;
 
-    drawSoftStar(s, aVal, s.x, s.y);
+    drawSoftStar(s, aVal, p.sx, p.sy, s.r * s.soft * prox);
   }
 
   function frame(now){
@@ -36248,6 +36485,8 @@ function _syncDayNightToggle(t){
 
     var dt = _lastFrameT ? Math.min((now - _lastFrameT) / 1000, 0.1) : 0;
     _lastFrameT = now;
+
+    stepCamera(now, dt);
 
     ctx.clearRect(0, 0, w, h);
 
@@ -36258,26 +36497,13 @@ function _syncDayNightToggle(t){
     // Flat void — no center glow layers here (they read as a visible circle
     // against pure black). Stars/dust/haze below carry all the depth cues.
 
-    // Soft galactic dust lane (behind far stars a bit — drawn under stars too)
-    // Gradient itself is cached in bandGradient (built once in resize()) and
-    // its alpha never changes frame to frame — only a CLIP region grows
-    // outward from center over BAND_REVEAL_MS, so it draws itself in like a
-    // beam extending, with nothing ever re-dithered.
-    if(!bandGradient) buildBandGradient();
+    // Soft galactic dust lane — a fixed feature out on the sky dome, properly
+    // projected through the 3D camera (see drawBand/projectDir) so panning
+    // slides it across the screen instead of spinning it. Reveal still eases
+    // in via bandEase on first activation.
     var bandT = Math.min(1, (now - _bandStartT) / BAND_REVEAL_MS);
     var bandEase = 1 - Math.pow(1 - bandT, 3); // ease-out cubic
-    var bandHalfW = w * 0.8 * bandEase;
-    if(bandHalfW > 0){
-      ctx.save();
-      ctx.translate(w * 0.5, h * 0.5);
-      ctx.rotate(-0.26);
-      ctx.beginPath();
-      ctx.rect(-bandHalfW, -h * 0.12, bandHalfW * 2, h * 0.24);
-      ctx.clip();
-      ctx.fillStyle = bandGradient;
-      ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
-      ctx.restore();
-    }
+    drawBand(bandEase);
 
     var t = (now - t0) / 1000;
     var si;
@@ -36295,15 +36521,29 @@ function _syncDayNightToggle(t){
     }
     // Dust lives between mid and near — soft blobs only
     dust.forEach(function(d){
-      d.x += d.vx; d.y += d.vy;
-      if(d.x < 0) d.x = w; if(d.x > w) d.x = 0;
-      if(d.y < 0) d.y = h; if(d.y > h) d.y = 0;
-      var dg = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * d.soft);
-      dg.addColorStop(0, 'rgba(180,195,220,' + d.a + ')');
+      d.wx += d.vx; d.wy += d.vy;
+      if(d.wx < -DUST_FIELD_R) d.wx = DUST_FIELD_R; else if(d.wx > DUST_FIELD_R) d.wx = -DUST_FIELD_R;
+      if(d.wy < -DUST_FIELD_R) d.wy = DUST_FIELD_R; else if(d.wy > DUST_FIELD_R) d.wy = -DUST_FIELD_R;
+
+      var relZ = d.wz - cam.travelZ;
+      if(relZ < -DUST_FIELD_R){ respawnAhead(d, true); return; }
+      if(relZ > DUST_FIELD_R + 40){ respawnBehindTravel(d, true); return; }
+
+      var dp = project(d.wx, d.wy, d.wz);
+      if(!dp) return;
+      if(dp.sx < -60 || dp.sx > w + 60 || dp.sy < -60 || dp.sy > h + 60) return;
+
+      var dprox = Math.min(1.5, Math.max(0.65,
+        (DUST_BASE_Z + focal * 0.15) / (dp.z + focal * 0.15)));
+      var da = d.a * dprox * dp.edgeFade;
+      if(da <= 0.008) return;
+      var R = d.r * d.soft * dprox;
+      var dg = ctx.createRadialGradient(dp.sx, dp.sy, 0, dp.sx, dp.sy, R);
+      dg.addColorStop(0, 'rgba(180,195,220,' + da + ')');
       dg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = dg;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r * d.soft, 0, Math.PI * 2);
+      ctx.arc(dp.sx, dp.sy, R, 0, Math.PI * 2);
       ctx.fill();
     });
 
@@ -36364,6 +36604,8 @@ function _syncDayNightToggle(t){
   }
   function stop(){
     running = false;
+    _warpOn = false;
+    cam.travelVel = 0;
     cancelAnimationFrame(raf);
     // Don't wipe the canvas right away — #deepSpaceLayer's container fades
     // opacity over 1.6s in CSS. If we clear the stars/aurora glow here,
@@ -36381,10 +36623,17 @@ function _syncDayNightToggle(t){
   function updateMenuUi(){
     var btn = document.getElementById('dsmToggleAurora');
     var st = document.getElementById('dsmAuroraState');
-    if(!btn || !st) return;
-    var on = isOn();
-    st.textContent = on ? 'On' : 'Off';
-    if(on) btn.classList.add('on'); else btn.classList.remove('on');
+    if(btn && st){
+      var on = isOn();
+      st.textContent = on ? 'On' : 'Off';
+      if(on) btn.classList.add('on'); else btn.classList.remove('on');
+    }
+    var wbtn = document.getElementById('dsmToggleWarp');
+    var wst = document.getElementById('dsmWarpState');
+    if(wbtn && wst){
+      wst.textContent = _warpOn ? 'On' : 'Off';
+      if(_warpOn) wbtn.classList.add('on'); else wbtn.classList.remove('on');
+    }
   }
 
   function hideMenu(){
@@ -36396,7 +36645,7 @@ function _syncDayNightToggle(t){
     if(!menu) return;
     updateMenuUi();
     menu.classList.add('open');
-    var mw = 240, mh = 110;
+    var mw = 240, mh = 145;
     var x = Math.min(clientX, window.innerWidth - mw - 8);
     var y = Math.min(clientY, window.innerHeight - mh - 8);
     if(x < 8) x = 8; if(y < 8) y = 8;
@@ -36408,6 +36657,130 @@ function _syncDayNightToggle(t){
     syncDom();
     if(active()) start(); else stop();
     hideMenu();
+  }
+
+  // Drag anywhere on the background = look around (spherical, like turning
+  // your head). Scroll wheel / pinch = travel forward or backward through
+  // space. Listeners live on window (not the canvas) because the canvas sits
+  // at z-index:0 behind the whole app shell and would rarely be the actual
+  // event target — real buttons/inputs/links/scrollable UI are explicitly
+  // excluded below so they keep working untouched.
+  var _exploreCameraBound = false;
+  function isRealUiTarget(el){
+    while(el && el !== document.body){
+      if(el.closest && el.closest('button,a,input,textarea,select,[role="button"],[contenteditable="true"]')) return true;
+      var cs = window.getComputedStyle(el);
+      if(cs && (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflowX === 'auto' || cs.overflowX === 'scroll') && el.scrollHeight > el.clientHeight + 2) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+  function pointerXY(e){
+    if(e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+  function pinchDist(e){
+    if(!e.touches || e.touches.length < 2) return 0;
+    var dx = e.touches[0].clientX - e.touches[1].clientX;
+    var dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  function recenterCamera(){
+    if(!active()) return;
+    _camFrom.yaw = cam.yaw; _camFrom.pitch = cam.pitch;
+    _camResetT = performance.now();
+    _camResetting = true;
+  }
+  function bindExploreCamera(){
+    if(_exploreCameraBound) return;
+    _exploreCameraBound = true;
+
+    window.addEventListener('pointerdown', function(e){
+      if(!active()) return;
+      if(e.button !== undefined && e.button !== 0) return;
+      if(isRealUiTarget(e.target)) return;
+      _dragging = true; _dragMoved = false; _camResetting = false;
+      var p = pointerXY(e);
+      _dragLastX = p.x; _dragLastY = p.y;
+      _dragVX = 0; _dragVY = 0;
+    }, { passive: true });
+
+    window.addEventListener('pointermove', function(e){
+      if(!_dragging || !active()) return;
+      var p = pointerXY(e);
+      var dx = p.x - _dragLastX, dy = p.y - _dragLastY;
+      _dragLastX = p.x; _dragLastY = p.y;
+      if(Math.abs(dx) > 1 || Math.abs(dy) > 1) _dragMoved = true;
+      var SENS = 0.0032;
+      cam.yaw -= dx * SENS;
+      cam.pitch -= dy * SENS;
+      var PITCH_LIMIT = 1.35;
+      if(cam.pitch > PITCH_LIMIT) cam.pitch = PITCH_LIMIT;
+      if(cam.pitch < -PITCH_LIMIT) cam.pitch = -PITCH_LIMIT;
+      _dragVX = -dx * SENS; _dragVY = -dy * SENS;
+    }, { passive: true });
+
+    function endDrag(){
+      if(!_dragging) return;
+      _dragging = false;
+      // Hand off residual drag speed as angular momentum for a natural
+      // "flick and it keeps drifting, then settles" release.
+      cam.yawVel = Math.max(-6, Math.min(6, _dragVX * 40));
+      cam.pitchVel = Math.max(-6, Math.min(6, _dragVY * 40));
+    }
+    window.addEventListener('pointerup', endDrag, { passive: true });
+    window.addEventListener('pointercancel', endDrag, { passive: true });
+
+    window.addEventListener('wheel', function(e){
+      if(!active()) return;
+      if(isRealUiTarget(e.target)) return;
+      e.preventDefault();
+      // Impulse added to velocity (not position) so repeated wheel ticks
+      // accelerate/decelerate smoothly via stepCamera()'s easing instead of
+      // jumping frame to frame.
+      var delta = -e.deltaY * 0.9;
+      cam.travelVel = Math.max(-260, Math.min(260, cam.travelVel + delta));
+    }, { passive: false });
+
+    window.addEventListener('touchstart', function(e){
+      if(!active()) return;
+      if(isRealUiTarget(e.target)) return;
+      if(e.touches.length === 2){
+        _dragging = false;
+        _pinchStartDist = _pinchLastDist = pinchDist(e);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function(e){
+      if(!active()) return;
+      if(e.touches.length === 2 && _pinchStartDist){
+        if(isRealUiTarget(e.target)) return;
+        e.preventDefault();
+        var d = pinchDist(e);
+        var delta = (d - _pinchLastDist) * 3.2;
+        _pinchLastDist = d;
+        cam.travelVel = Math.max(-260, Math.min(260, cam.travelVel + delta));
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', function(e){
+      if(e.touches.length < 2){ _pinchStartDist = 0; _pinchLastDist = 0; }
+    }, { passive: true });
+
+    // Double-click / double-tap eases the look direction back to center.
+    window.addEventListener('dblclick', function(e){
+      if(!active()) return;
+      if(isRealUiTarget(e.target)) return;
+      recenterCamera();
+    }, { passive: true });
+    var _lastTapT = 0;
+    window.addEventListener('touchend', function(e){
+      if(!active()) return;
+      if(isRealUiTarget(e.target)) return;
+      var now = Date.now();
+      if(now - _lastTapT < 320 && !_dragMoved) recenterCamera();
+      _lastTapT = now;
+    }, { passive: true });
   }
 
   function bind(){
@@ -36441,6 +36814,14 @@ function _syncDayNightToggle(t){
       tog.addEventListener('click', function(e){
         e.preventDefault(); e.stopPropagation();
         toggle();
+      });
+    }
+    var wtog = document.getElementById('dsmToggleWarp');
+    if(wtog && !wtog._bound){
+      wtog._bound = true;
+      wtog.addEventListener('click', function(e){
+        e.preventDefault(); e.stopPropagation();
+        toggleWarp();
       });
     }
     document.addEventListener('click', function(e){
@@ -36477,6 +36858,7 @@ function _syncDayNightToggle(t){
   window.addEventListener('load', function(){
     migrateLegacy();
     bind();
+    bindExploreCamera();
     watchChatEmptyState();
     syncDom();
     updateMenuUi();
@@ -36484,7 +36866,7 @@ function _syncDayNightToggle(t){
   });
   // In case script runs after load
   if(document.readyState === 'complete' || document.readyState === 'interactive'){
-    setTimeout(function(){ bind(); syncDom(); updateMenuUi(); if(active()) start(); }, 0);
+    setTimeout(function(){ bind(); bindExploreCamera(); syncDom(); updateMenuUi(); if(active()) start(); }, 0);
   }
 })();
 
