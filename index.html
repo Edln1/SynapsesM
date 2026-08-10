@@ -36300,39 +36300,65 @@ function _syncDayNightToggle(t){
     };
   }
 
-  // The dust-lane band is a fixed world-space line (anchor + tangent),
-  // projected through the same camera rotation as everything else. At
-  // cam.yaw=0/cam.pitch=0 this reduces to exactly the original static
-  // composition (centered, tilted BAND_TILT) — it only shifts/tilts as you
-  // actually look around, instead of either spinning (old flat-rotate bug)
-  // or looking like a different shape entirely (blob-based attempt).
+  // The dust-lane band is a great circle — the set of directions in the
+  // plane through the camera spanned by BAND_A and BAND_T. The gnomonic
+  // projection project()/projectDir() already use maps ANY great circle to
+  // a perfectly straight line in screen space (this is a real property of
+  // that projection, not an approximation) — so instead of sampling points
+  // along what we assumed was a curve (attempt #1: visible seams between
+  // segments; attempt #2: still fighting the same non-problem), we derive
+  // that line directly and exactly from the plane's normal vector, rotated
+  // into camera space the same way every direction vector already is.
+  // This also fixes the original bug for a different reason than either
+  // retry did: the old code anchored everything to ONE projected point
+  // (BAND_A, "straight ahead") and returned early — killing the whole band
+  // — the instant that single point rotated out of view, even though the
+  // rest of the same line could still be on screen. Deriving the line from
+  // the plane normal has no such single point of failure.
   var BAND_TILT = -0.26;
   var BAND_A = { x: 0, y: 0, z: 1 };                                   // straight ahead
   var BAND_T = { x: Math.cos(BAND_TILT), y: Math.sin(BAND_TILT), z: 0 }; // tangent at rest
+  // Plane normal = BAND_A × BAND_T (fixed in world space; the band's
+  // great circle is every direction perpendicular to this).
+  var BAND_N = {
+    x: BAND_A.y * BAND_T.z - BAND_A.z * BAND_T.y,
+    y: BAND_A.z * BAND_T.x - BAND_A.x * BAND_T.z,
+    z: BAND_A.x * BAND_T.y - BAND_A.y * BAND_T.x
+  };
   function drawBand(bandEase){
     if(bandEase <= 0 || !bandGradient) return;
-    var center = projectDir(BAND_A.x, BAND_A.y, BAND_A.z);
-    if(!center) return;
-    // A tiny step along the tangent gives the true on-screen angle at the
-    // current view (accounts for perspective, not just a fixed constant).
-    var EPS = 0.01;
-    var nx = BAND_A.x + BAND_T.x * EPS, ny = BAND_A.y + BAND_T.y * EPS, nz = BAND_A.z + BAND_T.z * EPS;
-    var len = Math.sqrt(nx * nx + ny * ny + nz * nz);
-    var near = projectDir(nx / len, ny / len, nz / len);
-    if(!near) return;
-    var angle = Math.atan2(near.sy - center.sy, near.sx - center.sx);
+    // Rotate the plane normal into camera space — identical rotation math
+    // to projectDir(), just without the final divide-by-z (we don't need a
+    // point yet, only the rotated normal, to derive the line's equation).
+    var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    var x1 = BAND_N.x * cy + BAND_N.z * sy;
+    var z1 = -BAND_N.x * sy + BAND_N.z * cy;
+    var cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    var y2 = BAND_N.y * cp + z1 * sp;
+    var z2 = -BAND_N.y * sp + z1 * cp;
+    var a = x1, b = y2, c = z2; // rotated normal, same axis order as project()/projectDir()
+    // Screen-space line: a*sx + b*sy + C = 0, derived from the plane
+    // equation a*X + b*Y + c = 0 where X=(sx-w/2)/focal, Y=(sy-h/2)/focal.
+    var C = c * focal - a * (w * 0.5) - b * (h * 0.5);
+    var magSq = a * a + b * b;
+    if(magSq < 1e-8) return; // camera looking straight along the band's own normal — edge-on/invisible, correctly nothing to draw
 
-    var bandHalfW = w * 0.8 * bandEase;
-    if(bandHalfW <= 0) return;
+    // Point on the line closest to screen center — used as the anchor for
+    // the "reveal sweeps outward from center" grow-in animation.
+    var t = -(a * (w * 0.5) + b * (h * 0.5) + C) / magSq;
+    var px = w * 0.5 + t * a, py = h * 0.5 + t * b;
+    var mag = Math.sqrt(magSq);
+    var angle = Math.atan2(a / mag, -b / mag); // direction along the line = perpendicular to the normal (a,b)
+
+    var diag = Math.sqrt(w * w + h * h);
+    var halfLen = diag * 2 * bandEase; // grows outward from center as bandEase eases 0→1; generous margin so it always reaches every corner even if the anchor point itself is off-canvas
+    if(halfLen <= 0) return;
+
     ctx.save();
-    ctx.globalAlpha = center.edgeFade;
-    ctx.translate(center.sx, center.sy);
+    ctx.translate(px, py);
     ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.rect(-bandHalfW, -h * 0.12, bandHalfW * 2, h * 0.24);
-    ctx.clip();
     ctx.fillStyle = bandGradient;
-    ctx.fillRect(-w * 0.8, -h * 0.12, w * 1.6, h * 0.24);
+    ctx.fillRect(-halfLen, -h * 0.12, halfLen * 2, h * 0.24);
     ctx.restore();
   }
 
@@ -36691,6 +36717,20 @@ function _syncDayNightToggle(t){
     _camResetT = performance.now();
     _camResetting = true;
   }
+  // Mobile/touch pointers don't get to drag-pan the camera — they only
+  // ever see the initial static framing of the scene. Coarse-pointer check
+  // (not UA sniffing) mirrors the pattern already used elsewhere in the
+  // file (see the `(hover: hover) and (pointer: fine)` check near line
+  // 45539) so it stays consistent with how "is this a mouse" is decided
+  // in the rest of the app.
+  function isPanBlockedInput(e){
+    if(e.pointerType === 'touch' || e.pointerType === 'pen') return true;
+    try{
+      if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+    }catch(_pm){}
+    return false;
+  }
+
   function bindExploreCamera(){
     if(_exploreCameraBound) return;
     _exploreCameraBound = true;
@@ -36699,6 +36739,7 @@ function _syncDayNightToggle(t){
       if(!active()) return;
       if(e.button !== undefined && e.button !== 0) return;
       if(isRealUiTarget(e.target)) return;
+      if(isPanBlockedInput(e)) return; // mobile: no pan-drag, first view only
       _dragging = true; _dragMoved = false; _camResetting = false;
       var p = pointerXY(e);
       _dragLastX = p.x; _dragLastY = p.y;
