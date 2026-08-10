@@ -1128,7 +1128,6 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      the bug that shifted the mic/title noticeably out of place). It's only
      the real conversation view (.chat-messages below) that should actually
      make use of the reclaimed space. */
-  body.topbar-hidden #chatEmptyState{padding-top:calc(18vh + 160px)!important;}
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
   #chatEmptyState .syn-greeting{font-size:20px!important;}
   #chatEmptyState .syn-fp{display:flex!important;opacity:1!important;margin:0 0 0!important;}
@@ -1143,7 +1142,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      it's flex:1 in that same flex column. This trims its own top padding
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
-  body.topbar-hidden .chat-messages{padding-top:0!important;}
+  body.topbar-hidden .chat-messages{padding-top:14px!important;}
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
