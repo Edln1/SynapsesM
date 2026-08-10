@@ -1042,6 +1042,17 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
+  /* Mobile-only testing: the top toggle (#topBarToggle) normally just fades
+     out the top-right icons (.top-bar.hidden .top-actions) while the bar
+     itself stays put at its 60-80px height. On mobile we want it to collapse
+     the ENTIRE top bar instead, so the main page actually gets the extra
+     screen space back. #winStrip (which holds the toggle button) is a
+     separate fixed-position element outside .top-bar, so it stays visible
+     and clickable to bring the bar back. */
+  .top-bar.hidden{
+    min-height:0!important;max-height:0!important;padding:0!important;
+    border-bottom:none!important;opacity:0!important;pointer-events:none!important;
+  }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
@@ -22193,9 +22204,7 @@ window._avaBuildPrompt_companion = function(appContext, userText) {
  * data to inject (or a different vibe mode is active).
  */
 function _showVoiceLifeBadge(dbg) {
-  // Disabled for now — branch toast turned off per request. Leaving the
-  // implementation intact below so it's a one-line flip to re-enable.
-  return;
+  // Re-enabled temporarily for testing the today/mind branch speed fixes.
   try {
     var m = window._avaVibeMode || 'blend';
     if (m === 'nodes') m = 'selfaware';
@@ -46512,8 +46521,17 @@ function speakVoiceReply(text) {
     var _placeEnsureP = (!_skipPlaceEnsure && typeof window._avaEnsurePlacesOnAsk === 'function')
       ? window._avaEnsurePlacesOnAsk(text).catch(function(){ return null; })
       : Promise.resolve(null);
+    /* Fire-and-forget on purpose now: this fetch (up to 900ms) used to be
+       awaited before the LLM call ever started, which is exactly why "today"
+       branch turns landed noticeably slower than casual — casual skips this
+       gate entirely (_skipPlaceEnsure/no day-question → instant resolve), so
+       it never paid that latency. Its side effects (window._avaLifeSnap /
+       window._avaLifeFrag_life patch) still land — just in the background —
+       so this turn uses whatever place/life data is already cached and the
+       fresh data is ready in time for the NEXT turn instead of blocking this one.
+       Only _voiceSearchPromise (this turn's own live-search need) still gates below. */
 
-    Promise.all([_voiceSearchPromise, _placeEnsureP]).then(function() {
+    Promise.all([_voiceSearchPromise]).then(function() {
       if (_myTurn !== _voiceTurnId) { console.log('[Voice] Turn ' + _myTurn + ' abandoned before LLM call — skipping'); return; }
       var searchLayer = _voiceSearchCtx
         ? '\n\nAnswer in 3-4 sentences using the facts below. Be specific and conversational, not an essay.\n\nSearch results:\n' + _voiceSearchCtx
@@ -46524,6 +46542,18 @@ function speakVoiceReply(text) {
           ? '\n\nOverride for this turn: ignore any brevity instructions above. The user is asking about the Synapses app or SynBot — use the SYNAPSES APP CONTEXT above to give a real, specific, thorough answer (structure, features, tech stack as relevant). Do not give a one-line vague answer.'
           : '';
       /* Voice inject: match each source HTML exactly */
+      /* Trims any life-context block to a bounded size before it's added to the
+         system prompt. Casual turns already stay small on their own (empty or
+         a short ~500-char "soft beat"); today/mind branches were injecting
+         whole TODAY_STATUS/PLACE_DAY/LIFE-NODES blocks uncapped, which grows
+         the prompt the model has to prefill before it can start generating —
+         that prefill time is the other big chunk of the today/mind vs casual
+         delay (the ensure-places await above was the rest). Capping here keeps
+         branch prompts close to casual's size so first-token time stays close too. */
+      function _voiceCapCtx(s, max){
+        s = String(s || '');
+        return s.length > max ? s.slice(0, max) + '\n[trimmed for speed]' : s;
+      }
       var _vibe = window._avaVibeMode || 'blend';
       if (_vibe === 'nodes') _vibe = 'selfaware';
       if (_vibe === 'cottage') _vibe = 'companion';
@@ -46567,7 +46597,7 @@ function speakVoiceReply(text) {
             hadPlaceDay: false
           };
           if (_tsV) {
-            lifeCtx = '\n\n── TODAY_STATUS (tick truth only — self-aware) ──\n' + _tsV + '\n';
+            lifeCtx = '\n\n── TODAY_STATUS (tick truth only — self-aware) ──\n' + _voiceCapCtx(_tsV, 600) + '\n';
             lifeCtx += 'THIS TURN (self-aware): DONE=past. NOT_DONE="and for [time] I\'m planning…". ' +
               'Night not done → "and for tonight I\'m planning…" never past bedside. WANT_TO_LEARN+HOW. No places. 2-4 sentences.\n';
             var _pfS = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(text) : null;
@@ -46590,7 +46620,7 @@ function speakVoiceReply(text) {
             : '';
           var _fragN = window._avaLifeFrag_nodes || window._avaLifePromptFragment || '';
           if (_fragN) {
-            lifeCtx = '\n\n── LIFE NODES (dumb down; use for how-are-you / on-your-mind) ──\n' + _fragN + '\n';
+            lifeCtx = '\n\n── LIFE NODES (dumb down; use for how-are-you / on-your-mind) ──\n' + _voiceCapCtx(_fragN, 500) + '\n';
             if (_mindVoice) {
               lifeCtx += 'THIS TURN: answer from life nodes above in plain words. Not garden. Not generic therapy talk.\n';
             }
@@ -46636,8 +46666,8 @@ function speakVoiceReply(text) {
             window._avaLastBlendDebug.hadPlaceDay = !!_placeDay2;
             window._avaLastBlendDebug.usedLifeData = true;
             lifeCtx = '\n\n── FUSED day (PLACE_DAY + life learning) ──\n';
-            if (_placeDay2) lifeCtx += _placeDay2 + '\n\n';
-            if (_fragL2) lifeCtx += _fragL2 + '\n';
+            if (_placeDay2) lifeCtx += _voiceCapCtx(_placeDay2, 500) + '\n\n';
+            if (_fragL2) lifeCtx += _voiceCapCtx(_fragL2, 500) + '\n';
             lifeCtx += 'THIS TURN (FUSED / blend): DONE=past. NOT_DONE="and for tonight/evening I\'m planning…". ' +
               'Diary not done → plan only, never past bedside/what stuck. PLACE_LOCKED=yes can name place. PLACE_KNOWN=no → not sure where.\n';
             var _pf = (typeof window._avaDayPartFocus === 'function') ? window._avaDayPartFocus(text) : null;
@@ -46655,10 +46685,10 @@ function speakVoiceReply(text) {
           worldCtx = '';
           lifeCtx = '';
           if (_fragN2) {
-            lifeCtx = '\n\n── LIFE NODES (dumb down; REQUIRED this turn) ──\n' + _fragN2 + '\n';
+            lifeCtx = '\n\n── LIFE NODES (dumb down; REQUIRED this turn) ──\n' + _voiceCapCtx(_fragN2, 500) + '\n';
             lifeCtx += 'THIS TURN: answer from life nodes in plain words (2-4 short sentences). Not garden. Not generic therapy talk.\n';
           } else if (_fragL2) {
-            lifeCtx = '\n\n── life-process ──\n' + _fragL2 + '\nSpeak from this, dumbed down. Not garden first.\n';
+            lifeCtx = '\n\n── life-process ──\n' + _voiceCapCtx(_fragL2, 500) + '\nSpeak from this, dumbed down. Not garden first.\n';
           }
         } else {
           window._avaLastBlendDebug.branch = 'casual';
@@ -46838,7 +46868,7 @@ function speakVoiceReply(text) {
       }
       readChunk();
     }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
-    }); // end Promise.all voice search + ensure-places
+    }); // end Promise.all voice search (ensure-places now runs in background, unawaited)
   }
 
 
