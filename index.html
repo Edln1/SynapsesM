@@ -728,14 +728,23 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 
 .top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease,opacity .25s ease,min-height .25s ease,border-color .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;opacity:1;}
-/* Collapse fully regardless of screen width — previously this only happened
-   inside the mobile media query, so on any viewport that didn't match that
-   breakpoint the bar kept its 60-80px box (just with faded icons), leaving
-   a dead gap the same size as the bar even though it was "hidden". */
-/* NOTE: intentionally NOT collapsing height here — that's mobile-only
-   (see the media query below). On desktop/PC, hiding the top bar should only
-   fade out the top-right icons while the bar itself stays the same height —
-   original, correct behavior, do not change. */
+/* Collapse fully regardless of screen width. This used to be scoped to the
+   max-width:768px media query only (see the duplicate .top-bar.hidden rule
+   below, kept as-is since it's harmless with identical !important values) —
+   so on any wider viewport the bar kept its 60-80px box, just with faded
+   icons, leaving a dead gap the same size as the bar even though it was
+   "hidden", and .chat-messages (flex:1 in the same flex column) never
+   actually got the reclaimed space. Window dragging is unaffected: the real
+   drag surface is #etbDragZoneL, a separate fixed-position strip pinned to
+   the top of the viewport regardless of .top-bar's state — see its
+   app-region:drag, added alongside this change so Electron keeps a drag
+   region even when .top-bar collapses to 0 (Neutralino already dragged via
+   that element's own mousedown handler, independent of .top-bar). */
+.top-bar.hidden{
+  min-height:0!important;max-height:0!important;padding:0!important;
+  border-color:transparent!important;opacity:0!important;
+  pointer-events:none!important;
+}
 body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-top .25s ease;}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -8890,7 +8899,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   <button id="etbClose" title="Close" style="width:40px;height:28px;border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,0.4);font-size:13px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s;-webkit-app-region:no-drag;" onmouseover="this.style.background='#c42b1c';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,0.4)'">&#x2715;</button>
 </div>
 <!-- Drag zone: covers title bar area left of window controls -->
-<div id="etbDragZoneL" style="position:fixed;top:0;left:0;right:136px;height:28px;z-index:99997;cursor:move;"></div>
+<div id="etbDragZoneL" style="position:fixed;top:0;left:0;right:136px;height:28px;z-index:99997;cursor:move;-webkit-app-region:drag;app-region:drag;"></div>
 <!-- Resize handles (8 edges/corners) -->
 <div id="neu-resize-n"  style="position:fixed;top:0;left:8px;right:8px;height:5px;z-index:9999998;cursor:n-resize;"></div>
 <div id="neu-resize-s"  style="position:fixed;bottom:0;left:8px;right:8px;height:5px;z-index:9999998;cursor:s-resize;"></div>
