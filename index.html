@@ -1142,7 +1142,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      it's flex:1 in that same flex column. This trims its own top padding
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
-  body.topbar-hidden .chat-messages{padding-top:14px!important;}
+  body.topbar-hidden .chat-messages{padding-top:6px!important;}
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
@@ -1978,7 +1978,7 @@ html[data-theme="trueblack"] .stream-btn svg rect{
 .qc-icon{font-size:22px;margin-bottom:8px;}
 .qc-title{font-family:'Syne',sans-serif;font-size:13.5px;font-weight:700;margin-bottom:4px;}
 .qc-desc{font-size:12px;color:var(--muted);line-height:1.5;}
-.chat-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:32px 0;scrollbar-width:none;-ms-overflow-style:none;}
+.chat-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:32px 0;scrollbar-width:none;-ms-overflow-style:none;transition:padding-top .25s ease;}
 #chatContainer::-webkit-scrollbar{width:0;height:0;display:none;}
 
 
