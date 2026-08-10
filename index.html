@@ -47439,16 +47439,10 @@ function speakVoiceReply(text) {
     'white-space:nowrap'
   ].join(';');
   btn.addEventListener('click', function(){
-    // Prefer the session snapshotted when the reply was sent — activeSession
-    // is a single mutable global that can get reset to null (new chat/home)
-    // or reassigned (a different past chat opened) while this response is
-    // still talking in the background. Reading it live here used to send
-    // the user to whatever chat happens to be newest, not the one talking.
-    var targetKey = (window._ttsSpeakingSessionKey) ? window._ttsSpeakingSessionKey : activeSession;
-    var idx = recentChats.findIndex(function(c){ return c.key === targetKey; });
-    if(idx < 0 && targetKey !== activeSession){
-      idx = recentChats.findIndex(function(c){ return c.key === activeSession; });
-    }
+    // Go ONLY to the chat that was stamped onto this button while it was
+    // visible and speaking — no other source, no guessing. See _showPill().
+    var targetKey = btn.dataset.targetSession;
+    var idx = targetKey ? recentChats.findIndex(function(c){ return c.key === targetKey; }) : -1;
     if(idx >= 0){ openRecentChat(idx); }
     else if(recentChats.length > 0){ openRecentChat(0); }
     else if(typeof setView === 'function'){ setView('sec-chat'); }
@@ -47808,6 +47802,14 @@ function _ttsUpdateFloatingPill(viewId) {
   }
   function _showPill() {
     if (!btn) return;
+    // Stamp the exact target chat directly onto the button every time it's
+    // shown/refreshed (this runs on every ~50ms poll tick while the pill is
+    // visible), so the click handler never has to guess or fall back to
+    // "whatever activeSession happens to be right now" — it just reads what
+    // was stamped here. Prefer the session snapshotted when the reply was
+    // sent; only fall back to the live activeSession if that snapshot is
+    // missing.
+    btn.dataset.targetSession = (window._ttsSpeakingSessionKey) ? window._ttsSpeakingSessionKey : (activeSession || '');
     btn.style.opacity = '1';
     btn.style.transition = '';
     btn.style.display = 'flex';
