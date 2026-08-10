@@ -2049,6 +2049,19 @@ html[data-theme="light"] .message-text .chat-md-dot{
   #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
     left:16px!important;right:16px!important;top:360px!important;bottom:auto!important;
   }
+  /* Ask me anything (home, toggled ON) — mobile only: match the exact bottom
+     placement/width used once a real chat is underway instead of sitting up
+     under the still-visible welcome text. Higher specificity (.askbar-on)
+     than the rule above, so it wins for the ON state only; OFF stays as-is
+     (invisible anyway). Paired with the mobile guard in
+     _positionAskBarAtFingerprint() that skips setting inline top/left/right
+     on mobile so this isn't fought by JS. */
+  #sec-chat.askbar-on #chatEmptyState:not(.hidden) ~ .input-area{
+    position:relative!important;
+    top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;
+    margin:0!important;margin-top:auto!important;
+    padding:12px 16px 16px!important;
+  }
   /* Chat-active bar (chats page) stays put — Pulse should only shift the
      home/"What's on your mind?" empty-state bar (rule above), not this one. */
   body.pulse-open #sec-chat .input-box{
@@ -20201,6 +20214,8 @@ function _positionAskBarAtFingerprint(){
     area.style.removeProperty('left');
     area.style.removeProperty('right');
     area.style.removeProperty('bottom');
+    area.style.removeProperty('margin');
+    area.style.removeProperty('z-index');
   }
   if(!_isChatEmptyHome()){
     clearTop();
@@ -20209,6 +20224,14 @@ function _positionAskBarAtFingerprint(){
   if(!window._askBarOpen){
     area.style.removeProperty('top');
     _cacheFingerprintSlotTop();
+    return;
+  }
+  /* Mobile: Ask bar (home, toggled on) sits at the bottom exactly like the
+     real mid-chat input bar instead of pinned under the greeting/fingerprint —
+     clear any inline placement so the mobile-only CSS override (position:
+     relative, bottom of flow) takes over untouched. */
+  if(window.innerWidth <= 768){
+    clearTop();
     return;
   }
   var secRect = sec.getBoundingClientRect();
@@ -22170,6 +22193,9 @@ window._avaBuildPrompt_companion = function(appContext, userText) {
  * data to inject (or a different vibe mode is active).
  */
 function _showVoiceLifeBadge(dbg) {
+  // Disabled for now — branch toast turned off per request. Leaving the
+  // implementation intact below so it's a one-line flip to re-enable.
+  return;
   try {
     var m = window._avaVibeMode || 'blend';
     if (m === 'nodes') m = 'selfaware';
@@ -36014,6 +36040,7 @@ function _syncDayNightToggle(t){
   var _warpOn = false;
   var WARP_SPEED = 210;
   var WARP_EASE = 0.045; // lower = slower spin-up to full speed
+  var WARP_KEY = 'synapses_deepspace_warp'; // persists across app close/reopen
 
   // ISOTROPIC FIELD: stars/dust are spawned in a cube of fixed radius
   // centered on the camera's current position (0,0,travelZ), the same
@@ -36405,6 +36432,7 @@ function _syncDayNightToggle(t){
 
   function toggleWarp(){
     _warpOn = !_warpOn;
+    try{ localStorage.setItem(WARP_KEY, _warpOn ? '1' : '0'); }catch(e){}
     updateMenuUi();
   }
 
@@ -36622,6 +36650,11 @@ function _syncDayNightToggle(t){
     ctx = canvas.getContext('2d');
     if(!grainReady) bakeGrain();
     running = true;
+    // Restore warp on/off from last session — stop() always zeroes _warpOn
+    // in memory, so without this, reopening the app (or switching back into
+    // true black) would silently drop warp even though the user left it on.
+    try{ _warpOn = localStorage.getItem(WARP_KEY) === '1'; }catch(e){}
+    updateMenuUi();
     _lastFrameT = 0;
     _bandStartT = performance.now();
     resize();
@@ -46280,6 +46313,12 @@ function speakVoiceReply(text) {
     var _brainLayer = ''; // brain deactivated
 
     // ── Voice Search: keyword trigger, minimal blockers ──
+    // Reset every voice turn — otherwise a "deep research" done earlier in normal
+    // text chat (which sets these same window._voiceUsed* flags via
+    // _avaResearchActivatedToast, since voice mode has no research agent of its
+    // own) leaks into the FIRST speech-to-speech reply after switching modes,
+    // showing a stale research/live-search badge on a turn that never searched.
+    window._voiceUsedResearch = false;
     var _voiceSearchKeywords = /\b(news|latest|current|weather|temperature|price|stock|crypto|score|standings|who won|who is winning|what happened|tell me|show me|find me|figure out|where is|when did|when does|how much is|how much does|is he still|is she still|are they still|who is the|what is the latest|breaking|update on|results of|status of|best|top|worst|highest.rated|recommend|recommendation|restaurant|restaurants|places to eat|place to eat|bar|bars|hotel|hotels|things to do|what to do|is it open|still open|is out yet|out yet|still airing|season|available|in stock|sale on|discount)\b/i;
     /* Explicit "I want live/current info" phrasing — same override used in text chat's
      * explicitLiveHint. Forces a search regardless of topic, since the user directly
