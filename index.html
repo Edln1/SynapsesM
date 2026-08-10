@@ -727,7 +727,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .sidebar-move-btn:hover{background:var(--surface2);color:var(--text);}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 
-.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;}
+.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease,opacity .25s ease,transform .25s ease,min-height .25s ease,border-color .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;opacity:1;transform:translateY(0);}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
 #etbBtns button{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -1048,10 +1048,14 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      the ENTIRE top bar instead, so the main page actually gets the extra
      screen space back. #winStrip (which holds the toggle button) is a
      separate fixed-position element outside .top-bar, so it stays visible
-     and clickable to bring the bar back. */
+     and clickable to bring the bar back.
+     Uses the exact same opacity/transform fade as .top-actions above (the
+     existing top-right icon show/hide animation) so the whole bar collapses
+     with identical easing/timing instead of a different-feeling motion. */
   .top-bar.hidden{
     min-height:0!important;max-height:0!important;padding:0!important;
-    border-bottom:none!important;opacity:0!important;pointer-events:none!important;
+    border-color:transparent!important;opacity:0!important;
+    transform:translateY(-16px)!important;pointer-events:none!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1104,6 +1108,10 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 
   /* ── Chat empty state — same home position as before fingerprint ── */
   #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;}
+  /* When the top bar is collapsed (body.topbar-hidden, set by toggleTopBar()),
+     the ~60px it used to occupy is now free — pull the empty-state content
+     up by that same amount instead of leaving the reclaimed space unused. */
+  body.topbar-hidden #chatEmptyState{padding-top:calc(18vh + 40px)!important;}
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
   #chatEmptyState .syn-greeting{font-size:20px!important;}
   #chatEmptyState .syn-fp{display:flex!important;opacity:1!important;margin:0 0 0!important;}
@@ -2796,7 +2804,7 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 #chatBeamsWrap{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 #chatBeamsCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
-#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
+#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease,padding-top .25s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
 /* Deep-space aurora mismatch (ask-me-anything on, llm chat off): skip the
    lingering fade-out so the greeting vanishes with the rest of the page
