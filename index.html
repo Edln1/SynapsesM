@@ -24254,6 +24254,14 @@ async function sendMessage(){
   if(isFirst) activeSession='session_'+Date.now();
   if(isFirst){var _tt3=document.getElementById('topTitle');var _tt3cur=(_tt3.innerText||_tt3.textContent||'').trim();_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';_tt3.style.opacity='1';if(_tt3cur!=='Synapses'){_tt3.innerHTML='Synapses';}}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   setView('sec-chat');
+  // Lock in which chat this reply belongs to. Placed AFTER setView() on purpose:
+  // setView() synchronously calls _ttsUpdateFloatingPill(), which — since no
+  // audio is playing yet at this instant — clears window._ttsSpeakingSessionKey
+  // back to null. Setting it here, after that call, means nothing downstream
+  // can wipe it before the reply actually starts speaking. This is what the
+  // "Back to chat" pill uses instead of the live (and later resettable/
+  // reassignable) activeSession global.
+  window._ttsSpeakingSessionKey = activeSession;
   // Fold any text-extracted attachments (pdf/txt/md/csv/json) into what the AI receives.
   var _textAttachBlock = '';
   sendAttachments.forEach(function(a){
@@ -47431,7 +47439,16 @@ function speakVoiceReply(text) {
     'white-space:nowrap'
   ].join(';');
   btn.addEventListener('click', function(){
-    var idx = recentChats.findIndex(function(c){ return c.key === activeSession; });
+    // Prefer the session snapshotted when the reply was sent — activeSession
+    // is a single mutable global that can get reset to null (new chat/home)
+    // or reassigned (a different past chat opened) while this response is
+    // still talking in the background. Reading it live here used to send
+    // the user to whatever chat happens to be newest, not the one talking.
+    var targetKey = (window._ttsSpeakingSessionKey) ? window._ttsSpeakingSessionKey : activeSession;
+    var idx = recentChats.findIndex(function(c){ return c.key === targetKey; });
+    if(idx < 0 && targetKey !== activeSession){
+      idx = recentChats.findIndex(function(c){ return c.key === activeSession; });
+    }
     if(idx >= 0){ openRecentChat(idx); }
     else if(recentChats.length > 0){ openRecentChat(0); }
     else if(typeof setView === 'function'){ setView('sec-chat'); }
