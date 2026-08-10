@@ -727,7 +727,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .sidebar-move-btn:hover{background:var(--surface2);color:var(--text);}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 
-.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease,opacity .25s ease,transform .25s ease,min-height .25s ease,border-color .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;opacity:1;transform:translateY(0);}
+.top-bar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(15,15,26,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);flex-shrink:0;transition:max-height .25s ease,padding .25s ease,opacity .25s ease,min-height .25s ease,border-color .25s ease;overflow:hidden;max-height:80px;min-height:60px;-webkit-app-region:drag;app-region:drag;position:relative;opacity:1;}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
 #etbBtns button{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -1049,13 +1049,19 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
      screen space back. #winStrip (which holds the toggle button) is a
      separate fixed-position element outside .top-bar, so it stays visible
      and clickable to bring the bar back.
-     Uses the exact same opacity/transform fade as .top-actions above (the
-     existing top-right icon show/hide animation) so the whole bar collapses
-     with identical easing/timing instead of a different-feeling motion. */
+     Uses the same opacity fade timing as .top-actions above (the existing
+     top-right icon show/hide animation) so the whole bar fades out instead
+     of an instant cut. Deliberately NO transform here (unlike .top-actions,
+     which is safe to shift): the speech-to-speech mic's "glide to center"
+     position (_tnvComputeCenterRowCy) measures #topTitle's actual
+     getBoundingClientRect() *inside* this bar once it's collapsed — a
+     transform on an ancestor shifts that measured rect too, throwing the
+     mic's landing spot off. Height/opacity collapsing doesn't have that
+     side effect; a translateY here did, so it stays off. */
   .top-bar.hidden{
     min-height:0!important;max-height:0!important;padding:0!important;
     border-color:transparent!important;opacity:0!important;
-    transform:translateY(-16px)!important;pointer-events:none!important;
+    pointer-events:none!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1108,10 +1114,21 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 
   /* ── Chat empty state — same home position as before fingerprint ── */
   #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;}
-  /* When the top bar is collapsed (body.topbar-hidden, set by toggleTopBar()),
-     the ~60px it used to occupy is now free — pull the empty-state content
-     up by that same amount instead of leaving the reclaimed space unused. */
-  body.topbar-hidden #chatEmptyState{padding-top:calc(18vh + 40px)!important;}
+  /* #chatEmptyState is position:absolute with top:0 *inside* #sec-chat — so
+     its screen position is anchored to #sec-chat's own top edge, not the
+     viewport. #sec-chat is a flex child of .main (flex-direction:column,
+     sibling of .top-bar), so when .top-bar collapses to 0 height, #sec-chat's
+     top edge rises by that same ~60px (the top bar's mobile min-height) —
+     purely as a side effect of flexbox reflow, nothing deliberate. That drags
+     the greeting/fingerprint/STS-mic up along with it, which is NOT wanted:
+     this starter screen should stay put in the exact same screen position
+     regardless of top-bar state. Canceling that drift means ADDING the same
+     ~60px back to padding-top when the bar is hidden (not subtracting it —
+     subtracting compounds with the drift instead of canceling it, which is
+     the bug that shifted the mic/title noticeably out of place). It's only
+     the real conversation view (.chat-messages below) that should actually
+     make use of the reclaimed space. */
+  body.topbar-hidden #chatEmptyState{padding-top:calc(18vh + 160px)!important;}
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
   #chatEmptyState .syn-greeting{font-size:20px!important;}
   #chatEmptyState .syn-fp{display:flex!important;opacity:1!important;margin:0 0 0!important;}
@@ -1120,6 +1137,13 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
   #chatEmptyState h2{font-size:1.6rem!important;text-align:center!important;padding:0 20px!important;}
   #chatEmptyState p{font-size:12px!important;padding:0!important;opacity:0.5!important;margin-top:6px!important;text-align:center!important;}
   body.bottom-nav .chat-messages{padding:12px 0 8px!important;}
+  /* The actual conversation view (#chatContainer, a normal flex-flow child of
+     #sec-chat — NOT absolutely positioned like #chatEmptyState above) already
+     grows into the space #sec-chat gains when the top bar collapses, since
+     it's flex:1 in that same flex column. This trims its own top padding
+     further on top of that, so the reclaimed space is visibly usable instead
+     of sitting behind an unchanged 12px gap. */
+  body.topbar-hidden .chat-messages{padding-top:0!important;}
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
@@ -36034,6 +36058,19 @@ function _syncDayNightToggle(t){
   var grainCanvas = null, grainReady = false;
   var focal = 500; // perspective constant, recomputed on resize() from h
 
+  // ── Battery/perf: this layer is a passive ambient background, not an
+  // interactive scene — it never needs full 60fps, and it should never run
+  // at all while the app isn't actually visible. Two cheap wins account for
+  // most of the drain: (1) stop the rAF loop entirely on tab/app background
+  // instead of quietly painting off-screen pixels every frame, (2) cap the
+  // frame rate on phones (desktop stays smooth/uncapped). A third, bigger
+  // win below (sprite-based star rendering) removes the per-star gradient
+  // allocations that were the actual CPU/GC cost, not just skip frames.
+  var isMobile = false;
+  var _mobileFrameMs = 33; // ~30fps target on phones; desktop uncapped
+  var _lastDrawT = 0;
+  var _pageHidden = (typeof document !== 'undefined' && document.hidden);
+
   // ── Explore camera — 360 look-around (drag) + forward/back travel (scroll/pinch) ──
   // Stars live at real 3D world positions (X,Y,Z ahead of the camera). Looking
   // around rotates the whole field into camera space before projecting (a true
@@ -36207,6 +36244,57 @@ function _syncDayNightToggle(t){
     grainReady = true;
   }
 
+  // ── Pre-baked star/dust sprites ──
+  // drawSoftStar() used to call ctx.createRadialGradient() + fill() for
+  // EVERY star, EVERY frame (hundreds of times, 30-60x/sec) — allocating a
+  // fresh gradient object each call. That constant allocation is exactly
+  // the kind of thing that (a) burns CPU/battery for no visual gain, since
+  // the gradient shape never actually changes, and (b) triggers frequent
+  // GC pauses, which is what read as the occasional stutter/hitch — most
+  // noticeable during warp when more stars are streaming past at once.
+  // Fix: bake the gradient once per color variant into a small offscreen
+  // canvas, then every frame just drawImage() that sprite scaled to size,
+  // using globalAlpha to control brightness. globalAlpha multiplies the
+  // sprite's own per-pixel alpha, so a sprite baked at full alpha and drawn
+  // with globalAlpha=aVal produces IDENTICAL output to the old
+  // createRadialGradient(...,aVal) call — same stops, same ratios — just
+  // without re-allocating a gradient object 60 times a second.
+  var starSprite = { warm: null, cool: null };
+  var dustSprite = null;
+  var spritesReady = false;
+  var SPRITE_SIZE = 128, SPRITE_R = 64;
+  function bakeSoftSprite(c0, c1){
+    var sc = document.createElement('canvas');
+    sc.width = sc.height = SPRITE_SIZE;
+    var sctx = sc.getContext('2d');
+    var g = sctx.createRadialGradient(SPRITE_R, SPRITE_R, 0, SPRITE_R, SPRITE_R, SPRITE_R);
+    g.addColorStop(0, 'rgba(' + c0 + ',1)');
+    g.addColorStop(0.18, 'rgba(' + c0 + ',0.45)');
+    g.addColorStop(0.45, 'rgba(' + c1 + ',0.12)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    sctx.fillStyle = g;
+    sctx.beginPath();
+    sctx.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, Math.PI * 2);
+    sctx.fill();
+    return sc;
+  }
+  function bakeStarSprites(){
+    starSprite.warm = bakeSoftSprite('235,238,248', '200,205,220');
+    starSprite.cool = bakeSoftSprite('210,222,245', '170,185,215');
+    var dc = document.createElement('canvas');
+    dc.width = dc.height = SPRITE_SIZE;
+    var dctx = dc.getContext('2d');
+    var dg = dctx.createRadialGradient(SPRITE_R, SPRITE_R, 0, SPRITE_R, SPRITE_R, SPRITE_R);
+    dg.addColorStop(0, 'rgba(180,195,220,1)');
+    dg.addColorStop(1, 'rgba(0,0,0,0)');
+    dctx.fillStyle = dg;
+    dctx.beginPath();
+    dctx.arc(SPRITE_R, SPRITE_R, SPRITE_R, 0, Math.PI * 2);
+    dctx.fill();
+    dustSprite = dc;
+    spritesReady = true;
+  }
+
   function buildBandGradient(){
     if(!ctx) return;
     var band = ctx.createLinearGradient(0, -h * 0.1, 0, h * 0.1);
@@ -36220,8 +36308,13 @@ function _syncDayNightToggle(t){
 
   function resize(){
     if(!canvas) return;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
     w = window.innerWidth; h = window.innerHeight;
+    isMobile = w <= 768;
+    // Battery: full retina (2x) density quadruples the pixels this canvas
+    // has to fill every frame for detail nobody's scrutinizing on an
+    // ambient background. Desktop keeps the existing 2x cap; phones are
+    // capped lower (1.5x) — still crisp, meaningfully less GPU/CPU work.
+    dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
     canvas.style.width = w + 'px';
@@ -36468,20 +36561,15 @@ function _syncDayNightToggle(t){
     });
   }
 
-  // Soft blob only — never a hard disc (that’s what made them look stickers)
+  // Soft blob only — never a hard disc (that's what made them look stickers).
+  // Uses the pre-baked sprite (see bakeStarSprites above) instead of building
+  // a fresh gradient per star per frame — same visual output, far cheaper.
   function drawSoftStar(s, a, rx, ry, R){
-    var g = ctx.createRadialGradient(rx, ry, 0, rx, ry, R);
-    // Cool tint toward blue-grey so they pick up the void, not pure UI-white
-    var c0 = s.cool ? '210,222,245' : '235,238,248';
-    var c1 = s.cool ? '170,185,215' : '200,205,220';
-    g.addColorStop(0, 'rgba(' + c0 + ',' + a + ')');
-    g.addColorStop(0.18, 'rgba(' + c0 + ',' + (a * 0.45) + ')');
-    g.addColorStop(0.45, 'rgba(' + c1 + ',' + (a * 0.12) + ')');
-    g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(rx, ry, R, 0, Math.PI * 2);
-    ctx.fill();
+    var sprite = s.cool ? starSprite.cool : starSprite.warm;
+    if(!sprite){ return; } // sprites always baked before start() runs frame()
+    ctx.globalAlpha = a;
+    ctx.drawImage(sprite, rx - R, ry - R, R * 2, R * 2);
+    ctx.globalAlpha = 1;
   }
 
   // Respawns a star/dust particle far ahead of (or, if traveling backward,
@@ -36554,6 +36642,13 @@ function _syncDayNightToggle(t){
     if(!running || !ctx) return;
     raf = requestAnimationFrame(frame);
 
+    // Battery: this is an ambient background, not something anyone is
+    // tracking frame-by-frame — cap it to ~30fps on phones (desktop stays
+    // uncapped/smooth). Halving the draw calls roughly halves this layer's
+    // share of battery drain with no perceptible visual cost.
+    if(isMobile && _lastDrawT && (now - _lastDrawT) < _mobileFrameMs) return;
+    _lastDrawT = now;
+
     var dt = _lastFrameT ? Math.min((now - _lastFrameT) / 1000, 0.1) : 0;
     _lastFrameT = now;
 
@@ -36609,13 +36704,11 @@ function _syncDayNightToggle(t){
       var da = d.a * dprox * dp.edgeFade;
       if(da <= 0.008) return;
       var R = d.r * d.soft * dprox;
-      var dg = ctx.createRadialGradient(dp.sx, dp.sy, 0, dp.sx, dp.sy, R);
-      dg.addColorStop(0, 'rgba(180,195,220,' + da + ')');
-      dg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = dg;
-      ctx.beginPath();
-      ctx.arc(dp.sx, dp.sy, R, 0, Math.PI * 2);
-      ctx.fill();
+      if(dustSprite){
+        ctx.globalAlpha = da;
+        ctx.drawImage(dustSprite, dp.sx - R, dp.sy - R, R * 2, R * 2);
+        ctx.globalAlpha = 1;
+      }
     });
 
     // ── NEAR stars (a bit tighter glow, still soft) ──
@@ -36642,8 +36735,13 @@ function _syncDayNightToggle(t){
       ctx.stroke();
     }
 
-    // Light film grain only — keeps stars integrated, no dark tunnel
-    if(grainReady && grainCanvas){
+    // Light film grain only — keeps stars integrated, no dark tunnel.
+    // Skipped during warp: it's a ~dozen extra drawImage calls tiling the
+    // whole screen every frame, and at warp speed the streaking stars
+    // already dominate the frame — the grain isn't perceptible but its
+    // cost still is, right when frame time is already under the most
+    // pressure (most stars/dust respawning per frame as they stream past).
+    if(grainReady && grainCanvas && !_warpOn){
       ctx.save();
       ctx.globalAlpha = 0.04;
       ctx.globalCompositeOperation = 'overlay';
@@ -36666,6 +36764,7 @@ function _syncDayNightToggle(t){
     if(!canvas) return;
     ctx = canvas.getContext('2d');
     if(!grainReady) bakeGrain();
+    if(!spritesReady) bakeStarSprites();
     running = true;
     // Restore warp on/off from last session — stop() always zeroes _warpOn
     // in memory, so without this, reopening the app (or switching back into
@@ -36673,10 +36772,11 @@ function _syncDayNightToggle(t){
     try{ _warpOn = localStorage.getItem(WARP_KEY) === '1'; }catch(e){}
     updateMenuUi();
     _lastFrameT = 0;
+    _lastDrawT = 0;
     _bandStartT = performance.now();
     resize();
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(frame);
+    if(!_pageHidden) raf = requestAnimationFrame(frame);
   }
   function stop(){
     running = false;
@@ -36694,6 +36794,28 @@ function _syncDayNightToggle(t){
       _stopClearTimer = null;
       if(!running && ctx && w){ ctx.clearRect(0, 0, w, h); }
     }, FADE_OUT_MS + 50);
+  }
+
+  // Battery: fully stop the rAF loop (not just let the browser throttle it)
+  // whenever the app/tab isn't actually visible — backgrounded, screen off,
+  // switched away. Browsers already de-prioritize background rAF, but an
+  // explicit pause means zero draw calls (not just infrequent ones) and, on
+  // resume, a clean single-frame restart instead of a burst of "catch up"
+  // frames with a huge dt. Resuming re-syncs _lastFrameT/_lastDrawT to now
+  // so the first frame back doesn't try to simulate the entire time spent
+  // hidden in one jump.
+  if(typeof document !== 'undefined'){
+    document.addEventListener('visibilitychange', function(){
+      _pageHidden = document.hidden;
+      if(_pageHidden){
+        cancelAnimationFrame(raf);
+      } else if(running){
+        _lastFrameT = 0;
+        _lastDrawT = 0;
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(frame);
+      }
+    });
   }
 
   function updateMenuUi(){
