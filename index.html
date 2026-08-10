@@ -732,7 +732,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
    inside the mobile media query, so on any viewport that didn't match that
    breakpoint the bar kept its 60-80px box (just with faded icons), leaving
    a dead gap the same size as the bar even though it was "hidden". */
-.top-bar.hidden{min-height:0!important;max-height:0!important;padding:0!important;border-color:transparent!important;opacity:0!important;pointer-events:none!important;}
+.top-bar.hidden{display:none!important;min-height:0!important;max-height:0!important;padding:0!important;border-color:transparent!important;opacity:0!important;pointer-events:none!important;}
 body.topbar-hidden .chat-messages{padding-top:6px!important;transition:padding-top .25s ease;}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
