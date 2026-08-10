@@ -44617,6 +44617,7 @@ async function _ttsPlayNext(genId) {
       }, 50);
     }
     return; }
+  var _wasAlreadySpeaking = _vmSpeaking;
   _ttsProcessing = true; _vmSpeaking = true;
   // Eagerly kill any lingering drain-poller from a previous turn the instant a
   // new turn actually starts speaking. The genId check inside the poller's own
@@ -44633,6 +44634,17 @@ async function _ttsPlayNext(genId) {
     window._ttsSpeakingFromView = _currentViewId;
   } else {
     window._ttsSpeakingFromView = 'sec-chat';
+  }
+  // Snapshot WHICH chat session is actually speaking, once, at the true start
+  // of this speaking bout (not re-captured per sentence). activeSession is a
+  // single mutable global that later gets reset to null (new chat / home) or
+  // reassigned (opening a different past chat) while this response is still
+  // streaming/speaking in the background — reading it live at click time on
+  // the "Back to chat" pill would then send the user to the wrong chat (or,
+  // with activeSession null, fall through to "most recent chat in the list"
+  // instead of the one that's actually talking). Lock it in here instead.
+  if (!_wasAlreadySpeaking && !window._topNavVoiceActive) {
+    window._ttsSpeakingSessionKey = (typeof activeSession !== 'undefined') ? activeSession : null;
   }
   setBtnPurple();
   _startMicAnim();
@@ -47440,7 +47452,15 @@ function speakVoiceReply(text) {
     'white-space:nowrap'
   ].join(';');
   btn.addEventListener('click', function(){
-    var idx = recentChats.findIndex(function(c){ return c.key === activeSession; });
+    // Prefer the session that was actually snapshotted when speech started —
+    // activeSession may have since been reset (new chat/home) or reassigned
+    // (a different past chat opened) while this response kept talking in the
+    // background, which used to send the user to the wrong chat.
+    var targetKey = (typeof window._ttsSpeakingSessionKey !== 'undefined' && window._ttsSpeakingSessionKey) ? window._ttsSpeakingSessionKey : activeSession;
+    var idx = recentChats.findIndex(function(c){ return c.key === targetKey; });
+    if(idx < 0 && targetKey !== activeSession){
+      idx = recentChats.findIndex(function(c){ return c.key === activeSession; });
+    }
     if(idx >= 0){ openRecentChat(idx); }
     else if(recentChats.length > 0){ openRecentChat(0); }
     else if(typeof setView === 'function'){ setView('sec-chat'); }
@@ -47450,6 +47470,7 @@ function speakVoiceReply(text) {
     btn.style.display = 'none';
     if (window._ttsPillPoller) { clearInterval(window._ttsPillPoller); window._ttsPillPoller = null; }
     window._ttsSpeakingFromView = null;
+    window._ttsSpeakingSessionKey = null;
   });
 })();
 
@@ -47807,6 +47828,7 @@ function _ttsUpdateFloatingPill(viewId) {
 
   if (stsLive) {
     window._ttsSpeakingFromView = 'sec-chat';
+    window._ttsSpeakingSessionKey = null;
     _hidePill(false);
     if (window._ttsPillPoller) {
       clearInterval(window._ttsPillPoller);
@@ -47817,6 +47839,7 @@ function _ttsUpdateFloatingPill(viewId) {
 
   if (!audioActive) {
     window._ttsSpeakingFromView = null;
+    window._ttsSpeakingSessionKey = null;
   } else if (!window._ttsSpeakingFromView) {
     // Ask/text TTS only: lock source once when speech starts (not mid-navigation page)
     window._ttsSpeakingFromView = (curView === 'sec-chat' || !curView) ? 'sec-chat' : curView;
@@ -47855,6 +47878,7 @@ function _ttsUpdateFloatingPill(viewId) {
         clearInterval(window._ttsPillPoller);
         window._ttsPillPoller = null;
         window._ttsSpeakingFromView = 'sec-chat';
+        window._ttsSpeakingSessionKey = null;
         return;
       }
       var sv = window._ttsSpeakingFromView || 'sec-chat';
@@ -47866,6 +47890,7 @@ function _ttsUpdateFloatingPill(viewId) {
         clearInterval(window._ttsPillPoller);
         window._ttsPillPoller = null;
         window._ttsSpeakingFromView = null;
+        window._ttsSpeakingSessionKey = null;
       } else {
         _pillMissCount = 0;
         if (onSrc) _hidePill(false);
