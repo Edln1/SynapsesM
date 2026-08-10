@@ -47821,7 +47821,6 @@ function _ttsUpdateFloatingPill(viewId) {
 
   if (stsLive) {
     window._ttsSpeakingFromView = 'sec-chat';
-    window._ttsSpeakingSessionKey = null;
     _hidePill(false);
     if (window._ttsPillPoller) {
       clearInterval(window._ttsPillPoller);
@@ -47832,7 +47831,6 @@ function _ttsUpdateFloatingPill(viewId) {
 
   if (!audioActive) {
     window._ttsSpeakingFromView = null;
-    window._ttsSpeakingSessionKey = null;
   } else if (!window._ttsSpeakingFromView) {
     // Ask/text TTS only: lock source once when speech starts (not mid-navigation page)
     window._ttsSpeakingFromView = (curView === 'sec-chat' || !curView) ? 'sec-chat' : curView;
