@@ -24261,6 +24261,11 @@ async function sendMessage(){
   // Treat as first whenever activeSession isn't already in recentChats.
   var isFirst = !activeSession || !recentChats.find(function(c){return c.key===activeSession;});
   if(isFirst) activeSession='session_'+Date.now();
+  // Lock in which chat this reply belongs to, right now, synchronously —
+  // before any network/streaming delay during which the user could navigate
+  // away and reset/reassign the global activeSession. The "Back to chat"
+  // pill reads this instead of the live activeSession at click time.
+  window._ttsSpeakingSessionKey = activeSession;
   if(isFirst){var _tt3=document.getElementById('topTitle');var _tt3cur=(_tt3.innerText||_tt3.textContent||'').trim();_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';_tt3.style.opacity='1';if(_tt3cur!=='Synapses'){_tt3.innerHTML='Synapses';}}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   setView('sec-chat');
   // Fold any text-extracted attachments (pdf/txt/md/csv/json) into what the AI receives.
@@ -44617,7 +44622,6 @@ async function _ttsPlayNext(genId) {
       }, 50);
     }
     return; }
-  var _wasAlreadySpeaking = _vmSpeaking;
   _ttsProcessing = true; _vmSpeaking = true;
   // Eagerly kill any lingering drain-poller from a previous turn the instant a
   // new turn actually starts speaking. The genId check inside the poller's own
@@ -44634,17 +44638,6 @@ async function _ttsPlayNext(genId) {
     window._ttsSpeakingFromView = _currentViewId;
   } else {
     window._ttsSpeakingFromView = 'sec-chat';
-  }
-  // Snapshot WHICH chat session is actually speaking, once, at the true start
-  // of this speaking bout (not re-captured per sentence). activeSession is a
-  // single mutable global that later gets reset to null (new chat / home) or
-  // reassigned (opening a different past chat) while this response is still
-  // streaming/speaking in the background — reading it live at click time on
-  // the "Back to chat" pill would then send the user to the wrong chat (or,
-  // with activeSession null, fall through to "most recent chat in the list"
-  // instead of the one that's actually talking). Lock it in here instead.
-  if (!_wasAlreadySpeaking && !window._topNavVoiceActive) {
-    window._ttsSpeakingSessionKey = (typeof activeSession !== 'undefined') ? activeSession : null;
   }
   setBtnPurple();
   _startMicAnim();
