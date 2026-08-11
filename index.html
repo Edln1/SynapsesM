@@ -3069,10 +3069,18 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 *::-webkit-scrollbar-button{display:none;width:0;height:0;}
 *::-webkit-scrollbar-thumb{background:rgba(124,106,247,0.22);border-radius:10px;}
 *::-webkit-scrollbar-thumb:hover{background:rgba(124,106,247,0.22);}
+html[data-theme="trueblack"] *::-webkit-scrollbar-thumb{background:rgba(130,130,138,0.3)!important;}
+html[data-theme="trueblack"] *::-webkit-scrollbar-thumb:hover{background:rgba(150,150,158,0.4)!important;}
+html[data-theme="trueblack"]{scrollbar-color:rgba(130,130,138,0.3) transparent;}
 #imageGenModal *::-webkit-scrollbar-thumb{background:transparent;}
 #imageGenModal *::-webkit-scrollbar-thumb:hover{background:transparent;}
 #imageGenModal{scrollbar-width:none;}
 #imageGenModal *{scrollbar-width:none;}
+.matrixSliderGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
+.matrixSliderGrid input[type=range]{min-width:0;}
+@media (max-width:480px){
+  .matrixSliderGrid{grid-template-columns:1fr;gap:2px;}
+}
 
 #toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px) scale(0.96);background:rgba(18,16,28,0.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .22s ease,transform .28s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);max-width:min(320px,calc(100vw - 40px));text-align:center;line-height:1.35;letter-spacing:0.01em;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
@@ -47843,15 +47851,16 @@ function renderMatrixCard() {
   var canvasWrap = document.createElement('div');
   canvasWrap.style.cssText = 'position:relative;width:100%;padding-bottom:0;display:flex;justify-content:center;';
   var canvas = document.createElement('canvas');
-  var SIZE = Math.min(window.innerWidth - 60, 360);
-  canvas.width = SIZE; canvas.height = SIZE;
-  canvas.style.cssText = 'display:block;cursor:crosshair;touch-action:none;';
+  var SIZE = Math.min(window.innerWidth - 24, 380);
+  var DPR = window.devicePixelRatio || 1;
+  canvas.width = SIZE * DPR; canvas.height = SIZE * DPR;
+  canvas.style.cssText = 'display:block;width:'+SIZE+'px;height:'+SIZE+'px;cursor:crosshair;touch-action:none;';
   canvasWrap.appendChild(canvas);
   body.appendChild(canvasWrap);
 
   var cx = SIZE / 2, cy = SIZE / 2;
-  var MAX_R = SIZE * 0.36;
-  var LABEL_R = SIZE * 0.47;
+  var MAX_R = SIZE * 0.28;
+  var LABEL_R = SIZE * 0.37;
 
   function angleFor(i) { return (i / n) * Math.PI * 2 - Math.PI / 2; }
   function pointFor(i, val) {
@@ -47866,6 +47875,7 @@ function renderMatrixCard() {
 
   function draw() {
     var ctx = canvas.getContext('2d');
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, SIZE, SIZE);
 
     // Grid rings
@@ -47925,11 +47935,22 @@ function renderMatrixCard() {
 
       // Label
       var a = angleFor(i);
-      ctx.textAlign = Math.cos(a) > 0.1 ? 'left' : Math.cos(a) < -0.1 ? 'right' : 'center';
+      var align = Math.cos(a) > 0.1 ? 'left' : Math.cos(a) < -0.1 ? 'right' : 'center';
+      ctx.textAlign = align;
       ctx.textBaseline = Math.sin(a) > 0.1 ? 'top' : Math.sin(a) < -0.1 ? 'bottom' : 'middle';
       ctx.font = '600 8px "DM Sans", sans-serif';
+      var labelText = '[' + t.val + '] ' + t.label;
+      var textW = ctx.measureText(labelText).width;
+      var pad = 3;
+      var lx = lp.x;
+      if (align === 'left' && lx + textW > SIZE - pad) lx = SIZE - pad - textW;
+      else if (align === 'right' && lx - textW < pad) lx = pad + textW;
+      else if (align === 'center') {
+        if (lx - textW / 2 < pad) lx = pad + textW / 2;
+        if (lx + textW / 2 > SIZE - pad) lx = SIZE - pad - textW / 2;
+      }
       ctx.fillStyle = isActive ? 'rgba(220,220,225,0.7)' : 'rgba(150,150,158,0.55)';
-      ctx.fillText('[' + t.val + '] ' + t.label, lp.x, lp.y);
+      ctx.fillText(labelText, lx, lp.y);
     });
 
     // Center dot
@@ -48010,7 +48031,8 @@ function renderMatrixCard() {
 
   // ── Slider rows ──
   var sliderSection = document.createElement('div');
-  sliderSection.style.cssText = 'padding:4px 16px 16px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;';
+  sliderSection.className = 'matrixSliderGrid';
+  sliderSection.style.cssText = 'padding:4px 16px 16px;';
 
   var sliderEls = {};
   keys.forEach(function(k) {
