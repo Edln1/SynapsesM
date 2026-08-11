@@ -36331,6 +36331,13 @@ function _syncDayNightToggle(t){
   // decaying all the way to a full stop.
   var IDLE_SPEED = 6;
   var IDLE_EASE = 0.03;
+  // Mobile compensation: dt-based travel is frame-rate independent (the
+  // 30fps cap just makes it choppier, not slower), but focal/screen-size
+  // math means identical world-space speed covers fewer visible pixels on
+  // a smaller, closer, higher-density phone screen — same motion, less
+  // perceived distance covered. Only bumps the idle (non-warp) creep;
+  // warp speed is left alone since it already reads fine on mobile.
+  var MOBILE_SPEED_MULT = 1.8;
 
   // ISOTROPIC FIELD: stars/dust are spawned in a cube of fixed radius
   // centered on the camera's current position (0,0,travelZ), the same
@@ -36568,8 +36575,13 @@ function _syncDayNightToggle(t){
     var area = w * h;
     // Density scales with area; floor lowered from 280→150 so phones
     // (~329k px²) land near their natural ~117 count instead of being
-    // forced up to desktop-sized density.
-    var nStars = Math.round(Math.min(900, Math.max(150, Math.floor(area / 2800))) * DENSITY_MULT);
+    // forced up to desktop-sized density. But most desktop screens sail
+    // well past this floor naturally (a laptop lands ~4000+ after
+    // DENSITY_MULT), while phones sit right at the bottom of the range —
+    // so mobile reads visibly sparser at a glance, especially parked/idle
+    // where there's no streak-trail to fill the frame. Mobile gets its
+    // own higher floor to close that gap without touching desktop.
+    var nStars = Math.round(Math.min(900, Math.max(isMobile ? 230 : 150, Math.floor(area / 2800))) * DENSITY_MULT);
     var i;
     for(i = 0; i < nStars; i++){
       var bright = Math.random();
@@ -36778,7 +36790,12 @@ function _syncDayNightToggle(t){
       // the user is holding scroll-up, then holds steady at WARP_SPEED.
       cam.travelVel += (WARP_SPEED - cam.travelVel) * Math.min(1, WARP_EASE * dt * 60);
     } else {
-      cam.travelVel += (IDLE_SPEED - cam.travelVel) * Math.min(1, IDLE_EASE * dt * 60);
+      // Mobile-only bump: same idle creep mechanism, just a higher resting
+      // target on phones to compensate for focal/screen-size math making
+      // identical world-space speed cover fewer visible pixels there.
+      // Warp is untouched — it's already fast enough to read clearly.
+      var _idleTarget = isMobile ? IDLE_SPEED * MOBILE_SPEED_MULT : IDLE_SPEED;
+      cam.travelVel += (_idleTarget - cam.travelVel) * Math.min(1, IDLE_EASE * dt * 60);
     }
   }
 
