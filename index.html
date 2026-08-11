@@ -4766,12 +4766,14 @@ html[data-theme="purple"] #studioTopBarTitle{
   }
   #studioGenerateView #imageGenEmptyState .studio-empty-hero{
     font-family:'Syne',sans-serif!important;
-    font-size:clamp(20px,6.5vw,25px)!important;
+    font-size:clamp(18px,5.8vw,23px)!important;
     font-weight:800!important;
     letter-spacing:-.03em!important;
     line-height:1.18!important;
     color:#fff!important;
-    max-width:17ch!important;
+    max-width:100%!important;
+    overflow-wrap:break-word!important;
+    word-break:break-word!important;
     margin:0!important;
     text-align:left!important;
   }
@@ -4956,6 +4958,11 @@ html[data-theme="purple"] #studioTopBarTitle{
   #studioGenerateView #imageGenEmptyState .studio-rail-title{
     font-family:'Syne',sans-serif!important;font-size:13px!important;font-weight:800!important;
     color:rgba(255,255,255,0.88)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-more{
+    border:none!important;background:transparent!important;color:rgba(180,180,200,0.55)!important;
+    font-size:11px!important;font-weight:600!important;cursor:pointer!important;font-family:inherit!important;
+    padding:6px 8px!important;border-radius:8px!important;-webkit-tap-highlight-color:transparent!important;
   }
   #studioGenerateView #imageGenEmptyState .studio-rail-tile{
     width:calc(50% - 5px)!important;flex:0 0 calc(50% - 5px)!important;
@@ -36581,7 +36588,7 @@ function _syncDayNightToggle(t){
     // so mobile reads visibly sparser at a glance, especially parked/idle
     // where there's no streak-trail to fill the frame. Mobile gets its
     // own higher floor to close that gap without touching desktop.
-    var nStars = Math.round(Math.min(900, Math.max(isMobile ? 230 : 150, Math.floor(area / 2800))) * DENSITY_MULT);
+    var nStars = Math.round(Math.min(900, Math.max(isMobile ? 270 : 150, Math.floor(area / 2800))) * DENSITY_MULT);
     var i;
     for(i = 0; i < nStars; i++){
       var bright = Math.random();
