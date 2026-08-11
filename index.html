@@ -3917,7 +3917,7 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 .sf-time{font-size:9.5px;color:var(--muted);}
 .sf-text{font-size:11px;line-height:1.55;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .sf-actions{display:flex;align-items:center;gap:8px;padding:6px 9px 7px;border-top:1px solid rgba(255,255,255,0.04);margin-top:auto;}
-.sf-actions button{background:none;border:none;cursor:pointer;font-size:10.5px;display:flex;align-items:center;gap:3px;padding:0;transition:color .15s;}
+.sf-actions button{background:none;border:none;cursor:pointer;font-size:10.5px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:3px;padding:0;transition:color .15s;}
 .studioBottomBar{border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.4);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);}
 @media (max-width:768px){
   .studioBottomBar{border-top:none;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
@@ -13938,8 +13938,8 @@ function renderStudioSocialFeed(){
         (currentUser && p.email === currentUser.email ? '<button onclick="deleteSocialPost(\''+p.id+'\')" style="color:rgba(232,93,150,0.7);margin-left:auto;">🗑</button>' : '') +
       '</div>' +
       '<div id="stsc_'+p.id+'" style="display:none;padding:0 9px 9px;">' +
-        p.comments.map(function(c){ return '<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>'; }).join('') +
-        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="stsci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;outline:none;" onkeydown="if(event.key===\'Enter\'){addStudioSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addStudioSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;cursor:pointer;">→</button></div>' +
+        p.comments.map(function(c){ return '<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;font-family:\'DM Sans\',sans-serif;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;font-family:\'DM Sans\',sans-serif;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>'; }).join('') +
+        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="stsci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;font-family:\'DM Sans\',sans-serif;outline:none;" onkeydown="if(event.key===\'Enter\'){addStudioSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addStudioSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;font-family:\'DM Sans\',sans-serif;cursor:pointer;">→</button></div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -26023,8 +26023,8 @@ function renderSocialFeed(){
         (currentUser&&p.email===currentUser.email?'<button onclick="deleteSocialPost(\''+p.id+'\')" style="color:rgba(232,93,150,0.7);margin-left:auto;">🗑</button>':'')+
       '</div>'+
       '<div id="sc_'+p.id+'" style="display:none;padding:0 9px 9px;">'+
-        p.comments.map(function(c){return'<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>';}).join('')+
-        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="sci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;outline:none;" onkeydown="if(event.key===\'Enter\'){addSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;cursor:pointer;">\u2192</button></div>'+
+        p.comments.map(function(c){return'<div style="display:flex;gap:7px;margin-bottom:7px;"><div style="width:22px;height:22px;border-radius:6px;background:'+c.color+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;font-family:\'DM Sans\',sans-serif;">'+c.initial+'</div><div style="background:rgba(255,255,255,0.025);border-radius:8px;padding:5px 8px;flex:1;font-family:\'DM Sans\',sans-serif;"><div style="font-size:10px;font-weight:600;margin-bottom:2px;">'+esc(c.name)+'</div><div style="font-size:11px;color:var(--muted);">'+esc(c.text)+'</div></div></div>';}).join('')+
+        '<div style="display:flex;gap:6px;margin-top:5px;"><input id="sci_'+p.id+'" placeholder="Comment..." style="flex:1;background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;font-family:\'DM Sans\',sans-serif;outline:none;" onkeydown="if(event.key===\'Enter\'){addSocialComment(\''+p.id+'\');event.preventDefault();}"><button onclick="addSocialComment(\''+p.id+'\')" style="padding:6px 11px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:10.5px;font-family:\'DM Sans\',sans-serif;cursor:pointer;">\u2192</button></div>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -47854,7 +47854,7 @@ function renderMatrixCard() {
   var SIZE = Math.min(window.innerWidth - 24, 380);
   var DPR = window.devicePixelRatio || 1;
   canvas.width = SIZE * DPR; canvas.height = SIZE * DPR;
-  canvas.style.cssText = 'display:block;width:'+SIZE+'px;height:'+SIZE+'px;cursor:crosshair;touch-action:none;';
+  canvas.style.cssText = 'display:block;width:'+SIZE+'px;height:'+SIZE+'px;cursor:crosshair;touch-action:pan-y;';
   canvasWrap.appendChild(canvas);
   body.appendChild(canvasWrap);
 
