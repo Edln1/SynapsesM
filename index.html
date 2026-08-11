@@ -4430,9 +4430,11 @@ html[data-theme="purple"] #studioTopBarTitle{
     top:calc(64px + env(safe-area-inset-top, 0px))!important;
     align-self:start!important;
     width:100%!important;
-    /* Definite height so the feed can overflow + auto-scroll (max-height alone is not enough) */
-    height:min(62vh,540px)!important;
-    max-height:calc(100vh - 200px)!important;
+    /* Definite height so the feed can overflow + auto-scroll (max-height alone is not enough).
+       Tall enough for a full 4-row x 2-col grid (148px tile + 10px gap ×4, plus head) so the
+       marquee never settles mid-scroll on a half-cut row. */
+    height:min(72vh,664px)!important;
+    max-height:calc(100vh - 160px)!important;
     display:flex!important;
     flex-direction:column!important;
     gap:10px!important;
@@ -12051,6 +12053,19 @@ function _studioUnmountDeepSpace(){
 }
 
 function openImageGenModal(){
+  // Decide the hero line for this visit right now, synchronously, before the modal
+  // is shown or any history loads — so it's already fixed by the time the person
+  // sees the screen and can't visibly change/flicker on them mid-visit.
+  _lockStudioHeroTagline();
+  // Wipe any stale empty-state markup left over from the LAST visit immediately,
+  // synchronously, before the modal is even shown. renderImageGenDefaultFeed() below
+  // is async (it awaits an IDB/cloud read), so without this the modal would fade in
+  // still showing last visit's old tagline for a beat, then flip to the new one once
+  // the async paint lands — which is exactly the "swap on landing" this prevents.
+  try{
+    var _emptyElPre = document.getElementById('imageGenEmptyState');
+    if(_emptyElPre){ _emptyElPre.style.display = 'none'; _emptyElPre.innerHTML = ''; }
+  }catch(_pre){}
   closeMobileMore();
   renderImageGenTemplates();
   // Restore whichever tab (generate/community) was active when Studio was last
@@ -12090,6 +12105,9 @@ function closeImageGenModal(){
   try{ if(typeof _setAndroidStatusBarStudio === 'function') _setAndroidStatusBarStudio(false); }catch(_s){}
   try{ _synBotRestoreAfterStudio(); }catch(_sb){}
   try{ _studioUnmountDeepSpace(); }catch(_ds){}
+  // Clear the locked hero line so the NEXT open picks a fresh one — decided again
+  // before that future visit ever paints, not mid-session.
+  window._studioSessionTagline = null;
   setTimeout(function(){
     modal.style.display = 'none';
     if(typeof closeImageGenSettingsSheet === 'function') closeImageGenSettingsSheet(true);
@@ -13445,6 +13463,40 @@ function _setStudioHomeBtnIcon(showingHome){
   btn.innerHTML = showingHome ? STUDIO_HOME_ICON_GEN : STUDIO_HOME_ICON_HOUSE;
 }
 
+/* Studio hero tagline — simple, direct prompts (no poetic copy). One is locked in
+ * per Studio "session" via _lockStudioHeroTagline(), called synchronously the moment
+ * Studio opens, BEFORE the modal is shown or any data loads. Every paint of the home
+ * screen during that same visit reuses the locked line via _getStudioHeroTagline(), so
+ * the person never sees it swap out mid-visit — it only changes on the NEXT time they
+ * open Studio, decided before they ever see the screen. */
+var STUDIO_HERO_TAGLINES = [
+  {h:'What would you like to create today?', s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'What do you want to make today?',      s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'Ready to create something new?',       s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'What should we create today?',         s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'Got an idea? Let\u2019s bring it to life.', s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'What\u2019s on your mind? Let\u2019s create it.', s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'Any idea, any style — let\u2019s create it.', s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'What are you in the mood to create?',  s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'Let\u2019s make something incredible.', s:'Browse looks and starters — or type a scene in the dock.'},
+  {h:'Time to bring your vision to life.',   s:'Browse looks and starters — or type a scene in the dock.'}
+];
+function _lockStudioHeroTagline(){
+  try{
+    var n = STUDIO_HERO_TAGLINES.length;
+    var idx = Math.floor(Math.random() * n);
+    if(n > 1 && idx === window._lastStudioHeroIdx) idx = (idx + 1) % n;
+    window._lastStudioHeroIdx = idx;
+    window._studioSessionTagline = STUDIO_HERO_TAGLINES[idx];
+  }catch(_e){
+    window._studioSessionTagline = STUDIO_HERO_TAGLINES[0];
+  }
+  return window._studioSessionTagline;
+}
+function _getStudioHeroTagline(){
+  return window._studioSessionTagline || _lockStudioHeroTagline();
+}
+
 /** Paints the Studio "home" screen (Featured looks / New in Studio / Apps browse on PC,
  *  simple empty copy on mobile) into #imageGenEmptyState. Pure render — does not touch
  *  #imageGenResults visibility, so callers control whether results stay mounted underneath. */
@@ -13454,12 +13506,13 @@ function _renderStudioHomeMarkup(emptyEl){
    * on PC and mobile — mobile just gets a scaled-down layout via the
    * @media(max-width:768px) rules mirrored onto these same classes below. */
   emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;min-height:260px;color:var(--muted);text-align:left;padding:0;box-sizing:border-box;';
+  var _tag = _getStudioHeroTagline();
   emptyEl.innerHTML =
     '<div class="studio-empty-stage">' +
       '<div class="studio-empty-main" id="studioEmptyExplore">' +
         '<div class="studio-empty-hero-wrap">' +
-          '<div class="studio-empty-hero">Everything you need to make anything you want</div>' +
-          '<div class="studio-empty-sub">Browse looks and starters — or type a scene in the dock.</div>' +
+          '<div class="studio-empty-hero">'+_tag.h+'</div>' +
+          '<div class="studio-empty-sub">'+_tag.s+'</div>' +
           '<div class="studio-empty-chips" aria-hidden="true">' +
             '<span class="studio-empty-chip studio-empty-chip-on">DreamShaper 8</span>' +
             '<span class="studio-empty-chip">Flux 1</span>' +
