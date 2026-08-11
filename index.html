@@ -47859,8 +47859,8 @@ function renderMatrixCard() {
   body.appendChild(canvasWrap);
 
   var cx = SIZE / 2, cy = SIZE / 2;
-  var MAX_R = SIZE * 0.28;
-  var LABEL_R = SIZE * 0.37;
+  var MAX_R = SIZE * 0.26;
+  var LABEL_R = SIZE * 0.32;
 
   function angleFor(i) { return (i / n) * Math.PI * 2 - Math.PI / 2; }
   function pointFor(i, val) {
@@ -47941,7 +47941,7 @@ function renderMatrixCard() {
       ctx.font = '600 8px "DM Sans", sans-serif';
       var labelText = '[' + t.val + '] ' + t.label;
       var textW = ctx.measureText(labelText).width;
-      var pad = 3;
+      var pad = 12;
       var lx = lp.x;
       if (align === 'left' && lx + textW > SIZE - pad) lx = SIZE - pad - textW;
       else if (align === 'right' && lx - textW < pad) lx = pad + textW;
