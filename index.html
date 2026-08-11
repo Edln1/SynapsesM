@@ -4736,7 +4736,7 @@ html[data-theme="purple"] #studioTopBarTitle{
     height:auto!important;
     box-sizing:border-box!important;
     gap:0!important;
-    padding:0 0 140px!important;
+    padding:0 0 90px!important;
     justify-content:flex-start!important;
     align-items:stretch!important;
     text-align:left!important;
@@ -11224,6 +11224,21 @@ function _mountStudioLandRail(){
   var marquee = document.getElementById('studioRailMarquee');
   var fakeThumb = document.getElementById('studioRailFakeThumb');
   if(!marquee) return;
+
+  /* Size the feed to its real content instead of reserving viewport-based empty
+     space: when the rendered tiles are shorter than the viewport guess (few items,
+     mobile 2-col grid), shrink the container down to match — no blank gap under
+     the Community section. Only keep the taller feedH when content truly overflows
+     it (marquee/scroll behavior still applies in that case). */
+  try{
+    var naturalH = marquee.scrollHeight || 0;
+    if(naturalH > 0 && naturalH < feedH){
+      feedH = Math.max(naturalH, 60);
+      feed.style.height = feedH + 'px';
+      feed.style.maxHeight = feedH + 'px';
+      feed.style.minHeight = feedH + 'px';
+    }
+  }catch(_n){}
 
   var tiles = marquee.querySelectorAll('.studio-rail-tile');
   for(var t = 0; t < tiles.length; t++){
