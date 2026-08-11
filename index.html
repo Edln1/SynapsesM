@@ -4724,30 +4724,248 @@ html[data-theme="purple"] #studioTopBarTitle{
   /* Hide compact mobile empty copy on PC (hero is the landing) */
   #studioGenerateView #imageGenEmptyState .studio-empty-mobile-fallback{display:none!important;}
 }
-/* Mobile: keep original compact empty copy + original dock chrome; hide PC-only pieces */
+/* Mobile: the PC home landing (Featured looks / New in Studio / Get started / Community),
+   scaled down to a single column that fits a phone screen. Dock chrome stays mobile-native. */
 @media(max-width:768px){
-  #studioGenerateView #imageGenEmptyState .studio-empty-stage,
-  #studioGenerateView #imageGenEmptyState .studio-empty-main,
-  #studioGenerateView #imageGenEmptyState .studio-empty-rail,
-  #studioGenerateView #imageGenEmptyState .studio-empty-hero-wrap,
-  #studioGenerateView #imageGenEmptyState .studio-empty-hero,
-  #studioGenerateView #imageGenEmptyState .studio-empty-sub,
-  #studioGenerateView #imageGenEmptyState .studio-empty-chips,
-  #studioGenerateView #imageGenEmptyState .studio-land-section{display:none!important;}
-  #studioGenerateView #imageGenEmptyState .studio-empty-mobile-fallback{display:block!important;}
   #studioGenerateView #imageGenEmptyState{
-    justify-content:center!important;
-    align-items:center!important;
-    text-align:center!important;
-    padding:40px 20px 100px!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:auto!important;
     height:auto!important;
-    min-height:260px!important;
+    box-sizing:border-box!important;
+    gap:0!important;
+    padding:0 0 140px!important;
+    justify-content:flex-start!important;
+    align-items:stretch!important;
+    text-align:left!important;
   }
+  #studioGenerateView #imageGenEmptyState .studio-empty-stage{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:26px!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:4px 16px 0!important;
+    box-sizing:border-box!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-main{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:22px!important;
+    min-width:0!important;
+    width:100%!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero-wrap{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    text-align:left!important;
+    gap:9px!important;
+    padding:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-hero{
+    font-family:'Syne',sans-serif!important;
+    font-size:clamp(20px,6.5vw,25px)!important;
+    font-weight:800!important;
+    letter-spacing:-.03em!important;
+    line-height:1.18!important;
+    color:#fff!important;
+    max-width:17ch!important;
+    margin:0!important;
+    text-align:left!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-sub{
+    font-size:12px!important;
+    line-height:1.5!important;
+    color:rgba(200,200,210,0.55)!important;
+    max-width:none!important;
+    margin:0!important;
+    text-align:left!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chips{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:6px!important;
+    justify-content:flex-start!important;
+    margin-top:2px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chip{
+    display:inline-flex!important;
+    align-items:center!important;
+    padding:6px 11px!important;
+    border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.1)!important;
+    background:rgba(255,255,255,0.04)!important;
+    color:rgba(230,230,240,0.78)!important;
+    font-size:10.5px!important;
+    font-weight:600!important;
+    letter-spacing:.01em!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-empty-chip.studio-empty-chip-on{
+    background:rgba(255,255,255,0.1)!important;
+    border-color:rgba(255,255,255,0.2)!important;
+    color:#fff!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-land-section{display:block!important;}
+  #studioGenerateView #imageGenEmptyState .studio-sec-head{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    margin:0 0 11px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-sec-title{
+    font-family:'Syne',sans-serif!important;
+    font-size:14px!important;
+    font-weight:800!important;
+    color:rgba(255,255,255,0.92)!important;
+    letter-spacing:-.01em!important;
+  }
+  /* Featured strip — smaller cards, horizontal scroll, nav arrows hidden (touch-scroll instead) */
+  #studioGenerateView #imageGenEmptyState .studio-feat-wrap{position:relative!important;width:100%!important;}
+  #studioGenerateView #imageGenEmptyState .studio-feat-track{
+    display:flex!important;
+    gap:9px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:none!important;
+    -webkit-overflow-scrolling:touch!important;
+    padding:2px 2px 6px!important;
+    scrollbar-width:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-track::-webkit-scrollbar{display:none!important;}
+  #studioGenerateView #imageGenEmptyState .studio-feat-card{
+    flex:0 0 158px!important;width:158px!important;min-width:158px!important;max-width:158px!important;
+    height:108px!important;min-height:108px!important;max-height:108px!important;
+    border-radius:12px!important;overflow:hidden!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    background:#1c1c24!important;padding:0!important;cursor:pointer!important;
+    position:relative!important;font:inherit!important;color:inherit!important;box-shadow:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card img,
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-grad{
+    position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+    object-fit:cover!important;display:block!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-shade{
+    position:absolute!important;inset:0!important;
+    background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,0.78) 100%)!important;
+    pointer-events:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-card .studio-feat-label{
+    position:absolute!important;left:10px!important;right:10px!important;bottom:9px!important;
+    font-family:'Syne',sans-serif!important;font-size:12px!important;font-weight:800!important;
+    color:#fff!important;text-align:left!important;z-index:2!important;pointer-events:none!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-feat-nav{display:none!important;}
+  /* New in Studio — single column so name/desc/thumb keep breathing room */
+  #studioGenerateView #imageGenEmptyState .studio-new-grid{
+    display:grid!important;grid-template-columns:1fr!important;gap:9px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card{
+    display:flex!important;flex-direction:column!important;gap:8px!important;
+    padding:13px 13px 12px!important;border-radius:14px!important;
+    border:1px solid rgba(255,255,255,0.08)!important;
+    background:rgba(255,255,255,0.035)!important;text-align:left!important;cursor:pointer!important;
+    font:inherit!important;color:inherit!important;min-height:auto!important;
+    position:relative!important;overflow:hidden!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-top{
+    display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-copy{min-width:0!important;flex:1!important;}
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-name{
+    font-family:'Syne',sans-serif!important;font-size:13.5px!important;font-weight:800!important;
+    color:#fff!important;margin:0 0 4px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-desc{
+    font-size:11.5px!important;line-height:1.4!important;color:rgba(190,190,205,0.55)!important;margin:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb{
+    position:relative!important;width:48px!important;height:48px!important;flex-shrink:0!important;
+    border-radius:11px!important;overflow:hidden!important;border:1px solid rgba(255,255,255,0.1)!important;
+    background:#1c1c24!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb img,
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-thumb .studio-feat-grad{
+    position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-new-card .studio-new-cta{
+    display:inline-flex!important;align-items:center!important;align-self:flex-start!important;
+    padding:5px 11px!important;border-radius:999px!important;
+    border:1px solid rgba(255,255,255,0.12)!important;background:rgba(255,255,255,0.06)!important;
+    color:rgba(245,245,250,0.9)!important;font-size:11px!important;font-weight:650!important;
+  }
+  /* Get started — tabs wrap, single-column app rows */
+  #studioGenerateView #imageGenEmptyState .studio-apps-head{
+    display:flex!important;flex-wrap:wrap!important;align-items:center!important;
+    justify-content:space-between!important;gap:10px!important;margin:0 0 11px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-tabs{display:flex!important;flex-wrap:wrap!important;gap:6px!important;}
+  #studioGenerateView #imageGenEmptyState .studio-apps-tab{
+    padding:6px 11px!important;border-radius:999px!important;border:1px solid transparent!important;
+    background:transparent!important;color:rgba(190,190,205,0.55)!important;
+    font-size:11.5px!important;font-weight:600!important;cursor:pointer!important;font-family:inherit!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-tab.on{
+    background:rgba(255,255,255,0.08)!important;border-color:rgba(255,255,255,0.1)!important;color:#fff!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-apps-grid{
+    display:grid!important;grid-template-columns:1fr!important;gap:6px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-row{
+    display:flex!important;align-items:center!important;gap:11px!important;padding:9px 8px!important;
+    border-radius:12px!important;border:1px solid transparent!important;background:transparent!important;
+    cursor:pointer!important;text-align:left!important;font:inherit!important;color:inherit!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-ico{
+    position:relative!important;width:38px!important;height:38px!important;flex-shrink:0!important;
+    border-radius:10px!important;overflow:hidden!important;border:1px solid rgba(255,255,255,0.08)!important;
+    background:#1c1c24!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-ico img,
+  #studioGenerateView #imageGenEmptyState .studio-app-ico .studio-feat-grad{
+    position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;display:block!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-meta{min-width:0!important;flex:1!important;}
+  #studioGenerateView #imageGenEmptyState .studio-app-name{
+    font-size:12.5px!important;font-weight:700!important;color:rgba(245,245,250,0.92)!important;margin:0 0 2px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-desc{
+    font-size:11px!important;line-height:1.35!important;color:rgba(170,170,185,0.5)!important;margin:0!important;
+    white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-app-badge{
+    flex-shrink:0!important;font-size:8.5px!important;font-weight:700!important;letter-spacing:.04em!important;
+    text-transform:uppercase!important;padding:3px 6px!important;border-radius:6px!important;
+    background:rgba(124,106,247,0.18)!important;color:rgba(200,190,255,0.9)!important;
+    border:1px solid rgba(124,106,247,0.3)!important;
+  }
+  /* Community rail — stacks full-width below the main content instead of a sticky side column */
+  #studioGenerateView #imageGenEmptyState .studio-empty-rail{
+    position:relative!important;top:auto!important;align-self:auto!important;
+    width:100%!important;height:auto!important;max-height:none!important;
+    display:flex!important;flex-direction:column!important;gap:9px!important;
+    min-width:0!important;padding:2px 2px 4px!important;box-sizing:border-box!important;overflow:visible!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-head{
+    display:flex!important;align-items:center!important;justify-content:space-between!important;
+    gap:8px!important;padding:0 2px!important;flex-shrink:0!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-title{
+    font-family:'Syne',sans-serif!important;font-size:13px!important;font-weight:800!important;
+    color:rgba(255,255,255,0.88)!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-tile{
+    width:calc(50% - 5px)!important;flex:0 0 calc(50% - 5px)!important;
+    height:130px!important;min-height:130px!important;max-height:130px!important;
+  }
+  /* Dock chrome stays the original mobile-native gear + pill (untouched) */
   #studioGenerateView .studioDockTools,
   #studioGenerateView .studioDockMeta{display:none!important;}
   #studioGenerateView .studioDockGearMobile{display:flex!important;}
   #studioGenerateView .studioDockCard{
-    /* same glass as original mobile input shell */
     background:rgba(255,255,255,0.06)!important;
     border:1px solid rgba(255,255,255,0.12)!important;
     border-radius:22px!important;
@@ -13225,34 +13443,28 @@ function _setStudioHomeBtnIcon(showingHome){
  *  #imageGenResults visibility, so callers control whether results stay mounted underneath. */
 function _renderStudioHomeMarkup(emptyEl){
   if(!emptyEl) return;
-  var isPcStudio = (typeof window !== 'undefined' && window.innerWidth > 768);
-  if(isPcStudio){
-    emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;min-height:260px;color:var(--muted);text-align:left;padding:0;box-sizing:border-box;';
-    /* PC only landing — mobile keeps original compact empty copy (no layout/bg side-effects) */
-    emptyEl.innerHTML =
-      '<div class="studio-empty-stage">' +
-        '<div class="studio-empty-main" id="studioEmptyExplore">' +
-          '<div class="studio-empty-hero-wrap">' +
-            '<div class="studio-empty-hero">Everything you need to make anything you want</div>' +
-            '<div class="studio-empty-sub">Browse looks and starters — or type a scene in the dock.</div>' +
-            '<div class="studio-empty-chips" aria-hidden="true">' +
-              '<span class="studio-empty-chip studio-empty-chip-on">DreamShaper 8</span>' +
-              '<span class="studio-empty-chip">Flux 1</span>' +
-              '<span class="studio-empty-chip">Flux.2 Klein</span>' +
-              '<span class="studio-empty-chip">GPT Image 2</span>' +
-            '</div>' +
+  /* Same rich landing (Featured looks / New in Studio / Get started / Community rail)
+   * on PC and mobile — mobile just gets a scaled-down layout via the
+   * @media(max-width:768px) rules mirrored onto these same classes below. */
+  emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;min-height:260px;color:var(--muted);text-align:left;padding:0;box-sizing:border-box;';
+  emptyEl.innerHTML =
+    '<div class="studio-empty-stage">' +
+      '<div class="studio-empty-main" id="studioEmptyExplore">' +
+        '<div class="studio-empty-hero-wrap">' +
+          '<div class="studio-empty-hero">Everything you need to make anything you want</div>' +
+          '<div class="studio-empty-sub">Browse looks and starters — or type a scene in the dock.</div>' +
+          '<div class="studio-empty-chips" aria-hidden="true">' +
+            '<span class="studio-empty-chip studio-empty-chip-on">DreamShaper 8</span>' +
+            '<span class="studio-empty-chip">Flux 1</span>' +
+            '<span class="studio-empty-chip">Flux.2 Klein</span>' +
+            '<span class="studio-empty-chip">GPT Image 2</span>' +
           '</div>' +
-          _buildStudioExploreHtml() +
         '</div>' +
-        _buildStudioLandRailHtml() +
-      '</div>';
-    try{ _mountStudioExplore(document.getElementById('studioEmptyExplore')); }catch(_ex){}
-  } else {
-    emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:260px;color:var(--muted);text-align:center;padding:20px;';
-    emptyEl.innerHTML =
-      '<div style="font-size:13px;">Nothing generated yet.</div>' +
-      '<div style="font-size:11.5px;">Type an idea below to make your first image.</div>';
-  }
+        _buildStudioExploreHtml() +
+      '</div>' +
+      _buildStudioLandRailHtml() +
+    '</div>';
+  try{ _mountStudioExplore(document.getElementById('studioEmptyExplore')); }catch(_ex){}
 }
 
 /** Tracks whether the results grid (vs the Studio home screen) is the active view,
@@ -36111,6 +36323,14 @@ function _syncDayNightToggle(t){
   var WARP_SPEED = 210;
   var WARP_EASE = 0.045; // lower = slower spin-up to full speed
   var WARP_KEY = 'synapses_deepspace_warp'; // persists across app close/reopen
+  // Same "hold scroll down" cruise as warp, just aimed at a much lower
+  // resting target — this is what's always running by default so the scene
+  // has a constant, barely-there forward drift instead of sitting dead
+  // still until someone touches warp or scroll. Also what a manual
+  // scroll/pinch impulse settles back down to afterward, instead of
+  // decaying all the way to a full stop.
+  var IDLE_SPEED = 6;
+  var IDLE_EASE = 0.03;
 
   // ISOTROPIC FIELD: stars/dust are spawned in a cube of fixed radius
   // centered on the camera's current position (0,0,travelZ), the same
@@ -36470,25 +36690,29 @@ function _syncDayNightToggle(t){
   // the plane normal has no such single point of failure.
   var BAND_TILT = -0.26;
   var BAND_A = { x: 0, y: 0, z: 1 };                                   // straight ahead
-  var BAND_T = { x: Math.cos(BAND_TILT), y: Math.sin(BAND_TILT), z: 0 }; // tangent at rest
-  // Plane normal = BAND_A × BAND_T (fixed in world space; the band's
-  // great circle is every direction perpendicular to this).
-  var BAND_N = {
-    x: BAND_A.y * BAND_T.z - BAND_A.z * BAND_T.y,
-    y: BAND_A.z * BAND_T.x - BAND_A.x * BAND_T.z,
-    z: BAND_A.x * BAND_T.y - BAND_A.y * BAND_T.x
-  };
+  function computeBandNormal(tilt){
+    var bt = { x: Math.cos(tilt), y: Math.sin(tilt), z: 0 };
+    // Plane normal = BAND_A × tangent (band's great circle is every
+    // direction perpendicular to this).
+    return {
+      x: BAND_A.y * bt.z - BAND_A.z * bt.y,
+      y: BAND_A.z * bt.x - BAND_A.x * bt.z,
+      z: BAND_A.x * bt.y - BAND_A.y * bt.x
+    };
+  }
+  var BAND_N = computeBandNormal(BAND_TILT);
   function drawBand(bandEase){
     if(bandEase <= 0 || !bandGradient) return;
+    var bandN = BAND_N;
     // Rotate the plane normal into camera space — identical rotation math
     // to projectDir(), just without the final divide-by-z (we don't need a
     // point yet, only the rotated normal, to derive the line's equation).
     var cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
-    var x1 = BAND_N.x * cy + BAND_N.z * sy;
-    var z1 = -BAND_N.x * sy + BAND_N.z * cy;
+    var x1 = bandN.x * cy + bandN.z * sy;
+    var z1 = -bandN.x * sy + bandN.z * cy;
     var cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
-    var y2 = BAND_N.y * cp + z1 * sp;
-    var z2 = -BAND_N.y * sp + z1 * cp;
+    var y2 = bandN.y * cp + z1 * sp;
+    var z2 = -bandN.y * sp + z1 * cp;
     var a = x1, b = y2, c = z2; // rotated normal, same axis order as project()/projectDir()
     // Screen-space line: a*sx + b*sy + C = 0, derived from the plane
     // equation a*X + b*Y + c = 0 where X=(sx-w/2)/focal, Y=(sy-h/2)/focal.
@@ -36541,9 +36765,12 @@ function _syncDayNightToggle(t){
     if(cam.pitch > PITCH_LIMIT) cam.pitch = PITCH_LIMIT;
     if(cam.pitch < -PITCH_LIMIT) cam.pitch = -PITCH_LIMIT;
 
-    // Forward/back travel: velocity eases toward zero (or toward whatever the
-    // last scroll/pinch impulse set it to) rather than the position jumping —
-    // this is what makes the dive feel continuous instead of stepped.
+    // Forward/back travel: velocity eases toward a target rather than the
+    // position jumping — this is what makes the dive feel continuous
+    // instead of stepped. Target is IDLE_SPEED at rest (a slow ambient
+    // creep, always running so the scene never looks frozen) or WARP_SPEED
+    // once warp is toggled on — same easing curve either way, warp just
+    // sets a much higher target.
     cam.travelZ += cam.travelVel * dt;
     if(_warpOn){
       // Sustained auto-cruise: ease toward a standing target speed instead
@@ -36551,8 +36778,7 @@ function _syncDayNightToggle(t){
       // the user is holding scroll-up, then holds steady at WARP_SPEED.
       cam.travelVel += (WARP_SPEED - cam.travelVel) * Math.min(1, WARP_EASE * dt * 60);
     } else {
-      cam.travelVel *= Math.pow(0.055, dt);
-      if(Math.abs(cam.travelVel) < 0.01) cam.travelVel = 0;
+      cam.travelVel += (IDLE_SPEED - cam.travelVel) * Math.min(1, IDLE_EASE * dt * 60);
     }
   }
 
