@@ -1152,6 +1152,14 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{padding-top:6px!important;}
+  /* Hidden bar only: drop Vesta just under the ▲/▼ so it stays tappable.
+     Same right edge as usual (top:12px;right:10px). Visible-bar look unchanged. */
+  body.topbar-hidden #dgVoiceToggle{
+    top:max(36px, calc(var(--android-status-inset, 0px) + 32px))!important;
+  }
+  body.topbar-hidden #dgVoicePanel{
+    top:max(72px, calc(var(--android-status-inset, 0px) + 68px))!important;
+  }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
@@ -3951,9 +3959,7 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 /* Home icon only makes sense once there's something to navigate away from (i.e. on the results view).
    Desktop/PC only — mobile keeps the original single Back-arrow header untouched. */
 #studioHomeBtn{ display:none!important; }
-@media(min-width:769px){
-  #imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
-}
+#imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
 /* Default Studio header layout (original): back | Studio | actions — NOT viewport-centered */
 #studioTopBar{
   display:flex!important;
@@ -4744,7 +4750,9 @@ html[data-theme="purple"] #studioTopBarTitle{
     height:auto!important;
     box-sizing:border-box!important;
     gap:0!important;
-    padding:0 0 90px!important;
+    /* Dock clearance already lives on #imageGenScrollCol (66px). Extra 90px
+       here stacked a dead strip under Community. Keep a little air only. */
+    padding:0 0 8px!important;
     justify-content:flex-start!important;
     align-items:stretch!important;
     text-align:left!important;
@@ -4977,6 +4985,10 @@ html[data-theme="purple"] #studioTopBarTitle{
   #studioGenerateView #imageGenEmptyState .studio-rail-tile{
     width:calc(50% - 5px)!important;flex:0 0 calc(50% - 5px)!important;
     height:130px!important;min-height:130px!important;max-height:130px!important;
+  }
+  #studioGenerateView #imageGenEmptyState .studio-rail-feed{
+    height:auto!important;max-height:none!important;min-height:0!important;
+    overflow:visible!important;padding:0!important;
   }
   /* Dock chrome stays the original mobile-native gear + pill (untouched) */
   #studioGenerateView .studioDockTools,
@@ -6362,6 +6374,19 @@ html.android-status-blend #imageGenScrollCol.igRowHidden{
 }
 html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
   padding-top:0!important;
+}
+/* Chat-only: let the hidden top bar actually collapse on Android so the
+   conversation (#chatContainer) can use that space. Do not touch notes or
+   the welcome empty-state — those stay on the original layout. */
+@media(max-width:768px){
+  html.android-status-blend .top-bar.hidden{
+    min-height:0!important;
+    max-height:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
 }
 </style>
 <script>
@@ -8689,8 +8714,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <div id="studioTopBarLeft" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
-      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Studio home" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Back to your generation" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
       </button>
     </div>
     <div id="studioTopBarTitle">Studio</div>
@@ -11178,6 +11203,8 @@ function _mountStudioLandRail(){
    * Manual max clamps to first set so the duplicate loop copy is never visible.
    */
   var feedH = 420;
+  var isMobileRail = false;
+  try{ isMobileRail = !!(window.matchMedia && window.matchMedia('(max-width:768px)').matches); }catch(_mm){}
   try{
     var railH = (rail && rail.clientHeight) ? rail.clientHeight : 0;
     var head = rail ? rail.querySelector('.studio-rail-head') : null;
@@ -11185,6 +11212,7 @@ function _mountStudioLandRail(){
     var vh = Math.max(280, Math.min(window.innerHeight * 0.55, 520));
     feedH = railH > 80 ? Math.max(200, railH - headH) : vh;
   }catch(_h){}
+  if(isMobileRail) feedH = 0;
 
   feed.style.cssText =
     'display:block;overflow:hidden;position:relative;' +
@@ -11240,7 +11268,13 @@ function _mountStudioLandRail(){
      it (marquee/scroll behavior still applies in that case). */
   try{
     var naturalH = marquee.scrollHeight || 0;
-    if(naturalH > 0 && naturalH < feedH){
+    if(isMobileRail){
+      feed.style.height = 'auto';
+      feed.style.maxHeight = 'none';
+      feed.style.minHeight = '0';
+      feed.style.overflow = 'visible';
+      feedH = Math.max(naturalH, 60);
+    } else if(naturalH > 0 && naturalH < feedH){
       feedH = Math.max(naturalH, 60);
       feed.style.height = feedH + 'px';
       feed.style.maxHeight = feedH + 'px';
@@ -13555,9 +13589,11 @@ function _renderStudioHomeMarkup(emptyEl){
 var _studioHomeShowing = false;
 function _setStudioShowingResults(showing){
   var modal = document.getElementById('imageGenModal');
-  if(modal) modal.classList.toggle('studio-showing-results', !!showing);
-  _studioHomeShowing = false;
-  _setStudioHomeBtnIcon(false);
+  if(modal) modal.classList.add('studio-showing-results');
+  _studioHomeShowing = !showing;
+  _setStudioHomeBtnIcon(!showing);
+  var btn = document.getElementById('studioHomeBtn');
+  if(btn) btn.title = showing ? 'Studio home' : 'Back to your generation';
 }
 
 /** Header Home icon: jump back to the Studio browse/home screen without touching
@@ -13593,36 +13629,25 @@ async function renderImageGenDefaultFeed(){
   if(!resultsEl) return;
   var items = await loadImageGenHistory();
   _imageGenFeedLoaded = true;
-  if(!items.length){
-    resultsEl.style.display = 'none';
-    resultsEl.innerHTML = '';
-    _renderStudioHomeMarkup(emptyEl);
-    _setStudioShowingResults(false);
-    return;
-  }
-  resultsEl.style.display = 'grid';
   resultsEl.innerHTML = '';
-  items.forEach(function(it, idx){
-    resultsEl.appendChild(_buildStudioImageCard({
-      src: it.src,
-      prompt: it.prompt || '',
-      filename: 'synapses-image-' + (idx + 1) + '.jpg'
-    }));
-  });
-  // If the person was browsing the Studio home/explore screen when they last left
-  // (via toggleStudioHome), re-opening Studio should NOT yank them onto the results
-  // grid — keep showing home, with results populated underneath for the back-toggle.
-  if(_studioHomeShowing){
-    resultsEl.style.display = 'none';
-    _renderStudioHomeMarkup(emptyEl);
-    if(emptyEl) emptyEl.style.display = 'flex';
-    var modalEl = document.getElementById('imageGenModal');
-    if(modalEl) modalEl.classList.add('studio-showing-results');
-    _setStudioHomeBtnIcon(true);
-    return;
+  if(items.length){
+    items.forEach(function(it, idx){
+      resultsEl.appendChild(_buildStudioImageCard({
+        src: it.src,
+        prompt: it.prompt || '',
+        filename: 'synapses-image-' + (idx + 1) + '.jpg'
+      }));
+    });
   }
-  if(emptyEl) emptyEl.style.display = 'none';
-  _setStudioShowingResults(true);
+  resultsEl.style.display = 'none';
+  _renderStudioHomeMarkup(emptyEl);
+  if(emptyEl) emptyEl.style.display = 'flex';
+  _studioHomeShowing = true;
+  _setStudioHomeBtnIcon(true);
+  var homeBtn = document.getElementById('studioHomeBtn');
+  if(homeBtn) homeBtn.title = 'Back to your generation';
+  var modalEl = document.getElementById('imageGenModal');
+  if(modalEl) modalEl.classList.add('studio-showing-results');
 }
 
 async function openImageGenHistory(){
