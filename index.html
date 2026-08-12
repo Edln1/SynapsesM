@@ -1047,11 +1047,13 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
 
 
   /* ── Top bar ── */
+  body{--topbar-slot:60px;}
   .top-bar{
     padding:8px 12px!important;
     box-sizing:border-box!important;
     transform:translateY(0);
-    transition:transform .32s cubic-bezier(.22,1,.36,1),opacity .28s ease,max-height .32s cubic-bezier(.22,1,.36,1),min-height .32s cubic-bezier(.22,1,.36,1)!important;
+    /* Show: ease-out so it settles in. Hide uses the inverse on .hidden. Same 0.32s. */
+    transition:transform .32s cubic-bezier(.22,1,.36,1),opacity .32s cubic-bezier(.22,1,.36,1),max-height .32s cubic-bezier(.22,1,.36,1),min-height .32s cubic-bezier(.22,1,.36,1)!important;
   }
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
@@ -1078,6 +1080,8 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
     border-color:transparent!important;opacity:0!important;
     overflow:hidden!important;
     pointer-events:none!important;
+    /* Inverse ease so hide doesn't rush off faster than show settles in */
+    transition:transform .32s cubic-bezier(.64,0,.78,0),opacity .32s cubic-bezier(.64,0,.78,0),max-height .32s cubic-bezier(.64,0,.78,0),min-height .32s cubic-bezier(.64,0,.78,0)!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1129,23 +1133,13 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   .qc-desc{font-size:11px!important;}
 
   /* ── Chat empty state — same home position as before fingerprint ── */
-  #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;}
-  /* #chatEmptyState is position:absolute with top:0 *inside* #sec-chat — so
-     its screen position is anchored to #sec-chat's own top edge, not the
-     viewport. #sec-chat is a flex child of .main (flex-direction:column,
-     sibling of .top-bar), so when .top-bar collapses to 0 height, #sec-chat's
-     top edge rises by that same ~60px (the top bar's mobile min-height) —
-     purely as a side effect of flexbox reflow, nothing deliberate. That drags
-     the greeting/fingerprint/STS-mic up along with it, which is NOT wanted:
-     this starter screen should stay put in the exact same screen position
-     regardless of top-bar state. Canceling that drift means ADDING the same
-     ~60px back to padding-top when the bar is hidden (not subtracting it —
-     subtracting compounds with the drift instead of canceling it, which is
-     the bug that shifted the mic/title noticeably out of place). It's only
-     the real conversation view (.chat-messages below) that should actually
-     make use of the reclaimed space. */
+  #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;transition:opacity .5s ease!important;}
+  /* Keep Good afternoon / Neural Interface locked on screen. Bar collapse
+     lifts #sec-chat; add back only the bar's own height — no extra inset,
+     and do not animate padding-top or the greeting slides. */
   body.topbar-hidden #chatEmptyState{
-    padding-top:calc(18vh + 160px + var(--android-status-inset, 0px))!important;
+    padding-top:calc(18vh + 100px + var(--topbar-slot, 60px))!important;
+    transition:opacity .5s ease!important;
   }
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
   #chatEmptyState .syn-greeting{font-size:20px!important;}
@@ -1162,18 +1156,17 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{
-    padding-top:max(76px, calc(48px + env(safe-area-inset-top, 0px)), calc(48px + var(--android-status-inset, 28px)))!important;
+    padding-top:8px!important;
   }
   body.topbar-hidden #chatHistoryPanel{
-    top:max(44px, calc(16px + env(safe-area-inset-top, 0px)), calc(16px + var(--android-status-inset, 28px)))!important;
+    top:16px!important;
   }
-  /* Hidden top bar only: keep Vesta clear of the top-right ▲/▼ arrow.
-     Visible-bar position (top:12px;right:10px) is untouched. */
+  /* Hidden bar only: same right edge, just under the ▲/▼. No extra page gap. */
   body.topbar-hidden #dgVoiceToggle{
-    top:max(72px, calc(40px + env(safe-area-inset-top, 0px)), calc(40px + var(--android-status-inset, 28px)))!important;
+    top:max(32px, calc(8px + var(--android-status-inset, 0px) + 24px))!important;
   }
   body.topbar-hidden #dgVoicePanel{
-    top:max(108px, calc(76px + env(safe-area-inset-top, 0px)), calc(76px + var(--android-status-inset, 28px)))!important;
+    top:max(68px, calc(44px + var(--android-status-inset, 0px) + 24px))!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
@@ -6339,6 +6332,7 @@ html[data-theme="trueblack"].deep-space-on #dayNightToggle{
 <style id="androidStatusBlendCSS">
 html.android-status-blend{
   --android-status-inset:28px;
+  --topbar-slot:calc(60px + var(--android-status-inset, 28px));
 }
 html.android-status-blend .top-bar{
   padding-top:calc(var(--android-status-inset) + 8px)!important;
