@@ -1071,6 +1071,13 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
     border-color:transparent!important;opacity:0!important;
     pointer-events:none!important;
   }
+  /* Conversation only: same fade as Good afternoon, THEN release the bar
+     height so the thread can use that strip. Padding stays so icons do not
+     reflow. Welcome / Notes do not get this, so they do not move. */
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .top-bar.hidden{
+    min-height:0!important;max-height:0!important;
+    overflow:hidden!important;
+  }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
@@ -1151,12 +1158,14 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{padding-top:6px!important;}
-  /* Hidden bar only: drop Vesta just under the ▲/▼ so it stays tappable.
-     Same right edge as usual (top:12px;right:10px). Visible-bar look unchanged. */
-  body.topbar-hidden #dgVoiceToggle{
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .chat-messages{
+    padding-top:max(40px, calc(16px + var(--android-status-inset, 0px)))!important;
+  }
+  /* Conversation + bar hidden only: Vesta sits just under the ▲/▼ */
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) #dgVoiceToggle{
     top:max(36px, calc(var(--android-status-inset, 0px) + 32px))!important;
   }
-  body.topbar-hidden #dgVoicePanel{
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) #dgVoicePanel{
     top:max(72px, calc(var(--android-status-inset, 0px) + 68px))!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
@@ -6373,6 +6382,15 @@ html.android-status-blend #imageGenScrollCol.igRowHidden{
 }
 html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
   padding-top:0!important;
+}
+@media(max-width:768px){
+  html.android-status-blend body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .top-bar.hidden{
+    min-height:0!important;
+    max-height:0!important;
+    overflow:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+  }
 }
 </style>
 <script>
