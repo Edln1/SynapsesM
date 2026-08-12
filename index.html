@@ -1068,9 +1068,13 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      mic's landing spot off. Height/opacity collapsing doesn't have that
      side effect; a translateY here did, so it stays off. */
   .top-bar.hidden{
-    min-height:0!important;max-height:0!important;padding:0!important;
     border-color:transparent!important;opacity:0!important;
     pointer-events:none!important;
+  }
+  /* Collapse height ONLY during an active LLM conversation. Welcome
+     (Good afternoon) and Notes keep the bar slot so they do not shift. */
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .top-bar.hidden{
+    min-height:0!important;max-height:0!important;padding:0!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1152,6 +1156,10 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{padding-top:6px!important;}
+  /* Conversation only: first message must sit below the hide-arrow / status bar */
+  body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .chat-messages{
+    padding-top:max(40px, calc(16px + var(--android-status-inset, 0px)))!important;
+  }
   /* Hidden bar only: drop Vesta just under the ▲/▼ so it stays tappable.
      Same right edge as usual (top:12px;right:10px). Visible-bar look unchanged. */
   body.topbar-hidden #dgVoiceToggle{
@@ -6375,11 +6383,10 @@ html.android-status-blend #imageGenScrollCol.igRowHidden{
 html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
   padding-top:0!important;
 }
-/* Chat-only: let the hidden top bar actually collapse on Android so the
-   conversation (#chatContainer) can use that space. Do not touch notes or
-   the welcome empty-state — those stay on the original layout. */
+/* Collapse the Android top bar ONLY in an active LLM conversation.
+   Welcome + Notes keep the original tall bar so they do not move. */
 @media(max-width:768px){
-  html.android-status-blend .top-bar.hidden{
+  html.android-status-blend body.topbar-hidden:has(#sec-chat.active #chatEmptyState.hidden) .top-bar.hidden{
     min-height:0!important;
     max-height:0!important;
     padding:0!important;
