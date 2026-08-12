@@ -1132,13 +1132,15 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   .qc-title{font-size:12px!important;}
   .qc-desc{font-size:11px!important;}
 
-  /* ── Chat empty state — same home position as before fingerprint ── */
-  #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;transition:opacity .5s ease!important;}
-  /* Keep Good afternoon / Neural Interface locked on screen. Bar collapse
-     lifts #sec-chat; add back only the bar's own height — no extra inset,
-     and do not animate padding-top or the greeting slides. */
-  body.topbar-hidden #chatEmptyState{
-    padding-top:calc(18vh + 100px + var(--topbar-slot, 60px))!important;
+  /* Pin the home greeting to the viewport so toggling the top bar cannot
+     move Good afternoon / Neural Interface. Same top + padding either way. */
+  #chatEmptyState{
+    position:fixed!important;
+    top:var(--topbar-slot, 60px)!important;
+    left:0!important;right:0!important;bottom:80px!important;
+    justify-content:flex-start!important;
+    padding:calc(18vh + 100px) 16px 0!important;
+    align-items:center!important;overflow:visible!important;
     transition:opacity .5s ease!important;
   }
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
@@ -1160,13 +1162,6 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   }
   body.topbar-hidden #chatHistoryPanel{
     top:16px!important;
-  }
-  /* Hidden bar only: same right edge, just under the ▲/▼. No extra page gap. */
-  body.topbar-hidden #dgVoiceToggle{
-    top:max(32px, calc(8px + var(--android-status-inset, 0px) + 24px))!important;
-  }
-  body.topbar-hidden #dgVoicePanel{
-    top:max(68px, calc(44px + var(--android-status-inset, 0px) + 24px))!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
@@ -2852,7 +2847,7 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 #chatBeamsWrap{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 #chatBeamsCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
-#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease,padding-top .25s ease;overflow:visible;}
+#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
 /* Deep-space aurora mismatch (ask-me-anything on, llm chat off): skip the
    lingering fade-out so the greeting vanishes with the rest of the page
