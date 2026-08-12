@@ -1047,13 +1047,26 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
 
 
   /* ── Top bar ── */
-  body{--topbar-slot:60px;}
   .top-bar{padding:8px 12px!important;}
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
-  /* In-flow collapse (same as pre-session). No overlay — that put the chat
-     under the status bar and yanked the welcome up. */
+  /* Mobile-only testing: the top toggle (#topBarToggle) normally just fades
+     out the top-right icons (.top-bar.hidden .top-actions) while the bar
+     itself stays put at its 60-80px height. On mobile we want it to collapse
+     the ENTIRE top bar instead, so the main page actually gets the extra
+     screen space back. #winStrip (which holds the toggle button) is a
+     separate fixed-position element outside .top-bar, so it stays visible
+     and clickable to bring the bar back.
+     Uses the same opacity fade timing as .top-actions above (the existing
+     top-right icon show/hide animation) so the whole bar fades out instead
+     of an instant cut. Deliberately NO transform here (unlike .top-actions,
+     which is safe to shift): the speech-to-speech mic's "glide to center"
+     position (_tnvComputeCenterRowCy) measures #topTitle's actual
+     getBoundingClientRect() *inside* this bar once it's collapsed — a
+     transform on an ancestor shifts that measured rect too, throwing the
+     mic's landing spot off. Height/opacity collapsing doesn't have that
+     side effect; a translateY here did, so it stays off. */
   .top-bar.hidden{
     min-height:0!important;max-height:0!important;padding:0!important;
     border-color:transparent!important;opacity:0!important;
@@ -1108,18 +1121,22 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   .qc-title{font-size:12px!important;}
   .qc-desc{font-size:11px!important;}
 
-  /* Original home padding (18vh + 100px). When the bar collapses, #sec-chat
-     rises by the bar height — add that same slot back so Good afternoon /
-     Neural Interface stay on the original screen point. No padding transition. */
-  #chatEmptyState{
-    justify-content:flex-start!important;
-    padding:calc(18vh + 100px) 16px 0!important;
-    align-items:center!important;overflow:visible!important;
-    transition:opacity .5s ease!important;
-  }
-  body.topbar-hidden #chatEmptyState{
-    padding-top:calc(18vh + 100px + var(--topbar-slot, 60px))!important;
-  }
+  /* ── Chat empty state — same home position as before fingerprint ── */
+  #chatEmptyState{justify-content:flex-start!important;padding:calc(18vh + 100px) 16px 0!important;align-items:center!important;overflow:visible!important;}
+  /* #chatEmptyState is position:absolute with top:0 *inside* #sec-chat — so
+     its screen position is anchored to #sec-chat's own top edge, not the
+     viewport. #sec-chat is a flex child of .main (flex-direction:column,
+     sibling of .top-bar), so when .top-bar collapses to 0 height, #sec-chat's
+     top edge rises by that same ~60px (the top bar's mobile min-height) —
+     purely as a side effect of flexbox reflow, nothing deliberate. That drags
+     the greeting/fingerprint/STS-mic up along with it, which is NOT wanted:
+     this starter screen should stay put in the exact same screen position
+     regardless of top-bar state. Canceling that drift means ADDING the same
+     ~60px back to padding-top when the bar is hidden (not subtracting it —
+     subtracting compounds with the drift instead of canceling it, which is
+     the bug that shifted the mic/title noticeably out of place). It's only
+     the real conversation view (.chat-messages below) that should actually
+     make use of the reclaimed space. */
   #chatEmptyState .syn-orb-wrap{width:180px!important;height:180px!important;margin-bottom:28px!important;}
   #chatEmptyState .syn-greeting{font-size:20px!important;}
   #chatEmptyState .syn-fp{display:flex!important;opacity:1!important;margin:0 0 0!important;}
@@ -2819,7 +2836,7 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 #chatBeamsWrap{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
 #chatBeamsCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 /* Original home layout: orb + greeting at pre-fingerprint position; fingerprint sits under subtitle */
-#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease;overflow:visible;}
+#chatEmptyState{position:absolute;top:0;left:0;right:0;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:calc(18vh + 100px) 24px 0;z-index:4;pointer-events:all;transition:opacity .5s ease,padding-top .25s ease;overflow:visible;}
 #chatEmptyState.hidden{opacity:0;pointer-events:none;}
 /* Deep-space aurora mismatch (ask-me-anything on, llm chat off): skip the
    lingering fade-out so the greeting vanishes with the rest of the page
@@ -3931,9 +3948,12 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 #imageGenModal.studio-tab-community #studioHomeBtn{
   display:none!important;
 }
-/* Home/generation swap — visible once Studio is open (class set in JS). */
+/* Home icon only makes sense once there's something to navigate away from (i.e. on the results view).
+   Desktop/PC only — mobile keeps the original single Back-arrow header untouched. */
 #studioHomeBtn{ display:none!important; }
-#imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
+@media(min-width:769px){
+  #imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
+}
 /* Default Studio header layout (original): back | Studio | actions — NOT viewport-centered */
 #studioTopBar{
   display:flex!important;
@@ -4717,19 +4737,6 @@ html[data-theme="purple"] #studioTopBarTitle{
 /* Mobile: the PC home landing (Featured looks / New in Studio / Get started / Community),
    scaled down to a single column that fits a phone screen. Dock chrome stays mobile-native. */
 @media(max-width:768px){
-  /* Keep enough bottom air so the last Community row sits above the dock,
-     not flush/off-screen. Not the old 90+66 stack — just dock clearance. */
-  #studioGenerateView #imageGenScrollCol,
-  #studioGenerateView #imageGenScrollCol.igRowHidden{
-    padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px))!important;
-  }
-  #studioCommunityView{
-    position:absolute!important;
-    inset:0!important;
-  }
-  #studioCommunityScroll{
-    padding-bottom:calc(28px + env(safe-area-inset-bottom, 0px))!important;
-  }
   #studioGenerateView #imageGenEmptyState{
     width:100%!important;
     max-width:none!important;
@@ -4737,7 +4744,7 @@ html[data-theme="purple"] #studioTopBarTitle{
     height:auto!important;
     box-sizing:border-box!important;
     gap:0!important;
-    padding:0!important;
+    padding:0 0 90px!important;
     justify-content:flex-start!important;
     align-items:stretch!important;
     text-align:left!important;
@@ -4970,11 +4977,6 @@ html[data-theme="purple"] #studioTopBarTitle{
   #studioGenerateView #imageGenEmptyState .studio-rail-tile{
     width:calc(50% - 5px)!important;flex:0 0 calc(50% - 5px)!important;
     height:130px!important;min-height:130px!important;max-height:130px!important;
-  }
-  /* Hug the tiles — JS otherwise locks a viewport-tall box and leaves a blank strip under Community */
-  #studioGenerateView #imageGenEmptyState .studio-rail-feed{
-    height:auto!important;max-height:none!important;min-height:0!important;
-    overflow:visible!important;padding:0!important;
   }
   /* Dock chrome stays the original mobile-native gear + pill (untouched) */
   #studioGenerateView .studioDockTools,
@@ -6294,7 +6296,6 @@ html[data-theme="trueblack"].deep-space-on #dayNightToggle{
 <style id="androidStatusBlendCSS">
 html.android-status-blend{
   --android-status-inset:28px;
-  --topbar-slot:calc(60px + var(--android-status-inset, 28px));
 }
 html.android-status-blend .top-bar{
   padding-top:calc(var(--android-status-inset) + 8px)!important;
@@ -6361,20 +6362,6 @@ html.android-status-blend #imageGenScrollCol.igRowHidden{
 }
 html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
   padding-top:0!important;
-}
-/* Hidden top bar must actually collapse on mobile. html.android-status-blend .top-bar
-   sets min-height/max-height/padding with higher specificity, so the bar stayed
-   ~88px tall at opacity 0 and left a dead gap the LLM chat could not fill. */
-@media(max-width:768px){
-  html.android-status-blend .top-bar.hidden,
-  html.android-status-blend body.topbar-hidden .top-bar{
-    min-height:0!important;
-    max-height:0!important;
-    padding:0!important;
-    overflow:hidden!important;
-    opacity:0!important;
-    pointer-events:none!important;
-  }
 }
 </style>
 <script>
@@ -8702,8 +8689,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <div id="studioTopBarLeft" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
-      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Back to your generation" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
+      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Studio home" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
       </button>
     </div>
     <div id="studioTopBarTitle">Studio</div>
@@ -11191,8 +11178,6 @@ function _mountStudioLandRail(){
    * Manual max clamps to first set so the duplicate loop copy is never visible.
    */
   var feedH = 420;
-  var isMobileRail = false;
-  try{ isMobileRail = !!(window.matchMedia && window.matchMedia('(max-width:768px)').matches); }catch(_mm){}
   try{
     var railH = (rail && rail.clientHeight) ? rail.clientHeight : 0;
     var head = rail ? rail.querySelector('.studio-rail-head') : null;
@@ -11200,7 +11185,6 @@ function _mountStudioLandRail(){
     var vh = Math.max(280, Math.min(window.innerHeight * 0.55, 520));
     feedH = railH > 80 ? Math.max(200, railH - headH) : vh;
   }catch(_h){}
-  if(isMobileRail) feedH = 0;
 
   feed.style.cssText =
     'display:block;overflow:hidden;position:relative;' +
@@ -11256,13 +11240,7 @@ function _mountStudioLandRail(){
      it (marquee/scroll behavior still applies in that case). */
   try{
     var naturalH = marquee.scrollHeight || 0;
-    if(isMobileRail){
-      feed.style.height = 'auto';
-      feed.style.maxHeight = 'none';
-      feed.style.minHeight = '0';
-      feed.style.overflow = 'visible';
-      feedH = Math.max(naturalH, 60);
-    } else if(naturalH > 0 && naturalH < feedH){
+    if(naturalH > 0 && naturalH < feedH){
       feedH = Math.max(naturalH, 60);
       feed.style.height = feedH + 'px';
       feed.style.maxHeight = feedH + 'px';
@@ -13577,12 +13555,9 @@ function _renderStudioHomeMarkup(emptyEl){
 var _studioHomeShowing = false;
 function _setStudioShowingResults(showing){
   var modal = document.getElementById('imageGenModal');
-  // Class keeps the home/gen swap visible on both screens (name is historical).
-  if(modal) modal.classList.add('studio-showing-results');
-  _studioHomeShowing = !showing;
-  _setStudioHomeBtnIcon(!showing);
-  var btn = document.getElementById('studioHomeBtn');
-  if(btn) btn.title = showing ? 'Studio home' : 'Back to your generation';
+  if(modal) modal.classList.toggle('studio-showing-results', !!showing);
+  _studioHomeShowing = false;
+  _setStudioHomeBtnIcon(false);
 }
 
 /** Header Home icon: jump back to the Studio browse/home screen without touching
@@ -13618,28 +13593,36 @@ async function renderImageGenDefaultFeed(){
   if(!resultsEl) return;
   var items = await loadImageGenHistory();
   _imageGenFeedLoaded = true;
-  resultsEl.innerHTML = '';
-  if(items.length){
-    items.forEach(function(it, idx){
-      resultsEl.appendChild(_buildStudioImageCard({
-        src: it.src,
-        prompt: it.prompt || '',
-        filename: 'synapses-image-' + (idx + 1) + '.jpg'
-      }));
-    });
+  if(!items.length){
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    _renderStudioHomeMarkup(emptyEl);
+    _setStudioShowingResults(false);
+    return;
   }
-  // Always land on the Studio home/browse screen. The header button starts as
-  // the image/generation glyph so one tap goes to the results grid — not house
-  // first, which used to waste the first tap just swapping the icon.
-  resultsEl.style.display = 'none';
-  _renderStudioHomeMarkup(emptyEl);
-  if(emptyEl) emptyEl.style.display = 'flex';
-  _studioHomeShowing = true;
-  _setStudioHomeBtnIcon(true);
-  var homeBtn = document.getElementById('studioHomeBtn');
-  if(homeBtn) homeBtn.title = 'Back to your generation';
-  var modalEl = document.getElementById('imageGenModal');
-  if(modalEl) modalEl.classList.add('studio-showing-results');
+  resultsEl.style.display = 'grid';
+  resultsEl.innerHTML = '';
+  items.forEach(function(it, idx){
+    resultsEl.appendChild(_buildStudioImageCard({
+      src: it.src,
+      prompt: it.prompt || '',
+      filename: 'synapses-image-' + (idx + 1) + '.jpg'
+    }));
+  });
+  // If the person was browsing the Studio home/explore screen when they last left
+  // (via toggleStudioHome), re-opening Studio should NOT yank them onto the results
+  // grid — keep showing home, with results populated underneath for the back-toggle.
+  if(_studioHomeShowing){
+    resultsEl.style.display = 'none';
+    _renderStudioHomeMarkup(emptyEl);
+    if(emptyEl) emptyEl.style.display = 'flex';
+    var modalEl = document.getElementById('imageGenModal');
+    if(modalEl) modalEl.classList.add('studio-showing-results');
+    _setStudioHomeBtnIcon(true);
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+  _setStudioShowingResults(true);
 }
 
 async function openImageGenHistory(){
