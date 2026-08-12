@@ -1157,18 +1157,20 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{
-    padding-top:max(52px, calc(24px + env(safe-area-inset-top, 0px)), calc(24px + var(--android-status-inset, 28px)))!important;
+    padding-top:max(76px, calc(48px + env(safe-area-inset-top, 0px)), calc(48px + var(--android-status-inset, 28px)))!important;
   }
   body.topbar-hidden #chatHistoryPanel{
     top:max(44px, calc(16px + env(safe-area-inset-top, 0px)), calc(16px + var(--android-status-inset, 28px)))!important;
   }
-  /* Voice picker is position:absolute on #chatContainer — collapse put it under the
-     status bar / hide-arrow, so it was untappable. Park it below that chrome. */
+  /* Hidden top bar only: keep Vesta clear of the top-right ▲/▼ arrow.
+     Visible-bar position (top:12px;right:10px) is untouched. */
   body.topbar-hidden #dgVoiceToggle{
-    top:max(44px, calc(12px + env(safe-area-inset-top, 0px)), calc(12px + var(--android-status-inset, 28px)))!important;
+    top:max(72px, calc(40px + env(safe-area-inset-top, 0px)), calc(40px + var(--android-status-inset, 28px)))!important;
+    right:36px!important;
   }
   body.topbar-hidden #dgVoicePanel{
-    top:max(80px, calc(48px + env(safe-area-inset-top, 0px)), calc(48px + var(--android-status-inset, 28px)))!important;
+    top:max(108px, calc(76px + env(safe-area-inset-top, 0px)), calc(76px + var(--android-status-inset, 28px)))!important;
+    right:34px!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
