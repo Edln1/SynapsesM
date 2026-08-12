@@ -1157,10 +1157,18 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden .chat-messages{
-    padding-top:max(6px, env(safe-area-inset-top, 0px), var(--android-status-inset, 0px))!important;
+    padding-top:max(52px, calc(24px + env(safe-area-inset-top, 0px)), calc(24px + var(--android-status-inset, 28px)))!important;
   }
   body.topbar-hidden #chatHistoryPanel{
-    top:max(16px, env(safe-area-inset-top, 0px), var(--android-status-inset, 0px))!important;
+    top:max(44px, calc(16px + env(safe-area-inset-top, 0px)), calc(16px + var(--android-status-inset, 28px)))!important;
+  }
+  /* Voice picker is position:absolute on #chatContainer — collapse put it under the
+     status bar / hide-arrow, so it was untappable. Park it below that chrome. */
+  body.topbar-hidden #dgVoiceToggle{
+    top:max(44px, calc(12px + env(safe-area-inset-top, 0px)), calc(12px + var(--android-status-inset, 28px)))!important;
+  }
+  body.topbar-hidden #dgVoicePanel{
+    top:max(80px, calc(48px + env(safe-area-inset-top, 0px)), calc(48px + var(--android-status-inset, 28px)))!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
@@ -4744,17 +4752,18 @@ html[data-theme="purple"] #studioTopBarTitle{
 /* Mobile: the PC home landing (Featured looks / New in Studio / Get started / Community),
    scaled down to a single column that fits a phone screen. Dock chrome stays mobile-native. */
 @media(max-width:768px){
-  /* No reserved strip under Community — dock is an overlay, not a layout spacer */
+  /* Keep enough bottom air so the last Community row sits above the dock,
+     not flush/off-screen. Not the old 90+66 stack — just dock clearance. */
   #studioGenerateView #imageGenScrollCol,
   #studioGenerateView #imageGenScrollCol.igRowHidden{
-    padding-bottom:0!important;
+    padding-bottom:calc(80px + env(safe-area-inset-bottom, 0px))!important;
   }
   #studioCommunityView{
     position:absolute!important;
     inset:0!important;
   }
   #studioCommunityScroll{
-    padding-bottom:0!important;
+    padding-bottom:calc(28px + env(safe-area-inset-bottom, 0px))!important;
   }
   #studioGenerateView #imageGenEmptyState{
     width:100%!important;
