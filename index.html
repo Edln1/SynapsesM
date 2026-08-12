@@ -1048,41 +1048,34 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
 
   /* ── Top bar ── */
   body{--topbar-slot:60px;}
+  /* Overlay: bar slides over the page instead of shoving #sec-chat (and the
+     welcome line) down. Height stays real so translateY(-100%) has a full trip. */
   .top-bar{
+    position:absolute!important;
+    top:0;left:0;right:0;
+    z-index:40;
     padding:8px 12px!important;
     box-sizing:border-box!important;
     transform:translateY(0);
-    /* Show: ease-out so it settles in. Hide uses the inverse on .hidden. Same 0.32s. */
-    transition:transform .32s cubic-bezier(.22,1,.36,1),opacity .32s cubic-bezier(.22,1,.36,1),max-height .32s cubic-bezier(.22,1,.36,1),min-height .32s cubic-bezier(.22,1,.36,1)!important;
+    transition:transform .32s ease-in-out,opacity .32s ease-in-out!important;
   }
   .top-title{font-size:12px!important;max-width:150px!important;}
   .top-actions{gap:3px!important;}
   .top-btn{padding:5px 7px!important;font-size:10px!important;}
-  /* Mobile-only testing: the top toggle (#topBarToggle) normally just fades
-     out the top-right icons (.top-bar.hidden .top-actions) while the bar
-     itself stays put at its 60-80px height. On mobile we want it to collapse
-     the ENTIRE top bar instead, so the main page actually gets the extra
-     screen space back. #winStrip (which holds the toggle button) is a
-     separate fixed-position element outside .top-bar, so it stays visible
-     and clickable to bring the bar back.
-     Uses the same opacity fade timing as .top-actions above (the existing
-     top-right icon show/hide animation) so the whole bar fades out instead
-     of an instant cut. Deliberately NO transform here (unlike .top-actions,
-     which is safe to shift): the speech-to-speech mic's "glide to center"
-     position (_tnvComputeCenterRowCy) measures #topTitle's actual
-     getBoundingClientRect() *inside* this bar once it's collapsed — a
-     transform on an ancestor shifts that measured rect too, throwing the
-     mic's landing spot off. Height/opacity collapsing doesn't have that
-     side effect; a translateY here did, so it stays off. */
   .top-bar.hidden{
     transform:translateY(-100%)!important;
-    min-height:0!important;max-height:0!important;
-    border-color:transparent!important;opacity:0!important;
-    overflow:hidden!important;
+    opacity:0!important;
     pointer-events:none!important;
-    /* Inverse ease so hide doesn't rush off faster than show settles in */
-    transition:transform .32s cubic-bezier(.64,0,.78,0),opacity .32s cubic-bezier(.64,0,.78,0),max-height .32s cubic-bezier(.64,0,.78,0),min-height .32s cubic-bezier(.64,0,.78,0)!important;
+    transition:transform .32s ease-in-out,opacity .32s ease-in-out!important;
   }
+  /* In-flow chat/tools sit under the overlay bar; welcome is position:absolute
+     so this padding does not move Good afternoon / Neural Interface. */
+  .section.active{
+    padding-top:var(--topbar-slot, 60px);
+    box-sizing:border-box;
+    transition:padding-top .32s ease-in-out;
+  }
+  body.topbar-hidden .section.active{padding-top:0;}
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
   /* ── Prevent iOS auto-zoom on ALL inputs ── */
@@ -1132,12 +1125,9 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   .qc-title{font-size:12px!important;}
   .qc-desc{font-size:11px!important;}
 
-  /* Pin the home greeting to the viewport so toggling the top bar cannot
-     move Good afternoon / Neural Interface. Same top + padding either way. */
   #chatEmptyState{
-    position:fixed!important;
-    top:var(--topbar-slot, 60px)!important;
-    left:0!important;right:0!important;bottom:80px!important;
+    position:absolute!important;
+    top:0!important;left:0!important;right:0!important;
     justify-content:flex-start!important;
     padding:calc(18vh + 100px) 16px 0!important;
     align-items:center!important;overflow:visible!important;
@@ -6402,9 +6392,6 @@ html.android-status-blend #imageGenScrollCol:not(.igRowHidden){
   html.android-status-blend .top-bar.hidden,
   html.android-status-blend body.topbar-hidden .top-bar{
     transform:translateY(-100%)!important;
-    min-height:0!important;
-    max-height:0!important;
-    overflow:hidden!important;
     opacity:0!important;
     pointer-events:none!important;
     background:transparent!important;
