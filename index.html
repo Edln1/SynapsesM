@@ -47257,8 +47257,7 @@ function speakVoiceReply(text) {
         messages: [{ role: 'system', content: sys }].concat(msgs),
         max_tokens: _maxTok,
         stream: true,
-        userId: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null,
-        email: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.email)?currentUser.email:null
+        userId: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null
       }),
       signal: _groqCtrl ? _groqCtrl.signal : undefined
     }).then(function(r) {
