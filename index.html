@@ -1084,6 +1084,30 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   body.llm-thread #sec-chat.active{
     flex:1 1 auto!important;
     min-height:0!important;
+    overflow:hidden!important;
+  }
+  /* Overlay header takes the bar out of flow, so the thread starts at y=0
+     of .main — under the phone status bar / notch. First bubbles were
+     clipping off the top of the screen. Pad only the conversation
+     (body.llm-thread), never welcome or Notes. */
+  body.llm-thread #sec-chat.active .chat-messages,
+  body.bottom-nav.llm-thread .chat-messages,
+  body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
+  body.topbar-hidden.llm-thread .chat-messages{
+    padding-top:calc(env(safe-area-inset-top, 0px) + 12px)!important;
+  }
+  html.android-status-blend body.llm-thread #sec-chat.active .chat-messages,
+  html.android-status-blend body.bottom-nav.llm-thread .chat-messages,
+  html.android-status-blend body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
+  html.android-status-blend body.topbar-hidden.llm-thread .chat-messages{
+    padding-top:calc(var(--android-status-inset, 28px) + 12px)!important;
+  }
+  /* Bar still visible (overlay): keep first bubble below the header row. */
+  body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages{
+    padding-top:calc(env(safe-area-inset-top, 0px) + 56px)!important;
+  }
+  html.android-status-blend body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages{
+    padding-top:calc(var(--android-status-inset, 28px) + 56px)!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1164,9 +1188,22 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      it's flex:1 in that same flex column. This trims its own top padding
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
-  body.topbar-hidden .chat-messages{padding-top:6px!important;transition:none!important;}
-  body.llm-thread.topbar-hidden #dgVoiceToggle{top:28px!important;}
-  body.llm-thread.topbar-hidden #dgVoicePanel{top:64px!important;}
+  body.topbar-hidden:not(.llm-thread) .chat-messages{padding-top:6px!important;transition:none!important;}
+  body.llm-thread #dgVoiceToggle{top:calc(env(safe-area-inset-top, 0px) + 10px)!important;}
+  body.llm-thread #dgVoicePanel{top:calc(env(safe-area-inset-top, 0px) + 46px)!important;}
+  body.llm-thread.topbar-hidden #dgVoiceToggle{top:calc(env(safe-area-inset-top, 0px) + 10px)!important;}
+  body.llm-thread.topbar-hidden #dgVoicePanel{top:calc(env(safe-area-inset-top, 0px) + 46px)!important;}
+  html.android-status-blend body.llm-thread #dgVoiceToggle,
+  html.android-status-blend body.llm-thread.topbar-hidden #dgVoiceToggle{
+    top:calc(var(--android-status-inset, 28px) + 8px)!important;
+  }
+  html.android-status-blend body.llm-thread #dgVoicePanel,
+  html.android-status-blend body.llm-thread.topbar-hidden #dgVoicePanel{
+    top:calc(var(--android-status-inset, 28px) + 44px)!important;
+  }
+  html.android-status-blend body.llm-thread #avaAvatarBox{
+    top:calc(var(--android-status-inset, 28px) + 8px)!important;
+  }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
@@ -15039,20 +15076,30 @@ function _renumberOrderedList(text, startCount){
 }
 /* Splits story/calm-mode streaming text into "sentences" on ./!/? boundaries,
  * then merges fragments back together where the split was bogus: a bare list
- * ordinal ("4." alone), a name initial ("J." "R." "K."), or a decimal number
- * split mid-way ("1." + "42 billion" from "1.42 billion"). Also re-homes a
- * stray trailing list-ordinal (left over from a period-split) onto the front
- * of the next sentence so numbering + content never separate.
- * Shared by the live per-chunk streaming reveal AND the end-of-stream flush
- * below, so both always agree on where sentences start/end. Previously each
- * spot had its own copy — and the live-reveal counter separately assumed a
- * fixed chunk size had been shown even when it hadn't, silently dropping
- * sentences from the DISPLAY while TTS (a fully independent counter) still
- * spoke them, and any leftover tail that hadn't filled a full chunk when
- * streaming ended was never shown at all. */
-function _storySplitSentences(text){
+ * ordinal ("4." alone), a name initial ("J." "F." "K."), a title/suffix
+ * ("Dr." "Jr."), or a decimal number split mid-way ("1." + "42 billion").
+ * Also re-homes a stray trailing list-ordinal onto the next sentence.
+ *
+ * holdIncomplete (live stream only): do NOT emit a last fragment that still
+ * looks like an initial/title ("John F.") — the next tokens ("Kennedy was
+ * born…") have not arrived yet. If we paint that fragment, _lastShownSentences
+ * becomes 1, the later merge keeps the count at 1, and the rest of the reply
+ * is never shown (the JFK "John F." bug). Flush calls without this flag.
+ *
+ * Flush also glues the unpunctuated tail after the last .!? so a short
+ * factual answer with no closing period is not dropped. */
+function _storyLooksIncomplete(frag){
+  var s = String(frag || '');
+  if(/^\s*\d+\.\s*$/.test(s)) return true;
+  if(/(^|\s)[A-Z]\.\s*$/.test(s)) return true;
+  if(/(^|\s)(Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.\s*$/i.test(s)) return true;
+  return false;
+}
+function _storySplitSentences(text, holdIncomplete){
+  text = String(text || '');
   var _raw = text.match(/[^.!?]+[.!?]+/g) || [];
   var sentences = [];
+  var _abbrEnd = /(?:^|\s)(?:[A-Z]\.|(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.)\s*$/i;
   for(var _ri=0; _ri<_raw.length; _ri++){
     var _frag = _raw[_ri];
     var _keepMerging = true;
@@ -15061,7 +15108,7 @@ function _storySplitSentences(text){
       if(/^\s*\d+\.\s*$/.test(_frag)){
         _frag += ' '+_raw[++_ri];
         _keepMerging = true;
-      } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
+      } else if(_abbrEnd.test(_frag)){
         _frag += ' '+_raw[++_ri];
         _keepMerging = true;
       } else if(/\d\.$/.test(_frag) && /^\d/.test(_raw[_ri+1])){
@@ -15078,7 +15125,80 @@ function _storySplitSentences(text){
       sentences[_si+1] = '\n\n' + _mTrail[1] + ' ' + sentences[_si+1].replace(/^\s+/, '');
     }
   }
+  if(holdIncomplete){
+    if(sentences.length && _storyLooksIncomplete(sentences[sentences.length-1])){
+      sentences.pop();
+    }
+    return sentences;
+  }
+  var _lastP = Math.max(text.lastIndexOf('.'), text.lastIndexOf('!'), text.lastIndexOf('?'));
+  var _tail = _lastP >= 0 ? text.slice(_lastP + 1) : (sentences.length ? '' : text);
+  if(_tail && _tail.trim()){
+    if(sentences.length && _storyLooksIncomplete(sentences[sentences.length-1])){
+      sentences[sentences.length-1] += _tail;
+    } else {
+      sentences.push(_tail);
+    }
+  }
   return sentences;
+}
+/* Voice clips. Mid-stream TTS also splits on ,;: so speech can start before
+ * the full sentence ends. That used to drop years: "August 17, 1940." became
+ * "August 17," + "1940." and "1940." was discarded for being under 8 chars.
+ * Glue years / tiny tails back on, and hold a trailing comma until the next
+ * clause arrives so the year is spoken with the date. */
+function _ttsIsTinyClip(frag){
+  var s = String(frag || '').trim();
+  if(!s) return true;
+  if(/^\d{1,4}\.?$/.test(s)) return true;
+  if(/^[A-Z]{1,3}\.?$/.test(s)) return true;
+  return s.length <= 8;
+}
+function _ttsSplitSentences(text, holdIncomplete){
+  text = String(text || '');
+  var raw = text.match(/[^.!?,;:]+[.!?,;:]+/g) || [];
+  var out = [];
+  var abbrEnd = /(?:^|\s)(?:[A-Z]\.|(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.)\s*$/i;
+  for(var i=0;i<raw.length;i++){
+    var frag = raw[i];
+    var keep = true;
+    while(keep && i+1<raw.length){
+      keep = false;
+      if(/^\s*\d+\.\s*$/.test(frag)){
+        frag += raw[++i]; keep = true;
+      } else if(abbrEnd.test(frag)){
+        frag += raw[++i]; keep = true;
+      } else if(/\d\.$/.test(frag) && /^\d/.test(raw[i+1])){
+        frag += raw[++i]; keep = true;
+      } else if(_ttsIsTinyClip(raw[i+1])){
+        frag += raw[++i]; keep = true;
+      }
+    }
+    out.push(frag);
+  }
+  if(holdIncomplete){
+    if(out.length){
+      var last = out[out.length-1];
+      if((typeof _storyLooksIncomplete === 'function' && _storyLooksIncomplete(last)) || /[,;:]\s*$/.test(last)){
+        out.pop();
+      }
+    }
+    return out;
+  }
+  var lastP = -1;
+  for(var p=0;p<text.length;p++){
+    if('.!?,;:'.indexOf(text[p])>=0) lastP = p;
+  }
+  var tail = lastP>=0 ? text.slice(lastP+1) : (out.length ? '' : text);
+  if(tail && tail.trim()){
+    var prev = out.length ? out[out.length-1] : '';
+    if(out.length && ((typeof _storyLooksIncomplete === 'function' && _storyLooksIncomplete(prev)) || /[,;:]\s*$/.test(prev) || _ttsIsTinyClip(tail))){
+      out[out.length-1] += tail;
+    } else {
+      out.push(tail);
+    }
+  }
+  return out;
 }
 /** Normalize messy model markdown so chat looks like clean deep-research style */
 function _prettifyChatMarkdown(t){
@@ -24790,20 +24910,18 @@ async function sendMessage(){
       // as BEFORE storybook changes. Speaks the stream text as sentences complete.
       // Research mutes this and speaks clean body once at the end.
       if(_vmActive && !window._avaResearchMuteStreamTTS){
-        var _voiceSrc = String(partial || '');
-        if (/@@AVA_SOURCES_HTML@@/i.test(_voiceSrc)) {
+        var _voiceSrc = (typeof _ttsClean === 'function') ? _ttsClean(partial) : String(partial || '');
+        if (/@@AVA_SOURCES_HTML@@/i.test(_voiceSrc) && typeof _researchBodyOnly === 'function') {
           _voiceSrc = _researchBodyOnly(_voiceSrc);
         }
-        var _sents=(_voiceSrc.match(/[^.!?,;:]+[.!?,;:]+/g)||[]);
+        var _sents = _ttsSplitSentences(_voiceSrc, true);
         if(_sents.length>_ttsSpokenSentences){
           for(var _ti=_ttsSpokenSentences;_ti<_sents.length;_ti++){
             var _chunk=_sents[_ti].trim();
-            if(_chunk.length>8) {
-              streamTTSQueue(_chunk);
-              _ttsSpokenUpTo += _sents[_ti].length;
-              _storyVoiceQueued = true;
-            }
-            else if(_chunk.length>0) { _ttsSpokenSentences++; _ttsSpokenUpTo += _sents[_ti].length; continue; }
+            if(!_chunk) continue;
+            streamTTSQueue(_chunk);
+            _ttsSpokenUpTo += _sents[_ti].length;
+            _storyVoiceQueued = true;
           }
           _ttsSpokenSentences=_sents.length;
         }
@@ -24819,7 +24937,7 @@ async function sendMessage(){
 
       // ── Paint: Pitch Black uses bakcusapd story; else rapid/calm from glow ──
       if(_paintMode===1){
-        var sentences = paintText.match(/[^.!?]+[.!?]+/g) || [];
+        var sentences = _storySplitSentences(paintText, true);
         if(sentences.length > _lastShownSentences){
           for(var _si=_lastShownSentences; _si<sentences.length; _si++){
             var _sp = document.createElement('span');
@@ -24835,9 +24953,10 @@ async function sendMessage(){
         // Pitch Black (bakcusapd): paint each ready group ASAP (delay 0). That is why
         // the whole reply feels fast there — NOT ChatGPT letter stream, NOT slow 1.2s metronome.
         // Sun: cumulative 1200ms slots (true slow storybook).
-        var sentences = (typeof _storySplitSentences === 'function')
-          ? _storySplitSentences(paintText)
-          : (paintText.match(/[^.!?]+[.!?]+/g) || []);
+        // holdIncomplete: wait on "John F." until "Kennedy…" arrives, or the
+        // stream ends — otherwise the first fragment is painted and the rest
+        // is dropped because the merged sentence count never increases.
+        var sentences = _storySplitSentences(paintText, true);
         var chunkSize = 3;
         var _cursor = _lastShownSentences;
         var _burst = 0;
@@ -24996,18 +25115,29 @@ async function sendMessage(){
       }
 
       // Leftover flush for sentence-chunk modes
-      if(streamP && _paintMode===2 && !_streamSkip && !_streamStopped){
+      if(streamP && (_paintMode===1 || _paintMode===2) && !_streamSkip && !_streamStopped){
         var _flushSrc = _isResearchReply ? _researchBodyOnly(reply) : String(reply || '');
-        var _finalSentences = (typeof _storySplitSentences === 'function')
-          ? _storySplitSentences(_flushSrc)
-          : (_flushSrc.match(/[^.!?]+[.!?]+/g) || []);
-        if(_storyBak){
+        var _finalSentences = _storySplitSentences(_flushSrc);
+        var _shownPlain = (streamP.textContent || '').replace(/\s+/g,' ').trim();
+        var _finalPlain = String(_flushSrc || '').replace(/\s+/g,' ').trim();
+        // Safety: "John F." was painted before the initial could merge — sentence
+        // COUNT stays the same, but the displayed text is only a prefix. Append
+        // the remainder instead of treating the reply as done.
+        if(_shownPlain && _finalPlain && _finalPlain.indexOf(_shownPlain) === 0 && _shownPlain.length < _finalPlain.length && _finalSentences.length <= _lastShownSentences){
+          var _prefixRem = _finalPlain.slice(_shownPlain.length).replace(/^\s*/, ' ');
+          var _pr = document.createElement('span');
+          _pr.className = (_paintMode===1) ? 'calm-sentence' : 'story-chunk';
+          _pr.innerHTML = fmtMDstream(_prefixRem, _storyListCounter);
+          streamP.appendChild(_pr);
+          _lastShownSentences = _finalSentences.length;
+          _scheduleScroll();
+        } else if(_paintMode===1 || _storyBak){
           // bakcusapd: append leftover immediately (same as that file)
           if(_finalSentences.length > _lastShownSentences){
             var _leftover = _finalSentences.slice(_lastShownSentences).join(' ');
             var _leftoverHtml = fmtMDstream(_leftover, _storyListCounter);
             var _lp = document.createElement('span');
-            _lp.className = 'story-chunk';
+            _lp.className = (_paintMode===1) ? 'calm-sentence' : 'story-chunk';
             _lp.innerHTML = _leftoverHtml;
             streamP.appendChild(_lp);
             _lastShownSentences = _finalSentences.length;
@@ -25064,7 +25194,8 @@ async function sendMessage(){
         var _rBody = _researchBodyOnly(reply) || data._avaResearchSpeak || window._avaResearchSpeakText || '';
         var _rSpeak = _ttsClean(_rBody);
         if (_rSpeak.length > 4) {
-          var _rSents = _rSpeak.match(/[^.!?]+[.!?]+/g) || [_rSpeak];
+          var _rSents = _ttsSplitSentences(_rSpeak);
+          if(!_rSents.length && _rSpeak.trim()) _rSents = [_rSpeak];
           _rSents.forEach(function(s){ if (s.trim().length > 3) streamTTSQueue(s.trim()); });
         }
         window._avaResearchSpeakText = null;
@@ -41635,28 +41766,7 @@ function synBotSend(text){
 
       _synBotLLMCall(_synBotHistory,
         function(partial){
-          var _rawSentences = partial.match(/[^.!?]+[.!?]+/g) || [];
-          var sentences = [];
-          for(var _ri=0;_ri<_rawSentences.length;_ri++){
-            var _frag = _rawSentences[_ri];
-            // Merge bare ordinals, name initials, and split decimal numbers forward
-            // instead of treating them as sentence ends.
-            var _keepMerging = true;
-            while(_keepMerging && _ri+1<_rawSentences.length){
-              _keepMerging = false;
-              if(/^\s*\d+\.\s*$/.test(_frag)){
-                _frag += ' '+_rawSentences[++_ri];
-                _keepMerging = true;
-              } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
-                _frag += ' '+_rawSentences[++_ri];
-                _keepMerging = true;
-              } else if(/\d\.$/.test(_frag) && /^\d/.test(_rawSentences[_ri+1])){
-                _frag += _rawSentences[++_ri];
-                _keepMerging = true;
-              }
-            }
-            sentences.push(_frag);
-          }
+          var sentences = _storySplitSentences(partial, true);
           var chunkSize = 1;
           var chunksNow = Math.floor(sentences.length / chunkSize);
           var _lastShownChunks = Math.floor(_sbShownSentences / chunkSize);
@@ -41673,14 +41783,22 @@ function synBotSend(text){
           }
         },
         function(full){
-          // Stream done — if queue still has items let them finish typing naturally
-          // If nothing queued at all (very short reply), just show it
-          if(_sbTypeQueue.length === 0 && !_sbTyping && typingEl.children.length === 0){
-            // Short reply with no sentence breaks — typewrite it directly
+          // Stream done — paint any sentences held back (e.g. "John F." waiting
+          // to merge) plus leftover tail. If nothing was sentence-split at all,
+          // typewrite the whole reply.
+          var _finalSents = _storySplitSentences(full);
+          if(_finalSents.length > _sbShownSentences){
+            var _rest = _finalSents.slice(_sbShownSentences).join(' ');
             var _fbSpan = document.createElement('span');
             _fbSpan.className = 'story-chunk';
             _fbSpan.style.display = 'block';
-            _sbTypeQueue.push({text: full, span: _fbSpan});
+            _sbTypeQueue.push({text: _rest, span: _fbSpan});
+            _sbTypeNext();
+          } else if(_sbTypeQueue.length === 0 && !_sbTyping && typingEl.children.length === 0){
+            var _fbSpan2 = document.createElement('span');
+            _fbSpan2.className = 'story-chunk';
+            _fbSpan2.style.display = 'block';
+            _sbTypeQueue.push({text: full, span: _fbSpan2});
             _sbTypeNext();
           }
           _synBotHistory.push({role:'assistant',content:full});
@@ -45112,8 +45230,10 @@ function streamTTSFinalize(fullText) {
 function speakVoiceReply(text) {
   if (!_vmActive) return;
   _ttsStopAll();
-  var sentences = _ttsClean(text).match(/[^.!?]+[.!?]+/g) || [_ttsClean(text)];
-  sentences.forEach(function(s){ _ttsQueue.push(s.trim()); });
+  var _spoken = _ttsClean(text);
+  var sentences = _ttsSplitSentences(_spoken);
+  if(!sentences.length && _spoken.trim()) sentences = [_spoken];
+  sentences.forEach(function(s){ if(s.trim()) _ttsQueue.push(s.trim()); });
   _ttsPlayNext(_vmGenId);
 }
 
