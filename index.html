@@ -737,8 +737,10 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 /* NOTE: intentionally NOT collapsing height here — that's mobile-only
    (see the media query below). On desktop/PC, hiding the top bar should only
    fade out the top-right icons while the bar itself stays the same height —
-   original, correct behavior, do not change. */
-body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-top .25s ease;}
+   original, correct behavior, do not change.
+   Do NOT change .chat-messages padding on PC when toggling icons — that
+   shifts the LLM thread. Mobile padding-top rules stay in the max-width
+   media query only. */}
 .top-btn{-webkit-app-region:no-drag;app-region:no-drag;}
 .top-title{-webkit-app-region:no-drag;app-region:no-drag;}
 #etbBtns button{-webkit-app-region:no-drag;app-region:no-drag;}
@@ -1381,7 +1383,7 @@ body.hide-chat-history #chatHistoryPanel{display:none!important;}
 #chatHistoryTrigger.cht-morphed .cht-dot{display:none;}
 #chatHistoryTrigger.cht-morphed .cht-x{display:flex;}
 #chatHistoryTrigger .cht-x{display:none;font-size:11px;color:rgba(200,195,225,0.5);line-height:1;font-family:'DM Sans',sans-serif;font-weight:400;}
-#chatHistoryTrigger.cht-morphed{width:22px;height:22px;border-radius:6px;background:rgba(200,195,225,0.06);border-color:rgba(200,195,225,0.2);}
+#chatHistoryTrigger.cht-morphed{width:22px;height:22px;border-radius:6px;background:rgba(200,195,225,0.06);border-color:rgba(200,195,225,0.2);z-index:60;}
 #chatHistoryTrigger.cht-morphed:hover{background:rgba(200,195,225,0.12)!important;border-color:rgba(200,195,225,0.35)!important;box-shadow:none!important;}
 #chatHistoryTrigger:hover{border-color:rgba(124,106,247,0.6);box-shadow:0 0 18px rgba(124,106,247,0.25);}
 @media (hover:hover) and (pointer:fine){ #bnavNotesBtn:hover{background:rgba(124,106,247,0.07);} }
@@ -1856,8 +1858,37 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 #chpSidebar.fade-open .chp-item:nth-child(6){animation-delay:.50s;}
 #chpSidebar.fade-open .chp-item:nth-child(n+7){animation-delay:.55s;}
 @keyframes chpItemSlide{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
-#chpSidebarInner{width:240px;display:flex;flex-direction:column;height:100%;overflow:hidden;}
-.chp-header{padding:0 14px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:rgba(200,195,225,0.35);text-transform:uppercase;border-bottom:1px solid rgba(200,195,225,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:46px;}
+#chpSidebarInner{width:240px;display:flex;flex-direction:column;height:100%;overflow:hidden;position:relative;}
+.chp-header{padding:0 14px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:rgba(200,195,225,0.35);text-transform:uppercase;border-top:1px solid rgba(200,195,225,0.07);border-bottom:1px solid rgba(200,195,225,0.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;min-height:46px;transition:border-color .2s;}
+.chp-header-hit{
+  flex:0 0 52%;max-width:52%;min-width:0;align-self:stretch;
+  display:flex;align-items:center;gap:6px;
+  padding:0;margin:0;position:relative;
+}
+#chpSidebar.chp-account-ready .chp-header:has(.chp-header-hit:hover),
+#chpSidebar.chp-account-ready .chp-header.chp-head-open{border-top-color:rgba(200,195,225,0.16);border-bottom-color:rgba(200,195,225,0.16);}
+.chp-gear-dock{
+  width:22px;height:22px;padding:0;border:none;border-radius:6px;flex-shrink:0;
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(200,195,225,0.34);
+  opacity:0;pointer-events:none;
+  transition:opacity .18s,color .15s;
+}
+.chp-gear-dock svg{display:block;}
+#chpSidebar.chp-account-ready .chp-header-hit:hover .chp-gear-dock,
+#chpSidebar.chp-account-ready .chp-header.chp-head-open .chp-gear-dock,
+#chpSidebar.chp-account-ready .chp-gear-dock[aria-expanded="true"],
+#chpSidebar.chp-account-ready .chp-header-hit:hover .chp-gear-dock:hover,
+#chpSidebar.chp-account-ready .chp-gear-dock:hover,
+#chpSidebar.chp-account-ready .chp-gear-dock:focus{
+  opacity:.72;pointer-events:auto;
+  color:rgba(200,195,225,0.34);
+  background:transparent;
+  box-shadow:none;
+  filter:none;
+}
+.chp-gear-dock[hidden]{display:none!important;}
 .chp-header-close{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:14px;padding:0;transition:color .2s;}
 .chp-header-close:hover{color:rgba(255,255,255,0.8);}
 .chp-list{flex:1;overflow-y:auto;padding:8px 0;}
@@ -1869,16 +1900,88 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .chp-item-dot{width:5px;height:5px;border-radius:50%;background:rgba(124,106,247,0.5);flex-shrink:0;}
 .chp-item-actions{display:none;align-items:center;gap:4px;flex-shrink:0;}
 .chp-item:hover .chp-item-actions{display:flex;}
-.chp-act-btn{background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:rgba(200,195,225,0.35);transition:color .15s;line-height:1;}
-.chp-act-btn:hover{color:rgba(200,195,225,0.9);}
-.chp-act-btn.bookmarked{color:rgba(124,106,247,0.8);}
+.chp-act-btn{background:none;border:none;cursor:pointer;padding:2px 4px;font-size:11px;color:rgba(200,195,225,0.38);transition:color .15s;line-height:1;}
+.chp-act-btn:hover{color:rgba(200,195,225,0.72);}
+.chp-act-btn.bookmarked{color:rgba(200,195,225,0.7);}
+.chp-act-btn .chp-bm{display:block;}
+.chp-act-btn.bookmarked .chp-bm{fill:currentColor;}
 .chp-section-label{padding:8px 16px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,0.2);text-transform:uppercase;}
 .chp-empty{padding:20px 16px;font-size:12px;color:rgba(255,255,255,0.25);font-style:italic;}
+.chp-user-dock{
+  position:relative;flex-shrink:0;
+  border-top:none;
+  padding:0 10px;
+  display:flex;flex-direction:column;align-items:stretch;
+}
+.chp-user-dock.open{padding:2px 10px 8px;}
+.chp-user-card{
+  display:flex;align-items:center;gap:9px;padding:8px 8px 10px;
+}
+.chp-user-av{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;
+  background:rgba(255,255,255,0.1);overflow:hidden;
+}
+.chp-user-meta{flex:1;min-width:0;}
+.chp-user-name{display:block;font-size:12.5px;font-weight:500;color:rgba(235,235,240,0.92);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chp-user-subline{display:flex;align-items:center;gap:6px;min-width:0;margin-top:1px;}
+.chp-user-mail{flex:1;min-width:0;font-size:10.5px;color:rgba(180,180,190,0.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chp-user-plan{
+  display:inline-block;margin-left:6px;vertical-align:middle;
+  font-size:10px;letter-spacing:.04em;
+  color:rgba(200,195,225,0.55);padding:1px 6px;border-radius:99px;
+  border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
+}
+.chp-user-plan.pro{color:#5eead4;border-color:rgba(0,217,168,0.28);background:rgba(0,217,168,0.08);}
+.chp-user-menu{
+  display:none;position:static;
+  background:transparent;border:none;border-radius:0;padding:2px 0 4px;
+  box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+  max-height:min(420px,calc(100vh - 180px));overflow-y:auto;
+}
+.chp-user-dock.open .chp-user-menu{display:block;}
+.chp-user-menu button{
+  width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:none;background:transparent;
+  color:rgba(230,230,235,0.88);font-family:'DM Sans',sans-serif;font-size:12.5px;
+  padding:8px 10px;border-radius:8px;cursor:pointer;
+}
+.chp-user-menu button:hover{background:rgba(255,255,255,0.06);}
+.chp-user-sep{height:1px;margin:4px 6px;background:rgba(255,255,255,0.08);}
+.chp-user-back{
+  display:flex;align-items:center;gap:6px;width:100%;border:none;background:transparent;
+  color:rgba(200,195,225,0.55);font-family:'DM Sans',sans-serif;font-size:11px;
+  padding:4px 8px 8px;cursor:pointer;letter-spacing:.04em;
+}
+.chp-user-back:hover{color:rgba(230,230,235,0.9);background:transparent;}
+.chp-user-opt{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  text-align:left;border:none;background:transparent;cursor:pointer;
+  color:rgba(230,230,235,0.88);font-family:'DM Sans',sans-serif;font-size:12.5px;
+  padding:8px 10px;border-radius:8px;
+}
+.chp-user-opt:hover{background:rgba(255,255,255,0.06);}
+.chp-user-opt.on{background:rgba(255,255,255,0.08);}
+.chp-user-opt .cx-sub{font-size:10.5px;color:rgba(170,170,178,0.55);margin-top:2px;}
+.chp-user-hint{font-size:11px;color:rgba(170,170,178,0.55);padding:4px 10px 8px;line-height:1.4;}
+html[data-theme="trueblack"] .chp-user-dock{border-top:none;}
+html[data-theme="trueblack"] .chp-user-name{color:rgba(245,245,247,0.92);}
+html[data-theme="trueblack"] .chp-user-menu{
+  background:transparent;border:none;box-shadow:none;
+}
 /* True Black: "Past Chats" sidebar text (header, section labels, chat titles) goes to
    true white instead of the dimmed purple-tinted greys used in Sun / Dark Mode. */
 html[data-theme="trueblack"] .chp-header{color:rgba(200,195,225,0.35)!important;}
-html[data-theme="trueblack"] .chp-header > div button{color:rgba(200,195,225,0.35)!important;}
-html[data-theme="trueblack"] .chp-header > div button:hover{color:rgba(200,195,225,0.85)!important;}
+html[data-theme="trueblack"] .chp-header > div button:not(.chp-gear-dock){color:rgba(200,195,225,0.35)!important;}
+html[data-theme="trueblack"] .chp-header > div button:not(.chp-gear-dock):hover{color:rgba(200,195,225,0.85)!important;}
+html[data-theme="trueblack"] .chp-gear-dock,
+html[data-theme="trueblack"] .chp-gear-dock:hover,
+html[data-theme="trueblack"] .chp-gear-dock:focus{
+  color:rgba(200,195,225,0.34)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
 html[data-theme="trueblack"] .chp-header-close{color:rgba(255,255,255,0.3)!important;}
 html[data-theme="trueblack"] .chp-header-close:hover{color:rgba(255,255,255,0.8)!important;}
 html[data-theme="trueblack"] .chp-section-label{color:rgba(255,255,255,0.2)!important;}
@@ -2135,7 +2238,7 @@ html[data-theme="light"] .message-text .chat-md-dot{
 #sec-chat .input-area,#sec-coach .input-area{padding:14px 20px 18px;border-top:none;background:transparent;flex-shrink:0;position:relative;z-index:3;}
 /* Home screen: pull the input bar up to sit right under "What's on your mind?" instead of pinned to the bottom. Once a chat starts (chatEmptyState gets .hidden), this stops applying and the input bar goes back to its normal spot at the bottom — no functionality changed, just position. */
 #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{position:absolute!important;left:24px!important;right:24px!important;top:360px!important;bottom:auto!important;margin:0!important;z-index:6;}
-#sec-chat #chatEmptyState:not(.hidden) ~ .input-area #chatAttachBtn{display:none!important;}
+/* + stays visible on home so users can attach or pick a prompt tip */
 /* Pulse open on mobile: sheet rises from bottom; ask-bar lifts with same timing */
 @media (max-width:768px){
   /* Ask-bar lifts with Pulse via top/margin — NOT transform.
@@ -2153,9 +2256,16 @@ html[data-theme="light"] .message-text .chat-md-dot{
   #sec-chat #voiceModeBtn,
   #sec-chat #aiModeToggle,
   #sec-chat #chatHistoryBtn,
+  #sec-chat #chatAttachBtn,
   #sec-chat .send-btn{
     top:0!important;bottom:0!important;margin-top:auto!important;margin-bottom:auto!important;
     transform:none!important;
+  }
+  #sec-chat #chatAttachBtn[aria-expanded="true"]{
+    transform:none!important;
+  }
+  #sec-chat #chatAttachBtn[aria-expanded="true"] svg{
+    transform:rotate(45deg)!important;
   }
   #sec-chat #chatEmptyState:not(.hidden) ~ .input-area{
     left:16px!important;right:16px!important;top:360px!important;bottom:auto!important;
@@ -2347,6 +2457,49 @@ html[data-theme="trueblack"] #dgVoicePanel .vp-item.active .vp-dot{background:rg
 html[data-theme="trueblack"] #dgVoicePanel .vp-item .vp-desc{color:rgba(120,120,130,0.45)!important;}
 html[data-theme="trueblack"] #dgVoicePanel .vp-item.locked .vp-dot{background:rgba(90,90,100,0.3)!important;}
 html[data-theme="trueblack"] #dgVoicePanel .vp-section-label{color:rgba(130,130,140,0.5)!important;border-top-color:rgba(90,90,100,0.2)!important;}
+#avaStsCtxMenu .ava-cx-item{
+  display:flex;align-items:center;gap:10px;
+}
+#avaStsCtxMenu .ava-cx-ico{
+  width:18px;min-width:18px;height:18px;flex:0 0 18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;line-height:18px;text-align:center;
+}
+#avaStsCtxMenu .ava-cx-ico svg{display:block;}
+html[data-theme="trueblack"] #avaStsCtxMenu{
+  background:rgba(12,12,12,0.97)!important;
+  border-color:rgba(255,255,255,0.12)!important;
+  box-shadow:0 10px 32px rgba(0,0,0,0.65)!important;
+}
+html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-item{color:rgba(235,235,238,0.88)!important;}
+html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-sec{color:rgba(180,180,186,0.45)!important;}
+html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-div{background:rgba(255,255,255,0.08)!important;}
+html[data-theme="trueblack"] #avaStsCtxMenu [id$="Chk"]{color:#fff!important;}
+html[data-theme="trueblack"] .ava-life-card{
+  background:#0a0a0a!important;
+  border-color:rgba(255,255,255,0.12)!important;
+  box-shadow:0 20px 60px rgba(0,0,0,0.75)!important;
+}
+html[data-theme="trueblack"] .ava-life-card h3,
+html[data-theme="trueblack"] #avaLifeOverlay .ava-life-title{color:#f2f2f4!important;}
+html[data-theme="trueblack"] #avaLifeRefreshBtn{
+  border-color:rgba(255,255,255,0.16)!important;
+  background:rgba(255,255,255,0.06)!important;
+  color:#f2f2f4!important;
+}
+html[data-theme="trueblack"] #avaLifeTickBtn{
+  border-color:rgba(255,255,255,0.14)!important;
+  background:rgba(28,28,28,0.9)!important;
+  color:#e8e8ea!important;
+}
+html[data-theme="trueblack"] #avaLifeCloseBtn{
+  border-color:rgba(255,255,255,0.14)!important;
+  color:rgba(220,220,224,0.7)!important;
+}
+html[data-theme="trueblack"] .ava-life-sched{
+  background:rgba(255,255,255,0.04)!important;
+  border-color:rgba(255,255,255,0.1)!important;
+}
 /* True Black past-chats trigger = exact sun hamburger/orb behavior.
    Only difference: hover backlight uses TB violet-grey instead of purple.
    Never touch transform (panel fly-in uses it). */
@@ -2566,6 +2719,7 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 #sec-chat .input-wrapper > #voiceModeBtn,
 #sec-chat .input-wrapper > #aiModeToggle,
 #sec-chat .input-wrapper > #chatHistoryBtn,
+#sec-chat .input-wrapper > #chatAttachBtn,
 #sec-chat .input-wrapper > .send-btn{
   position:absolute!important;
   top:0!important;bottom:0!important;
@@ -2750,6 +2904,89 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
 .msg-attach-thumb img{width:34px;height:34px;object-fit:cover;border-radius:5px;flex-shrink:0;}
 .msg-attach-thumb .mat-icon{width:34px;height:34px;border-radius:5px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
 .msg-attach-thumb .mat-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gen-doc-dl{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0;padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:rgba(22,22,26,0.72);color:rgba(235,235,238,0.92);text-decoration:none;font-size:13px;font-family:'DM Sans',sans-serif;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.gen-doc-dl:hover{background:rgba(36,36,40,0.82);border-color:rgba(255,255,255,0.24);color:#fff;}
+html[data-theme="trueblack"] .gen-doc-dl{
+  background:rgba(18,18,18,0.78)!important;
+  border:1px solid rgba(255,255,255,0.16)!important;
+  color:#f2f2f4!important;
+  box-shadow:none!important;
+}
+html[data-theme="trueblack"] .gen-doc-dl:hover{
+  background:rgba(28,28,28,0.88)!important;
+  border-color:rgba(255,255,255,0.28)!important;
+}
+.gen-doc-preview{margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;background:rgba(8,8,14,0.72);width:100%;max-width:100%;box-sizing:border-box;position:relative;font-family:'DM Sans',sans-serif;}
+html[data-theme="trueblack"] .gen-doc-preview{background:#000;border-color:rgba(255,255,255,0.12);}
+#chatContainer{overflow-x:hidden;}
+.gen-doc-bar{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:0 0 10px;padding:0 2px;min-height:34px;}
+.gen-doc-bar .gen-doc-dl{margin:0!important;}
+.gen-doc-ico{
+  position:absolute;top:20px;right:20px;z-index:6;
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(22,22,26,0.78);border:1px solid rgba(255,255,255,0.16);
+  color:#f2f2f4;text-decoration:none;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.gen-doc-ico:hover{background:rgba(36,36,40,0.9);border-color:rgba(255,255,255,0.28);color:#fff;}
+html[data-theme="trueblack"] .gen-doc-ico{
+  background:rgba(18,18,18,0.82)!important;border-color:rgba(255,255,255,0.16)!important;color:#f2f2f4!important;
+}
+.gen-doc-preview iframe,.gen-doc-pdf-frame{display:block;width:100%;height:min(70vh,560px);border:0;border-radius:8px;background:#111;}
+#chatAttachBtn{z-index:4;}
+#chatAttachBtn svg{transition:transform .18s ease;display:block;}
+#chatAttachBtn[aria-expanded="true"]{opacity:0.9!important;border-color:rgba(255,255,255,0.3)!important;}
+#chatAttachBtn[aria-expanded="true"] svg{transform:rotate(45deg);}
+#plusMenu{position:fixed;width:260px;max-height:min(62vh,420px);overflow-y:auto;background:rgba(30,30,34,0.78);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:99999;display:none;padding:6px 0 8px;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);}
+#plusMenu.open{display:block;}
+.plus-menu-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;background:transparent;color:var(--text);padding:10px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;}
+.plus-menu-item:hover{background:rgba(124,106,247,0.12);}
+.plus-menu-ico{width:22px;height:22px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.8;}
+.plus-menu-div{height:1px;margin:6px 12px;background:rgba(255,255,255,0.08);}
+.plus-menu-head{padding:8px 14px 4px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:'DM Sans',sans-serif;}
+.plus-menu-tip{width:100%;text-align:left;border:0;background:transparent;color:#e8e8f0;padding:8px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.plus-menu-tip:hover{background:rgba(124,106,247,0.12);}
+.plus-menu-tip strong{display:block;font-size:13px;font-weight:700;margin-bottom:2px;}
+.plus-menu-tip span{display:block;font-size:11.5px;line-height:1.4;color:rgba(200,200,210,0.62);}
+html[data-theme="trueblack"] #plusMenu{background:rgba(18,18,18,0.88);border-color:rgba(255,255,255,0.12);}
+html[data-theme="trueblack"] .plus-menu-item:hover,html[data-theme="trueblack"] .plus-menu-tip:hover{background:rgba(255,255,255,0.07);}
+.gen-doc-slides{display:flex;flex-direction:column;gap:10px;padding:12px;max-height:min(70vh,640px);overflow:auto;}
+.gen-doc-slide{background:#0b0b12;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 18px;}
+.gen-doc-slide h4{margin:0 0 8px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.01em;color:#fff;}
+.gen-doc-slide ul{margin:0;padding-left:18px;color:rgba(230,230,235,0.88);font-size:14px;line-height:1.7;font-family:'DM Sans',sans-serif;}
+html[data-theme="trueblack"] .gen-doc-slides{background:transparent;gap:8px;padding:10px;}
+html[data-theme="trueblack"] .gen-doc-slide{
+  background:#1a1a22;
+  border:1px solid rgba(255,255,255,0.1);
+  box-shadow:none;
+}
+html[data-theme="trueblack"] .gen-doc-slide:first-child{background:#1a1a22;}
+html[data-theme="trueblack"] .gen-doc-slide h4{color:#f2f2f2;}
+html[data-theme="trueblack"] .gen-doc-slide ul,
+html[data-theme="trueblack"] .gen-doc-slide p{color:rgba(210,210,210,0.78);}
+.gen-doc-sheet{overflow:auto;max-height:min(70vh,480px);font-family:'DM Sans',sans-serif;}
+.gen-doc-sheet table{width:100%;border-collapse:collapse;font-size:13px;color:#e8e8f0;}
+.gen-doc-sheet th{background:#1a1a22;color:#fff;text-align:left;padding:8px 10px;position:sticky;top:0;font-family:'DM Sans',sans-serif;font-weight:700;font-size:12px;letter-spacing:-.01em;}
+.gen-doc-sheet td{padding:7px 10px;border-top:1px solid rgba(255,255,255,0.06);}
+.gen-doc-sheet tr:nth-child(even) td{background:rgba(255,255,255,0.03);}
+.gen-doc-pdf{padding:18px 20px 20px;max-height:min(70vh,560px);overflow:auto;font-family:'DM Sans',sans-serif;}
+.gen-doc-pdf h1,.gen-doc-pdf h2,.gen-doc-pdf h3,.gen-doc-pdf h4,
+.gen-doc-pdf .chat-md-h,.gen-doc-preview h1,.gen-doc-preview h2,.gen-doc-preview h3,.gen-doc-preview h4,.gen-doc-preview .chat-md-h{
+  font-family:'DM Sans',sans-serif!important;
+  font-weight:700!important;
+  letter-spacing:-.015em;
+  line-height:1.3;
+  color:#fff!important;
+}
+.gen-doc-pdf h1,.gen-doc-preview h1{font-size:22px;margin:0 0 14px;}
+.gen-doc-pdf h2,.gen-doc-pdf h3,.gen-doc-pdf .chat-md-h,
+.gen-doc-preview h2,.gen-doc-preview h3,.gen-doc-preview .chat-md-h{font-size:16px;margin:18px 0 8px;}
+.gen-doc-pdf h4,.gen-doc-preview h4{font-size:14.5px;font-weight:700!important;margin:14px 0 6px;}
+.gen-doc-pdf h3:first-child,.gen-doc-pdf h1:first-child,.gen-doc-pdf .chat-md-h:first-child{margin-top:0;}
+.gen-doc-pdf p,.gen-doc-pdf li,.gen-doc-preview p,.gen-doc-preview li{
+  margin:0 0 10px;font-family:'DM Sans',sans-serif;font-size:14.5px;line-height:1.7;font-weight:400;color:rgba(232,232,240,0.92);
+}
 .room-send{width:40px;height:40px;background:rgba(99,102,241,0.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(99,102,241,0.3);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.88);flex-shrink:0;transition:all .2s;}
 .room-send:hover{background:rgba(99,102,241,0.26);border-color:rgba(99,102,241,0.55);box-shadow:0 0 18px rgba(99,102,241,0.25);transform:scale(1.05);}
 .jobs-inner{max-width:100%;margin:0;padding:28px 32px 32px;width:100%;}
@@ -2838,6 +3075,22 @@ html[data-theme="trueblack"] .qn-glow-wrap::before{
   cursor:pointer;font-weight:500;letter-spacing:.08em;text-transform:uppercase;transition:all .15s;
 }
 #sec-profile .prof-ghost-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.32);}
+#synConnectorsCard .cx-row{
+  display:flex;align-items:flex-start;gap:12px;padding:12px 0;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+#synConnectorsCard .cx-row:last-child{border-bottom:none;padding-bottom:0;}
+#synConnectorsCard .cx-ico{
+  width:34px;height:34px;border-radius:9px;flex:0 0 34px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+  font-size:15px;
+}
+#synConnectorsCard .cx-meta{flex:1;min-width:0;}
+#synConnectorsCard .cx-name{font-size:13px;font-weight:600;color:rgba(240,240,245,0.94);}
+#synConnectorsCard .cx-blurb{font-size:11.5px;line-height:1.45;color:rgba(170,170,178,0.7);margin-top:3px;}
+#synConnectorsCard .cx-on{font-size:11px;color:rgba(0,217,168,0.85);margin-top:4px;}
+#synConnectorsCard .cx-off{font-size:11px;color:rgba(150,150,158,0.55);margin-top:4px;}
 #sec-profile .prof-mini-btn{
   padding:5px 10px;background:transparent;border:1px solid rgba(255,255,255,0.12);
   border-radius:5px;color:rgba(210,210,215,0.8);font-family:'DM Sans',sans-serif;font-size:10px;
@@ -3142,9 +3395,14 @@ html[data-theme="trueblack"]{scrollbar-color:rgba(130,130,138,0.3) transparent;}
   .matrixSliderGrid{grid-template-columns:1fr;gap:2px;}
 }
 
-#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px) scale(0.96);background:rgba(18,16,28,0.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.92);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .22s ease,transform .28s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);max-width:min(320px,calc(100vw - 40px));text-align:center;line-height:1.35;letter-spacing:0.01em;}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}
-
+#toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(6px);background:rgba(10,10,12,0.88);backdrop-filter:blur(20px) saturate(130%);-webkit-backdrop-filter:blur(20px) saturate(130%);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.88);padding:7px 13px;border-radius:999px;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;z-index:100120;opacity:0;transition:opacity .18s ease,transform .2s cubic-bezier(0.16,1,0.3,1);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.06);max-width:min(280px,calc(100vw - 40px));text-align:center;line-height:1.3;letter-spacing:0.01em;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.toast-anchor{bottom:auto;left:auto;right:auto;text-align:left;white-space:nowrap;transform:translateY(-50%) translateX(-4px);}
+#toast.toast-anchor.show{transform:translateY(-50%) translateX(0);}
+#toast.toast-below{transform:translateX(-50%) translateY(-4px);}
+#toast.toast-below.show{transform:translateX(-50%) translateY(0);}
+#toast.toast-above{transform:translate(-50%,calc(-100% + 4px));}
+#toast.toast-above.show{transform:translate(-50%,-100%);}
 /* Research / live-search pills: clear labels, not washed-out chrome */
 .src-meta-pill{
   display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 9px;border-radius:20px;
@@ -6142,10 +6400,10 @@ html[data-theme="purple"] #studioTopBarTitle{
 @keyframes cgGlowTB{0%,100%{box-shadow:0 0 8px rgba(255,255,255,0.25);}50%{box-shadow:0 0 16px rgba(255,255,255,0.45);}}
 /* True Black: welcome-back toast + global #toast — OLED glass, no purple */
 html[data-theme="trueblack"] #toast{
-  background:rgba(10,10,12,0.92)!important;
+  background:rgba(8,8,10,0.9)!important;
   border-color:rgba(255,255,255,0.12)!important;
-  color:rgba(255,255,255,0.92)!important;
-  box-shadow:0 8px 28px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.06)!important;
+  color:rgba(255,255,255,0.88)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.05)!important;
 }
 html[data-theme="trueblack"] #cyberGreeting .cg-bubble{
   background:rgba(8,8,10,0.92)!important;
@@ -6235,6 +6493,24 @@ body.studio-open #robotTooltip,
 body.studio-open #tinyBotCanvas,
 body.studio-open #synBotChat,
 body.studio-open #synBotRephrasePopup{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+/* Home widgets stay live in state, but must never paint over Studio */
+body.studio-open #synPulsePanel,
+body.studio-open #bnavPulseBtn,
+body.studio-open #avaTvPopup,
+body.studio-open #avaStsCtxMenu,
+body.studio-open #avaAvatarBox,
+body.studio-open #dgVoicePanel,
+body.studio-open #plusMenu,
+body.studio-open #chatHistoryDropdown,
+body.studio-open #stickyNotesLayer,
+body.studio-open .sticky-note-2030,
+body.studio-open #synFingerprint,
+body.studio-open #synBotZone{
   display:none!important;
   opacity:0!important;
   visibility:hidden!important;
@@ -7979,22 +8255,22 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </aside>
 
 <!-- Bottom Nav Bar -->
-<button id="bnavNotesBtn" onclick="goNotes()" title="My Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
 <!-- Pulse feed -->
-<button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" title="Pulse — meetups & updates" aria-label="Open Pulse updates" style="display:none;">
+<button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" aria-label="Pulse" style="display:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
   </svg>
   <span class="pulse-dot" aria-hidden="true"></span>
 </button>
-<button type="button" id="bnavCallBtn" title="Recent call result" aria-label="Recent call result">
+<button type="button" id="bnavCallBtn" aria-label="Call">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
   </svg>
   <span class="call-dot" aria-hidden="true"></span>
 </button>
 <!-- Ask — furthest right on this icon row; same send glyph as ask bar -->
-<button type="button" id="bnavAskBtn" onclick="window.activateAskMe&&window.activateAskMe()" title="Ask me anything" aria-label="Toggle ask me anything" style="display:none;">
+<button type="button" id="bnavAskBtn" onclick="window.activateAskMe&&window.activateAskMe()" aria-label="Ask" style="display:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"/>
     <polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -9417,7 +9693,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       </button>
       <div id="topBarDynBtns" style="display:flex;align-items:center;gap:4px;"></div>
       <!-- Robot hover toggle -->
-      <button id="synBotToggleBtn" onclick="toggleSynBot()" title="Hide SYN-BOT" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
+      <button id="synBotToggleBtn" onclick="toggleSynBot()" aria-label="Toggle SynBot" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:transparent;cursor:pointer;flex-shrink:0;position:relative;padding:0;transition:opacity .2s;">
         <svg id="synBotToggleIcon" class="syn-bot-robot" width="15" height="15" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="14" y="25" width="28" height="22" rx="5" stroke="#7c6af7" stroke-width="2"/>
           <rect x="15" y="10" width="26" height="17" rx="7" stroke="#7c6af7" stroke-width="2"/>
@@ -9431,7 +9707,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
           <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
         </svg>
       </button>
-      <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" title="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;overflow:hidden;">
+      <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" aria-label="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;overflow:hidden;">
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
           <div id="dnt-left" style="display:flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:9999px;transition:transform .3s;background:#27272a;">
             <img id="dnt-left-icon" class="dnt-ico-img" width="14" height="14" alt="" draggable="false" aria-hidden="true"/>
@@ -9528,7 +9804,32 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     </div>
     <div id="chpSidebar">
       <div id="chpSidebarInner">
-        <div class="chp-header" id="chpHeader">Past Chats<div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><button onclick="newChat({forceAsk:true})" title="New Chat" style="background:none;border:none;color:rgba(200,195,225,0.35);font-size:14px;cursor:pointer;padding:0;line-height:1;transition:color .2s;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='rgba(200,195,225,0.85)'" onmouseout="this.style.color='rgba(200,195,225,0.35)'">+</button></div></div>
+        <div class="chp-header" id="chpHeader"><div class="chp-header-hit">Past Chats<button type="button" id="chpUserBtn" class="chp-gear-dock" hidden aria-label="Account menu" aria-haspopup="menu" aria-expanded="false"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0 1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div><div style="display:flex;align-items:center;gap:6px;margin-left:auto;"><button onclick="newChat({forceAsk:true})" title="New Chat" style="background:none;border:none;color:rgba(200,195,225,0.35);font-size:14px;cursor:pointer;padding:0;line-height:1;transition:color .2s;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='rgba(200,195,225,0.85)'" onmouseout="this.style.color='rgba(200,195,225,0.35)'">+</button></div></div>
+        <div id="chpUserDock" class="chp-user-dock" hidden>
+          <div id="chpUserMenu" class="chp-user-menu" role="menu">
+            <div id="chpUserHome">
+              <div class="chp-user-card">
+                <span id="chpUserAv" class="chp-user-av"></span>
+                <span class="chp-user-meta">
+                  <span id="chpUserName" class="chp-user-name"></span>
+                  <span class="chp-user-subline"><span id="chpUserMail" class="chp-user-mail"></span><span id="chpUserPlan" class="chp-user-plan"></span></span>
+                </span>
+              </div>
+              <div class="chp-user-sep"></div>
+              <button type="button" role="menuitem" data-chp-act="settings">Settings</button>
+              <button type="button" role="menuitem" data-chp-act="theme">Appearance</button>
+              <button type="button" role="menuitem" data-chp-act="connectors">Connectors</button>
+              <button type="button" role="menuitem" data-chp-act="voice">Voice</button>
+              <button type="button" role="menuitem" data-chp-act="plan">Plan &amp; credits</button>
+              <div class="chp-user-sep"></div>
+              <button type="button" role="menuitem" data-chp-act="logout">Sign out</button>
+            </div>
+            <div id="chpUserPane" hidden>
+              <button type="button" class="chp-user-back" data-chp-act="back">‹ Back</button>
+              <div id="chpUserPaneBody"></div>
+            </div>
+          </div>
+        </div>
         <div class="chp-list" id="chpList"></div>
       </div>
     </div>
@@ -9580,7 +9881,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       </div>
       <div class="syn-sub">Synapses · Neural Interface</div>
       <!-- Fingerprint pad — hold-to-scan → speech-to-speech (mic centers mid-header) -->
-      <div class="syn-fp" id="synFingerprint" title="Hold to start speech-to-speech">
+      <div class="syn-fp" id="synFingerprint">
         <button type="button" class="syn-fp-pad" id="synFpPad" aria-label="Hold fingerprint to start speech-to-speech">
           <span class="syn-fp-ring" id="synFpRing" aria-hidden="true"></span>
           <span class="syn-fp-scan" aria-hidden="true"></span>
@@ -9599,7 +9900,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       <div class="input-wrapper">
         <textarea class="input-box" id="inputBox" placeholder="Ask me anything…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)" style="height:52px;"></textarea>
         <input type="file" id="chatFileInput" accept="image/*,.pdf,.txt,.md,.csv,.json,.mp3,audio/mpeg" multiple style="display:none;" onchange="handleChatFileSelect(event)">
-        <button id="chatAttachBtn" onclick="document.getElementById('chatFileInput').click()" title="Attach file" style="position:absolute;right:116px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.08)'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-8.49 8.49a1 1 0 0 1-1.41-1.41l7.78-7.78"/></svg></button>
+        <button id="chatAttachBtn" type="button" onclick="togglePlusMenu(event)" title="Add files or prompt tips" aria-label="Add files or prompt tips" aria-expanded="false" aria-haspopup="menu" style="position:absolute;right:116px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="if(this.getAttribute('aria-expanded')!=='true'){this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.08)'}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button id="chatHistoryBtn" onclick="toggleChatHistoryDropdown()" title="Chat history"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
         <button id="voiceModeBtn" onclick="event.stopPropagation(); (function(){ var es=document.getElementById('chatEmptyState'); var onOrb=es&&!es.classList.contains('hidden'); if(onOrb && _vmSpeaking){ var idx=recentChats.findIndex(function(c){return c.key===activeSession;}); if(idx>=0){ openRecentChat(idx); } else if(recentChats.length>0){ openRecentChat(0); } else { toggleVoiceMode(); } } else { toggleVoiceMode(); } })()" title="Voice mode" style="position:absolute;right:84px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(99,102,241,0.4);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);transition:opacity .3s,border-color .3s,background .3s,box-shadow .3s;padding:0;opacity:0.6;z-index:10;box-sizing:border-box;transform:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
         <button id="aiModeToggle" onclick="toggleAiMode()" title="Mode: LLM — pure Groq" style="position:absolute;right:52px;top:0;bottom:0;margin:auto 0;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s,border-color .2s;padding:0;opacity:0.45;box-sizing:border-box;transform:none;" onmouseover="this.style.opacity='0.85';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.opacity='0.45';this.style.borderColor='rgba(255,255,255,0.15)'"><svg width="16" height="16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;"><circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.7)" stroke-width="6" fill="none"/><path d="M72 50 A22 22 0 1 1 50 28" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round" fill="none"/><line x1="50" y1="50" x2="72" y2="50" stroke="rgba(255,255,255,0.7)" stroke-width="7" stroke-linecap="round"/></svg></button>
@@ -12131,7 +12432,12 @@ function _studioMountDeepSpace(){
     if(!layer || !modal) return;
     if(layer.parentNode === modal) return; // already mounted
     _studioDeepSpaceHome = { parent: layer.parentNode, nextSibling: layer.nextSibling };
+    // Reparenting restarts the 1.6s opacity transition from 0. Freeze it
+    // so Studio's own fade is the only open animation.
+    layer.style.transition = 'none';
+    layer.style.opacity = '1';
     modal.insertBefore(layer, modal.firstChild);
+    void layer.offsetWidth;
   }catch(e){}
 }
 function _studioUnmountDeepSpace(){
@@ -12140,11 +12446,18 @@ function _studioUnmountDeepSpace(){
     if(!layer || !_studioDeepSpaceHome) return;
     var home = _studioDeepSpaceHome;
     _studioDeepSpaceHome = null;
+    layer.style.transition = 'none';
+    layer.style.opacity = '1';
     if(home.nextSibling && home.nextSibling.parentNode === home.parent){
       home.parent.insertBefore(layer, home.nextSibling);
     } else {
       home.parent.appendChild(layer);
     }
+    void layer.offsetWidth;
+    requestAnimationFrame(function(){
+      layer.style.transition = '';
+      layer.style.opacity = '';
+    });
   }catch(e){}
 }
 
@@ -12160,7 +12473,11 @@ function openImageGenModal(){
   // the async paint lands — which is exactly the "swap on landing" this prevents.
   try{
     var _emptyElPre = document.getElementById('imageGenEmptyState');
-    if(_emptyElPre){ _emptyElPre.style.display = 'none'; _emptyElPre.innerHTML = ''; }
+    if(_emptyElPre){
+      _renderStudioHomeMarkup(_emptyElPre);
+      _emptyElPre.style.display = 'flex';
+      _studioHomeShowing = true;
+    }
   }catch(_pre){}
   closeMobileMore();
   renderImageGenTemplates();
@@ -12174,6 +12491,8 @@ function openImageGenModal(){
   modal.style.transition = 'none';
   modal.style.opacity = '0';
   modal.style.display = 'flex';
+  // Mount aurora before the fade so it rides the same opacity as the dock.
+  try{ _studioMountDeepSpace(); }catch(_ds){}
   void modal.offsetWidth; // force reflow so the transition below actually animates
   modal.style.transition = 'opacity .4s ease';
   // Studio: transparent status bar so header blends under the notification strip
@@ -12186,8 +12505,6 @@ function openImageGenModal(){
   /* Paint live model / style / aspect / mode on the PC dock chips */
   if(typeof syncImageGenPickersFromSelects === 'function') syncImageGenPickersFromSelects();
   else if(typeof syncStudioDockChips === 'function') syncStudioDockChips();
-  // True Black: bring the aurora inside Studio's own Generate tab (contained — see fn doc)
-  try{ _studioMountDeepSpace(); }catch(_ds){}
 }
 function closeImageGenModal(){
   var modal = document.getElementById('imageGenModal');
@@ -13679,7 +13996,7 @@ async function renderImageGenDefaultFeed(){
     });
   }
   resultsEl.style.display = 'none';
-  _renderStudioHomeMarkup(emptyEl);
+  if(emptyEl && !emptyEl.innerHTML) _renderStudioHomeMarkup(emptyEl);
   if(emptyEl) emptyEl.style.display = 'flex';
   _studioHomeShowing = true;
   _setStudioHomeBtnIcon(true);
@@ -15457,17 +15774,155 @@ function _haptic(pattern) {
   try { if (navigator.vibrate) navigator.vibrate(pattern || 10); } catch (e) {}
 }
 
-function showToast(msg){
+function hideToast(){
+  var t=document.getElementById('toast');
+  if(!t) return;
+  t.classList.remove('show');
+  clearTimeout(t._to);
+  clearTimeout(t._hidePos);
+  t._hidePos=setTimeout(function(){
+    if(t.classList.contains('show')) return;
+    t.classList.remove('toast-anchor','toast-below','toast-above');
+    t.style.top=t.style.left=t.style.right=t.style.bottom=t.style.transform='';
+  }, 220);
+}
+function showToast(msg, opts){
   var t=document.getElementById('toast');
   if(!t) return;
   /* During immersive tour/film, suppress app toasts — they fight narration & headers */
   if(window.__synTourActive) return;
+  opts = opts || {};
+  clearTimeout(t._hidePos);
   t.textContent=msg;
   t.style.opacity='';
+  t.style.top=t.style.left=t.style.right=t.style.bottom=t.style.transform='';
+  t.classList.remove('toast-anchor','toast-below','toast-above');
+  var el = opts.anchor;
+  if(typeof el === 'string') el = document.getElementById(el);
+  if(el && el.getBoundingClientRect){
+    var r = el.getBoundingClientRect();
+    t.classList.add('toast-anchor');
+    t.style.bottom = 'auto';
+    if(opts.place === 'below'){
+      t.classList.add('toast-below');
+      t.style.top = Math.round(r.bottom + 8) + 'px';
+      t.style.left = Math.round(r.left + r.width/2) + 'px';
+    } else if(opts.place === 'above'){
+      t.classList.add('toast-above');
+      t.style.top = Math.round(r.top - 8) + 'px';
+      t.style.left = Math.round(r.left + r.width/2) + 'px';
+    } else {
+      t.style.top = Math.round(r.top + r.height/2) + 'px';
+      t.style.left = Math.round(r.right + 8) + 'px';
+    }
+  }
   t.classList.add('show');
   clearTimeout(t._to);
-  t._to=setTimeout(function(){t.classList.remove('show');},2000);
+  if(!opts.hold){
+    t._to=setTimeout(function(){ if(typeof hideToast==='function') hideToast(); }, opts.ms || 2000);
+  }
 }
+function _bindHintToast(el, msgOrFn, opts){
+  if(!el) return;
+  opts = opts || {};
+  try{ el.removeAttribute('title'); }catch(_e){}
+  if(el._hintBound) return;
+  el._hintBound = true;
+  var timer = 0;
+  function hide(){
+    clearTimeout(timer);
+    var t = document.getElementById('toast');
+    if(t && t.classList.contains('toast-anchor')) hideToast();
+  }
+  el.addEventListener('pointerenter', function(){
+    try{ el.removeAttribute('title'); }catch(_e2){}
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      if(!el.isConnected) return;
+      var msg = typeof msgOrFn === 'function' ? msgOrFn() : msgOrFn;
+      if(msg) showToast(msg, {anchor:el, hold:true, place:opts.place || 'below'});
+    }, opts.delay || 550);
+  });
+  el.addEventListener('pointerleave', hide);
+  el.addEventListener('click', hide);
+}
+function _bindDayNightHint(){
+  var dnt = document.getElementById('dayNightToggle');
+  if(!dnt) return;
+  dnt.removeAttribute('title');
+  _bindHintToast(dnt, 'Day / night', {place:'below'});
+}
+function _bindSynBotHint(){
+  var btn = document.getElementById('synBotToggleBtn');
+  if(!btn) return;
+  btn.removeAttribute('title');
+  _bindHintToast(btn, 'Synbot Toggle', {place:'below'});
+}
+function _bindBottomLeftHints(){
+  var notes = document.getElementById('bnavNotesBtn');
+  var pulse = document.getElementById('bnavPulseBtn');
+  var call = document.getElementById('bnavCallBtn');
+  var ask = document.getElementById('bnavAskBtn');
+  var fp = document.getElementById('synFingerprint');
+  if(notes) _bindHintToast(notes, 'Notes', {place:'above'});
+  if(pulse) _bindHintToast(pulse, 'Pulse', {place:'above'});
+  if(call) _bindHintToast(call, 'Call', {place:'above'});
+  if(ask) _bindHintToast(ask, 'Ask', {place:'above'});
+  if(fp) _bindHintToast(fp, function(){
+    var voiceOn = !!(window._topNavVoiceActive || (document.body && document.body.classList.contains('voice-live')) || window._fpUnlocked);
+    if(voiceOn) return 'End voice';
+    var needHold = (typeof _fpRequiresHoldScan === 'function') ? _fpRequiresHoldScan() : true;
+    return needHold ? 'Hold to unlock' : 'Speech to speech';
+  }, {place:'above'});
+}
+function _hintPlaceFor(el){
+  try{
+    var r = el.getBoundingClientRect();
+    if(r.top < 88) return 'below';
+    if(r.bottom > window.innerHeight - 88) return 'above';
+    return 'above';
+  }catch(_e){ return 'below'; }
+}
+(function(){
+  var timer = 0, cur = null;
+  function hide(){
+    clearTimeout(timer);
+    cur = null;
+    var t = document.getElementById('toast');
+    if(t && t.classList.contains('toast-anchor')) hideToast();
+  }
+  document.addEventListener('pointerover', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('[title], [data-hint]') : null;
+    if(!el || el._hintBound) return;
+    var msg = String(el.getAttribute('data-hint') || el.getAttribute('title') || '').trim();
+    if(!msg) return;
+    if(el.hasAttribute('title')){
+      el.setAttribute('data-hint', msg);
+      el.removeAttribute('title');
+    }
+    if(cur === el) return;
+    cur = el;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      if(cur !== el || !el.isConnected) return;
+      showToast(msg, {anchor:el, hold:true, place:_hintPlaceFor(el)});
+    }, 550);
+  }, true);
+  document.addEventListener('pointerout', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('[data-hint], [title]') : null;
+    if(!el || el._hintBound) return;
+    if(e.relatedTarget && el.contains(e.relatedTarget)) return;
+    if(cur === el) hide();
+  }, true);
+})();
+_bindDayNightHint();
+_bindSynBotHint();
+_bindBottomLeftHints();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', function(){ _bindDayNightHint(); _bindSynBotHint(); _bindBottomLeftHints(); });
+}
+setTimeout(function(){ _bindDayNightHint(); _bindSynBotHint(); _bindBottomLeftHints(); }, 0);
+setTimeout(function(){ _bindDayNightHint(); _bindSynBotHint(); _bindBottomLeftHints(); }, 800);
 
 /**
  * Detect "research X" / "deep research X" (same spirit as live-search keywords).
@@ -15642,7 +16097,7 @@ function switchAuthTab(t){
 }
 function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
 function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
-function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;try{window.currentUser=null;}catch(_w){}try{document.body.classList.remove('syn-authed');}catch(_b){}try{if(typeof window._applyDockedTourBtn==='function')window._applyDockedTourBtn();}catch(_t){}chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
+function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;try{window.currentUser=null;}catch(_w){}try{document.body.classList.remove('syn-authed');}catch(_b){}try{if(typeof window._syncChpUserDock==='function')window._syncChpUserDock();}catch(_cx){}try{if(typeof window._applyDockedTourBtn==='function')window._applyDockedTourBtn();}catch(_t){}chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
 // Clear video banner and avatar so old account's media doesn't show for next user
 var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.style.display='none';}
 var fav=document.getElementById('feedProfileAv');if(fav){fav.style.backgroundImage='';fav.style.background='linear-gradient(135deg,#6366f1,#4f46e5)';fav.textContent='?';}
@@ -15680,6 +16135,7 @@ if(typeof renderPlanBadge==='function')renderPlanBadge();loadPersistedChats();if
 if(currentUser.avatar)try{localStorage.setItem('synapses_avatar_'+currentUser.email,currentUser.avatar);}catch(e){}
 // Avatar is already loaded from Supabase in doLogin — apply it immediately
 applyAvatar(currentUser.avatar||null);
+if(typeof window._syncChpUserDock==='function') window._syncChpUserDock();
 var cav=document.getElementById('composerAv');if(cav){if(currentUser.avatar){cav.style.backgroundImage='url('+currentUser.avatar+')';cav.style.backgroundSize='cover';cav.style.backgroundPosition='center';cav.style.background='none';cav.textContent='';}else{cav.textContent=currentUser.initial;cav.style.background=currentUser.color;}}var _fpc=document.getElementById('feedProfileCard');
 var _fpn=document.getElementById('feedProfileName');
 var _fpr=document.getElementById('feedProfileRole');
@@ -20325,11 +20781,7 @@ function _fpSyncTapModeUi(){
   window._fpTapMode = !needHold;
   if(wrap) wrap.classList.toggle('fp-tap-mode', !needHold);
   var voiceOn = !!(window._topNavVoiceActive || (document.body && document.body.classList.contains('voice-live')) || window._fpUnlocked);
-  if(wrap){
-    wrap.title = voiceOn
-      ? 'Tap to end speech-to-speech'
-      : (needHold ? 'Hold fingerprint to unlock voice' : 'Tap for speech-to-speech');
-  }
+  if(wrap) wrap.removeAttribute('title');
   if(pad){
     pad.setAttribute('aria-label', voiceOn
       ? 'Tap to end speech-to-speech'
@@ -20787,7 +21239,35 @@ function _saveAskBarPref(on){
  * opts.silent true → never write synapses_askbar_open (e.g. + new chat opens Ask without flipping toggle pref).
  * When forced open without silent, saves pref on (user opened Ask via activateAskMe).
  */
+function _hardStopChatVoice(){
+  try{ if(typeof _vmActive!=='undefined') _vmActive=false; }catch(_e){}
+  try{ if(typeof _vmSpeaking!=='undefined') _vmSpeaking=false; }catch(_e){}
+  try{ if(typeof _ttsStopAll==='function') _ttsStopAll(true); }catch(_e){}
+  try{ if(typeof window._stsStopAll==='function') window._stsStopAll(); }catch(_e){}
+  try{
+    if(window._topNavVoiceActive && typeof window.toggleTopNavVoice==='function' && typeof window._stsStopAll!=='function'){
+      window.toggleTopNavVoice();
+    }
+  }catch(_e){}
+  try{ if(typeof closeVoiceMode==='function') closeVoiceMode(); }catch(_e){}
+  try{ if(typeof _chatAbortCtrl!=='undefined' && _chatAbortCtrl) _chatAbortCtrl.abort(); }catch(_e){}
+  try{ if(typeof _stopMicAnim==='function') _stopMicAnim(); }catch(_e){}
+  try{
+    var vmb=document.getElementById('voiceModeBtn');
+    if(vmb){
+      vmb.classList.remove('tts-breathing');
+      vmb.style.animation='';
+      vmb.style.background='transparent';
+      vmb.style.borderColor='rgba(99,102,241,0.4)';
+      vmb.style.boxShadow='none';
+      vmb.style.opacity='0.6';
+      vmb.style.color='rgba(255,255,255,0.55)';
+    }
+  }catch(_e){}
+  try{ if(typeof _ttsUpdateFloatingPill==='function') _ttsUpdateFloatingPill(); }catch(_e){}
+}
 function _restoreEmptyChatHome(withAsk, opts){
+  try{ _hardStopChatVoice(); }catch(_hs){}
   opts = opts || {};
   var forced = (withAsk !== undefined);
   if(!forced) withAsk = _prefAskBarOpen();
@@ -22505,6 +22985,156 @@ function toggleAiMode(){
 // ── Groq API (proxied through Render backend — no keys in client) ──
 var GROQ_PROXY = 'https://synbot-whatsapp-2.onrender.com';
 
+/* Per-user app connectors. Tokens never leave the server. Chat + speech-to-speech
+   call /connectors/act so Ava can later "check my email" / "what's on my calendar". */
+(function(){
+  var CX_ICONS = { google:'G', github:'⌥', notion:'N' };
+  function _cxUid(){
+    try{
+      if(typeof currentUser !== 'undefined' && currentUser && currentUser.id && !currentUser.isGuest) return String(currentUser.id);
+    }catch(e){}
+    return '';
+  }
+  function _cxBase(){
+    return (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY.replace(/\/$/,'') : 'https://synbot-whatsapp-2.onrender.com';
+  }
+  async function cxList(){
+    var uid = _cxUid();
+    if(!uid) return { ok:false, needSignIn:true, providers:[], connected:{} };
+    var r = await fetch(_cxBase()+'/connectors/list?user_id='+encodeURIComponent(uid));
+    return await r.json();
+  }
+  function cxConnect(provider){
+    var uid = _cxUid();
+    if(!uid){ if(typeof showToast==='function') showToast('Sign in to connect apps'); return; }
+    window.open(_cxBase()+'/connectors/auth/'+encodeURIComponent(provider)+'?user_id='+encodeURIComponent(uid), 'synCx', 'width=520,height=680');
+  }
+  async function cxDisconnect(provider){
+    var uid = _cxUid();
+    if(!uid) return { ok:false };
+    var r = await fetch(_cxBase()+'/connectors/disconnect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ user_id:uid, provider:provider })
+    });
+    return await r.json();
+  }
+  async function cxAct(action, args, confirm){
+    var uid = _cxUid();
+    if(!uid) return { ok:false, needSignIn:true, spoken:'Sign in first, then connect the app in Profile.' };
+    var r = await fetch(_cxBase()+'/connectors/act', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ user_id:uid, action:action, args:args||{}, confirm:!!confirm })
+    });
+    return await r.json();
+  }
+  function cxDetect(text){
+    var t = String(text||'').trim();
+    if(!t) return null;
+    if(/\b(connect|link)\b.{0,18}\b(google|gmail|calendar|drive)\b/i.test(t)) return { kind:'connect', provider:'google' };
+    if(/\b(connect|link)\b.{0,12}\bgithub\b/i.test(t)) return { kind:'connect', provider:'github' };
+    if(/\b(connect|link)\b.{0,12}\bnotion\b/i.test(t)) return { kind:'connect', provider:'notion' };
+    if(/\b(search|find|look\s*up)\b.{0,24}\b(mail|email|inbox|gmail)\b/i.test(t) || /\b(mail|email|inbox|gmail)\b.{0,18}\b(search|find)\b/i.test(t)){
+      var q = t.replace(/^.*?\b(?:for|about)\s+/i,'').replace(/\b(in )?(my )?(mail|email|inbox|gmail)\b/ig,'').trim();
+      return { kind:'act', action:'gmail.search', args:{ q: q || t } };
+    }
+    if(/\b(check|read|open|any|what.?s in|what is in)\b.{0,20}\b(mail|email|inbox|gmail)\b|\bunread\b.{0,12}\b(mail|email)\b|\b(mail|email|inbox)\b.{0,12}\b(unread|new)\b/i.test(t)){
+      return { kind:'act', action:'gmail.unread', args:{} };
+    }
+    if(/\b(add|create|put|schedule)\b.{0,24}\b(calendar|event|meeting|appointment)\b/i.test(t)){
+      return { kind:'act', action:'calendar.create', args:{ title: t }, needsConfirm:true };
+    }
+    if(/\b(what.?s on my (calendar|schedule|day)|am i free( today)?|any meetings( today)?|my calendar|calendar today)\b/i.test(t)){
+      var days = /\bweek\b/i.test(t) ? 7 : 1;
+      return { kind:'act', action:'calendar.upcoming', args:{ days:days } };
+    }
+    if(/\b(search|find|look\s*up)\b.{0,20}\b(drive|google drive|docs?)\b|\bin (my )?drive\b/i.test(t)){
+      var dq = t.replace(/^.*?\b(?:for|about|named)\s+/i,'').replace(/\b(in )?(my )?(google )?drive\b/ig,'').trim();
+      return { kind:'act', action: dq ? 'drive.search' : 'drive.recent', args:{ q:dq } };
+    }
+    if(/\b(my )?(github )?repos?(itories)?\b|\brepos on github\b/i.test(t)){
+      return { kind:'act', action:'github.repos', args:{} };
+    }
+    if(/\b(search|find)\b.{0,16}\bnotion\b|\bin notion\b/i.test(t)){
+      var nq = t.replace(/^.*?\b(?:for|about)\s+/i,'').replace(/\b(in )?notion\b/ig,'').trim();
+      return { kind:'act', action:'notion.search', args:{ q:nq } };
+    }
+    return null;
+  }
+  async function cxRunFromText(text, opts){
+    opts = opts || {};
+    var hit = cxDetect(text);
+    if(!hit) return null;
+    if(hit.kind === 'connect'){
+      cxConnect(hit.provider);
+      return { ok:true, handled:true, spoken:'Opening '+hit.provider+' to connect.' };
+    }
+    if(hit.needsConfirm && !opts.confirm){
+      return { ok:false, handled:true, needsConfirm:true, pending:hit, spoken:'I can add that to your calendar. Say confirm to add it.' };
+    }
+    var out = await cxAct(hit.action, hit.args, !!opts.confirm);
+    out.handled = true;
+    out.pending = hit;
+    if(out.needConnect){
+      out.spoken = (out.spoken || 'That app is not connected.') + ' Open Profile, then Connected apps.';
+    }
+    if(out.needSignIn){
+      out.spoken = 'Sign in first, then connect the app in Profile.';
+    }
+    return out;
+  }
+  async function _renderConnectorsCard(){
+    var el = document.getElementById('synConnectorsCard');
+    if(!el) return;
+    var uid = _cxUid();
+    el.innerHTML = '<div class="section-card-header"><h3>Connected apps</h3></div><div style="padding:14px 18px 16px;font-size:13px;color:rgba(170,170,178,0.7);">Loading…</div>';
+    if(!uid){
+      el.innerHTML = '<div class="section-card-header"><h3>Connected apps</h3></div><div style="padding:16px 18px;font-size:13px;line-height:1.55;color:rgba(170,170,178,0.75);">Sign in to connect Gmail, Calendar, Drive, GitHub, or Notion. Speech-to-speech can use them once they are linked.</div>';
+      return;
+    }
+    var data;
+    try{ data = await cxList(); }
+    catch(e){ data = { ok:false, error:(e && e.message) || 'offline' }; }
+    var providers = (data && data.providers) || [
+      { id:'google', name:'Google', apps:['Gmail','Calendar','Drive'], blurb:'Mail, calendar, Drive.', ready:true },
+      { id:'github', name:'GitHub', apps:['Repos'], blurb:'Your repositories.', ready:true },
+      { id:'notion', name:'Notion', apps:['Workspace'], blurb:'Search pages.', ready:true }
+    ];
+    var connected = (data && data.connected) || {};
+    var rows = providers.map(function(p){
+      var on = !!connected[p.id];
+      var acc = on && connected[p.id].account ? connected[p.id].account : '';
+      var status = on
+        ? '<div class="cx-on">Connected'+(acc ? ' · '+String(acc).replace(/</g,'') : '')+'</div>'
+        : (!p.ready ? '<div class="cx-off">Server keys not set yet</div>' : '<div class="cx-off">Not connected</div>');
+      var btn = on
+        ? '<button type="button" class="prof-ghost-btn" data-cx-off="'+p.id+'">Disconnect</button>'
+        : '<button type="button" class="prof-ghost-btn" data-cx-on="'+p.id+'" '+(p.ready?'':'disabled style="opacity:.4"')+'>Connect</button>';
+      return '<div class="cx-row"><div class="cx-ico">'+(CX_ICONS[p.id]||'•')+'</div><div class="cx-meta"><div class="cx-name">'+p.name+'</div><div class="cx-blurb">'+(p.blurb||'')+'</div>'+status+'</div>'+btn+'</div>';
+    }).join('');
+    var err = (data && !data.ok && data.error) ? '<div style="font-size:11.5px;color:#f87171;margin-bottom:10px;">'+String(data.error).replace(/</g,'')+'</div>' : '';
+    el.innerHTML = '<div class="section-card-header"><h3>Connected apps</h3></div><div style="padding:8px 18px 16px;">'+
+      '<p style="font-size:12.5px;line-height:1.55;color:rgba(170,170,178,0.72);margin:8px 0 4px;">Link an account, then ask in chat or speech-to-speech — check my email, what\'s on my calendar, find this in Drive.</p>'+
+      err+rows+'</div>';
+    el.querySelectorAll('[data-cx-on]').forEach(function(b){
+      b.onclick = function(){ cxConnect(b.getAttribute('data-cx-on')); };
+    });
+    el.querySelectorAll('[data-cx-off]').forEach(function(b){
+      b.onclick = async function(){
+        if(!confirm('Disconnect '+b.getAttribute('data-cx-off')+'?')) return;
+        await cxDisconnect(b.getAttribute('data-cx-off'));
+        _renderConnectorsCard();
+      };
+    });
+  }
+  window.addEventListener('message', function(e){
+    if(!e.data || e.data.type !== 'syn-connector') return;
+    if(typeof showToast==='function') showToast(e.data.ok ? 'App connected' : 'Could not connect');
+    _renderConnectorsCard();
+    if(typeof window._chpRefreshConnectors==='function') window._chpRefreshConnectors();
+  });
+  window.synConnectors = { list:cxList, connect:cxConnect, disconnect:cxDisconnect, act:cxAct, detect:cxDetect, runFromText:cxRunFromText, render:_renderConnectorsCard };
+})();
+
 // ── Ava modes: each uses EXACT prompt code from a source HTML ─────────────
 // selfaware → index-ava-life-nodes.html
 // companion → indexpreavalifebackup.html
@@ -23150,8 +23780,23 @@ if (typeof document !== 'undefined') {
   }, true);
 }
 
+function _isHostAccount(){
+  try {
+    var u = (typeof currentUser !== 'undefined' && currentUser) ? currentUser
+      : (window.currentUser || null);
+    var email = (u && u.email && !u.isGuest) ? String(u.email) : '';
+    if(!email){
+      var s = JSON.parse(localStorage.getItem('synapses_session') || 'null');
+      if(s && s.email && !s.isGuest) email = String(s.email);
+    }
+    return email.trim().toLowerCase() === 'ednbusiness73@gmail.com';
+  } catch(_e){ return false; }
+}
+window._isHostAccount = _isHostAccount;
+
 /** Modal: Ava continuous life state — open from voice-btn right-click menu */
 window.openAvaLifeViewer = async function(forceTick) {
+  if(!_isHostAccount()) return;
   var old = document.getElementById('avaLifeOverlay');
   if (old) old.remove();
 
@@ -23159,9 +23804,9 @@ window.openAvaLifeViewer = async function(forceTick) {
   overlay.id = 'avaLifeOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   overlay.innerHTML =
-    '<div style="width:min(92vw,440px);max-height:min(86vh,640px);overflow:auto;background:rgba(14,12,24,0.98);border:1px solid rgba(124,106,247,0.35);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.65);padding:18px 18px 16px;font-family:\'DM Sans\',sans-serif;">' +
+    '<div class="ava-life-card" style="width:min(92vw,440px);max-height:min(86vh,640px);overflow:auto;background:rgba(14,12,24,0.98);border:1px solid rgba(124,106,247,0.35);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.65);padding:18px 18px 16px;font-family:\'DM Sans\',sans-serif;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">' +
-        '<div style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:15px;color:#e8e8f0;">🧬 Ava Life State</div>' +
+        '<div class="ava-life-title" style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:15px;color:#e8e8f0;">🧬 Ava Life State</div>' +
         '<button type="button" id="avaLifeCloseBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:rgba(255,255,255,0.55);padding:4px 10px;cursor:pointer;font-size:12px;">Close</button>' +
       '</div>' +
       '<div id="avaLifeModalBody" style="font-size:12.5px;color:rgba(255,255,255,0.75);line-height:1.55;">Loading…</div>' +
@@ -23229,7 +23874,7 @@ window.openAvaLifeViewer = async function(forceTick) {
         var ts = snap.today_status || (typeof window._avaBuildClientTodayStandin === 'function' ? window._avaBuildClientTodayStandin(snap) : '');
         if (!ts) return '';
         return '<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Today schedule (morning → night)</div>' +
-          '<div style="margin-bottom:12px;color:rgba(255,255,255,0.78);white-space:pre-wrap;word-break:break-word;line-height:1.45;font-size:11.5px;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:10px;padding:10px 12px;">' +
+          '<div class="ava-life-sched" style="margin-bottom:12px;color:rgba(255,255,255,0.78);white-space:pre-wrap;word-break:break-word;line-height:1.45;font-size:11.5px;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.2);border-radius:10px;padding:10px 12px;">' +
           esc(ts) + '</div>';
       })() +
       (snap.today_diary ? ('<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:4px;">Today diary</div><div style="margin-bottom:12px;color:rgba(255,255,255,0.8);">' + esc(snap.today_diary) + '</div>') : '') +
@@ -23398,6 +24043,7 @@ function renderPlanBadge(){
     el.style.color = '#6b6b8a';
     el.onclick = showPaywall;
   }
+  if(typeof window._syncChpUserDock==='function') window._syncChpUserDock();
 }
 
 function syncPlanFromSupabase(){
@@ -23539,7 +24185,11 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
       if(notesOnly) messages.push({role:'system', content:'USER QUICK NOTES (reference if relevant):' + notesOnly});
     }
     // llm_nocontext: no system prompt at all (used for note extraction to avoid token bloat)
-    msgs.forEach(function(m){ messages.push({role:m.role==='assistant'?'assistant':'user', content:m.content}); });
+    msgs.forEach(function(m){
+      var _mc = m.content;
+      if(typeof _stripSyndoc === 'function') _mc = _stripSyndoc(_mc);
+      messages.push({role:m.role==='assistant'?'assistant':'user', content:_mc});
+    });
     /* Keep payload lean — history bloat still hurts TTFT */
     if(messages.length > 20) messages = messages.slice(-20);
     for (var _mi = 0; _mi < messages.length; _mi++) {
@@ -24023,17 +24673,40 @@ function toggleAvaGlow(){
   });
 }
 var AVA_B64='data:image/webp;base64,UklGRogCAABXRUJQVlA4IHwCAABQDACdASowADAAPp1Gm0olo6IhpyyQsBOJQBWGYjdmz/uMFYL5lwHqpp465xWJjTvLO8IsB9+uspveaF4G7PViUGbDEdVs1ZHU7I1yjmzxrwSAzimy1Oz8b4zzSKtownkmLS4GLzofrBk8AAD+8ULlFTYELG6yAkmGo/HasBTl+OjZZvw4kAWnPzN8yVKi+f2uVmLAnMW1LKMgxR6Xyl9qt0WC0baYLx3OkSpqKNRdfLVJZ/mPAe1Mg85SY++griupG2XYY1PYvlA0IQefdn5y9qfhwqioSk2Fr5SH+J41lAZ0L9wustHVrCYPP9arA0inqej2ByxBMAodzQjyQxDLnLoA7nGn0D3dctWnagJ1GzaYX1eN5daMia5IXlxh+uHErdmaYvzW7q1jvpr05FMW3o9Saq8oFjkUEBTsFCEx0L2mrX1TjlZjlqt8ycJMS6FQ7QO86VQZbmYgWt+0TP8gBBAH+UayFXYbv1sXTrYIwqGttP30JNRptggnvvI/rJnIqnwHRuBEE9U0PWPlPCR5gkiuoFlojsFjtePb/G8Y1tdPpMk+cVwXrCFDB0c1LVApaOGpEz+NegXot0gDdZlY9UoD8BNVNoDvJHiDNVXfdQ/0W0TGey4XbUtXh6aoX5WvkDvkQ8RVxtKTiDpjNmP3NtZF0zNxiHJeRyfObC7V8SmU+1UVLz25IYfvq9T2Ow9zAyq/T/278SxbDsxqdGypEKuQGeo3sPkegfcpWrZ+ErFqv3gSdMx9V1bNtONc5fZE7AENzmM5J+K3n9IVecJ4+qkZ6DkTL8S7ZhyaH8FHcCl8pGZsCEcyTZEAcFusa0bmtl1BLENWB4TWoAA=';
+function _encodeSyndoc(obj){
+  try{
+    var slim = { type: obj.type, name: obj.name, spec: obj.spec, prompt: obj.prompt, url: obj.url||'' };
+    var s = JSON.stringify(slim);
+    if(s.length > 120000){ slim.spec = null; s = JSON.stringify(slim); }
+    return '<!--SYNDOC:'+btoa(unescape(encodeURIComponent(s)))+'-->';
+  }catch(e){ return ''; }
+}
+function _decodeSyndoc(text){
+  var raw = String(text==null?'':text);
+  var m = raw.match(/<!--SYNDOC:([A-Za-z0-9+/=]+)-->/);
+  var doc = null;
+  if(m){
+    try{ doc = JSON.parse(decodeURIComponent(escape(atob(m[1])))); }catch(e){ doc = null; }
+    raw = raw.replace(/\n*<!--SYNDOC:[A-Za-z0-9+/=]+-->/g,'').trim();
+  }
+  return { text: raw, doc: doc };
+}
+function _stripSyndoc(s){
+  return String(s==null?'':s).replace(/\n*<!--SYNDOC:[A-Za-z0-9+/=]+-->/g,'').trim();
+}
 function addMsg(cId,role,content,isTyping,mode){
   var c=document.getElementById(cId),g=document.createElement('div');
   g.className='message-group'+(role==='user'?' message-group-user':'');
   if(isTyping)g.id=cId+'-typing';
   var aiName=mode==='coach'?'AI Coach Hub':'Synapses AI';
   var avatarHtml='';
+  var _sd = (!isTyping && role==='ai') ? _decodeSyndoc(content) : { text: content, doc: null };
+  var _disp = _sd.text;
   /* Research replies: same clickable title-links on first open as on reopen */
   var _bodyHtml = '';
   if(!isTyping){
     try{
-      var _rawC = (content == null) ? '' : String(content);
+      var _rawC = (_disp == null) ? '' : String(_disp);
       if(role==='ai' && typeof _avaRenderResearchHtml==='function' &&
          (/@@AVA_SOURCES_HTML@@/i.test(_rawC) || /ava-src-block/i.test(_rawC))){
         _bodyHtml = _avaRenderResearchHtml(_rawC);
@@ -24042,11 +24715,17 @@ function addMsg(cId,role,content,isTyping,mode){
       }
     }catch(_amErr){
       console.warn('[addMsg] render failed, plain text fallback', _amErr);
-      _bodyHtml = esc(String(content||'')).replace(/\n/g,'<br>');
+      _bodyHtml = esc(String(_disp||'')).replace(/\n/g,'<br>');
     }
   }
   g.innerHTML=avatarHtml+'<div class="message-body">'+'<div class="message-name'+(role==='user'?' message-name-user':'')+'">'+(role==='ai'?aiName:(currentUser?currentUser.name:'You'))+'</div>'+(isTyping?'<div class="typing"><span></span><span></span><span></span></div>':'<div class="message-text"><p>'+_bodyHtml+'</p></div>')+'</div>';
   c.appendChild(g);
+  if(_sd.doc && !isTyping){
+    var _mb = g.querySelector('.message-body');
+    if(_mb && typeof _mountGeneratedDocPreview === 'function'){
+      try{ _mountGeneratedDocPreview(_mb, _sd.doc.type, _sd.doc.url||'', _sd.doc.spec, _sd.doc.name, _sd.doc.prompt); }catch(_md){}
+    }
+  }
   c.scrollTop=c.scrollHeight;
   return g;
 }
@@ -24126,6 +24805,13 @@ function closeChatHistoryPanel(){
   var sidebar = document.getElementById('chpSidebar');
   var trigger = document.getElementById('chatHistoryTrigger');
   if(sidebar) sidebar.classList.remove('open','fade-open');
+  var _dock = document.getElementById('chpUserDock');
+  var _gbtn = document.getElementById('chpUserBtn');
+  if(_dock) _dock.classList.remove('open');
+  if(_gbtn) _gbtn.setAttribute('aria-expanded','false');
+  var _hdr = document.getElementById('chpHeader');
+  if(_hdr) _hdr.classList.remove('chp-head-open');
+  if(typeof window._chpParkAccountMenu==='function') window._chpParkAccountMenu();
   var _secChat = document.getElementById('sec-chat');
   if(_secChat) _secChat.classList.remove('chp-blur-active');
   _syncStickyNotesOffset();
@@ -24186,6 +24872,7 @@ function updateChpActiveState(){
   });
 }
 
+var _chpBmIco='<svg class="chp-bm" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h10c.83 0 1.5.67 1.5 1.5v16.1L12 16.6 5.5 21.1V5c0-.83.67-1.5 1.5-1.5z"/></svg>';
 function refreshChpList(){
   var list = document.getElementById('chpList');
   if(!list) return;
@@ -24194,28 +24881,293 @@ function refreshChpList(){
   if(_sb) _sb.classList.remove('fade-open');
   list.innerHTML = '';
   var all = recentChats.slice();
-  if(!all.length){
+  var savedKeys = {};
+  savedChats.forEach(function(s){ if(s && s.key) savedKeys[s.key]=1; });
+  var unsaved = [];
+  all.forEach(function(c,i){ if(c && c.key && !savedKeys[c.key]) unsaved.push({c:c,i:i}); });
+  if(!savedChats.length && !unsaved.length){
     list.innerHTML = '<div class="chp-empty">No past chats yet</div>';
   } else {
     if(savedChats.length){
       var sl = document.createElement('div'); sl.className='chp-section-label'; sl.textContent='Saved'; list.appendChild(sl);
       savedChats.forEach(function(c,i){
         var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':'');
-        item.innerHTML = '<span class="chp-item-dot" style="background:rgba(0,217,168,0.6)"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn bookmarked" title="Bookmarked" onclick="event.stopPropagation();removeSavedChatByKey(\''+c.key+'\');refreshChpList();">🔖</button><button class="chp-act-btn" title="Delete" onclick="event.stopPropagation();savedChats.splice('+i+',1);persistChats();refreshChpList();">✕</button></div>';
+        item.innerHTML = '<span class="chp-item-dot" style="background:rgba(0,217,168,0.6)"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn bookmarked" data-hint="Bookmarked" onclick="event.stopPropagation();removeSavedChatByKey(\''+c.key+'\');refreshChpList();">'+_chpBmIco+'</button><button class="chp-act-btn" data-hint="Delete" onclick="event.stopPropagation();deleteSavedChat('+i+');">✕</button></div>';
         (function(_i){ item.onclick = function(){ openSavedChat(_i); }; })(i);
         list.appendChild(item);
       });
     }
-    var rl = document.createElement('div'); rl.className='chp-section-label'; rl.textContent='Recent'; list.appendChild(rl);
-    all.forEach(function(c,i){
-      var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':''); item.dataset.sessionKey=c.key;
-      var isSaved = savedChats.find(function(s){return s.key===c.key;});
-      item.innerHTML = '<span class="chp-item-dot"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn'+(isSaved?' bookmarked':'')+('" title="'+(isSaved?'Bookmarked':'Bookmark')+'" onclick="event.stopPropagation();openSaveChatModal(\''+c.key+'\');">🔖</button><button class="chp-act-btn" title="Delete" onclick="event.stopPropagation();recentChats.splice('+i+',1);persistChats();refreshChpList();">✕</button></div>');
-      (function(_i){ item.onclick = function(){ openRecentChat(_i); }; })(i);
-      list.appendChild(item);
-    });
+    if(unsaved.length){
+      var rl = document.createElement('div'); rl.className='chp-section-label'; rl.textContent='Recent'; list.appendChild(rl);
+      unsaved.forEach(function(row){
+        var c = row.c, i = row.i;
+        var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':''); item.dataset.sessionKey=c.key;
+        item.innerHTML = '<span class="chp-item-dot"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn" data-hint="Bookmark" onclick="event.stopPropagation();openSaveChatModal(\''+c.key+'\');">'+_chpBmIco+'</button><button class="chp-act-btn" data-hint="Delete" onclick="event.stopPropagation();deleteRecentChat('+i+');">✕</button></div>';
+        (function(_i){ item.onclick = function(){ openRecentChat(_i); }; })(i);
+        list.appendChild(item);
+      });
+    }
   }
 }
+function _syncChpUserDock(){
+  var dock = document.getElementById('chpUserDock');
+  var gbtn = document.getElementById('chpUserBtn');
+  var sidebar = document.getElementById('chpSidebar');
+  var header = document.getElementById('chpHeader');
+  if(!dock) return;
+  var u = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+  var signedIn = !!(u && u.email && !u.isGuest);
+  dock.hidden = !signedIn;
+  if(sidebar) sidebar.classList.toggle('chp-account-ready', signedIn);
+  if(gbtn){
+    gbtn.hidden = !signedIn;
+    if(!signedIn) gbtn.setAttribute('aria-expanded','false');
+  }
+  if(!signedIn){
+    dock.classList.remove('open');
+    if(header) header.classList.remove('chp-head-open');
+    return;
+  }
+  var nameEl = document.getElementById('chpUserName');
+  var mailEl = document.getElementById('chpUserMail');
+  var planEl = document.getElementById('chpUserPlan');
+  var av = document.getElementById('chpUserAv');
+  if(nameEl) nameEl.textContent = u.name || (u.email.split('@')[0]);
+  if(mailEl) mailEl.textContent = u.email || '';
+  if(planEl){
+    var pro = (typeof isPro === 'function') ? isPro() : (u.plan === 'pro');
+    planEl.textContent = pro ? 'Pro' : 'Free';
+    planEl.classList.toggle('pro', !!pro);
+  }
+  if(av){
+    if(u.avatar){
+      av.style.backgroundImage = 'url('+u.avatar+')';
+      av.style.backgroundSize = 'cover';
+      av.style.backgroundPosition = 'center';
+      av.textContent = '';
+    } else {
+      av.style.backgroundImage = '';
+      av.style.background = u.color || 'rgba(255,255,255,0.12)';
+      av.textContent = (u.initial || (u.name||'?').charAt(0)).toString().slice(0,1).toUpperCase();
+    }
+  }
+}
+window._syncChpUserDock = _syncChpUserDock;
+(function(){
+  var bound = false;
+  function bind(){
+    if(bound) return;
+    var dock = document.getElementById('chpUserDock');
+    var btn = document.getElementById('chpUserBtn');
+    if(!dock || !btn) return;
+    bound = true;
+    var home = document.getElementById('chpUserHome');
+    var pane = document.getElementById('chpUserPane');
+    var paneBody = document.getElementById('chpUserPaneBody');
+    function parkMenu(){
+      var menu = document.getElementById('chpUserMenu');
+      if(!menu) return;
+      menu.classList.remove('is-open');
+      menu.style.left = menu.style.right = menu.style.top = menu.style.bottom = menu.style.width = '';
+      if(dock && menu.parentNode !== dock) dock.appendChild(menu);
+    }
+    window._chpParkAccountMenu = parkMenu;
+    function setAccountOpen(on){
+      if(!on) parkMenu();
+    }
+    function showHome(){
+      if(home) home.hidden = false;
+      if(pane) pane.hidden = true;
+      if(paneBody) paneBody.innerHTML = '';
+    }
+    function showPane(){
+      if(home) home.hidden = true;
+      if(pane) pane.hidden = false;
+    }
+    function pick(on, html){
+      return '<button type="button" class="chp-user-opt'+(on?' on':'')+'" '+html;
+    }
+    function renderThemePane(){
+      var themes = (window._getThemes && window._getThemes()) || [
+        {id:'easyview',label:'Sun'},{id:'trueblack',label:'True Black'},{id:'purple',label:'Dark Mode'}
+      ];
+      var cur = (window._curTheme && window._curTheme()) || 'trueblack';
+      paneBody.innerHTML = themes.map(function(t){
+        return pick(cur===t.id, 'data-chp-set="theme" data-id="'+t.id+'"><span>'+t.label+(t.desc?'<div class="cx-sub">'+t.desc+'</div>':'')+'</span><span>'+(cur===t.id?'●':'')+'</span></button>');
+      }).join('');
+    }
+    function renderVoicePane(){
+      var prov = window._ttsProvider || 'deepgram';
+      var dg = (typeof _dgVoices !== 'undefined' && _dgVoices) ? _dgVoices : [];
+      var hm = (typeof _humeVoices !== 'undefined' && _humeVoices) ? _humeVoices : [];
+      var cur = prov === 'hume'
+        ? (window._humeVoice || '')
+        : (window._dgVoice || '');
+      var list = prov === 'hume' ? hm : dg;
+      var tabs = '<div style="display:flex;gap:4px;padding:0 6px 8px;">'+
+        '<button type="button" class="chp-user-opt'+(prov==='deepgram'?' on':'')+'" data-chp-set="vprov" data-id="deepgram" style="justify-content:center;padding:6px;">Deepgram</button>'+
+        '<button type="button" class="chp-user-opt'+(prov==='hume'?' on':'')+'" data-chp-set="vprov" data-id="hume" style="justify-content:center;padding:6px;">Hume</button>'+
+        '</div>';
+      paneBody.innerHTML = tabs + list.map(function(v){
+        if(!v || !v.id) return '';
+        var name = String(v.label||v.id).split(' — ')[0];
+        return pick(v.id===cur, 'data-chp-set="voice" data-id="'+String(v.id).replace(/"/g,'')+'"><span>'+name+'</span><span>'+(v.id===cur?'●':'')+'</span></button>');
+      }).join('');
+    }
+    async function renderConnectorsPane(){
+      window._chpRefreshConnectors = renderConnectorsPane;
+      paneBody.innerHTML = '<div class="chp-user-hint">Link an account here. Tokens stay on the server.</div><div class="chp-user-hint">Loading…</div>';
+      var data = { providers:[], connected:{} };
+      try{
+        if(window.synConnectors && window.synConnectors.list) data = await window.synConnectors.list();
+      }catch(e){}
+      var rows = (data.providers || []).map(function(p){
+        var on = !!(data.connected && data.connected[p.id]);
+        var acc = on && data.connected[p.id].account ? data.connected[p.id].account : '';
+        var btn = on
+          ? 'data-chp-set="cxoff" data-id="'+p.id+'">Disconnect</button>'
+          : 'data-chp-set="cxon" data-id="'+p.id+'" '+(p.ready?'':'disabled style="opacity:.4"')+'>Connect</button>';
+        return '<div style="padding:6px 8px 8px;"><div style="font-size:12.5px;color:rgba(235,235,240,.9);">'+p.name+'</div><div class="cx-sub">'+(on?(acc||'Connected'):(p.ready?'Not connected':'Server keys not set'))+'</div><button type="button" class="chp-user-opt" style="margin-top:6px;justify-content:center;" '+btn+'</div>';
+      }).join('') || '<div class="chp-user-hint">Connectors are not available yet.</div>';
+      paneBody.innerHTML = '<div class="chp-user-hint">Link an account here. No need to leave this menu.</div>'+rows;
+    }
+    function renderPlanPane(){
+      var hostPreview = false;
+      try{
+        var em = (currentUser && currentUser.email || '').toLowerCase();
+        hostPreview = em === 'ednbusiness73@gmail.com';
+      }catch(_h){}
+      var pro = hostPreview ? false : ((typeof isPro === 'function') ? isPro() : false);
+      var left = (typeof remainingFree === 'function' && !hostPreview) ? remainingFree() : ((typeof FREE_DAILY_LIMIT !== 'undefined') ? FREE_DAILY_LIMIT : 10);
+      var limit = (typeof FREE_DAILY_LIMIT !== 'undefined') ? FREE_DAILY_LIMIT : 10;
+      if(pro){
+        paneBody.innerHTML =
+          '<div class="chp-user-hint">You are on <b style="color:#5eead4">Pro</b> — unlimited access.</div>'+
+          '<button type="button" class="chp-user-opt" data-chp-set="billing" style="justify-content:center;">Manage billing</button>';
+      } else {
+        paneBody.innerHTML =
+          '<div class="chp-user-hint">'+(hostPreview?'Host preview — ':'')+'You are on <b>Free</b>. '+left+' / '+limit+' messages left today.</div>'+
+          '<button type="button" class="chp-user-opt" data-chp-set="upgrade" style="justify-content:center;">Upgrade to Pro</button>'+
+          '<button type="button" class="chp-user-opt" data-chp-set="credits" style="justify-content:center;">Buy credits</button>';
+      }
+    }
+    function openFeature(act){
+      if(act === 'theme'){ showPane(); renderThemePane(); }
+      else if(act === 'voice'){ showPane(); renderVoicePane(); }
+      else if(act === 'connectors'){ showPane(); renderConnectorsPane(); }
+      else if(act === 'plan'){ showPane(); renderPlanPane(); }
+    }
+    if(typeof _bindHintToast==='function') _bindHintToast(btn, 'Account');
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(dock.hidden) return;
+      var on = dock.classList.toggle('open');
+      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      var header = document.getElementById('chpHeader');
+      if(header) header.classList.toggle('chp-head-open', on);
+      setAccountOpen(on);
+      if(on) showHome();
+    });
+    var menuEl = document.getElementById('chpUserMenu');
+    if(menuEl) menuEl.addEventListener('click', function(e){
+      var t = e.target;
+      while(t && t !== menuEl && !(t.getAttribute && (t.getAttribute('data-chp-act') || t.getAttribute('data-chp-set')))) t = t.parentElement;
+      if(!t || t === menuEl) return;
+      e.stopPropagation();
+      var set = t.getAttribute('data-chp-set');
+      var act = t.getAttribute('data-chp-act');
+      if(set === 'theme'){
+        if(window._applyTheme) window._applyTheme(t.getAttribute('data-id'));
+        renderThemePane();
+        return;
+      }
+      if(set === 'vprov'){
+        if(typeof _setTtsProvider === 'function') _setTtsProvider(t.getAttribute('data-id'));
+        renderVoicePane();
+        return;
+      }
+      if(set === 'voice'){
+        var id = t.getAttribute('data-id');
+        var prov = window._ttsProvider || 'deepgram';
+        if(prov === 'hume'){
+          window._humeVoice = id;
+          try{ localStorage.setItem('humeVoice', id); localStorage.setItem('ttsSource','hume'); }catch(_e){}
+          if(typeof _humeVoice !== 'undefined') _humeVoice = id;
+          if(typeof _elevenSelected !== 'undefined') _elevenSelected = false;
+          window._elevenSelected = false;
+        } else {
+          window._dgVoice = id;
+          try{ localStorage.setItem('dgVoice', id); }catch(_e){}
+          if(typeof _dgVoice !== 'undefined') _dgVoice = id;
+        }
+        if(typeof _wsClose === 'function') _wsClose();
+        if(typeof window._updateToggleLabel === 'function') window._updateToggleLabel();
+        if(typeof window._renderVoiceList === 'function') window._renderVoiceList();
+        renderVoicePane();
+        return;
+      }
+      if(set === 'cxon'){
+        if(window.synConnectors) window.synConnectors.connect(t.getAttribute('data-id'));
+        return;
+      }
+      if(set === 'cxoff'){
+        if(window.synConnectors) window.synConnectors.disconnect(t.getAttribute('data-id')).then(function(){ renderConnectorsPane(); });
+        return;
+      }
+      if(set === 'upgrade' || set === 'credits'){
+        if(typeof startCheckout === 'function') startCheckout();
+        else if(typeof showPaywall === 'function') showPaywall();
+        return;
+      }
+      if(set === 'billing'){
+        if(currentUser && currentUser.stripeCustomerId && typeof openBillingPortal === 'function'){
+          openBillingPortal();
+        } else if(typeof startCheckout === 'function'){
+          startCheckout();
+        } else if(typeof showPaywall === 'function'){
+          showPaywall();
+        }
+        return;
+      }
+      if(act === 'back'){ showHome(); return; }
+      if(act === 'theme' || act === 'voice' || act === 'connectors' || act === 'plan'){
+        openFeature(act);
+        return;
+      }
+      if(act === 'settings'){
+        dock.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        var _h = document.getElementById('chpHeader');
+        if(_h) _h.classList.remove('chp-head-open');
+        setAccountOpen(false);
+        if(typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
+        if(typeof goProfile === 'function') goProfile();
+        return;
+      }
+      if(act === 'logout'){
+        dock.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        var _h2 = document.getElementById('chpHeader');
+        if(_h2) _h2.classList.remove('chp-head-open');
+        setAccountOpen(false);
+        if(typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
+        if(typeof logout === 'function') logout();
+      }
+    });
+    document.addEventListener('click', function(e){
+      if(!dock.classList.contains('open')) return;
+      if(dock.contains(e.target) || btn.contains(e.target)) return;
+      dock.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      var header = document.getElementById('chpHeader');
+      if(header) header.classList.remove('chp-head-open');
+      setAccountOpen(false);
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+  setTimeout(function(){ bind(); if(typeof _syncChpUserDock==='function') _syncChpUserDock(); }, 0);
+})();
 function toggleChatHistoryPanel(openMode){
   var sidebar = document.getElementById('chpSidebar');
   var list = document.getElementById('chpList');
@@ -24232,29 +25184,36 @@ function toggleChatHistoryPanel(openMode){
   // Build list
   list.innerHTML = '';
   var all = recentChats.slice();
-  if(!all.length){
+  var savedKeys = {};
+  savedChats.forEach(function(s){ if(s && s.key) savedKeys[s.key]=1; });
+  var unsaved = [];
+  all.forEach(function(c,i){ if(c && c.key && !savedKeys[c.key]) unsaved.push({c:c,i:i}); });
+  if(!savedChats.length && !unsaved.length){
     list.innerHTML = '<div class="chp-empty">No past chats yet</div>';
   } else {
     if(savedChats.length){
       var sl = document.createElement('div'); sl.className='chp-section-label'; sl.textContent='Saved'; list.appendChild(sl);
       savedChats.forEach(function(c,i){
         var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':'');
-        item.innerHTML = '<span class="chp-item-dot" style="background:rgba(0,217,168,0.6)"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn bookmarked" title="Bookmarked" onclick="event.stopPropagation();removeSavedChatByKey(\''+c.key+'\');refreshChpList();">🔖</button><button class="chp-act-btn" title="Delete" onclick="event.stopPropagation();savedChats.splice('+i+',1);persistChats();refreshChpList();">✕</button></div>';
+        item.innerHTML = '<span class="chp-item-dot" style="background:rgba(0,217,168,0.6)"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn bookmarked" data-hint="Bookmarked" onclick="event.stopPropagation();removeSavedChatByKey(\''+c.key+'\');refreshChpList();">'+_chpBmIco+'</button><button class="chp-act-btn" data-hint="Delete" onclick="event.stopPropagation();deleteSavedChat('+i+');">✕</button></div>';
         (function(_i){ item.onclick = function(){ openSavedChat(_i); }; })(i);
         list.appendChild(item);
       });
     }
-    var rl = document.createElement('div'); rl.className='chp-section-label'; rl.textContent='Recent'; list.appendChild(rl);
-    all.forEach(function(c,i){
-      var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':''); item.dataset.sessionKey=c.key;
-      var isSaved = savedChats.find(function(s){return s.key===c.key;});
-      item.innerHTML = '<span class="chp-item-dot"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn'+(isSaved?' bookmarked':'')+'" title="'+(isSaved?'Bookmarked':'Bookmark')+'" onclick="event.stopPropagation();openSaveChatModal(\''+c.key+'\');">'+(isSaved?'🔖':'🔖')+'</button><button class="chp-act-btn" title="Delete" onclick="event.stopPropagation();recentChats.splice('+i+',1);persistChats();refreshChpList();">✕</button></div>';
-      (function(_i){ item.onclick = function(){ openRecentChat(_i); }; })(i);
-      list.appendChild(item);
-    });
+    if(unsaved.length){
+      var rl = document.createElement('div'); rl.className='chp-section-label'; rl.textContent='Recent'; list.appendChild(rl);
+      unsaved.forEach(function(row){
+        var c = row.c, i = row.i;
+        var item = document.createElement('div'); item.className='chp-item'+(c.key===activeSession?' active':''); item.dataset.sessionKey=c.key;
+        item.innerHTML = '<span class="chp-item-dot"></span><span class="chp-item-label">'+esc(c.label)+'</span><div class="chp-item-actions"><button class="chp-act-btn" data-hint="Bookmark" onclick="event.stopPropagation();openSaveChatModal(\''+c.key+'\');">'+_chpBmIco+'</button><button class="chp-act-btn" data-hint="Delete" onclick="event.stopPropagation();deleteRecentChat('+i+');">✕</button></div>';
+        (function(_i){ item.onclick = function(){ openRecentChat(_i); }; })(i);
+        list.appendChild(item);
+      });
+    }
   }
   sidebar.classList.remove('fade-open');
   sidebar.classList.add('open');
+  if(typeof _syncChpUserDock==='function') _syncChpUserDock();
   // Sticky only after user has picked a chat once AND reopens the panel themselves
   if(openMode === 'user' && _chpPickedGet()) _chpStickySet(true);
   var _secChatOpen = document.getElementById('sec-chat');
@@ -24290,6 +25249,7 @@ function toggleChatHistoryPanel(openMode){
 }
 function toggleChatHistoryDropdown(){
   _haptic(10);
+  if(typeof _closePlusMenu === 'function') _closePlusMenu();
   // Ensure dropdown is on body so it works from any page
   var dd = document.getElementById('chatHistoryDropdown');
   if(!dd){ dd=document.createElement('div'); dd.id='chatHistoryDropdown'; document.body.appendChild(dd); }
@@ -24304,24 +25264,39 @@ function toggleChatHistoryDropdown(){
     dd.style.transform = 'translateY(-100%)';
   }
   var all = recentChats.slice();
-  if(!all.length){ dd.innerHTML='<div class="chd-header">No chat history</div>'; dd.style.display='block'; dd.classList.add('open'); if(_secChatDD) _secChatDD.classList.add('chp-blur-active'); return; }
+  var savedKeys = {};
+  savedChats.forEach(function(s){ if(s && s.key) savedKeys[s.key]=1; });
+  var unsaved = [];
+  all.forEach(function(c,i){ if(c && c.key && !savedKeys[c.key]) unsaved.push({c:c,i:i}); });
+  if(!savedChats.length && !unsaved.length){
+    dd.innerHTML='<div class="chd-header">No chat history</div>';
+    dd.style.display='block'; dd.classList.add('open');
+    if(_secChatDD) _secChatDD.classList.add('chp-blur-active');
+    return;
+  }
   dd.innerHTML = '';
-  var hdr = document.createElement('div'); hdr.className='chd-header'; hdr.textContent='Recent Chats'; dd.appendChild(hdr);
-  all.forEach(function(c,i){
-    var isSaved = savedChats.find(function(s){return s.key===c.key;});
-    var el_r = document.createElement('div');
-    el_r.className = 'chd-item';
-    el_r.innerHTML = '<span class="chd-item-label">'+(isSaved?'<svg width="9" height="10" viewBox="0 0 24 24" fill="rgba(124,106,247,0.5)" style="margin-right:4px;vertical-align:middle;flex-shrink:0;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>':'')+esc(c.label)+'</span>';
-    (function(_i){ el_r.onclick = function(){ openRecentChat(_i); dd.classList.remove('open'); dd.style.display='none'; if(_secChatDD) _secChatDD.classList.remove('chp-blur-active'); }; })(i);
-    dd.appendChild(el_r);
-  });
+  function _ddClose(){
+    dd.classList.remove('open'); dd.style.display='none';
+    if(_secChatDD) _secChatDD.classList.remove('chp-blur-active');
+  }
   if(savedChats.length){
+    var sh = document.createElement('div'); sh.className='chd-header'; sh.textContent='Saved'; dd.appendChild(sh);
     savedChats.forEach(function(c,i){
       var el_s = document.createElement('div');
       el_s.className = 'chd-item';
-      el_s.innerHTML = '<span class="chd-item-label"><svg width="9" height="10" viewBox="0 0 24 24" fill="rgba(124,106,247,0.5)" style="margin-right:4px;vertical-align:middle;flex-shrink:0;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'+esc(c.label)+'</span>';
-      (function(_i){ el_s.onclick = function(){ openSavedChat(_i); dd.classList.remove('open'); dd.style.display='none'; if(_secChatDD) _secChatDD.classList.remove('chp-blur-active'); }; })(i);
+      el_s.innerHTML = '<span class="chd-item-label">'+esc(c.label)+'</span>';
+      (function(_i){ el_s.onclick = function(){ openSavedChat(_i); _ddClose(); }; })(i);
       dd.appendChild(el_s);
+    });
+  }
+  if(unsaved.length){
+    var hdr = document.createElement('div'); hdr.className='chd-header'; hdr.textContent='Recent'; dd.appendChild(hdr);
+    unsaved.forEach(function(row){
+      var el_r = document.createElement('div');
+      el_r.className = 'chd-item';
+      el_r.innerHTML = '<span class="chd-item-label">'+esc(row.c.label)+'</span>';
+      (function(_i){ el_r.onclick = function(){ openRecentChat(_i); _ddClose(); }; })(row.i);
+      dd.appendChild(el_r);
     });
   }
   dd.style.display='block'; dd.classList.add('open');
@@ -24341,7 +25316,7 @@ function toggleChatHistoryDropdown(){
 var pendingAttachments = [];
 var _attachIdSeq = 0;
 
-function handleChatAttachClick(){ var el=document.getElementById('chatFileInput'); if(el) el.click(); }
+function handleChatAttachClick(){ _closePlusMenu(); var el=document.getElementById('chatFileInput'); if(el) el.click(); }
 
 async function handleChatFileSelect(event){
   var files = Array.prototype.slice.call((event && event.target && event.target.files) || []);
@@ -24349,7 +25324,7 @@ async function handleChatFileSelect(event){
   await handleChatFiles(files);
 }
 
-/* Shared by the paperclip picker AND drag-and-drop onto the input bar */
+/* Shared by the + menu attach picker AND drag-and-drop onto the input bar */
 async function handleChatFiles(files){
   files = Array.prototype.slice.call(files || []);
   for (var i=0;i<files.length;i++){
@@ -24571,7 +25546,335 @@ function renderMsgAttachments(groupEl, attachments){
 }
 /* ================= end chat attachments ================= */
 
+function _escDoc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _specToPreviewHtml(type, spec, fileName){
+  if(!spec) return '';
+  if(type==='pptx'){
+    var slides = spec.slides || [];
+    var html = '<div class="gen-doc-slides">';
+    if(spec.title) html += '<div class="gen-doc-slide"><h4>'+_escDoc(spec.title)+'</h4>'+(spec.subtitle?'<p style="margin:0;color:rgba(170,170,180,.75);font-size:12px;">'+_escDoc(spec.subtitle)+'</p>':'')+'</div>';
+    slides.forEach(function(s,i){
+      html += '<div class="gen-doc-slide"><h4>'+(i+1)+'. '+_escDoc(s.title||'Slide')+'</h4>';
+      if(s.bullets && s.bullets.length) html += '<ul>'+s.bullets.map(function(b){ return '<li>'+_escDoc(b)+'</li>'; }).join('')+'</ul>';
+      html += '</div>';
+    });
+    return html + '</div>';
+  }
+  if(type==='xlsx'){
+    var sheets = spec.sheets || [];
+    var htmlx = '<div class="gen-doc-sheet">';
+    sheets.forEach(function(sh){
+      htmlx += '<table><thead>';
+      if(sh.name) htmlx += '<tr><th colspan="'+(sh.columns&&sh.columns.length?sh.columns.length:1)+'">'+_escDoc(sh.name)+'</th></tr>';
+      if(sh.columns && sh.columns.length) htmlx += '<tr>'+sh.columns.map(function(c){ return '<th>'+_escDoc(c)+'</th>'; }).join('')+'</tr>';
+      htmlx += '</thead><tbody>';
+      (sh.rows||[]).forEach(function(row){
+        var cells = Array.isArray(row) ? row : [row];
+        htmlx += '<tr>'+cells.map(function(c){ return '<td>'+_escDoc(c)+'</td>'; }).join('')+'</tr>';
+      });
+      htmlx += '</tbody></table>';
+    });
+    return htmlx + '</div>';
+  }
+  var htmlp = '<div class="gen-doc-pdf"><h3>'+_escDoc(spec.title||fileName||'Document')+'</h3>';
+  (spec.sections||[]).forEach(function(sec){
+    htmlp += '<h4>'+_escDoc(sec.heading||'')+'</h4><p>'+_escDoc(sec.body||'')+'</p>';
+  });
+  return htmlp + '</div>';
+}
+async function _fetchDocSpecForPreview(type, userMessage){
+  try {
+  var schema = {
+    pptx: '{"title": string, "subtitle"?: string, "slides": [{"title": string, "bullets": [string]}]}',
+    xlsx: '{"sheets": [{"name": string, "columns": [string], "rows": [[string|number],...]}]}',
+    pdf: '{"title": string, "sections": [{"heading": string, "body": string}]}'
+  }[type] || '{"title": string, "sections": [{"heading": string, "body": string}]}';
+  var base = (typeof GROQ_PROXY==='string'?GROQ_PROXY:'https://synbot-whatsapp-2.onrender.com');
+  var res = await fetch(base+'/groq-chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role:'system', content:'Generate the full readable content for a '+type+' document. Reply ONLY with valid JSON matching this shape, no markdown:\n'+schema },
+        { role:'user', content: String(userMessage||'') }
+      ],
+      max_tokens: 2500,
+      temperature: 0.4,
+      userId: (typeof currentUser!=='undefined' && currentUser && !currentUser.isGuest && currentUser.id) ? currentUser.id : undefined
+    })
+  });
+  var data = await res.json().catch(function(){ return {}; });
+  var raw = '';
+  if(data && data.choices && data.choices[0] && data.choices[0].message) raw = data.choices[0].message.content || '';
+  else if(data && data.content) raw = Array.isArray(data.content) ? data.content.map(function(b){return b.text||'';}).join('') : String(data.content);
+  raw = String(raw||'').replace(/```json|```/gi,'').trim();
+  var a = raw.indexOf('{'), b = raw.lastIndexOf('}');
+  if(a<0 || b<=a) return null;
+  try { return JSON.parse(raw.slice(a,b+1)); } catch(e){ return null; }
+  } catch(_e){ return null; }
+}
+async function _mountGeneratedDocPreview(bodyEl, type, fileUrl, spec, fileName, userMessage){
+  if(!bodyEl) return;
+  if(bodyEl.querySelector('.gen-doc-preview')) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'gen-doc-preview';
+  bodyEl.appendChild(wrap);
+
+  if(type==='pdf' && fileUrl){
+    try{
+      var _fr = await fetch(fileUrl);
+      if(_fr.ok){
+        var _buf = await _fr.arrayBuffer();
+        var _obj = URL.createObjectURL(new Blob([_buf], { type: 'application/pdf' }));
+        wrap.innerHTML = '<iframe title="PDF preview" src="'+_obj+'#toolbar=1"></iframe>';
+        _pinDocDownloadChip(wrap, _obj, fileName, type);
+        return;
+      }
+    }catch(_fe){}
+  }
+
+  var inner = _specToPreviewHtml(type, spec, fileName);
+  if(!inner){
+    spec = await _fetchDocSpecForPreview(type, userMessage);
+    inner = _specToPreviewHtml(type, spec, fileName);
+  }
+  if(!inner && typeof callClaude === 'function'){
+    try{
+      var _d = await callClaude(
+        'Write the complete document the user asked for as clean markdown. Use a # title and ## headings. No preamble, no talk about files or downloads.',
+        [{role:'user', content: String(userMessage||'')}],
+        1800
+      );
+      var _txt = (_d && _d.content) ? _d.content.map(function(b){ return b.text||''; }).join('') : '';
+      if(_txt && !_d.error && typeof fmtMD === 'function') inner = '<div class="gen-doc-pdf">'+fmtMD(_txt)+'</div>';
+    }catch(_ce){}
+  }
+  wrap.innerHTML = inner || '<div class="gen-doc-pdf"><p>Preview unavailable. Use Download for the file.</p></div>';
+  _pinDocDownloadChip(wrap, fileUrl, fileName, type);
+}
+function _pinDocDownloadChip(wrap, fileUrl, fileName, type){
+  if(!wrap || !fileUrl) return;
+  var host = wrap.parentNode;
+  if(!host || (host.querySelector && host.querySelector(':scope > .gen-doc-dl'))) return;
+  var a = document.createElement('a');
+  a.className = 'gen-doc-dl';
+  a.href = fileUrl;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.download = fileName || ('document.'+(type||'pdf'));
+  a.textContent = 'Download '+(fileName || ((type||'pdf').toUpperCase()));
+  if(wrap.nextSibling) host.insertBefore(a, wrap.nextSibling);
+  else host.appendChild(a);
+}
+function _pinDocDownloadIcon(wrap, fileUrl, fileName, type, prompt){
+  if(!wrap || wrap.querySelector('.gen-doc-ico')) return;
+  var a = document.createElement('a');
+  a.className = 'gen-doc-ico';
+  a.title = 'Download';
+  a.setAttribute('aria-label','Download');
+  a.href = fileUrl || '#';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.download = fileName || ('document.'+(type||'pdf'));
+  a.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  if(!fileUrl || /^https?:/i.test(fileUrl)){
+    a.addEventListener('click', function(ev){
+      if(fileUrl && fileUrl.indexOf('blob:')===0) return;
+      ev.preventDefault();
+      var base = (typeof GROQ_PROXY==='string'?GROQ_PROXY:'https://synbot-whatsapp-2.onrender.com');
+      fetch(fileUrl||'', { method:'GET' }).then(function(r){
+        if(r && r.ok){ window.open(fileUrl, '_blank'); return; }
+        return fetch(base+'/generate-doc', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ message: prompt||fileName||'document', type: type||'pdf', userId:(typeof currentUser!=='undefined'&&currentUser&&currentUser.id)||undefined })
+        }).then(function(r2){ return r2.json(); }).then(function(d){
+          if(d && d.attachment && d.attachment.url) window.open(base+d.attachment.url, '_blank');
+        });
+      }).catch(function(){});
+    });
+  }
+  wrap.appendChild(a);
+}
+async function _fileToDataUrl(url){
+  try{
+    var r = await fetch(url);
+    if(!r.ok) return '';
+    var b = await r.blob();
+    if(b.size > 500000) return '';
+    return await new Promise(function(ok){
+      var fr = new FileReader();
+      fr.onload = function(){ ok(fr.result || ''); };
+      fr.onerror = function(){ ok(''); };
+      fr.readAsDataURL(b);
+    });
+  }catch(e){ return ''; }
+}
+function _rememberGeneratedDoc(rec){
+  if(!activeSession) return;
+  if(!chatSessions[activeSession]) chatSessions[activeSession] = { history:[], docs:[] };
+  chatSessions[activeSession].docs = chatSessions[activeSession].docs || [];
+  chatSessions[activeSession].docs.push(rec);
+}
+function _restoreGeneratedDocs(sessionKey){
+  var sess = chatSessions[sessionKey];
+  if(!sess || !sess.docs || !sess.docs.length) return;
+  var groups = document.querySelectorAll('#chatContainer .message-group');
+  sess.docs.forEach(function(d){
+    var el = (typeof d.i === 'number' && groups[d.i]) ? groups[d.i] : null;
+    if(!el){
+      for(var i = groups.length - 1; i >= 0; i--){
+        var t = groups[i].textContent || '';
+        if(/your (PDF|PPTX|XLSX)/i.test(t)){ el = groups[i]; break; }
+      }
+    }
+    if(!el) return;
+    var body = el.querySelector('.message-body');
+    if(!body || body.querySelector('.gen-doc-preview')) return;
+    var url = d.dataUrl || d.url || '';
+    try{ _mountGeneratedDocPreview(body, d.type, url, d.spec, d.name, d.prompt); }catch(_r){}
+  });
+}
+var ASK_HELP_ACTIONS = [
+  { title:'Make a PDF', blurb:'Writes a formatted PDF you can read and download.', prompt:'Make me a PDF about ' },
+  { title:'Make slides', blurb:'Builds a PowerPoint deck from your topic.', prompt:'Create a PowerPoint about ' },
+  { title:'Make a spreadsheet', blurb:'Builds an Excel table you can download.', prompt:'Generate an Excel spreadsheet of ' },
+  { title:'Deep research', blurb:'Live web research with sources on a topic.', prompt:'Do deep research on ' },
+  { title:'Quick research', blurb:'Faster live search when you need current info.', prompt:'Research ' },
+  { title:'Save a note', blurb:'Turns this chat into a note on your board.', prompt:'Save this as a note' }
+];
+function _ensurePlusMenu(){
+  var m = document.getElementById('plusMenu');
+  if(m) return m;
+  m = document.createElement('div');
+  m.id = 'plusMenu';
+  m.setAttribute('role','menu');
+  var attach = document.createElement('button');
+  attach.type = 'button';
+  attach.className = 'plus-menu-item';
+  attach.innerHTML = '<span class="plus-menu-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-8.49 8.49a1 1 0 0 1-1.41-1.41l7.78-7.78"/></svg></span><span>Attach files</span>';
+  attach.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); handleChatAttachClick(); });
+  m.appendChild(attach);
+  var div = document.createElement('div');
+  div.className = 'plus-menu-div';
+  m.appendChild(div);
+  var head = document.createElement('div');
+  head.className = 'plus-menu-head';
+  head.textContent = 'What you can ask';
+  m.appendChild(head);
+  ASK_HELP_ACTIONS.forEach(function(a){
+    var it = document.createElement('button');
+    it.type = 'button';
+    it.className = 'plus-menu-tip';
+    it.innerHTML = '<strong>'+a.title.replace(/</g,'')+'</strong><span>'+a.blurb.replace(/</g,'')+'</span>';
+    it.addEventListener('click', function(){ _fillAskHelpPrompt(a.prompt); });
+    m.appendChild(it);
+  });
+  document.body.appendChild(m);
+  return m;
+}
+function _fillAskHelpPrompt(prompt){
+  var inp = document.getElementById('inputBox');
+  if(!inp) return;
+  inp.value = prompt || '';
+  inp.focus();
+  try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(e){}
+  if(typeof autoResize === 'function') autoResize(inp);
+  _closePlusMenu();
+}
+function _positionPlusMenu(){
+  var m = document.getElementById('plusMenu');
+  var btn = document.getElementById('chatAttachBtn');
+  if(!m || !btn) return;
+  var r = btn.getBoundingClientRect();
+  var w = 260;
+  var gap = 8;
+  var pad = 10;
+  var left = Math.round(r.right - w);
+  if(left < pad) left = pad;
+  if(left + w > window.innerWidth - pad) left = window.innerWidth - w - pad;
+  var spaceAbove = r.top - pad;
+  var spaceBelow = window.innerHeight - r.bottom - pad;
+  var es = document.getElementById('chatEmptyState');
+  var onHome = !!(es && !es.classList.contains('hidden'));
+  var menuH = m.offsetHeight || Math.min(window.innerHeight * 0.62, 420);
+  var openDown = onHome || spaceAbove < menuH + gap;
+  if(spaceAbove < menuH + gap && spaceBelow < menuH + gap){
+    openDown = spaceBelow >= spaceAbove;
+  }
+  var avail = openDown ? spaceBelow : spaceAbove;
+  var maxH = Math.max(160, Math.min(avail - gap, Math.min(window.innerHeight * 0.62, 420)));
+  m.style.maxHeight = maxH + 'px';
+  m.style.left = left + 'px';
+  if(openDown){
+    m.style.top = Math.round(r.bottom + gap) + 'px';
+    m.style.transform = 'none';
+  } else {
+    m.style.top = Math.round(r.top - gap) + 'px';
+    m.style.transform = 'translateY(-100%)';
+  }
+}
+function _closePlusMenu(){
+  var m = document.getElementById('plusMenu');
+  var b = document.getElementById('chatAttachBtn');
+  if(m){ m.classList.remove('open'); m.style.display='none'; m.style.visibility=''; }
+  if(b){
+    b.setAttribute('aria-expanded','false');
+    b.style.opacity='0.45';
+    b.style.borderColor='rgba(255,255,255,0.08)';
+  }
+}
+function togglePlusMenu(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); }
+  if(typeof _haptic === 'function') _haptic(10);
+  var m = _ensurePlusMenu();
+  var b = document.getElementById('chatAttachBtn');
+  var open = m.classList.contains('open');
+  var hist = document.getElementById('chatHistoryDropdown');
+  if(hist && hist.classList.contains('open')){
+    hist.classList.remove('open'); hist.style.display='none';
+    var sc = document.getElementById('sec-chat');
+    if(sc) sc.classList.remove('chp-blur-active');
+  }
+  if(open){ _closePlusMenu(); return; }
+  m.style.visibility='hidden';
+  m.style.display='block';
+  m.classList.add('open');
+  _positionPlusMenu();
+  m.style.visibility='visible';
+  if(b){
+    b.setAttribute('aria-expanded','true');
+    b.style.opacity='0.9';
+    b.style.borderColor='rgba(255,255,255,0.3)';
+  }
+  setTimeout(function(){
+    document.addEventListener('click', function _close(ev){
+      var menu = document.getElementById('plusMenu');
+      var btn = document.getElementById('chatAttachBtn');
+      if(menu && menu.contains(ev.target)) return;
+      if(btn && btn.contains(ev.target)) return;
+      _closePlusMenu();
+      document.removeEventListener('click', _close);
+    });
+  }, 10);
+}
+window.addEventListener('resize', function(){
+  var m = document.getElementById('plusMenu');
+  if(m && m.classList.contains('open')) _positionPlusMenu();
+});
+function _detectGenerateDocType(text){
+  var t = String(text||'');
+  if(!/\b(pdf|pptx|ppt|powerpoint|slides?|deck|xlsx|xls|excel|spreadsheet)\b/i.test(t)) return null;
+  if(!/\b(make|create|generate|write|export|draft|build|give me|send me|download|as a|into a|to a)\b/i.test(t)) return null;
+  if(/\b(pptx|ppt|powerpoint|slides?|deck)\b/i.test(t)) return 'pptx';
+  if(/\b(xlsx|xls|excel|spreadsheet)\b/i.test(t)) return 'xlsx';
+  return 'pdf';
+}
 async function sendMessage(){
+  if(typeof _closePlusMenu === 'function') _closePlusMenu();
   var inp=document.getElementById('inputBox'),text=inp.value.trim();
   if(!text && !pendingAttachments.length) return;
   if(pendingAttachments.some(function(a){ return a.pending; })){
@@ -24730,6 +26033,69 @@ async function sendMessage(){
     if(_sbNow&&_sbNow.classList.contains('open')) refreshChpList();
   }
   var _isFirstSession = isFirst; // captured for use after streaming completes
+
+  // ── Generate PDF / slides / spreadsheet via Render /generate-doc ──
+  var _docWant = _detectGenerateDocType(text);
+  if(_docWant && !sendAttachments.length){
+    var _esDoc = document.getElementById('chatEmptyState');
+    if(_esDoc) _esDoc.classList.add('hidden');
+    if(typeof setAskBarVisible === 'function') setAskBarVisible(true);
+    if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+    if(typeof _syncLlmThreadClass === 'function') _syncLlmThreadClass();
+    var _tp = typing.querySelector('p');
+    if(_tp) _tp.textContent = 'Making your '+_docWant.toUpperCase()+'…';
+    try{
+      var _docRes = await fetch((typeof GROQ_PROXY==='string'?GROQ_PROXY:'https://synbot-whatsapp-2.onrender.com')+'/generate-doc', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ message:text, type:_docWant, userId:(currentUser&&currentUser.id)||undefined })
+      });
+      var _docData = await _docRes.json().catch(function(){ return {}; });
+      if(!_docRes.ok || !_docData.attachment){
+        throw new Error((_docData&&_docData.error)||('Could not make the '+_docWant));
+      }
+      var _fileUrl = (typeof GROQ_PROXY==='string'?GROQ_PROXY:'https://synbot-whatsapp-2.onrender.com') + _docData.attachment.url;
+      var _reply = _docData.reply || ('Here is your '+_docWant.toUpperCase()+'.');
+      var _spec = _docData.spec || null;
+      if(!_spec){
+        if(_tp) _tp.textContent = 'Loading preview…';
+        _spec = await _fetchDocSpecForPreview(_docWant, text);
+      }
+      typing.remove();
+      var _marker = _encodeSyndoc({
+        type: _docWant,
+        name: _docData.attachment.name,
+        spec: _spec,
+        prompt: text,
+        url: _fileUrl
+      });
+      var _stored = _reply + (_marker ? '\n\n'+_marker : '');
+      var _docGroup = addMsg('chatContainer','ai',_stored,false,'chat');
+      var _docBody = _docGroup.querySelector('.message-body');
+      if(_docBody && !_docBody.querySelector('.gen-doc-preview')){
+        await _mountGeneratedDocPreview(_docBody, _docWant, _fileUrl, _spec, _docData.attachment.name, text);
+      }
+      chatHistory.push({role:'assistant',content:_stored});
+      _rememberGeneratedDoc({
+        i: chatHistory.length - 1,
+        type: _docWant,
+        name: _docData.attachment.name,
+        spec: _spec,
+        prompt: text,
+        url: _fileUrl
+      });
+      if(chatSessions[activeSession]) chatSessions[activeSession].history = chatHistory.slice();
+      persistChats();
+    }catch(_docErr){
+      var _errP = typing.querySelector('p');
+      if(_errP) _errP.textContent = 'Could not make that file: '+(_docErr.message||_docErr);
+    }
+    if(typeof setAskBarVisible === 'function') setAskBarVisible(true);
+    if(typeof _positionAskBarAtFingerprint === 'function') _positionAskBarAtFingerprint();
+    isSending=false;
+    clearTimeout(_sendSafetyTimer);
+    return;
+  }
 
   // Show smart redirects if relevant pages detected — only in Mini Brain mode
   if(_aiMode === 'brain'){
@@ -25334,12 +26700,30 @@ function handleRenameKey(e,i){if(e.key==='Enter'){e.preventDefault();commitRenam
 function commitRename(i){var inp=document.getElementById('rename-input-'+i);if(!inp)return;var val=inp.value.trim();if(val&&savedChats[i]){savedChats[i].label=val.slice(0,40);}renderSavedChats();}
 var _pendingSaveKey=null,_saveChatColor='#7c6af7';
 var SAVE_COLORS=['#7c6af7','#00d9a8','#e85d96','#f7a66a','#6af7f7','#f7e96a','#818cf8','#f76a6a'];
-function openSaveChatModal(key){var existing=savedChats.find(function(s){return s.key===key;});if(existing){removeSavedChatByKey(key);return;}_pendingSaveKey=key;_saveChatColor='#7c6af7';var picker=document.getElementById('saveChatColorPicker');picker.innerHTML=SAVE_COLORS.map(function(col){return'<div onclick="pickSaveChatColor(\''+col+'\',this)" style="width:24px;height:24px;border-radius:50%;background:'+col+';cursor:pointer;border:2px solid '+(col===_saveChatColor?'white':'transparent')+';transition:border .15s;"></div>';}).join('');document.getElementById('saveChatModal').style.display='flex';}
+function openSaveChatModal(key){
+  if(!key) return;
+  var existing=savedChats.find(function(s){return s.key===key;});
+  if(existing){ removeSavedChatByKey(key); return; }
+  var chat=recentChats.find(function(c){return c.key===key;});
+  if(!chat) return;
+  savedChats.unshift({label:chat.label,key:chat.key,category:'General',color:'#7c6af7'});
+  try{ var _m=document.getElementById('saveChatModal'); if(_m) _m.style.display='none'; }catch(_e){}
+  persistChats();
+  if(typeof renderRecentChats==='function') renderRecentChats();
+  if(typeof renderSavedChats==='function') renderSavedChats();
+  if(typeof refreshChpList==='function') refreshChpList();
+}
 function pickSaveChatColor(col,el){_saveChatColor=col;document.querySelectorAll('#saveChatColorPicker div').forEach(function(d){d.style.border='2px solid transparent';});el.style.border='2px solid white';}
 function toggleCustomCategory(val){var inp=document.getElementById('saveChatCustomCategory');if(inp)inp.style.display=val==='custom'?'block':'none';}
 function confirmSaveChat(){if(!_pendingSaveKey)return;var chat=recentChats.find(function(c){return c.key===_pendingSaveKey;});if(!chat){closeModal('saveChatModal');return;}var catSel=document.getElementById('saveChatCategory').value;var catCustom=document.getElementById('saveChatCustomCategory').value.trim();var category=catSel==='custom'?(catCustom||'Custom'):catSel;savedChats.unshift({label:chat.label,key:chat.key,category:category,color:_saveChatColor});closeModal('saveChatModal');_pendingSaveKey=null;renderRecentChats();renderSavedChats();persistChats();showToast('Chat saved!');}
 function removeSavedChat(i){savedChats.splice(i,1);renderRecentChats();renderSavedChats();persistChats();showToast('Removed from saved');}
-function removeSavedChatByKey(key){savedChats=savedChats.filter(function(s){return s.key!==key;});renderRecentChats();renderSavedChats();persistChats();showToast('Removed from saved');}
+function removeSavedChatByKey(key){
+  savedChats=savedChats.filter(function(s){return s.key!==key;});
+  persistChats();
+  if(typeof renderRecentChats==='function') renderRecentChats();
+  if(typeof renderSavedChats==='function') renderSavedChats();
+  if(typeof refreshChpList==='function') refreshChpList();
+}
 function _checkAndShowNotesPanel(history){
   var p = document.getElementById('sciFiNotesPanel');
   // No history — hide panel
@@ -25426,6 +26810,7 @@ function openSavedChat(i){
       addMsg('chatContainer','ai','This chat’s messages aren’t stored on this device anymore. You can keep chatting in a new thread from here.',false,'chat');
     }catch(_e){}
   }
+  try{ _restoreGeneratedDocs(c.key); }catch(_rd){}
   var es=document.getElementById('chatEmptyState');
   if(es){
     // Opening a past chat should swap straight to it — the normal .5s
@@ -25458,7 +26843,7 @@ function persistChats(){
     var allKeys=recentChats.map(function(c){return c.key;}).concat(savedChats.map(function(c){return c.key;}));
     allKeys.forEach(function(k){
       if(!chatSessions[k]) return;
-      data.chatSessions[k]={history:chatSessions[k].history||[],hasNotes:chatSessions[k].hasNotes||false};
+      data.chatSessions[k]={history:chatSessions[k].history||[],hasNotes:chatSessions[k].hasNotes||false,docs:chatSessions[k].docs||[]};
     });
     var _json=JSON.stringify(data);
     localStorage.setItem('synapses_chat_history',_json);
@@ -25471,7 +26856,12 @@ function persistChats(){
       var minimal={recentChats:recentChats,savedChats:savedChats,chatSessions:{}};
       recentChats.concat(savedChats).forEach(function(c){
         var s=chatSessions[c.key];
-        if(s) minimal.chatSessions[c.key]={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false};
+        if(s){
+          var slimDocs=(s.docs||[]).map(function(d){
+            return {i:d.i,type:d.type,name:d.name,spec:d.spec,prompt:d.prompt,url:d.url};
+          });
+          minimal.chatSessions[c.key]={history:(s.history||[]).slice(-10),hasNotes:s.hasNotes||false,docs:slimDocs};
+        }
       });
       var _mjson=JSON.stringify(minimal);
       localStorage.setItem('synapses_chat_history',_mjson);
@@ -25533,6 +26923,7 @@ function openRecentChat(i){
       addMsg('chatContainer','ai','This chat’s messages aren’t stored on this device anymore (older sessions were cleared to free memory). Start a new message here, or re-run research if you need the sources again.',false,'chat');
     }catch(_e){}
   }
+  try{ _restoreGeneratedDocs(c.key); }catch(_rd){}
   var es=document.getElementById('chatEmptyState');
   if(es){
     // Opening a past chat should swap straight to it — the normal .5s
@@ -28263,7 +29654,7 @@ function renderNotes(){
     var isAva=i>=userLen;
     var realIdx=isAva?i-userLen:i;
     return '<div style="position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s;" class="note-card" onclick="openNoteJournal('+realIdx+','+isAva+')" onmouseover="this.style.borderColor=\'rgba(124,106,247,0.4)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
-      +'<button onclick="event.stopPropagation();deleteNote('+realIdx+','+isAva+')" class="note-del-btn" title="Delete">✕</button>'
+      +'<button onclick="event.stopPropagation();deleteNote('+realIdx+','+isAva+')" class="note-del-btn" data-hint="Delete">✕</button>'
       +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">'
       +'<div style="font-family:\'Syne\',sans-serif;font-size:13.5px;font-weight:700;color:var(--text);">'+esc(n.title)+'</div>'
       +'<div style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">'+n.date+'</div>'
@@ -35232,7 +36623,7 @@ function wbRenderBoardList(){
       +dot
       +refreshBtn
 
-      +'<span onclick="wbDeleteBoard(\'' +b.id+ '\',event)" title="Delete" style="font-size:11px;opacity:0.4;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">&#x1F5D1;</span>'
+      +'<span onclick="wbDeleteBoard(\'' +b.id+ '\',event)" data-hint="Delete" style="font-size:11px;opacity:0.4;cursor:pointer;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.4">&#x1F5D1;</span>'
       +'</div>'
       +'</div>'
       +'</div>';
@@ -36633,6 +38024,7 @@ function _syncDayNightToggle(t){
   var STAR_BASE_Z = STAR_FIELD_R * 0.5;
   var DUST_BASE_Z = DUST_FIELD_R * 0.5;
   var _dragging = false, _dragLastX = 0, _dragLastY = 0, _dragMoved = false;
+  var _dragStartX = 0, _dragStartY = 0, _dragArmed = false, _dragStartT = 0; // dead-zone: real drag only after crossing PAN_THRESHOLD *and* MIN_HOLD_MS
   var _dragVX = 0, _dragVY = 0; // recent drag speed, for release momentum
   var _pinchStartDist = 0, _pinchLastDist = 0;
   var _camResetT = 0, _camResetting = false;
@@ -37388,7 +38780,7 @@ function _syncDayNightToggle(t){
   var _exploreCameraBound = false;
   function isRealUiTarget(el){
     while(el && el !== document.body){
-      if(el.closest && el.closest('button,a,input,textarea,select,[role="button"],[contenteditable="true"]')) return true;
+      if(el.closest && el.closest('button,a,input,textarea,select,[role="button"],[contenteditable="true"],#synPulsePanel')) return true;
       var cs = window.getComputedStyle(el);
       if(cs && (cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflowX === 'auto' || cs.overflowX === 'scroll') && el.scrollHeight > el.clientHeight + 2) return true;
       el = el.parentElement;
@@ -37437,6 +38829,8 @@ function _syncDayNightToggle(t){
       _dragging = true; _dragMoved = false; _camResetting = false;
       var p = pointerXY(e);
       _dragLastX = p.x; _dragLastY = p.y;
+      _dragStartX = p.x; _dragStartY = p.y; _dragArmed = false;
+      _dragStartT = performance.now();
       _dragVX = 0; _dragVY = 0;
     }, { passive: true });
 
@@ -37446,6 +38840,22 @@ function _syncDayNightToggle(t){
       var dx = p.x - _dragLastX, dy = p.y - _dragLastY;
       _dragLastX = p.x; _dragLastY = p.y;
       if(Math.abs(dx) > 1 || Math.abs(dy) > 1) _dragMoved = true;
+      // Two independent gates before a drag "arms" and starts rotating the
+      // camera: (1) real cumulative movement from the pointerdown spot, and
+      // (2) the button/touch has actually been held a beat. A click (or
+      // spam-clicking fast across the screen) can occasionally rack up
+      // >PAN_THRESHOLD px of incidental movement during its brief down-time,
+      // but it essentially can never also clear MIN_HOLD_MS — that's the
+      // signal a real, deliberate press-and-drag is happening, not a click.
+      if(!_dragArmed){
+        var totalDx = p.x - _dragStartX, totalDy = p.y - _dragStartY;
+        var PAN_THRESHOLD = 8;
+        var MIN_HOLD_MS = 70;
+        var movedEnough = Math.abs(totalDx) >= PAN_THRESHOLD || Math.abs(totalDy) >= PAN_THRESHOLD;
+        var heldEnough = (performance.now() - _dragStartT) >= MIN_HOLD_MS;
+        if(!movedEnough || !heldEnough) return;
+        _dragArmed = true;
+      }
       var SENS = 0.0032;
       cam.yaw -= dx * SENS;
       cam.pitch -= dy * SENS;
@@ -43514,28 +44924,63 @@ function _buildVoicePicker() {
   });
 
   function _updateToggleLabel() {
-    var lbl = document.getElementById('dgVoiceToggleLabel');
-    if (!lbl) return;
     var found = _activeVoiceList().find(function(v){ return v.id === _activeVoiceId(); });
-    lbl.textContent = found ? (found.label.split(' — ')[0] || 'Dynamic') : 'Voice';
+    var name = found ? (found.label.split(' — ')[0] || 'Voice') : 'Voice';
+    var lbl = document.getElementById('dgVoiceToggleLabel');
+    if (lbl) lbl.textContent = name;
+    var sts = document.getElementById('avaCxVoiceName');
+    if (sts) sts.textContent = name;
   }
   window._updateToggleLabel = _updateToggleLabel;
   _updateToggleLabel();
 
-  // ── Toggle open/close ──────────────────────────────────────────────────────
+  // ── Toggle open/close (original working path) ──────────────────────────────
   var _panelOpen = false;
+  var _panelPinned = false;
+  function _showVoicePanel(){
+    panel.style.display = 'flex';
+    panel.style.pointerEvents = 'auto';
+    _panelOpen = true;
+    window._dgVoiceIgnoreClose = Date.now() + 400;
+    var active = list.querySelector('.vp-item.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+  function _hideVoicePanel(){
+    panel.style.display = 'none';
+    _panelOpen = false;
+    _panelPinned = false;
+  }
+  window.openVoiceChooser = function(at){
+    if(at && at.left != null){
+      _panelPinned = true;
+      document.body.appendChild(panel);
+    } else {
+      _panelPinned = false;
+      var host = document.getElementById('chatContainer');
+      if(host && panel.parentNode !== host) host.appendChild(panel);
+    }
+    _showVoicePanel();
+    if(at && at.left != null){
+      panel.style.position = 'fixed';
+      panel.style.zIndex = '1000002';
+      panel.style.left = at.left + 'px';
+      panel.style.top = at.top + 'px';
+      panel.style.right = 'auto';
+    }
+  };
   toggle.addEventListener('click', function(e) {
     e.stopPropagation();
-    _panelOpen = !_panelOpen;
-    panel.style.display = _panelOpen ? 'flex' : 'none';
-    // Scroll active item into view
-    if (_panelOpen) {
-      var active = list.querySelector('.vp-item.active');
-      if (active) active.scrollIntoView({ block: 'nearest' });
-    }
+    if(_panelOpen){ _hideVoicePanel(); return; }
+    panel.style.position = '';
+    panel.style.zIndex = '';
+    panel.style.left = '';
+    panel.style.right = '';
+    panel.style.top = '';
+    _showVoicePanel();
   });
   document.addEventListener('click', function() {
-    if (_panelOpen) { panel.style.display = 'none'; _panelOpen = false; }
+    if (window._dgVoiceIgnoreClose && Date.now() < window._dgVoiceIgnoreClose) return;
+    if (_panelOpen) _hideVoicePanel();
   });
   panel.addEventListener('click', function(e){ e.stopPropagation(); });
 
@@ -43548,10 +44993,10 @@ function _buildVoicePicker() {
       // they now live inside it (so they scroll away with the messages
       // instead of floating fixed on screen). Re-attach if that happened.
       if (!cc.contains(toggle)) cc.appendChild(toggle);
-      if (!cc.contains(panel)) cc.appendChild(panel);
+      if (!_panelPinned && !cc.contains(panel)) cc.appendChild(panel);
       var show = cc.querySelectorAll('.message-group').length > 0;
       toggle.style.display = show ? 'flex' : 'none';
-      if (!show) { panel.style.display = 'none'; _panelOpen = false; }
+      if (!show && !_panelPinned) { panel.style.display = 'none'; _panelOpen = false; }
     }).observe(cc, { childList: true, subtree: false });
   }
 
@@ -43562,7 +45007,7 @@ function _buildVoicePicker() {
     var cc2 = document.getElementById('chatContainer');
     if (cc2) {
       if (!cc2.contains(toggle)) cc2.appendChild(toggle);
-      if (!cc2.contains(panel)) cc2.appendChild(panel);
+      if (!_panelPinned && !cc2.contains(panel)) cc2.appendChild(panel);
     }
     var hasChat = cc2 && cc2.querySelectorAll('.message-group').length > 0;
     toggle.style.display = (onChat && hasChat) ? 'flex' : 'none';
@@ -46703,6 +48148,24 @@ function speakVoiceReply(text) {
       return;
     }
 
+    // ── Voice → connected apps (Gmail / Calendar / Drive) ─────────────────
+    if (!_vcHandled && window.synConnectors && typeof window.synConnectors.detect === 'function' && window.synConnectors.detect(_t)) {
+      _vcHandled = true;
+      window.synConnectors.runFromText(_t, {}).then(function(out){
+        if (_myTurn !== _voiceTurnId) return;
+        var line = (out && (out.spoken || out.error)) || "I couldn't reach that app.";
+        if (out && out.needConnect) line += ' Connect it in Profile, under Connected apps.';
+        try { speak(line); } catch(_sx) {}
+        _busy = false; _busySince = 0;
+        if (_on) setTimeout(record, 800);
+      }).catch(function(){
+        try { speak("I couldn't reach that app right now."); } catch(_s2) {}
+        _busy = false; _busySince = 0;
+        if (_on) setTimeout(record, 800);
+      });
+      return;
+    }
+
     // ── Voice → Studio image gen: "generate me a photo of …" ─────────────────
     // Opens Studio, sets 1 variation (unless they asked for a set / N images), generates.
     if (!_vcHandled) {
@@ -47739,6 +49202,7 @@ function speakVoiceReply(text) {
     // Show speaker on last AI bubble so user can replay after voice ends/cancels
     setTimeout(function(){ if(typeof window._speakerOnLastBubble==='function') window._speakerOnLastBubble(); }, 150);
   }
+  window._stsStopAll = stopAll;
 
   _setTopNavVoiceActive(false);
   window._openTranscript = function() {
@@ -48893,19 +50357,21 @@ async function srcAgentContact(supplier) {
 
   // Right-click context menu (speech-to-speech / voice button)
   var ctxMenu = document.createElement('div');
+  ctxMenu.id = 'avaStsCtxMenu';
   ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;min-width:220px;';
   ctxMenu.innerHTML =
-    '<div id="avaCx4" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
-    '<div id="avaCxLife" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">🧬</span><span>Ava Life State</span></div>' +
-    '<div id="avaCxLifeTick" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span style="font-size:14px;">⟳</span><span>Run solitude tick</span></div>' +
-    '<div style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
-    '<div style="padding:4px 12px 2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:\'DM Sans\',sans-serif;">Ava mode</div>' +
-    '<div id="avaCxModeSelf" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="font-size:14px;">◈</span><span style="flex:1;">Self-aware</span><span id="avaCxModeSelfChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
-    '<div id="avaCxModeComp" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="font-size:14px;">♡</span><span style="flex:1;">Companion</span><span id="avaCxModeCompChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
-    '<div id="avaCxModeBlend" style="display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex-shrink:0;" title="Blend"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="9.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><circle cx="14.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><path d="M12 8.2a5.25 5.25 0 0 1 0 7.6" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/></svg></span><span style="flex:1;">Blend both</span><span id="avaCxModeBlendChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
-    '<div id="avaCx2" style="display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span style="font-size:14px;">✕</span><span>Close Window</span></div>';
+    '<div id="avaCx4" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
+    '<div id="avaCxVoice" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🎙</span><span style="flex:1;">Choose voice</span><span id="avaCxVoiceName" style="font-size:12px;opacity:0.5;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>' +
+    '<div id="avaCxLife" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🧬</span><span>Ava Life State</span></div>' +
+    '<div id="avaCxLifeTick" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span class="ava-cx-ico">⟳</span><span>Run solitude tick</span></div>' +
+    '<div class="ava-cx-div" style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
+    '<div class="ava-cx-sec" style="padding:4px 12px 2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:\'DM Sans\',sans-serif;">Ava mode</div>' +
+    '<div id="avaCxModeSelf" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico">◈</span><span style="flex:1;">Self-aware</span><span id="avaCxModeSelfChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCxModeComp" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico">♡</span><span style="flex:1;">Companion</span><span id="avaCxModeCompChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCxModeBlend" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico" title="Blend"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="9.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><circle cx="14.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><path d="M12 8.2a5.25 5.25 0 0 1 0 7.6" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/></svg></span><span style="flex:1;">Blend both</span><span id="avaCxModeBlendChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
+    '<div id="avaCx2" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">✕</span><span>Close Window</span></div>';
   document.body.appendChild(ctxMenu);
-  function _cxHov(el,bg){ if(!el)return; el.onmouseenter=function(){el.style.background=bg;}; el.onmouseleave=function(){el.style.background='';}; }
+  function _cxHov(el,bg){ if(!el)return; el.onmouseenter=function(){el.style.background=(typeof _isTrueBlackTheme==='function'&&_isTrueBlackTheme())?'rgba(255,255,255,0.07)':bg;}; el.onmouseleave=function(){el.style.background='';}; }
   function _cxSyncModeChecks(){
     var m = window._avaVibeMode || 'blend';
     if (m === 'nodes') m = 'selfaware';
@@ -48929,6 +50395,7 @@ async function srcAgentContact(supplier) {
   }
   _cxHov(ctxMenu.querySelector('#avaCx2'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCx4'),'rgba(124,106,247,0.18)');
+  _cxHov(ctxMenu.querySelector('#avaCxVoice'),'rgba(124,106,247,0.16)');
   _cxHov(ctxMenu.querySelector('#avaCxLife'),'rgba(0,217,168,0.14)');
   _cxHov(ctxMenu.querySelector('#avaCxLifeTick'),'rgba(0,217,168,0.10)');
   _cxHov(ctxMenu.querySelector('#avaCxModeSelf'),'rgba(124,106,247,0.16)');
@@ -48939,6 +50406,19 @@ async function srcAgentContact(supplier) {
     ctxMenu.style.display='none';
     if (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) { disableAvaAvatar(); }
     else if (typeof enableAvaAvatar === 'function') { enableAvaAvatar(); }
+  };
+  ctxMenu.querySelector('#avaCxVoice').onclick = function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    var box = ctxMenu.getBoundingClientRect();
+    ctxMenu.style.display='none';
+    window._dgVoiceIgnoreClose = Date.now() + 400;
+    if(typeof window.openVoiceChooser==='function'){
+      window.openVoiceChooser({ left: box.left, top: box.top, width: box.width });
+    } else {
+      var t=document.getElementById('dgVoiceToggle');
+      if(t) t.click();
+    }
   };
   ctxMenu.querySelector('#avaCxLife').onclick = function(e){
     e.stopPropagation();
@@ -48958,6 +50438,12 @@ async function srcAgentContact(supplier) {
     ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
     var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
     if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
+    var host = (typeof window._isHostAccount === 'function') ? window._isHostAccount() : false;
+    var life = ctxMenu.querySelector('#avaCxLife');
+    var tick = ctxMenu.querySelector('#avaCxLifeTick');
+    if(life) life.style.display = host ? 'flex' : 'none';
+    if(tick) tick.style.display = host ? 'flex' : 'none';
+    if(typeof window._updateToggleLabel==='function') window._updateToggleLabel();
     _cxSyncModeChecks();
     ctxMenu.style.display = 'block';
     ctxMenu.style.left = Math.min(clientX, window.innerWidth - 240) + 'px';
