@@ -1188,9 +1188,17 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
   body.topbar-hidden:not(.llm-thread) .chat-messages{padding-top:6px!important;transition:none!important;}
-  /* Hidden header: original lowered Vesta (pressable, same spot as before). */
-  body.llm-thread.topbar-hidden #dgVoiceToggle{top:28px!important;}
-  body.llm-thread.topbar-hidden #dgVoicePanel{top:64px!important;}
+  /* Hidden header only: sit Vesta under #topBarToggle (24px tall at the
+     status inset) with ~20px air so the two taps don't collide. Header-on
+     and welcome/Notes keep their own rules. */
+  body.llm-thread.topbar-hidden #dgVoiceToggle{top:48px!important;}
+  body.llm-thread.topbar-hidden #dgVoicePanel{top:84px!important;}
+  html.android-status-blend body.llm-thread.topbar-hidden #dgVoiceToggle{
+    top:calc(var(--android-status-inset, 28px) + 44px)!important;
+  }
+  html.android-status-blend body.llm-thread.topbar-hidden #dgVoicePanel{
+    top:calc(var(--android-status-inset, 28px) + 80px)!important;
+  }
   /* Visible overlay header covers y=0 of #sec-chat. Park Vesta just under
      the bar — same 12px / 48px offset it had when the header was in-flow. */
   body.llm-thread:not(.topbar-hidden) #dgVoiceToggle{
