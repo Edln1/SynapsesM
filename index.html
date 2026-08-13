@@ -440,9 +440,7 @@ html[data-theme="light"] #authLeftPanel{background:linear-gradient(135deg,#e8eaf
 /* ── Theme card ── */
 .theme-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-input,textarea,[contenteditable],[contenteditable="true"],#notesEditor,#notesPageTitle{-webkit-user-select:text!important;user-select:text!important;-webkit-user-modify:read-write!important;}
-#notesEditor,#notesEditor *{cursor:text!important;-webkit-user-select:text!important;user-select:text!important;}
-.message-text,.message-text *{-webkit-user-select:text!important;user-select:text!important;cursor:text!important;}
+input,textarea{-webkit-user-select:text!important;user-select:text!important;}.message-text,.message-text *{-webkit-user-select:text!important;user-select:text!important;cursor:text!important;}
 body{font-family:'DM Sans',sans-serif;background:#000000;color:var(--text);display:flex;height:100vh;overflow:hidden;position:relative;transition:background-color 1.4s ease;}
 .sidebar{width:260px;min-width:180px;max-width:400px;flex-shrink:0;background:rgba(15,15,26,0.85);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:visible;position:relative;transition:width .25s cubic-bezier(0.4,0,0.2,1);}
 .sidebar::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;}
@@ -1070,52 +1068,9 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      mic's landing spot off. Height/opacity collapsing doesn't have that
      side effect; a translateY here did, so it stays off. */
   .top-bar.hidden{
+    min-height:0!important;max-height:0!important;padding:0!important;
     border-color:transparent!important;opacity:0!important;
     pointer-events:none!important;
-  }
-  /* body.llm-thread is set in JS while a real conversation is open.
-     Header floats over the thread (same fade as Good afternoon). Welcome
-     and Notes never get this class, so they stay put. */
-  body.llm-thread .top-bar{
-    position:absolute!important;
-    top:0!important;left:0!important;right:0!important;
-    z-index:40;
-  }
-  body.llm-thread #sec-chat.active{
-    flex:1 1 auto!important;
-    min-height:0!important;
-    overflow:hidden!important;
-  }
-  /* Overlay header takes the bar out of flow, so the thread starts at y=0
-     of .main. Hidden bar: only clear the status/notch (fill the header
-     strip). Visible bar: same gap as the old in-flow header — bar height
-     (~60px) + 12px air — so the first name/msg is not tight under it. */
-  body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
-  body.topbar-hidden.llm-thread .chat-messages,
-  body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    padding-top:calc(env(safe-area-inset-top, 0px) + 12px)!important;
-  }
-  html.android-status-blend body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
-  html.android-status-blend body.topbar-hidden.llm-thread .chat-messages,
-  html.android-status-blend body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    padding-top:calc(var(--android-status-inset, 28px) + 12px)!important;
-  }
-  body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
-  body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    padding-top:calc(env(safe-area-inset-top, 0px) + 72px)!important;
-  }
-  html.android-status-blend body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
-  html.android-status-blend body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    padding-top:calc(var(--android-status-inset, 28px) + 72px)!important;
-  }
-  /* First 3 bubbles: fixed gap (NOT flex-grow — that centered the thread).
-     Vesta lives inside #chatContainer so we cannot count nth-child.
-     JS sets .llm-early-thread from the real .message-group count. */
-  body.llm-thread #sec-chat.active #chatContainer.llm-early-thread::before{
-    content:'';
-    display:block;
-    height:100px;
-    pointer-events:none;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -1196,32 +1151,7 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
      it's flex:1 in that same flex column. This trims its own top padding
      further on top of that, so the reclaimed space is visibly usable instead
      of sitting behind an unchanged 12px gap. */
-  body.topbar-hidden:not(.llm-thread) .chat-messages{padding-top:6px!important;transition:none!important;}
-  /* Hidden header only: sit Vesta under #topBarToggle (24px tall at the
-     status inset) with ~20px air so the two taps don't collide. Header-on
-     and welcome/Notes keep their own rules. */
-  body.llm-thread.topbar-hidden #dgVoiceToggle{top:48px!important;}
-  body.llm-thread.topbar-hidden #dgVoicePanel{top:84px!important;}
-  html.android-status-blend body.llm-thread.topbar-hidden #dgVoiceToggle{
-    top:calc(var(--android-status-inset, 28px) + 44px)!important;
-  }
-  html.android-status-blend body.llm-thread.topbar-hidden #dgVoicePanel{
-    top:calc(var(--android-status-inset, 28px) + 80px)!important;
-  }
-  /* Visible overlay header covers y=0 of #sec-chat. Park Vesta just under
-     the bar — same 12px / 48px offset it had when the header was in-flow. */
-  body.llm-thread:not(.topbar-hidden) #dgVoiceToggle{
-    top:calc(env(safe-area-inset-top, 0px) + 72px)!important;
-  }
-  body.llm-thread:not(.topbar-hidden) #dgVoicePanel{
-    top:calc(env(safe-area-inset-top, 0px) + 108px)!important;
-  }
-  html.android-status-blend body.llm-thread:not(.topbar-hidden) #dgVoiceToggle{
-    top:calc(var(--android-status-inset, 28px) + 72px)!important;
-  }
-  html.android-status-blend body.llm-thread:not(.topbar-hidden) #dgVoicePanel{
-    top:calc(var(--android-status-inset, 28px) + 108px)!important;
-  }
+  body.topbar-hidden .chat-messages{padding-top:6px!important;}
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
@@ -4021,7 +3951,9 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
 /* Home icon only makes sense once there's something to navigate away from (i.e. on the results view).
    Desktop/PC only — mobile keeps the original single Back-arrow header untouched. */
 #studioHomeBtn{ display:none!important; }
-#imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
+@media(min-width:769px){
+  #imageGenModal.studio-showing-results #studioHomeBtn{ display:inline-flex!important; }
+}
 /* Default Studio header layout (original): back | Studio | actions — NOT viewport-centered */
 #studioTopBar{
   display:flex!important;
@@ -4812,9 +4744,7 @@ html[data-theme="purple"] #studioTopBarTitle{
     height:auto!important;
     box-sizing:border-box!important;
     gap:0!important;
-    /* Dock clearance already lives on #imageGenScrollCol (66px). Extra 90px
-       here stacked a dead strip under Community. Keep a little air only. */
-    padding:0 0 8px!important;
+    padding:0 0 90px!important;
     justify-content:flex-start!important;
     align-items:stretch!important;
     text-align:left!important;
@@ -5047,10 +4977,6 @@ html[data-theme="purple"] #studioTopBarTitle{
   #studioGenerateView #imageGenEmptyState .studio-rail-tile{
     width:calc(50% - 5px)!important;flex:0 0 calc(50% - 5px)!important;
     height:130px!important;min-height:130px!important;max-height:130px!important;
-  }
-  #studioGenerateView #imageGenEmptyState .studio-rail-feed{
-    height:auto!important;max-height:none!important;min-height:0!important;
-    overflow:visible!important;padding:0!important;
   }
   /* Dock chrome stays the original mobile-native gear + pill (untouched) */
   #studioGenerateView .studioDockTools,
@@ -8763,8 +8689,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   <div id="studioTopBar" style="position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:calc(18px + env(safe-area-inset-top, 0px)) 14px 12px;flex-shrink:0;background:rgba(10,10,14,0.38);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);">
     <div id="studioTopBarLeft" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <button type="button" onclick="closeImageGenModal()" title="Back" style="width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);color:var(--text);font-size:20px;cursor:pointer;">‹</button>
-      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Back to your generation" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
+      <button type="button" id="studioHomeBtn" onclick="toggleStudioHome()" title="Studio home" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--muted);cursor:pointer;transition:background .18s,border-color .18s,color .18s;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
       </button>
     </div>
     <div id="studioTopBarTitle">Studio</div>
@@ -11252,8 +11178,6 @@ function _mountStudioLandRail(){
    * Manual max clamps to first set so the duplicate loop copy is never visible.
    */
   var feedH = 420;
-  var isMobileRail = false;
-  try{ isMobileRail = !!(window.matchMedia && window.matchMedia('(max-width:768px)').matches); }catch(_mm){}
   try{
     var railH = (rail && rail.clientHeight) ? rail.clientHeight : 0;
     var head = rail ? rail.querySelector('.studio-rail-head') : null;
@@ -11261,7 +11185,6 @@ function _mountStudioLandRail(){
     var vh = Math.max(280, Math.min(window.innerHeight * 0.55, 520));
     feedH = railH > 80 ? Math.max(200, railH - headH) : vh;
   }catch(_h){}
-  if(isMobileRail) feedH = 0;
 
   feed.style.cssText =
     'display:block;overflow:hidden;position:relative;' +
@@ -11317,13 +11240,7 @@ function _mountStudioLandRail(){
      it (marquee/scroll behavior still applies in that case). */
   try{
     var naturalH = marquee.scrollHeight || 0;
-    if(isMobileRail){
-      feed.style.height = 'auto';
-      feed.style.maxHeight = 'none';
-      feed.style.minHeight = '0';
-      feed.style.overflow = 'visible';
-      feedH = Math.max(naturalH, 60);
-    } else if(naturalH > 0 && naturalH < feedH){
+    if(naturalH > 0 && naturalH < feedH){
       feedH = Math.max(naturalH, 60);
       feed.style.height = feedH + 'px';
       feed.style.maxHeight = feedH + 'px';
@@ -13638,11 +13555,9 @@ function _renderStudioHomeMarkup(emptyEl){
 var _studioHomeShowing = false;
 function _setStudioShowingResults(showing){
   var modal = document.getElementById('imageGenModal');
-  if(modal) modal.classList.add('studio-showing-results');
-  _studioHomeShowing = !showing;
-  _setStudioHomeBtnIcon(!showing);
-  var btn = document.getElementById('studioHomeBtn');
-  if(btn) btn.title = showing ? 'Studio home' : 'Back to your generation';
+  if(modal) modal.classList.toggle('studio-showing-results', !!showing);
+  _studioHomeShowing = false;
+  _setStudioHomeBtnIcon(false);
 }
 
 /** Header Home icon: jump back to the Studio browse/home screen without touching
@@ -13678,25 +13593,36 @@ async function renderImageGenDefaultFeed(){
   if(!resultsEl) return;
   var items = await loadImageGenHistory();
   _imageGenFeedLoaded = true;
-  resultsEl.innerHTML = '';
-  if(items.length){
-    items.forEach(function(it, idx){
-      resultsEl.appendChild(_buildStudioImageCard({
-        src: it.src,
-        prompt: it.prompt || '',
-        filename: 'synapses-image-' + (idx + 1) + '.jpg'
-      }));
-    });
+  if(!items.length){
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    _renderStudioHomeMarkup(emptyEl);
+    _setStudioShowingResults(false);
+    return;
   }
-  resultsEl.style.display = 'none';
-  _renderStudioHomeMarkup(emptyEl);
-  if(emptyEl) emptyEl.style.display = 'flex';
-  _studioHomeShowing = true;
-  _setStudioHomeBtnIcon(true);
-  var homeBtn = document.getElementById('studioHomeBtn');
-  if(homeBtn) homeBtn.title = 'Back to your generation';
-  var modalEl = document.getElementById('imageGenModal');
-  if(modalEl) modalEl.classList.add('studio-showing-results');
+  resultsEl.style.display = 'grid';
+  resultsEl.innerHTML = '';
+  items.forEach(function(it, idx){
+    resultsEl.appendChild(_buildStudioImageCard({
+      src: it.src,
+      prompt: it.prompt || '',
+      filename: 'synapses-image-' + (idx + 1) + '.jpg'
+    }));
+  });
+  // If the person was browsing the Studio home/explore screen when they last left
+  // (via toggleStudioHome), re-opening Studio should NOT yank them onto the results
+  // grid — keep showing home, with results populated underneath for the back-toggle.
+  if(_studioHomeShowing){
+    resultsEl.style.display = 'none';
+    _renderStudioHomeMarkup(emptyEl);
+    if(emptyEl) emptyEl.style.display = 'flex';
+    var modalEl = document.getElementById('imageGenModal');
+    if(modalEl) modalEl.classList.add('studio-showing-results');
+    _setStudioHomeBtnIcon(true);
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+  _setStudioShowingResults(true);
 }
 
 async function openImageGenHistory(){
@@ -15094,30 +15020,20 @@ function _renumberOrderedList(text, startCount){
 }
 /* Splits story/calm-mode streaming text into "sentences" on ./!/? boundaries,
  * then merges fragments back together where the split was bogus: a bare list
- * ordinal ("4." alone), a name initial ("J." "F." "K."), a title/suffix
- * ("Dr." "Jr."), or a decimal number split mid-way ("1." + "42 billion").
- * Also re-homes a stray trailing list-ordinal onto the next sentence.
- *
- * holdIncomplete (live stream only): do NOT emit a last fragment that still
- * looks like an initial/title ("John F.") — the next tokens ("Kennedy was
- * born…") have not arrived yet. If we paint that fragment, _lastShownSentences
- * becomes 1, the later merge keeps the count at 1, and the rest of the reply
- * is never shown (the JFK "John F." bug). Flush calls without this flag.
- *
- * Flush also glues the unpunctuated tail after the last .!? so a short
- * factual answer with no closing period is not dropped. */
-function _storyLooksIncomplete(frag){
-  var s = String(frag || '');
-  if(/^\s*\d+\.\s*$/.test(s)) return true;
-  if(/(^|\s)[A-Z]\.\s*$/.test(s)) return true;
-  if(/(^|\s)(Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.\s*$/i.test(s)) return true;
-  return false;
-}
-function _storySplitSentences(text, holdIncomplete){
-  text = String(text || '');
+ * ordinal ("4." alone), a name initial ("J." "R." "K."), or a decimal number
+ * split mid-way ("1." + "42 billion" from "1.42 billion"). Also re-homes a
+ * stray trailing list-ordinal (left over from a period-split) onto the front
+ * of the next sentence so numbering + content never separate.
+ * Shared by the live per-chunk streaming reveal AND the end-of-stream flush
+ * below, so both always agree on where sentences start/end. Previously each
+ * spot had its own copy — and the live-reveal counter separately assumed a
+ * fixed chunk size had been shown even when it hadn't, silently dropping
+ * sentences from the DISPLAY while TTS (a fully independent counter) still
+ * spoke them, and any leftover tail that hadn't filled a full chunk when
+ * streaming ended was never shown at all. */
+function _storySplitSentences(text){
   var _raw = text.match(/[^.!?]+[.!?]+/g) || [];
   var sentences = [];
-  var _abbrEnd = /(?:^|\s)(?:[A-Z]\.|(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.)\s*$/i;
   for(var _ri=0; _ri<_raw.length; _ri++){
     var _frag = _raw[_ri];
     var _keepMerging = true;
@@ -15126,7 +15042,7 @@ function _storySplitSentences(text, holdIncomplete){
       if(/^\s*\d+\.\s*$/.test(_frag)){
         _frag += ' '+_raw[++_ri];
         _keepMerging = true;
-      } else if(_abbrEnd.test(_frag)){
+      } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
         _frag += ' '+_raw[++_ri];
         _keepMerging = true;
       } else if(/\d\.$/.test(_frag) && /^\d/.test(_raw[_ri+1])){
@@ -15143,80 +15059,7 @@ function _storySplitSentences(text, holdIncomplete){
       sentences[_si+1] = '\n\n' + _mTrail[1] + ' ' + sentences[_si+1].replace(/^\s+/, '');
     }
   }
-  if(holdIncomplete){
-    if(sentences.length && _storyLooksIncomplete(sentences[sentences.length-1])){
-      sentences.pop();
-    }
-    return sentences;
-  }
-  var _lastP = Math.max(text.lastIndexOf('.'), text.lastIndexOf('!'), text.lastIndexOf('?'));
-  var _tail = _lastP >= 0 ? text.slice(_lastP + 1) : (sentences.length ? '' : text);
-  if(_tail && _tail.trim()){
-    if(sentences.length && _storyLooksIncomplete(sentences[sentences.length-1])){
-      sentences[sentences.length-1] += _tail;
-    } else {
-      sentences.push(_tail);
-    }
-  }
   return sentences;
-}
-/* Voice clips. Mid-stream TTS also splits on ,;: so speech can start before
- * the full sentence ends. That used to drop years: "August 17, 1940." became
- * "August 17," + "1940." and "1940." was discarded for being under 8 chars.
- * Glue years / tiny tails back on, and hold a trailing comma until the next
- * clause arrives so the year is spoken with the date. */
-function _ttsIsTinyClip(frag){
-  var s = String(frag || '').trim();
-  if(!s) return true;
-  if(/^\d{1,4}\.?$/.test(s)) return true;
-  if(/^[A-Z]{1,3}\.?$/.test(s)) return true;
-  return s.length <= 8;
-}
-function _ttsSplitSentences(text, holdIncomplete){
-  text = String(text || '');
-  var raw = text.match(/[^.!?,;:]+[.!?,;:]+/g) || [];
-  var out = [];
-  var abbrEnd = /(?:^|\s)(?:[A-Z]\.|(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Ltd|Gen|Col|Rev|Hon|Sen|Rep|Gov)\.)\s*$/i;
-  for(var i=0;i<raw.length;i++){
-    var frag = raw[i];
-    var keep = true;
-    while(keep && i+1<raw.length){
-      keep = false;
-      if(/^\s*\d+\.\s*$/.test(frag)){
-        frag += raw[++i]; keep = true;
-      } else if(abbrEnd.test(frag)){
-        frag += raw[++i]; keep = true;
-      } else if(/\d\.$/.test(frag) && /^\d/.test(raw[i+1])){
-        frag += raw[++i]; keep = true;
-      } else if(_ttsIsTinyClip(raw[i+1])){
-        frag += raw[++i]; keep = true;
-      }
-    }
-    out.push(frag);
-  }
-  if(holdIncomplete){
-    if(out.length){
-      var last = out[out.length-1];
-      if((typeof _storyLooksIncomplete === 'function' && _storyLooksIncomplete(last)) || /[,;:]\s*$/.test(last)){
-        out.pop();
-      }
-    }
-    return out;
-  }
-  var lastP = -1;
-  for(var p=0;p<text.length;p++){
-    if('.!?,;:'.indexOf(text[p])>=0) lastP = p;
-  }
-  var tail = lastP>=0 ? text.slice(lastP+1) : (out.length ? '' : text);
-  if(tail && tail.trim()){
-    var prev = out.length ? out[out.length-1] : '';
-    if(out.length && ((typeof _storyLooksIncomplete === 'function' && _storyLooksIncomplete(prev)) || /[,;:]\s*$/.test(prev) || _ttsIsTinyClip(tail))){
-      out[out.length-1] += tail;
-    } else {
-      out.push(tail);
-    }
-  }
-  return out;
 }
 /** Normalize messy model markdown so chat looks like clean deep-research style */
 function _prettifyChatMarkdown(t){
@@ -20832,7 +20675,7 @@ function _restoreEmptyChatHome(withAsk, opts){
   chatHistory = [];
   activeSession = null;
   var cc = document.getElementById('chatContainer');
-  if(cc){ cc.innerHTML = ''; cc.scrollTop = 0; if(typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread(); }
+  if(cc){ cc.innerHTML = ''; cc.scrollTop = 0; }
   var es = document.getElementById('chatEmptyState');
   var _wasActiveConvo = es && es.classList.contains('hidden');
   if(es){ es.classList.remove('hidden'); es._manualHide = false; }
@@ -23306,7 +23149,7 @@ function _usageState(){
 }
 
 // Accounts that always get unlimited access, regardless of plan/usage — for dev/testing.
-var DEV_UNLIMITED_EMAILS = ['ednbusiness73@gmail.com','mishas3dart@gmail.com'];
+var DEV_UNLIMITED_EMAILS = ['ednbusiness73@gmail.com'];
 
 function isPro(){
   if(currentUser && currentUser.email && DEV_UNLIMITED_EMAILS.indexOf(currentUser.email.toLowerCase()) !== -1) return true;
@@ -24033,12 +23876,6 @@ function toggleAvaGlow(){
   });
 }
 var AVA_B64='data:image/webp;base64,UklGRogCAABXRUJQVlA4IHwCAABQDACdASowADAAPp1Gm0olo6IhpyyQsBOJQBWGYjdmz/uMFYL5lwHqpp465xWJjTvLO8IsB9+uspveaF4G7PViUGbDEdVs1ZHU7I1yjmzxrwSAzimy1Oz8b4zzSKtownkmLS4GLzofrBk8AAD+8ULlFTYELG6yAkmGo/HasBTl+OjZZvw4kAWnPzN8yVKi+f2uVmLAnMW1LKMgxR6Xyl9qt0WC0baYLx3OkSpqKNRdfLVJZ/mPAe1Mg85SY++griupG2XYY1PYvlA0IQefdn5y9qfhwqioSk2Fr5SH+J41lAZ0L9wustHVrCYPP9arA0inqej2ByxBMAodzQjyQxDLnLoA7nGn0D3dctWnagJ1GzaYX1eN5daMia5IXlxh+uHErdmaYvzW7q1jvpr05FMW3o9Saq8oFjkUEBTsFCEx0L2mrX1TjlZjlqt8ycJMS6FQ7QO86VQZbmYgWt+0TP8gBBAH+UayFXYbv1sXTrYIwqGttP30JNRptggnvvI/rJnIqnwHRuBEE9U0PWPlPCR5gkiuoFlojsFjtePb/G8Y1tdPpMk+cVwXrCFDB0c1LVApaOGpEz+NegXot0gDdZlY9UoD8BNVNoDvJHiDNVXfdQ/0W0TGey4XbUtXh6aoX5WvkDvkQ8RVxtKTiDpjNmP3NtZF0zNxiHJeRyfObC7V8SmU+1UVLz25IYfvq9T2Ow9zAyq/T/278SxbDsxqdGypEKuQGeo3sPkegfcpWrZ+ErFqv3gSdMx9V1bNtONc5fZE7AENzmM5J+K3n9IVecJ4+qkZ6DkTL8S7ZhyaH8FHcCl8pGZsCEcyTZEAcFusa0bmtl1BLENWB4TWoAA=';
-function _syncLlmEarlyThread(){
-  var cc = document.getElementById('chatContainer');
-  if(!cc) return;
-  var n = cc.querySelectorAll('.message-group').length;
-  cc.classList.toggle('llm-early-thread', n > 0 && n <= 3);
-}
 function addMsg(cId,role,content,isTyping,mode){
   var c=document.getElementById(cId),g=document.createElement('div');
   g.className='message-group'+(role==='user'?' message-group-user':'');
@@ -24063,7 +23900,6 @@ function addMsg(cId,role,content,isTyping,mode){
   }
   g.innerHTML=avatarHtml+'<div class="message-body">'+'<div class="message-name'+(role==='user'?' message-name-user':'')+'">'+(role==='ai'?aiName:(currentUser?currentUser.name:'You'))+'</div>'+(isTyping?'<div class="typing"><span></span><span></span><span></span></div>':'<div class="message-text"><p>'+_bodyHtml+'</p></div>')+'</div>';
   c.appendChild(g);
-  if(cId==='chatContainer' && typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread();
   c.scrollTop=c.scrollHeight;
   return g;
 }
@@ -24935,18 +24771,20 @@ async function sendMessage(){
       // as BEFORE storybook changes. Speaks the stream text as sentences complete.
       // Research mutes this and speaks clean body once at the end.
       if(_vmActive && !window._avaResearchMuteStreamTTS){
-        var _voiceSrc = (typeof _ttsClean === 'function') ? _ttsClean(partial) : String(partial || '');
-        if (/@@AVA_SOURCES_HTML@@/i.test(_voiceSrc) && typeof _researchBodyOnly === 'function') {
+        var _voiceSrc = String(partial || '');
+        if (/@@AVA_SOURCES_HTML@@/i.test(_voiceSrc)) {
           _voiceSrc = _researchBodyOnly(_voiceSrc);
         }
-        var _sents = _ttsSplitSentences(_voiceSrc, true);
+        var _sents=(_voiceSrc.match(/[^.!?,;:]+[.!?,;:]+/g)||[]);
         if(_sents.length>_ttsSpokenSentences){
           for(var _ti=_ttsSpokenSentences;_ti<_sents.length;_ti++){
             var _chunk=_sents[_ti].trim();
-            if(!_chunk) continue;
-            streamTTSQueue(_chunk);
-            _ttsSpokenUpTo += _sents[_ti].length;
-            _storyVoiceQueued = true;
+            if(_chunk.length>8) {
+              streamTTSQueue(_chunk);
+              _ttsSpokenUpTo += _sents[_ti].length;
+              _storyVoiceQueued = true;
+            }
+            else if(_chunk.length>0) { _ttsSpokenSentences++; _ttsSpokenUpTo += _sents[_ti].length; continue; }
           }
           _ttsSpokenSentences=_sents.length;
         }
@@ -24962,7 +24800,7 @@ async function sendMessage(){
 
       // ── Paint: Pitch Black uses bakcusapd story; else rapid/calm from glow ──
       if(_paintMode===1){
-        var sentences = _storySplitSentences(paintText, true);
+        var sentences = paintText.match(/[^.!?]+[.!?]+/g) || [];
         if(sentences.length > _lastShownSentences){
           for(var _si=_lastShownSentences; _si<sentences.length; _si++){
             var _sp = document.createElement('span');
@@ -24978,10 +24816,9 @@ async function sendMessage(){
         // Pitch Black (bakcusapd): paint each ready group ASAP (delay 0). That is why
         // the whole reply feels fast there — NOT ChatGPT letter stream, NOT slow 1.2s metronome.
         // Sun: cumulative 1200ms slots (true slow storybook).
-        // holdIncomplete: wait on "John F." until "Kennedy…" arrives, or the
-        // stream ends — otherwise the first fragment is painted and the rest
-        // is dropped because the merged sentence count never increases.
-        var sentences = _storySplitSentences(paintText, true);
+        var sentences = (typeof _storySplitSentences === 'function')
+          ? _storySplitSentences(paintText)
+          : (paintText.match(/[^.!?]+[.!?]+/g) || []);
         var chunkSize = 3;
         var _cursor = _lastShownSentences;
         var _burst = 0;
@@ -25140,29 +24977,18 @@ async function sendMessage(){
       }
 
       // Leftover flush for sentence-chunk modes
-      if(streamP && (_paintMode===1 || _paintMode===2) && !_streamSkip && !_streamStopped){
+      if(streamP && _paintMode===2 && !_streamSkip && !_streamStopped){
         var _flushSrc = _isResearchReply ? _researchBodyOnly(reply) : String(reply || '');
-        var _finalSentences = _storySplitSentences(_flushSrc);
-        var _shownPlain = (streamP.textContent || '').replace(/\s+/g,' ').trim();
-        var _finalPlain = String(_flushSrc || '').replace(/\s+/g,' ').trim();
-        // Safety: "John F." was painted before the initial could merge — sentence
-        // COUNT stays the same, but the displayed text is only a prefix. Append
-        // the remainder instead of treating the reply as done.
-        if(_shownPlain && _finalPlain && _finalPlain.indexOf(_shownPlain) === 0 && _shownPlain.length < _finalPlain.length && _finalSentences.length <= _lastShownSentences){
-          var _prefixRem = _finalPlain.slice(_shownPlain.length).replace(/^\s*/, ' ');
-          var _pr = document.createElement('span');
-          _pr.className = (_paintMode===1) ? 'calm-sentence' : 'story-chunk';
-          _pr.innerHTML = fmtMDstream(_prefixRem, _storyListCounter);
-          streamP.appendChild(_pr);
-          _lastShownSentences = _finalSentences.length;
-          _scheduleScroll();
-        } else if(_paintMode===1 || _storyBak){
+        var _finalSentences = (typeof _storySplitSentences === 'function')
+          ? _storySplitSentences(_flushSrc)
+          : (_flushSrc.match(/[^.!?]+[.!?]+/g) || []);
+        if(_storyBak){
           // bakcusapd: append leftover immediately (same as that file)
           if(_finalSentences.length > _lastShownSentences){
             var _leftover = _finalSentences.slice(_lastShownSentences).join(' ');
             var _leftoverHtml = fmtMDstream(_leftover, _storyListCounter);
             var _lp = document.createElement('span');
-            _lp.className = (_paintMode===1) ? 'calm-sentence' : 'story-chunk';
+            _lp.className = 'story-chunk';
             _lp.innerHTML = _leftoverHtml;
             streamP.appendChild(_lp);
             _lastShownSentences = _finalSentences.length;
@@ -25219,8 +25045,7 @@ async function sendMessage(){
         var _rBody = _researchBodyOnly(reply) || data._avaResearchSpeak || window._avaResearchSpeakText || '';
         var _rSpeak = _ttsClean(_rBody);
         if (_rSpeak.length > 4) {
-          var _rSents = _ttsSplitSentences(_rSpeak);
-          if(!_rSents.length && _rSpeak.trim()) _rSents = [_rSpeak];
+          var _rSents = _rSpeak.match(/[^.!?]+[.!?]+/g) || [_rSpeak];
           _rSents.forEach(function(s){ if (s.trim().length > 3) streamTTSQueue(s.trim()); });
         }
         window._avaResearchSpeakText = null;
@@ -25334,7 +25159,6 @@ function sendHomeMessage(){
   var intent=detectIntent(text,'chat');
   chatHistory=[];
   document.getElementById('chatContainer').innerHTML='';
-  if(typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread();
   activeSession='session_'+Date.now();
   document.getElementById('inputBox').value=text;
   setView('sec-chat');
@@ -31966,8 +31790,6 @@ function goNotes() {
     } catch(ePB){}
     document.addEventListener('keydown', function(e){
       if(!_open) return;
-      var t = e.target;
-      if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       if(e.key === 'Escape') closePulse();
       if(e.key === 'ArrowRight'){ e.preventDefault(); advance('right', 1); }
       if(e.key === 'ArrowLeft' || e.key === ' '){ e.preventDefault(); advance('left', 1); }
@@ -36236,27 +36058,7 @@ window._tnvVanishEscapeInPlace = _tnvVanishEscapeInPlace;
 window._tnvEscapeAboveModal = _tnvEscapeAboveModal;
 window._tnvReturnFromModal = _tnvReturnFromModal;
 
-function _syncLlmThreadClass(){
-  var chat = document.getElementById('sec-chat');
-  var es = document.getElementById('chatEmptyState');
-  var on = !!(chat && chat.classList.contains('active') && es && es.classList.contains('hidden'));
-  document.body.classList.toggle('llm-thread', on);
-}
-(function(){
-  function boot(){
-    _syncLlmThreadClass();
-    var chat = document.getElementById('sec-chat');
-    var es = document.getElementById('chatEmptyState');
-    if(!window.MutationObserver) return;
-    var mo = new MutationObserver(_syncLlmThreadClass);
-    if(chat) mo.observe(chat, { attributes:true, attributeFilter:['class'] });
-    if(es) mo.observe(es, { attributes:true, attributeFilter:['class'] });
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})();
 function toggleTopBar(){
-  if(typeof _syncLlmThreadClass === 'function') _syncLlmThreadClass();
   TOP_BAR_HIDDEN = !TOP_BAR_HIDDEN;
   var bar = document.querySelector('.top-bar');
   var btn = document.getElementById('topBarToggle');
@@ -41792,7 +41594,28 @@ function synBotSend(text){
 
       _synBotLLMCall(_synBotHistory,
         function(partial){
-          var sentences = _storySplitSentences(partial, true);
+          var _rawSentences = partial.match(/[^.!?]+[.!?]+/g) || [];
+          var sentences = [];
+          for(var _ri=0;_ri<_rawSentences.length;_ri++){
+            var _frag = _rawSentences[_ri];
+            // Merge bare ordinals, name initials, and split decimal numbers forward
+            // instead of treating them as sentence ends.
+            var _keepMerging = true;
+            while(_keepMerging && _ri+1<_rawSentences.length){
+              _keepMerging = false;
+              if(/^\s*\d+\.\s*$/.test(_frag)){
+                _frag += ' '+_rawSentences[++_ri];
+                _keepMerging = true;
+              } else if(/(^|\s)[A-Z]\.\s*$/.test(_frag)){
+                _frag += ' '+_rawSentences[++_ri];
+                _keepMerging = true;
+              } else if(/\d\.$/.test(_frag) && /^\d/.test(_rawSentences[_ri+1])){
+                _frag += _rawSentences[++_ri];
+                _keepMerging = true;
+              }
+            }
+            sentences.push(_frag);
+          }
           var chunkSize = 1;
           var chunksNow = Math.floor(sentences.length / chunkSize);
           var _lastShownChunks = Math.floor(_sbShownSentences / chunkSize);
@@ -41809,22 +41632,14 @@ function synBotSend(text){
           }
         },
         function(full){
-          // Stream done — paint any sentences held back (e.g. "John F." waiting
-          // to merge) plus leftover tail. If nothing was sentence-split at all,
-          // typewrite the whole reply.
-          var _finalSents = _storySplitSentences(full);
-          if(_finalSents.length > _sbShownSentences){
-            var _rest = _finalSents.slice(_sbShownSentences).join(' ');
+          // Stream done — if queue still has items let them finish typing naturally
+          // If nothing queued at all (very short reply), just show it
+          if(_sbTypeQueue.length === 0 && !_sbTyping && typingEl.children.length === 0){
+            // Short reply with no sentence breaks — typewrite it directly
             var _fbSpan = document.createElement('span');
             _fbSpan.className = 'story-chunk';
             _fbSpan.style.display = 'block';
-            _sbTypeQueue.push({text: _rest, span: _fbSpan});
-            _sbTypeNext();
-          } else if(_sbTypeQueue.length === 0 && !_sbTyping && typingEl.children.length === 0){
-            var _fbSpan2 = document.createElement('span');
-            _fbSpan2.className = 'story-chunk';
-            _fbSpan2.style.display = 'block';
-            _sbTypeQueue.push({text: full, span: _fbSpan2});
+            _sbTypeQueue.push({text: full, span: _fbSpan});
             _sbTypeNext();
           }
           _synBotHistory.push({role:'assistant',content:full});
@@ -45256,10 +45071,8 @@ function streamTTSFinalize(fullText) {
 function speakVoiceReply(text) {
   if (!_vmActive) return;
   _ttsStopAll();
-  var _spoken = _ttsClean(text);
-  var sentences = _ttsSplitSentences(_spoken);
-  if(!sentences.length && _spoken.trim()) sentences = [_spoken];
-  sentences.forEach(function(s){ if(s.trim()) _ttsQueue.push(s.trim()); });
+  var sentences = _ttsClean(text).match(/[^.!?]+[.!?]+/g) || [_ttsClean(text)];
+  sentences.forEach(function(s){ _ttsQueue.push(s.trim()); });
   _ttsPlayNext(_vmGenId);
 }
 
@@ -47397,23 +47210,11 @@ function speakVoiceReply(text) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       /* avaLife:true ensures server injects latest mind even if client cache is stale */
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        avaLife: true,
-        messages: [{ role: 'system', content: sys }].concat(msgs),
-        max_tokens: _maxTok,
-        stream: true,
-        userId: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null
-      }),
+      body: JSON.stringify({ model: 'llama-3.1-8b-instant', avaLife: true, messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
       signal: _groqCtrl ? _groqCtrl.signal : undefined
     }).then(function(r) {
       if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
-      if (r.status === 429) {
-        if (!_avatarLive()) toast('One moment...');
-        _busy = false; _busySince = 0;
-        if (_on) setTimeout(record, 1200);
-        return Promise.reject(null);
-      }
+      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -49236,7 +49037,6 @@ async function srcAgentContact(supplier) {
     if(!isOpen && !_forestScene) return;
     var isArrow = e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown';
     if((e.key==='e'||e.key==='E') && !_forestScene){ _avaKeys.e=true; e.preventDefault(); return; }
-    if(e.key===' ' && e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
     if(e.key===' ' && _forestScene){ e.preventDefault();
       var wd = _equippedWeapon && _WEAPON_DATA[_equippedWeapon.id];
       if(wd && wd.type==='ranged') {
