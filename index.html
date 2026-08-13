@@ -440,7 +440,9 @@ html[data-theme="light"] #authLeftPanel{background:linear-gradient(135deg,#e8eaf
 /* ── Theme card ── */
 .theme-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-input,textarea{-webkit-user-select:text!important;user-select:text!important;}.message-text,.message-text *{-webkit-user-select:text!important;user-select:text!important;cursor:text!important;}
+input,textarea,[contenteditable],[contenteditable="true"],#notesEditor,#notesPageTitle{-webkit-user-select:text!important;user-select:text!important;-webkit-user-modify:read-write!important;}
+#notesEditor,#notesEditor *{cursor:text!important;-webkit-user-select:text!important;user-select:text!important;}
+.message-text,.message-text *{-webkit-user-select:text!important;user-select:text!important;cursor:text!important;}
 body{font-family:'DM Sans',sans-serif;background:#000000;color:var(--text);display:flex;height:100vh;overflow:hidden;position:relative;transition:background-color 1.4s ease;}
 .sidebar{width:260px;min-width:180px;max-width:400px;flex-shrink:0;background:rgba(15,15,26,0.85);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:visible;position:relative;transition:width .25s cubic-bezier(0.4,0,0.2,1);}
 .sidebar::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;}
@@ -31807,6 +31809,8 @@ function goNotes() {
     } catch(ePB){}
     document.addEventListener('keydown', function(e){
       if(!_open) return;
+      var t = e.target;
+      if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       if(e.key === 'Escape') closePulse();
       if(e.key === 'ArrowRight'){ e.preventDefault(); advance('right', 1); }
       if(e.key === 'ArrowLeft' || e.key === ' '){ e.preventDefault(); advance('left', 1); }
@@ -47247,11 +47251,24 @@ function speakVoiceReply(text) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       /* avaLife:true ensures server injects latest mind even if client cache is stale */
-      body: JSON.stringify({ model: 'llama-3.1-8b-instant', avaLife: true, messages: [{ role: 'system', content: sys }].concat(msgs), max_tokens: _maxTok, stream: true }),
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        avaLife: true,
+        messages: [{ role: 'system', content: sys }].concat(msgs),
+        max_tokens: _maxTok,
+        stream: true,
+        userId: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.id)?currentUser.id:null,
+        email: (typeof currentUser!=='undefined'&&currentUser&&!currentUser.isGuest&&currentUser.email)?currentUser.email:null
+      }),
       signal: _groqCtrl ? _groqCtrl.signal : undefined
     }).then(function(r) {
       if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
-      if (r.status === 429) { if (!_avatarLive()) toast('One moment...'); _busy = false; _busySince = 0; if (_on) setTimeout(record, 1000); return Promise.reject(null); }
+      if (r.status === 429) {
+        if (!_avatarLive()) toast('One moment...');
+        _busy = false; _busySince = 0;
+        if (_on) setTimeout(record, 1200);
+        return Promise.reject(null);
+      }
       if (!r.ok) throw new Error('LLM ' + r.status);
       var reader = r.body.getReader();
       var decoder = new TextDecoder();
@@ -49074,6 +49091,7 @@ async function srcAgentContact(supplier) {
     if(!isOpen && !_forestScene) return;
     var isArrow = e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown';
     if((e.key==='e'||e.key==='E') && !_forestScene){ _avaKeys.e=true; e.preventDefault(); return; }
+    if(e.key===' ' && e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
     if(e.key===' ' && _forestScene){ e.preventDefault();
       var wd = _equippedWeapon && _WEAPON_DATA[_equippedWeapon.id];
       if(wd && wd.type==='ranged') {
