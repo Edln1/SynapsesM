@@ -1108,22 +1108,15 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   html.android-status-blend body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
     padding-top:calc(var(--android-status-inset, 28px) + 72px)!important;
   }
-  /* First bubble sits where the second one normally would. A flex spacer
-     above it eats leftover viewport (capped at one message slot). Scroll
-     up to use the top/full-screen strip; once the thread fills the screen
-     the spacer shrinks to 0 so history can still go edge-to-edge.
-     Conversation only — welcome / Notes / header-on Vesta unchanged. */
-  body.llm-thread #sec-chat.active #chatContainer{
-    display:flex!important;
-    flex-direction:column!important;
-  }
-  body.llm-thread #sec-chat.active #chatContainer::before{
+  /* First 3 bubbles only: a fixed one-slot gap above them so the first
+     name/msg starts where the second used to, and you can scroll up into
+     the top strip. After message 4 the gap goes away so the thread is
+     top-aligned again — no flex grow, so nothing sits in the center. */
+  body.llm-thread #sec-chat.active #chatContainer:has(.message-group):not(:has(.message-group:nth-child(4)))::before{
     content:'';
-    flex:1 1 auto;
-    min-height:0;
-    max-height:88px;
+    display:block;
+    height:88px;
     pointer-events:none;
-    flex-shrink:1;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
