@@ -1108,14 +1108,13 @@ body.topbar-hidden .chat-messages{padding-top:20px!important;transition:padding-
   html.android-status-blend body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
     padding-top:calc(var(--android-status-inset, 28px) + 72px)!important;
   }
-  /* First 3 bubbles only: a fixed one-slot gap above them so the first
-     name/msg starts where the second used to, and you can scroll up into
-     the top strip. After message 4 the gap goes away so the thread is
-     top-aligned again — no flex grow, so nothing sits in the center. */
-  body.llm-thread #sec-chat.active #chatContainer:has(.message-group):not(:has(.message-group:nth-child(4)))::before{
+  /* First 3 bubbles: fixed gap (NOT flex-grow — that centered the thread).
+     Vesta lives inside #chatContainer so we cannot count nth-child.
+     JS sets .llm-early-thread from the real .message-group count. */
+  body.llm-thread #sec-chat.active #chatContainer.llm-early-thread::before{
     content:'';
     display:block;
-    height:88px;
+    height:100px;
     pointer-events:none;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
@@ -20833,7 +20832,7 @@ function _restoreEmptyChatHome(withAsk, opts){
   chatHistory = [];
   activeSession = null;
   var cc = document.getElementById('chatContainer');
-  if(cc){ cc.innerHTML = ''; cc.scrollTop = 0; }
+  if(cc){ cc.innerHTML = ''; cc.scrollTop = 0; if(typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread(); }
   var es = document.getElementById('chatEmptyState');
   var _wasActiveConvo = es && es.classList.contains('hidden');
   if(es){ es.classList.remove('hidden'); es._manualHide = false; }
@@ -24034,6 +24033,12 @@ function toggleAvaGlow(){
   });
 }
 var AVA_B64='data:image/webp;base64,UklGRogCAABXRUJQVlA4IHwCAABQDACdASowADAAPp1Gm0olo6IhpyyQsBOJQBWGYjdmz/uMFYL5lwHqpp465xWJjTvLO8IsB9+uspveaF4G7PViUGbDEdVs1ZHU7I1yjmzxrwSAzimy1Oz8b4zzSKtownkmLS4GLzofrBk8AAD+8ULlFTYELG6yAkmGo/HasBTl+OjZZvw4kAWnPzN8yVKi+f2uVmLAnMW1LKMgxR6Xyl9qt0WC0baYLx3OkSpqKNRdfLVJZ/mPAe1Mg85SY++griupG2XYY1PYvlA0IQefdn5y9qfhwqioSk2Fr5SH+J41lAZ0L9wustHVrCYPP9arA0inqej2ByxBMAodzQjyQxDLnLoA7nGn0D3dctWnagJ1GzaYX1eN5daMia5IXlxh+uHErdmaYvzW7q1jvpr05FMW3o9Saq8oFjkUEBTsFCEx0L2mrX1TjlZjlqt8ycJMS6FQ7QO86VQZbmYgWt+0TP8gBBAH+UayFXYbv1sXTrYIwqGttP30JNRptggnvvI/rJnIqnwHRuBEE9U0PWPlPCR5gkiuoFlojsFjtePb/G8Y1tdPpMk+cVwXrCFDB0c1LVApaOGpEz+NegXot0gDdZlY9UoD8BNVNoDvJHiDNVXfdQ/0W0TGey4XbUtXh6aoX5WvkDvkQ8RVxtKTiDpjNmP3NtZF0zNxiHJeRyfObC7V8SmU+1UVLz25IYfvq9T2Ow9zAyq/T/278SxbDsxqdGypEKuQGeo3sPkegfcpWrZ+ErFqv3gSdMx9V1bNtONc5fZE7AENzmM5J+K3n9IVecJ4+qkZ6DkTL8S7ZhyaH8FHcCl8pGZsCEcyTZEAcFusa0bmtl1BLENWB4TWoAA=';
+function _syncLlmEarlyThread(){
+  var cc = document.getElementById('chatContainer');
+  if(!cc) return;
+  var n = cc.querySelectorAll('.message-group').length;
+  cc.classList.toggle('llm-early-thread', n > 0 && n <= 3);
+}
 function addMsg(cId,role,content,isTyping,mode){
   var c=document.getElementById(cId),g=document.createElement('div');
   g.className='message-group'+(role==='user'?' message-group-user':'');
@@ -24058,6 +24063,7 @@ function addMsg(cId,role,content,isTyping,mode){
   }
   g.innerHTML=avatarHtml+'<div class="message-body">'+'<div class="message-name'+(role==='user'?' message-name-user':'')+'">'+(role==='ai'?aiName:(currentUser?currentUser.name:'You'))+'</div>'+(isTyping?'<div class="typing"><span></span><span></span><span></span></div>':'<div class="message-text"><p>'+_bodyHtml+'</p></div>')+'</div>';
   c.appendChild(g);
+  if(cId==='chatContainer' && typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread();
   c.scrollTop=c.scrollHeight;
   return g;
 }
@@ -25328,6 +25334,7 @@ function sendHomeMessage(){
   var intent=detectIntent(text,'chat');
   chatHistory=[];
   document.getElementById('chatContainer').innerHTML='';
+  if(typeof _syncLlmEarlyThread==='function') _syncLlmEarlyThread();
   activeSession='session_'+Date.now();
   document.getElementById('inputBox').value=text;
   setView('sec-chat');
