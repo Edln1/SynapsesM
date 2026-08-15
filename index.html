@@ -2796,9 +2796,6 @@ html:not(.chp-sidebar-mode) .chp-section-label{gap:0;padding-left:16px;}
 #synMapResizeE{position:absolute;right:0;top:10px;bottom:10px;width:6px;cursor:e-resize;z-index:4;}
 @media (max-width:768px){
   #synMapOrb{right:12px;left:12px;width:auto;bottom:92px;height:min(400px,52vh);}
-  #synMapResize{width:26px;height:26px;}
-  #synMapResizeN,#synMapResizeS{height:14px;}
-  #synMapResizeW,#synMapResizeE{width:14px;}
 }
 html[data-theme="trueblack"] .chp-user-dock{border-top:none;}
 html[data-theme="trueblack"] .chp-user-name{color:rgba(245,245,247,0.92);}
@@ -3830,7 +3827,7 @@ html[data-theme="trueblack"] .gen-doc-ico{
 #chatAttachBtn svg{transition:transform .18s ease;display:block;}
 #chatAttachBtn[aria-expanded="true"]{opacity:0.9!important;border-color:rgba(255,255,255,0.3)!important;}
 #chatAttachBtn[aria-expanded="true"] svg{transform:rotate(45deg);}
-#plusMenu{position:fixed;width:260px;max-height:min(62vh,420px);overflow-y:auto;background:rgba(30,30,34,0.78);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:99999;display:none;padding:6px 0 8px;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);}
+#plusMenu{position:fixed;width:260px;max-height:min(62vh,420px);overflow-y:auto;scrollbar-gutter:stable;background:rgba(30,30,34,0.78);border:1px solid rgba(255,255,255,0.1);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:99999;display:none;padding:6px 0 8px;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);}
 #plusMenu.open{display:block;}
 .plus-menu-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;background:transparent;color:var(--text);padding:10px 14px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;}
 .plus-menu-item:hover{background:rgba(124,106,247,0.12);}
@@ -3841,6 +3838,19 @@ html[data-theme="trueblack"] .gen-doc-ico{
 .plus-menu-tip:hover{background:rgba(124,106,247,0.12);}
 .plus-menu-tip strong{display:block;font-size:13px;font-weight:700;margin-bottom:2px;}
 .plus-menu-tip span{display:block;font-size:11.5px;line-height:1.4;color:rgba(200,200,210,0.62);}
+.plus-menu-headrow{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 4px;gap:8px;}
+.plus-menu-headrow .plus-menu-head{padding:0;}
+.plus-menu-tabs{display:flex;gap:4px;flex-shrink:0;}
+.plus-menu-tab{width:26px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(200,200,210,0.72);cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+.plus-menu-tab:hover{background:rgba(255,255,255,0.06);}
+.plus-menu-tab.active{background:rgba(124,106,247,0.22);border-color:rgba(124,106,247,0.5);color:#fff;}
+/* True Black stays monochrome, same treatment as this theme's other active
+   states (.chp-item.active, #dgVoicePanel .vp-tab.active) — no purple. */
+html[data-theme="trueblack"] .plus-menu-tab.active{background:rgba(255,255,255,0.14)!important;border-color:rgba(255,255,255,0.4)!important;color:#fff!important;}
+/* Light theme: darker, greyish-purple treatment — matching how muted the
+   "What you can ask" label and the app's low-opacity purple scrollbar
+   accents (rgba(124,106,247,…)) look, instead of a bright solid indigo fill. */
+html[data-theme="light"] .plus-menu-tab.active{background:rgba(124,106,247,0.14)!important;border-color:rgba(124,106,247,0.3)!important;color:rgba(90,84,140,0.85)!important;}
 html[data-theme="trueblack"] #plusMenu{background:rgba(18,18,18,0.88);border-color:rgba(255,255,255,0.12);}
 html[data-theme="trueblack"] .plus-menu-item:hover,html[data-theme="trueblack"] .plus-menu-tip:hover{background:rgba(255,255,255,0.07);}
 .gen-doc-slides{display:flex;flex-direction:column;gap:10px;padding:12px;max-height:min(70vh,640px);overflow:auto;}
@@ -24245,10 +24255,29 @@ function groqStripThink(raw){
       if(_cxIsHerePhrase(namedFrom)) namedFrom = '';
       return { kind:'act', action:'maps.directions', args:{ destination: dest, origin: namedFrom } };
     }
-    if(/\b(near(?:by| me)?|closest|nearest|find (a |an |some )?|places? (for|like)|restaurants?|coffee|gas station)\b/i.test(t) &&
-       /\b(near|around|in|at|maps?|place|restaurant|coffee|bar|hotel|store)\b/i.test(t)){
-      var pq = t.replace(/^(search|find|look\s*up|show me)\s+/i,'').trim();
-      return { kind:'act', action:'maps.search', args:{ q: pq || t } };
+    // A strong proximity phrase ("nearest", "closest", "near me", "nearby")
+    // is intent enough on its own — no need to also match a place-type
+    // keyword. Previously this required BOTH, and the place-keyword list
+    // didn't even include "gas station", so "nearest gas station" failed
+    // the second check and silently fell through to plain chat.
+    var _mapProximity = /\b(nearest|closest|near me|nearby|around here|close by)\b/i.test(t);
+    var _mapFindVerb = /\bfind\b/i.test(t) || /\bplaces?\s+(for|like)\b/i.test(t);
+    var _mapPlaceWord = /\b(restaurants?|cafe|coffee|gas( station)?|fuel|pharmacy|drugstore|atm|bank|grocery|supermarket|hospital|clinic|hotel|motel|bar|pub|store|shop|mall|parking|park|library|school|gym|mechanic|repair shop)\b/i.test(t);
+    if(_mapProximity || (_mapFindVerb && _mapPlaceWord)){
+      // Strip the verb ("find"/"search"/etc) AND every proximity phrase
+      // ("nearby", "nearest", "near me"...) wherever they appear — not just
+      // a leading "find". Previously only the leading verb was stripped, so
+      // "Find nearby gas station" left "nearby gas station" in the query,
+      // and "Find nearby" with no place typed after it collapsed to the
+      // bare word "nearby" — which then got sent to the backend, and when
+      // that came back empty, got geocoded LITERALLY as if "nearby" were
+      // a real address. That's what was showing up as the destination.
+      var pq = _cxStripProximity(t);
+      // Don't fall back to the raw, unstripped text (t) when pq is empty —
+      // that's exactly how a literal "find nearby" ended up as the query.
+      // An empty pq means "no place type given", so just search generic
+      // nearby places instead of re-injecting the words we just removed.
+      return { kind:'act', action:'maps.search', args:{ q: pq } };
     }
     if(/\b(where is|where'?s|address of|locate)\b/i.test(t)){
       var gq = t.replace(/^(where is|where'?s|what'?s the address of|address of|locate)\s+/i,'').trim();
@@ -24272,18 +24301,80 @@ function groqStripThink(raw){
       geo = await _cxGetGeo();
       hit.args = hit.args || {};
       if(hit.args.destination) hit.args.destination = _cxCleanDest(hit.args.destination);
+      // maps.search's q was never cleaned here before — only .destination
+      // was. Re-strip it too so a proximity word can't survive into the
+      // backend call or, worse, into the geocode fallback below.
+      if(hit.action === 'maps.search' && hit.args.q) hit.args.q = _cxStripProximity(hit.args.q);
       if(hit.args.origin && _cxIsHerePhrase(hit.args.origin)) hit.args.origin = '';
       if(geo){
         if(hit.action === 'maps.directions' && !hit.args.origin){
           hit.args.origin = Number(geo.lat).toFixed(6) + ',' + Number(geo.lng).toFixed(6);
         }
         if(hit.action === 'maps.search'){
+          // Sending the location under several common aliases as a stopgap
+          // — directions already proves geo itself is correct (it routes
+          // from the right place), so if nearby search is still landing in
+          // the wrong country, the backend's maps.search handler is most
+          // likely reading a different key than lat/lng and silently
+          // falling back to an unscoped search. This doesn't fix that
+          // handler (need the backend file for that) but maximizes the
+          // odds one of these keys is the one it's actually looking for.
           hit.args.lat = geo.lat;
           hit.args.lng = geo.lng;
+          hit.args.latitude = geo.lat;
+          hit.args.longitude = geo.lng;
+          hit.args.location = Number(geo.lat).toFixed(6) + ',' + Number(geo.lng).toFixed(6);
+          hit.args.near = hit.args.location;
         }
       }
     }
-    var out = await cxAct(hit.action, hit.args, !!opts.confirm);
+    var out;
+    if(hit.action === 'maps.search'){
+      // Turns out embedding coordinates in freeform destination text and
+      // handing it to Directions/Geocoding was never going to reliably
+      // find "the nearest coffee shop" — those APIs resolve a SPECIFIC
+      // address/place, they don't rank a category by distance. That's why
+      // it was just showing "coffee shop" literally: there was nothing
+      // real for it to resolve to.
+      //
+      // The actual right tool for "find nearest X" is the Places Nearby
+      // Search API, ranked by distance — and the Google Maps JS SDK
+      // (with the places library) is already loaded client-side elsewhere
+      // in this file for autocomplete, so this runs entirely in the
+      // browser: no backend call for the search itself, just the one
+      // maps.directions call at the end to route there — same call count
+      // as before, just an actually-real nearest result this time.
+      var _searchQ = (hit.args && hit.args.q) || '';
+      out = { ok:false };
+      try{
+        var _best = await _cxFindNearestPlace(_searchQ, geo);
+        if(_best && _best.lat != null){
+          out = await cxAct('maps.directions', {
+            origin: geo ? (Number(geo.lat).toFixed(6)+','+Number(geo.lng).toFixed(6)) : '',
+            destination: _best.lat + ',' + _best.lng
+          }, false);
+          if(out && out.items && out.items[0]){
+            out.items[0].lat = _best.lat;
+            out.items[0].lng = _best.lng;
+            out.items[0].to = _best.name;
+          }
+          out = out || {};
+          // Relabel the intent as directions so every downstream check
+          // (rendering, spoken-message wording, the geocode-fallback
+          // guard) treats this exactly like a normal address lookup —
+          // because that's now literally what it is.
+          hit.action = 'maps.directions';
+          hit.args.destination = _best.name;
+          if(!out.spoken) out.spoken = 'Found ' + _best.name + ' nearby.';
+        } else {
+          out = { ok:false, error:'not_found', spoken:"I couldn't find that nearby." };
+        }
+      }catch(_nf){
+        out = { ok:false, error:'failed', spoken:"Couldn't reach maps just now." };
+      }
+    } else {
+      out = await cxAct(hit.action, hit.args, !!opts.confirm);
+    }
     if(out && out.mapsKey) window._cxMapsKeyCache = String(out.mapsKey);
     if(out && !out.ok && hit.action === 'maps.directions' && hit.args.destination){
       try{
@@ -24330,6 +24421,19 @@ function groqStripThink(raw){
     d = d.replace(/[?.!,]+$/g,'');
     return d.trim();
   }
+  // Strips search verbs ("find"/"search"/"look up"/"show me") and proximity
+  // phrases ("nearby"/"nearest"/"near me"/"closest"/"around here"/"close by")
+  // from anywhere in the string, leaving just the place type/name — e.g.
+  // "Find nearby gas station" -> "gas station", "closest coffee" -> "coffee".
+  function _cxStripProximity(raw){
+    var d = String(raw||'');
+    d = d.replace(/^(search|find|look\s*up|show me)\s+/i,'');
+    d = d.replace(/\bnear\s+me\b/ig,'');
+    d = d.replace(/\b(nearest|closest|nearby|around here|close by)\b/ig,'');
+    d = d.replace(/^(a|an|the|some)\s+/i,'');
+    d = d.replace(/\s+/g,' ').trim();
+    return d;
+  }
   function _cxIsHerePhrase(s){
     return /^(here|home|my house|my home|the house|my place|my location|current location|where i am|where i'm|me)$/i.test(String(s||'').trim());
   }
@@ -24368,6 +24472,13 @@ function groqStripThink(raw){
   // ── End Median geolocation bridge ──────────────────────────────────────
   async function _cxGetGeo(){
     await _cxMedianGeoReady();
+    // A "nearby places" search needs city-scale precision or better. IP/
+    // Wi-Fi-based geolocation (common on desktop, or behind a VPN) can
+    // still return a "successful" fix with an accuracy radius of tens or
+    // hundreds of km — easily wide enough to land in a different country.
+    // Anything worse than this is treated as no usable location at all,
+    // rather than silently biasing a search toward the wrong continent.
+    var MAX_USABLE_ACCURACY_M = 50000; // 50km
     return new Promise(function(resolve){
       if(!navigator.geolocation){ resolve(null); return; }
       var best = (_cxGeoCache && (Date.now() - _cxGeoCache.at) < 20000 && _cxGeoCache.acc <= 60) ? _cxGeoCache : null;
@@ -24377,6 +24488,17 @@ function groqStripThink(raw){
         if(done) return;
         done = true;
         try{ if(wid != null) navigator.geolocation.clearWatch(wid); }catch(_c){}
+        // Fall back to a previously cached fix (up to 30 min old) rather
+        // than resolving null outright — but only if it was ever a decent
+        // fix to begin with. A stale bad fix is still a bad fix.
+        if(!best && _cxGeoCache && (Date.now() - _cxGeoCache.at) < 1800000 && _cxGeoCache.acc <= MAX_USABLE_ACCURACY_M){
+          best = _cxGeoCache;
+        }
+        // Reject anything too coarse to mean "near me" — an IP-level guess
+        // is worse than no location bias, not better. This is what was
+        // letting a US-wide (or worse) fix through and landing results in
+        // the US regardless of where the person actually is.
+        if(best && best.acc > MAX_USABLE_ACCURACY_M) best = null;
         resolve(best ? { lat:best.lat, lng:best.lng } : null);
       }
       function consider(pos){
@@ -24387,13 +24509,12 @@ function groqStripThink(raw){
         }
         if(acc <= 35) finish();
       }
-      var _geoTimeoutMs = (typeof isMobile === 'function' && isMobile()) ? 9500 : 4500;
       try{
         wid = navigator.geolocation.watchPosition(consider, function(){ finish(); }, { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
       }catch(_w){
         navigator.geolocation.getCurrentPosition(consider, function(){ finish(); }, { enableHighAccuracy:true, timeout:8000, maximumAge:0 });
       }
-      setTimeout(finish, _geoTimeoutMs);
+      setTimeout(finish, 4500);
     });
   }
   function _cxMapGeomKey(){ return 'synapses_map_geom'; }
@@ -24466,6 +24587,42 @@ function groqStripThink(raw){
     window._cxDirService = null;
     try{ if(window._cxTrafficLayer) window._cxTrafficLayer.setMap(null); }catch(_t){}
     try{ if(window._cxTransitLayer) window._cxTransitLayer.setMap(null); }catch(_t){}
+  }
+  // Real "nearest X" lookup via Google Places Nearby Search, ranked by
+  // distance — this is the actual right tool for a category search
+  // ("coffee shop", "gas station"). Runs entirely client-side using the
+  // Google Maps JS SDK's places library, which is already loaded on
+  // demand elsewhere in this file (same key/loader Live/Google mode
+  // uses) — no separate backend call for the search itself.
+  async function _cxFindNearestPlace(query, geo){
+    if(!query || !geo) return null;
+    try{
+      var key = await _cxMapsKey();
+      var gm = await _cxLoadGoogleMaps(key);
+      if(!gm || !gm.places) return null;
+      return await new Promise(function(resolve){
+        try{
+          var svc = new gm.places.PlacesService(document.createElement('div'));
+          svc.nearbySearch({
+            location: { lat: geo.lat, lng: geo.lng },
+            rankBy: gm.places.RankBy.DISTANCE, // sorts results[0] as literally the closest match — no radius allowed alongside this
+            keyword: query
+          }, function(results, status){
+            if(status === gm.places.PlacesServiceStatus.OK && results && results[0]){
+              var p = results[0];
+              var loc = p.geometry && p.geometry.location;
+              resolve({
+                name: p.name || p.vicinity || query,
+                lat: loc ? loc.lat() : null,
+                lng: loc ? loc.lng() : null
+              });
+            } else {
+              resolve(null);
+            }
+          });
+        }catch(_e){ resolve(null); }
+      });
+    }catch(_e2){ return null; }
   }
   async function _cxMapsKey(){
     if(window._cxMapsKeyCache) return window._cxMapsKeyCache;
@@ -24631,7 +24788,11 @@ function groqStripThink(raw){
             if(res.routes.length > 1) bits.push(res.routes.length+' routes');
             _cxMapSetMeta(bits.join(' · '));
             _cxMapPlaceGoogleDots(you, pin, dest, true);
-            _cxMapUpdateModeEtas();
+            // Deferred + off the critical path: this fires 3 extra network
+            // calls (one per other mode) and was racing/competing with the
+            // route request that's actually driving what's on screen —
+            // delay it so Go/route-drawing is never waiting behind it.
+            setTimeout(_cxMapUpdateModeEtas, 500);
           }
         }catch(_r){}
       } else {
@@ -24948,7 +25109,10 @@ function groqStripThink(raw){
     if(!pts.length) pts = await _cxMapFetchOsrm(you, pin, mode) || [];
     if(pts.length >= 4){
       _cxMapPaintLine(pts);
-      _cxMapUpdateModeEtas();
+      // Deferred, same reasoning as the Google-mode branch above — don't
+      // let 3 extra concurrent lookups compete with/delay the actual route
+      // request that Go is waiting on.
+      setTimeout(_cxMapUpdateModeEtas, 500);
     } else if(window._synMapKind === 'leaflet' && window._synMapObj){
       // No routing service returned a line — still frame the camera on
       // both points so it's obvious something happened, and say why there's
@@ -25278,13 +25442,19 @@ function groqStripThink(raw){
     if(!origin) return;
     var myReq = (wrap._cxEtaReq = (wrap._cxEtaReq||0) + 1);
     var btns = [].slice.call(toolsEl.querySelectorAll('[data-mode]'));
-    btns.forEach(function(b){
+    btns.forEach(function(b, i){
       var label = b.getAttribute('data-label') || b.textContent;
       b.textContent = label + ' · …';
-      _cxMapFetchModeEta(origin, pin, b.getAttribute('data-mode')).then(function(txt){
-        if(wrap._cxEtaReq !== myReq) return; // a newer destination/mode superseded this
-        b.textContent = label + (txt ? ' · '+txt : ' · N/A');
-      });
+      // Stagger requests ~250ms apart instead of firing all 4 at once —
+      // this was piling on top of the main route request and appears to
+      // have been starving/delaying it on the backend.
+      setTimeout(function(){
+        if(wrap._cxEtaReq !== myReq) return;
+        _cxMapFetchModeEta(origin, pin, b.getAttribute('data-mode')).then(function(txt){
+          if(wrap._cxEtaReq !== myReq) return; // a newer destination/mode superseded this
+          b.textContent = label + (txt ? ' · '+txt : ' · N/A');
+        });
+      }, i * 250);
     });
   }
   function _cxMapEnsureTools(wrap, map){
@@ -25506,9 +25676,7 @@ function groqStripThink(raw){
     _cxMapStartWatch();
     if(you && pin) _cxMapEnsureRoute();
     _cxMapEnsureTools(wrap, map);
-    [80, 300, 700].forEach(function(t){
-      setTimeout(function(){ try{ map.invalidateSize(); }catch(_i){} }, t);
-    });
+    setTimeout(function(){ try{ map.invalidateSize(); }catch(_i){} }, 80);
   }
   async function _cxMapMountLive(wrap, inner, origin, dest){
     // Try the real Google Maps JS SDK first — gives us traffic, transit,
@@ -25651,34 +25819,7 @@ function groqStripThink(raw){
         if(toEl) setTimeout(function(){ toEl.focus(); }, 60);
       }
     };
-    function _cxPt(e){
-      if(e.touches && e.touches.length) return { x:e.touches[0].clientX, y:e.touches[0].clientY };
-      if(e.changedTouches && e.changedTouches.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
-      return { x:e.clientX, y:e.clientY };
-    }
-    function _cxBindDrag(target, downFn){
-      target.addEventListener('mousedown', downFn);
-      target.addEventListener('touchstart', downFn, { passive:false });
-    }
-    function _cxBindMove(fn){
-      document.addEventListener('mousemove', fn);
-      document.addEventListener('touchmove', fn, { passive:false });
-    }
-    function _cxUnbindMove(fn){
-      document.removeEventListener('mousemove', fn);
-      document.removeEventListener('touchmove', fn);
-    }
-    function _cxBindUp(fn){
-      document.addEventListener('mouseup', fn);
-      document.addEventListener('touchend', fn);
-      document.addEventListener('touchcancel', fn);
-    }
-    function _cxUnbindUp(fn){
-      document.removeEventListener('mouseup', fn);
-      document.removeEventListener('touchend', fn);
-      document.removeEventListener('touchcancel', fn);
-    }
-    _cxBindDrag(wrap.querySelector('#synMapOrbBar'), function(e){
+    wrap.querySelector('#synMapOrbBar').addEventListener('mousedown', function(e){
       if(e.target && e.target.tagName === 'BUTTON') return;
       e.preventDefault();
       var r = wrap.getBoundingClientRect();
@@ -25686,13 +25827,10 @@ function groqStripThink(raw){
       wrap.style.top = r.top + 'px';
       wrap.style.right = 'auto';
       wrap.style.bottom = 'auto';
-      var p0 = _cxPt(e);
-      var sx = p0.x, sy = p0.y, sl = r.left, st = r.top;
+      var sx = e.clientX, sy = e.clientY, sl = r.left, st = r.top;
       wrap.classList.add('syn-map-drag');
       function onM(ev){
-        if(ev.cancelable) ev.preventDefault();
-        var p = _cxPt(ev);
-        var L = sl + (p.x - sx), T = st + (p.y - sy);
+        var L = sl + (ev.clientX - sx), T = st + (ev.clientY - sy);
         L = Math.max(4, Math.min(L, window.innerWidth - wrap.offsetWidth - 4));
         T = Math.max(4, Math.min(T, window.innerHeight - wrap.offsetHeight - 4));
         wrap.style.left = L + 'px';
@@ -25700,12 +25838,12 @@ function groqStripThink(raw){
       }
       function onU(){
         wrap.classList.remove('syn-map-drag');
-        _cxUnbindMove(onM);
-        _cxUnbindUp(onU);
+        document.removeEventListener('mousemove', onM);
+        document.removeEventListener('mouseup', onU);
         _cxMapSaveGeom(wrap);
       }
-      _cxBindMove(onM);
-      _cxBindUp(onU);
+      document.addEventListener('mousemove', onM);
+      document.addEventListener('mouseup', onU);
     });
     function startResize(edge, e){
       e.preventDefault(); e.stopPropagation();
@@ -25714,12 +25852,9 @@ function groqStripThink(raw){
       wrap.style.top = r.top + 'px';
       wrap.style.right = 'auto';
       wrap.style.bottom = 'auto';
-      var p0 = _cxPt(e);
-      var sx = p0.x, sy = p0.y, sw = r.width, sh = r.height, sl = r.left, st = r.top;
+      var sx = e.clientX, sy = e.clientY, sw = r.width, sh = r.height, sl = r.left, st = r.top;
       function onM(ev){
-        if(ev.cancelable) ev.preventDefault();
-        var p = _cxPt(ev);
-        var dx = p.x - sx, dy = p.y - sy;
+        var dx = ev.clientX - sx, dy = ev.clientY - sy;
         var L = sl, T = st, W = sw, H = sh;
         if(edge.indexOf('e') >= 0) W = sw + dx;
         if(edge.indexOf('s') >= 0) H = sh + dy;
@@ -25736,17 +25871,17 @@ function groqStripThink(raw){
         if(!wrap._cxRsT) wrap._cxRsT = setTimeout(function(){ wrap._cxRsT = null; _cxMapInvalidate(); }, 80);
       }
       function onU(){
-        _cxUnbindMove(onM);
-        _cxUnbindUp(onU);
+        document.removeEventListener('mousemove', onM);
+        document.removeEventListener('mouseup', onU);
         _cxMapSaveGeom(wrap);
         _cxMapInvalidate();
       }
-      _cxBindMove(onM);
-      _cxBindUp(onU);
+      document.addEventListener('mousemove', onM);
+      document.addEventListener('mouseup', onU);
     }
     [['#synMapResize','se'],['#synMapResizeN','n'],['#synMapResizeS','s'],['#synMapResizeW','w'],['#synMapResizeE','e']].forEach(function(pair){
       var el = wrap.querySelector(pair[0]);
-      if(el) _cxBindDrag(el, function(ev){ startResize(pair[1], ev); });
+      if(el) el.addEventListener('mousedown', function(ev){ startResize(pair[1], ev); });
     });
   }
   async function _cxShowRoundMap(out, geo, hit){
@@ -25822,15 +25957,33 @@ function groqStripThink(raw){
         stage0.appendChild(searchBox0);
       }
       wrap.classList.remove('live-on', 'search-on');
-      var dest = _cxCleanDest((hit && hit.args && (hit.args.destination || hit.args.q)) || (items[0] && (items[0].to || items[0].name || items[0].address)) || '');
+      // Prefer the ACTUAL best result the backend already found (items[0])
+      // over re-deriving a destination string from the raw hit args — that
+      // raw string is what was getting geocoded literally as "nearby"/
+      // "find nearby" when a proximity search came back with no items.
+      var dest = _cxCleanDest((items[0] && (items[0].to || items[0].name || items[0].address)) || (hit && hit.args && (hit.args.destination || hit.args.q)) || '');
+      if(hit && hit.action === 'maps.search') dest = _cxStripProximity(dest);
       if(!geo) geo = await _cxGetGeo();
       var origin = (hit && hit.args && hit.args.origin) || (geo ? (Number(geo.lat).toFixed(6)+','+Number(geo.lng).toFixed(6)) : '');
       wrap.setAttribute('data-origin', origin || '');
       wrap.setAttribute('data-dest', dest || '');
       var first = items[0] || {};
-      if(first.lat != null && first.lng != null){
-        wrap.setAttribute('data-plat', String(first.lat));
-        wrap.setAttribute('data-plng', String(first.lng));
+      // Clear any pin left over from a PREVIOUS search before trying to set
+      // a new one. This was the actual bug: if a result came back without
+      // lat/lng in exactly the shape expected, the old pin (e.g. Metrotown
+      // from a prior "directions to") just stayed on the element — and the
+      // geocode-fallback below never ran to fix it, because it only fires
+      // when there's no pin set yet, which looked untrue due to the stale
+      // leftover value.
+      wrap.removeAttribute('data-plat');
+      wrap.removeAttribute('data-plng');
+      // Tolerate a couple of plausible result shapes, not just flat lat/lng.
+      var fLoc = first.location || (first.geometry && first.geometry.location) || null;
+      var fLat = first.lat != null ? first.lat : (fLoc && fLoc.lat != null ? fLoc.lat : null);
+      var fLng = first.lng != null ? first.lng : (fLoc && fLoc.lng != null ? fLoc.lng : null);
+      if(fLat != null && fLng != null){
+        wrap.setAttribute('data-plat', String(fLat));
+        wrap.setAttribute('data-plng', String(fLng));
       }
       if(first.fromLat != null && first.fromLng != null && !origin){
         origin = Number(first.fromLat).toFixed(6)+','+Number(first.fromLng).toFixed(6);
@@ -25842,7 +25995,16 @@ function groqStripThink(raw){
       if(first.duration) bits.push(first.duration);
       if(first.distance) bits.push(first.distance);
       _cxMapSetMeta(bits.join(' · '));
-      if(dest && !wrap.getAttribute('data-plat')){
+      // The blind geocode fallback below makes sense for a NAMED place
+      // ("Starbucks", "123 Main St") — there's one clear match to look up.
+      // It does NOT make sense for a category search ("coffee shop", "gas
+      // station"): geocoding a bare category with zero location bias just
+      // returns whatever matches that name anywhere on the planet, which is
+      // how "coffee shops near me" was landing on a result hours away.
+      // For maps.search, only fall back if we actually have a location to
+      // bias the lookup toward — never do an unscoped global geocode of a
+      // generic category term.
+      if(dest && !wrap.getAttribute('data-plat') && !(hit && hit.action === 'maps.search')){
         try{
           var looked = await cxAct('maps.geocode', { q: dest }, false);
           if(looked && looked.mapsKey) window._cxMapsKeyCache = String(looked.mapsKey);
@@ -25852,6 +26014,14 @@ function groqStripThink(raw){
             wrap.setAttribute('data-plng', String(p.lng));
           }
         }catch(_g){}
+      } else if(hit && hit.action === 'maps.search'){
+        // By the time we get here, cxRunFromText already tried the
+        // geocode -> directions resolution and relabeled hit.action to
+        // 'maps.directions' on success — so landing in this branch at all
+        // means that resolution failed to find anything nearby. Don't call
+        // the broken maps.search backend action as a second attempt; just
+        // say plainly that nothing turned up.
+        _cxMapSetMeta('No results found nearby');
       }
       var fromEl = document.getElementById('synMapFrom');
       var toEl = document.getElementById('synMapTo');
@@ -29411,6 +29581,53 @@ var ASK_HELP_ACTIONS = [
   { title:'Quick research', blurb:'Faster live search when you need current info.', prompt:'Research ' },
   { title:'Save a note', blurb:'Turns this chat into a note on your board.', prompt:'Save this as a note' }
 ];
+// Second tab: tools beyond document/productivity generation — maps live here.
+var ASK_TOOLS_ACTIONS = [
+  { title:'Get directions', blurb:'Opens a map and routes you there.', prompt:'Directions to ' },
+  { title:'Find nearby', blurb:'Search restaurants, gas, coffee and more nearby.', prompt:'Find nearby ' },
+  { title:"Where's this?", blurb:'Looks up an address or place on the map.', prompt:"Where is " }
+];
+var PLUS_MENU_TABS = [
+  { key:'create', label:'Productivity', headText:'What you can ask', items:ASK_HELP_ACTIONS,
+    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>' },
+  { key:'tools', label:'Tools', headText:'More tools', items:ASK_TOOLS_ACTIONS,
+    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 1 1-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 1 5.4-5.4l-2.83 2.83a1 1 0 0 0 0 1.41l1.29 1.29a1 1 0 0 0 1.41 0z"/></svg>' }
+];
+function _renderPlusMenuTab(key){
+  var list = document.getElementById('plusMenuList');
+  var headLabel = document.getElementById('plusMenuHeadLabel');
+  if(!list) return;
+  list.style.minHeight = '0px'; // reset before measuring this tab's natural height
+  list.innerHTML = '';
+  var tabDef = PLUS_MENU_TABS.find(function(t){ return t.key === key; }) || PLUS_MENU_TABS[0];
+  if(headLabel) headLabel.textContent = tabDef.headText;
+  tabDef.items.forEach(function(a){
+    var it = document.createElement('button');
+    it.type = 'button';
+    it.className = 'plus-menu-tip';
+    it.innerHTML = '<strong>'+a.title.replace(/</g,'')+'</strong><span>'+a.blurb.replace(/</g,'')+'</span>';
+    it.addEventListener('click', function(){ _fillAskHelpPrompt(a.prompt); });
+    list.appendChild(it);
+  });
+  // Lock the list to the TALLEST tab's height seen so far, so switching to a
+  // shorter tab (e.g. Tools, 3 items) never shrinks the menu and shifts the
+  // divider/margins above it — height only ever grows to fit, never shrinks.
+  // (While the menu is still display:none — e.g. this first build inside
+  // _ensurePlusMenu — scrollHeight reads 0, so togglePlusMenu re-measures
+  // once the menu is actually visible.)
+  var natural = list.scrollHeight;
+  var prevMax = Number(list.getAttribute('data-max-h') || 0);
+  var newMax = Math.max(natural, prevMax);
+  if(newMax > 0){
+    list.setAttribute('data-max-h', String(newMax));
+    list.style.minHeight = newMax + 'px';
+  }
+  var m = document.getElementById('plusMenu');
+  if(m) [].slice.call(m.querySelectorAll('.plus-menu-tab')).forEach(function(tb){
+    tb.classList.toggle('active', tb.getAttribute('data-tab') === key);
+  });
+  m && (m._cxActiveTab = key);
+}
 function _ensurePlusMenu(){
   var m = document.getElementById('plusMenu');
   if(m) return m;
@@ -29426,19 +29643,36 @@ function _ensurePlusMenu(){
   var div = document.createElement('div');
   div.className = 'plus-menu-div';
   m.appendChild(div);
-  var head = document.createElement('div');
-  head.className = 'plus-menu-head';
-  head.textContent = 'What you can ask';
-  m.appendChild(head);
-  ASK_HELP_ACTIONS.forEach(function(a){
-    var it = document.createElement('button');
-    it.type = 'button';
-    it.className = 'plus-menu-tip';
-    it.innerHTML = '<strong>'+a.title.replace(/</g,'')+'</strong><span>'+a.blurb.replace(/</g,'')+'</span>';
-    it.addEventListener('click', function(){ _fillAskHelpPrompt(a.prompt); });
-    m.appendChild(it);
+  // Header row: "What you can ask" / "More tools" label on the left, small
+  // icon tab buttons on the right (a document icon for Productivity, a
+  // wrench icon for Tools) — clicking swaps the list below in place.
+  var headrow = document.createElement('div');
+  headrow.className = 'plus-menu-headrow';
+  var headLabel = document.createElement('div');
+  headLabel.className = 'plus-menu-head';
+  headLabel.id = 'plusMenuHeadLabel';
+  headLabel.textContent = 'What you can ask';
+  headrow.appendChild(headLabel);
+  var tabs = document.createElement('div');
+  tabs.className = 'plus-menu-tabs';
+  PLUS_MENU_TABS.forEach(function(t){
+    var tb = document.createElement('button');
+    tb.type = 'button';
+    tb.className = 'plus-menu-tab' + (t.key === 'create' ? ' active' : '');
+    tb.setAttribute('data-tab', t.key);
+    tb.title = t.label;
+    tb.setAttribute('aria-label', t.label);
+    tb.innerHTML = t.icon;
+    tb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); _renderPlusMenuTab(t.key); });
+    tabs.appendChild(tb);
   });
+  headrow.appendChild(tabs);
+  m.appendChild(headrow);
+  var list = document.createElement('div');
+  list.id = 'plusMenuList';
+  m.appendChild(list);
   document.body.appendChild(m);
+  _renderPlusMenuTab('create');
   return m;
 }
 function _fillAskHelpPrompt(prompt){
@@ -29508,6 +29742,10 @@ function togglePlusMenu(e){
   m.style.visibility='hidden';
   m.style.display='block';
   m.classList.add('open');
+  // The very first render happened while the menu was still display:none, so
+  // scrollHeight measured 0 then — re-measure now that it's actually laid
+  // out, before positioning reads m.offsetHeight below.
+  _renderPlusMenuTab(m._cxActiveTab || 'create');
   _positionPlusMenu();
   m.style.visibility='visible';
   if(b){
@@ -29647,6 +29885,34 @@ async function sendMessage(){
     isSending=false;
     return;
   }
+
+  // ── Maps / connected-app intent — same cxDetect/runFromText pipeline the
+  // voice (speech-to-speech) flow already uses. It was never wired in here,
+  // so typing "directions to X" (or "where is X", "find coffee near me",
+  // etc.) into Ask-me-anything silently fell through to the plain chat LLM
+  // and never opened the map — only saying it out loud worked.
+  if(window.synConnectors && typeof window.synConnectors.detect === 'function' && !sendAttachments.length){
+    var _mapHit = window.synConnectors.detect(text);
+    if(_mapHit){
+      inp.value=''; inp.style.height='52px';
+      addMsg('chatContainer','user',text,false,'chat');
+      var _mapTypingEl = addMsg('chatContainer','ai','Looking that up…',false,'chat');
+      var _mapTypingP = _mapTypingEl.querySelector('p');
+      try{
+        var _mapOut = await window.synConnectors.runFromText(text, {});
+        var _mapLine = (_mapOut && (_mapOut.spoken || _mapOut.error)) || "I couldn't find that.";
+        if(_mapOut && _mapOut.needConnect) _mapLine += ' Connect it in Profile, under Connected apps.';
+        if(_mapTypingP) _mapTypingP.textContent = _mapLine;
+        chatHistory.push({role:'user',content:text});
+        chatHistory.push({role:'assistant',content:_mapLine});
+      }catch(_me){
+        if(_mapTypingP) _mapTypingP.textContent = "Couldn't reach that just now.";
+      }
+      isSending=false;
+      return;
+    }
+  }
+
   isSending=true;inp.value='';inp.style.height='52px';
   /* Hard cap so a hung Venice/proxy request can never leave send dead forever */
   var _sendSafetyTimer = setTimeout(function(){
