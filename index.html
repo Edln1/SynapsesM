@@ -1303,7 +1303,6 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
     top:calc(var(--android-status-inset, 28px) + 108px)!important;
   }
   .message-group{padding:0 10px!important;gap:8px!important;margin-bottom:16px!important;}
-  .message-group-user{padding-left:48px!important;padding-right:10px!important;}
   .message-text{font-size:13px!important;}
   /* Chat input above nav */
   #sec-chat .input-area,#sec-coach .input-area{padding:12px 16px 16px!important;position:relative;z-index:3;margin-top:auto!important;border-top:none!important;background:transparent!important;}
@@ -23372,6 +23371,23 @@ function _parseRequestedListCount(t){
   var n = parseInt(m[1],10);
   return (n>=3 && n<=30) ? n : null;
 }
+function _cxBuildRouteContextForAI(){
+  var r = window._cxLastRouteInfo;
+  if(!r || !r.destination) return '';
+  // Only surface it while it's plausibly still "this trip" for the user —
+  // stale routes from way earlier in the session shouldn't leak in forever.
+  if(Date.now() - (r.at || 0) > 45 * 60 * 1000) return '';
+  var bits = [];
+  if(r.origin) bits.push('from ' + r.origin);
+  bits.push('to ' + r.destination);
+  if(r.mode) bits.push('by ' + r.mode);
+  if(r.distanceText) bits.push(r.distanceText);
+  if(r.durationInTrafficText) bits.push(r.durationInTrafficText + ' with current traffic');
+  else if(r.durationText) bits.push(r.durationText + ' estimated');
+  return '\n\nACTIVE MAP ROUTE: The user currently has a route on screen — ' + bits.join(', ') + '. ' +
+    'If they ask about "this trip/journey/route/drive", answer using these real details instead of saying you lack GPS or real-time data — you already have this from the app\'s map. ' +
+    'You do not get live minute-by-minute traffic updates beyond this snapshot, so don\'t claim to be tracking traffic live — just don\'t deny having any location awareness either.';
+}
 function buildSmartSysPrompt(mode, userText) {
   var intent = detectIntent(userText, mode);
   var appContext = (typeof _synapsesCtx === 'string' && _synapsesCtx) ? _synapsesCtx : (
@@ -23418,7 +23434,7 @@ function buildSmartSysPrompt(mode, userText) {
       'CRITICAL RULES: (1) Generate COMPLETE mission briefs — always include: Problem Statement, Why Now, Approach, Key Actions (3-5 specific steps), Skills Needed, How to Start This Week, Resources/Connections. (2) Be specific to the user\'s input, never generic. (3) Use **bold** headers and structured markdown. (4) Mention relevant app sections where community support exists. (5) Be inspiring but realistic — great missions start small.',
   };
 
-  return (modePrompts[mode] || modePrompts.chat) + buildNotesContext(userText) + _matrixGetInjection();
+  return (modePrompts[mode] || modePrompts.chat) + buildNotesContext(userText) + _matrixGetInjection() + _cxBuildRouteContextForAI();
 }
 
 // ── Offline Smart Response (no API needed) ──
@@ -24787,6 +24803,23 @@ function groqStripThink(raw){
             if(leg.distance && leg.distance.text) bits.push(leg.distance.text);
             if(res.routes.length > 1) bits.push(res.routes.length+' routes');
             _cxMapSetMeta(bits.join(' · '));
+            // Keep the AI chat aware of the journey currently on screen — so
+            // a follow-up like "what do you think about this trip" can be
+            // answered with the actual distance/time instead of the model
+            // claiming it has no location/GPS awareness at all.
+            try{
+              var modeLabelForAI = { DRIVING:'driving', WALKING:'walking', TRANSIT:'transit', BICYCLING:'biking' }[mode] || String(mode||'').toLowerCase();
+              window._cxLastRouteInfo = {
+                origin: leg.start_address || (typeof origin === 'string' ? origin : ''),
+                destination: leg.end_address || dest,
+                distanceText: (leg.distance && leg.distance.text) || '',
+                durationText: (leg.duration && leg.duration.text) || '',
+                durationInTrafficText: (leg.duration_in_traffic && leg.duration_in_traffic.text) || '',
+                mode: modeLabelForAI,
+                numRoutes: res.routes.length,
+                at: Date.now()
+              };
+            }catch(_ri){}
             _cxMapPlaceGoogleDots(you, pin, dest, true);
             // Deferred + off the critical path: this fires 3 extra network
             // calls (one per other mode) and was racing/competing with the
@@ -25103,6 +25136,18 @@ function groqStripThink(raw){
         if(first && first.duration) bits.push(first.duration);
         if(first && first.distance) bits.push(first.distance);
         if(bits.length) _cxMapSetMeta(bits.join(' · '));
+        try{
+          window._cxLastRouteInfo = {
+            origin: wrap.getAttribute('data-origin') || '',
+            destination: wrap.getAttribute('data-dest') || '',
+            distanceText: (first && first.distance) || '',
+            durationText: (first && first.duration) || '',
+            durationInTrafficText: '',
+            mode: mode,
+            numRoutes: 1,
+            at: Date.now()
+          };
+        }catch(_ri){}
       }catch(_d){}
     }
     if(!pts.length) pts = await _cxMapFetchProxy(you, pin, mode) || [];
