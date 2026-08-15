@@ -2715,11 +2715,80 @@ html:not(.chp-sidebar-mode) .chp-section-label{gap:0;padding-left:16px;}
   background:rgba(255,255,255,0.12)!important;color:rgba(255,255,255,0.88)!important;
 }
 #synMapOrb.live-on #synMapLiveBtn{background:#1a73e8!important;color:#fff!important;}
+#synMapOrb.search-on #synMapDirBtn{background:rgba(255,255,255,0.18)!important;color:#fff!important;}
 #synMapOrbStage{flex:1;min-height:0;position:relative;overflow:hidden;background:#d8d5ce;}
+#synMapSearch{
+  position:absolute;left:8px;right:8px;top:8px;z-index:15;
+  display:none;flex-wrap:wrap;gap:6px;align-items:center;
+  background:rgba(20,20,24,0.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.14);border-radius:12px;
+  padding:8px;box-shadow:0 10px 26px rgba(0,0,0,0.45);
+}
+#synMapOrb.search-on #synMapSearch{display:flex;}
+.syn-map-field{flex:1 1 120px;min-width:0;position:relative;}
+#synMapSearch input{
+  width:100%;box-sizing:border-box;background:rgba(255,255,255,0.09);
+  border:1px solid rgba(255,255,255,0.14);border-radius:8px;
+  color:#fff;font:400 12px/1 DM Sans,system-ui,sans-serif;
+  padding:8px 10px;outline:none;
+}
+#synMapSearch input::placeholder{color:rgba(255,255,255,0.45);}
+#synMapSearch input:focus{border-color:rgba(26,115,232,0.75);background:rgba(255,255,255,0.13);}
+.syn-map-suggest{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;
+  display:none;flex-direction:column;
+  background:rgba(24,24,28,0.98);border:1px solid rgba(255,255,255,0.14);
+  border-radius:10px;overflow:hidden auto;max-height:220px;
+  box-shadow:0 12px 28px rgba(0,0,0,0.5);
+}
+.syn-map-suggest.on{display:flex;}
+.syn-map-suggest button{
+  all:unset;box-sizing:border-box;width:100%;padding:9px 11px;
+  color:rgba(255,255,255,0.88);font:400 12px/1.3 DM Sans,system-ui,sans-serif;
+  cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.syn-map-suggest button:last-child{border-bottom:none;}
+.syn-map-suggest button:hover{background:rgba(26,115,232,0.28);}
+.syn-map-suggest-empty{padding:9px 11px;color:rgba(255,255,255,0.42);font:400 12px/1.3 DM Sans,system-ui,sans-serif;}
+#synMapGo{
+  flex:0 0 auto;background:#1a73e8;color:#fff;border:none;border-radius:8px;
+  font:700 12px/1 DM Sans,system-ui,sans-serif;padding:0 14px;height:34px;cursor:pointer;
+}
+#synMapGo:hover{background:#1662c4;}
+#synMapTools{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;}
+#synMapTools button{
+  background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);
+  border:1px solid rgba(255,255,255,0.12);border-radius:7px;
+  font:600 10px/1 DM Sans,system-ui,sans-serif;letter-spacing:.03em;
+  padding:7px 10px;cursor:pointer;
+}
+#synMapTools button.on{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+#synMapTools button:hover{background:rgba(255,255,255,0.14);}
+#synMapMeta{flex:0 0 100%;color:rgba(255,255,255,0.68);font:600 11px/1.2 DM Sans,system-ui,sans-serif;padding-top:2px;min-height:11px;}
 #synMapOrbInner{position:absolute;inset:0;z-index:1;}
 #synMapOrb.syn-map-embed #synMapOrbInner{inset:0 0 -40px 0;}
 #synMapOrbInner iframe{width:100%;height:100%;border:0;display:block;}
 #synMapOrbInner .leaflet-control-zoom{border:none!important;box-shadow:0 2px 8px rgba(0,0,0,0.25)!important;margin:8px!important;}
+.syn-map-you-wrap{position:relative;width:22px;height:22px;}
+.syn-map-you-pulse{
+  position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;
+  border-radius:50%;background:rgba(26,115,232,0.35);
+  animation:synMapPulse 2s ease-out infinite;
+}
+@keyframes synMapPulse{
+  0%{transform:scale(0.4);opacity:0.9;}
+  70%{transform:scale(1.9);opacity:0;}
+  100%{transform:scale(1.9);opacity:0;}
+}
+.syn-map-you-dot{
+  position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;
+  border-radius:50%;background:#1a73e8;border:2.5px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,0.4);
+}
+.syn-map-pin{
+  width:30px;height:40px;position:relative;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.45));
+}
+.syn-map-pin svg{display:block;width:100%;height:100%;}
 #synMapResize{position:absolute;bottom:2px;right:2px;width:16px;height:16px;cursor:se-resize;z-index:4;}
 #synMapResizeN{position:absolute;top:0;left:10px;right:10px;height:6px;cursor:n-resize;z-index:4;}
 #synMapResizeS{position:absolute;bottom:0;left:10px;right:10px;height:6px;cursor:s-resize;z-index:4;}
@@ -24400,18 +24469,27 @@ function groqStripThink(raw){
       var r = await fetch(_cxBase()+'/connectors/maps/client');
       var j = await r.json();
       if(j && j.key) window._cxMapsKeyCache = String(j.key);
-    }catch(_e){}
+      else { window._cxMapsKeyFailReason = 'server returned no key'; console.warn('[synMap] /connectors/maps/client returned no key', j); }
+    }catch(_e){
+      window._cxMapsKeyFailReason = 'could not reach maps/client endpoint';
+      console.warn('[synMap] /connectors/maps/client fetch failed', _e);
+    }
     return window._cxMapsKeyCache || '';
   }
   function _cxLoadGoogleMaps(key){
     return new Promise(function(resolve){
       if(window.google && google.maps && google.maps.Map){ resolve(google.maps); return; }
       var done = false;
+      window.gm_authFailure = function(){
+        window._cxMapsKeyFailReason = 'Google rejected the key (auth failure — check billing/restrictions)';
+        console.warn('[synMap] Google Maps auth failure — check API key restrictions/billing');
+        finish(null);
+      };
       function finish(v){ if(done) return; done = true; resolve(v || (window.google && google.maps && google.maps.Map ? google.maps : null)); }
       if(document.getElementById('synGmapsJs')){
         var n = 0, wait = setInterval(function(){
           if(window.google && google.maps && google.maps.Map){ clearInterval(wait); finish(google.maps); }
-          else if(++n > 120){ clearInterval(wait); finish(null); }
+          else if(++n > 120){ clearInterval(wait); window._cxMapsKeyFailReason = 'script present but never initialized (timeout)'; finish(null); }
         }, 50);
         return;
       }
@@ -24422,9 +24500,9 @@ function groqStripThink(raw){
       s.src = key
         ? ('https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&libraries=places,geometry&callback=_synGmapsReady')
         : (_cxBase()+'/connectors/maps/js?callback=_synGmapsReady');
-      s.onerror = function(){ finish(null); };
+      s.onerror = function(){ window._cxMapsKeyFailReason = key ? 'script tag failed to load (network/blocked)' : 'no key, and proxy script route failed too'; finish(null); };
       document.head.appendChild(s);
-      setTimeout(function(){ finish(null); }, 9000);
+      setTimeout(function(){ if(!done) window._cxMapsKeyFailReason = window._cxMapsKeyFailReason || 'script load timed out after 9s'; finish(null); }, 9000);
     });
   }
   function _cxMapParseLatLng(s){
@@ -24549,8 +24627,17 @@ function groqStripThink(raw){
             if(res.routes.length > 1) bits.push(res.routes.length+' routes');
             _cxMapSetMeta(bits.join(' · '));
             _cxMapPlaceGoogleDots(you, pin, dest, true);
+            _cxMapUpdateModeEtas();
           }
         }catch(_r){}
+      } else {
+        // A mode switch (esp. Transit/Bicycling) can legitimately have no
+        // route for a given trip. Previously this branch did nothing, so
+        // the OLD route from the last mode stayed on screen — looking like
+        // the button press had no effect. Clear it and say why instead.
+        try{ window._cxDirRenderer.setDirections({ routes: [] }); }catch(_c){}
+        var modeLabel = { DRIVING:'driving', WALKING:'walking', TRANSIT:'transit', BICYCLING:'biking' }[mode] || String(mode||'').toLowerCase();
+        _cxMapSetMeta('No ' + modeLabel + ' route available for this trip');
       }
     });
   }
@@ -24690,7 +24777,7 @@ function groqStripThink(raw){
       wheelPxPerZoomLevel: 60,
       maxZoom: 20
     }).setView([center.lat, center.lng], z);
-    window._cxRoadTiles = Lmap.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, maxNativeZoom:20 }).addTo(map);
+    window._cxRoadTiles = Lmap.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, maxNativeZoom:19 }).addTo(map);
     window._cxSatTiles = Lmap.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:20, maxNativeZoom:19 });
     window._cxSatLabels = Lmap.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxZoom:20, maxNativeZoom:20, pane:'overlayPane' });
     if(map.zoomControl) map.zoomControl.setPosition('bottomleft');
@@ -24729,17 +24816,36 @@ function groqStripThink(raw){
       }
     });
   }
+  function _cxMapFitBounds(map, Lmap, bounds){
+    // Shared camera-framing rule used everywhere we fit the leaflet map to
+    // points/routes, so the zoom never jumps between different call sites.
+    try{
+      map.fitBounds(bounds, { padding:[56,56], maxZoom:17 });
+      // fitBounds' maxZoom only caps zooming IN — if the two points/route
+      // are very close together it can still leave the view oddly loose
+      // for their own sake, so nudge back in a touch when that happens.
+      var z = map.getZoom();
+      if(z < 3) map.setZoom(3);
+    }catch(_f){}
+  }
   function _cxMapPaintLine(pts){
     var map = window._synMapObj;
     if(!map || window._synMapKind !== 'leaflet' || !window.L || !pts || pts.length < 2) return;
     _cxMapClearLeafLine();
     window._cxLeafCasing = window.L.polyline(pts, { color:'#fff', weight:11, opacity:0.95 }).addTo(map);
     window._cxLeafLine = window.L.polyline(pts, { color:'#1a73e8', weight:6, opacity:1 }).addTo(map);
-    try{ map.fitBounds(window._cxLeafLine.getBounds(), { padding:[48,48] }); }catch(_f){}
+    _cxMapFitBounds(map, window.L, window._cxLeafLine.getBounds());
   }
   async function _cxMapFetchOsrm(you, pin, mode){
     if(!you || !pin) return null;
     mode = String(mode || 'driving').toLowerCase();
+    // OSRM has no transit profile — it would otherwise silently fall through
+    // to 'driving' below and draw the exact same line as the Drive mode,
+    // making Transit look broken/unchanged instead of just unsupported here.
+    if(mode === 'transit'){
+      _cxMapSetMeta('Transit routing needs Live/Google mode — not available on the free map');
+      return null;
+    }
     var profile = 'driving';
     if(mode === 'walking') profile = 'foot';
     if(mode === 'bicycling' || mode === 'bike') profile = 'bike';
@@ -24796,7 +24902,21 @@ function groqStripThink(raw){
       var named = _cxMapParseLatLng(destName);
       if(named) pin = named;
     }
-    if(!you || !pin) return;
+    if(!you || !pin){
+      _cxMapSetMeta(!you ? 'Waiting for your location…' : 'Add a destination');
+      return;
+    }
+    if(window._synMapKind === 'leaflet' && window.L && window._synMapObj){
+      // Keep the on-map dots in sync whenever origin/destination change
+      // (e.g. picked via the From/To search panel), not just the route line.
+      var lmap = window._synMapObj;
+      if(window._cxDestMarker) window._cxDestMarker.setLatLng([pin.lat, pin.lng]);
+      else window._cxDestMarker = window.L.circleMarker([pin.lat, pin.lng], { radius:9, color:'#fff', weight:2, fillColor:'#ea4335', fillOpacity:1 }).addTo(lmap);
+      var destLabel = wrap.getAttribute('data-dest');
+      if(destLabel && window._cxDestMarker.bindTooltip) window._cxDestMarker.bindTooltip(destLabel, { permanent:true, direction:'top', offset:[0,-10] });
+      if(window._cxYouMarker) window._cxYouMarker.setLatLng([you.lat, you.lng]);
+      else window._cxYouMarker = window.L.circleMarker([you.lat, you.lng], { radius:10, color:'#fff', weight:3, fillColor:'#1a73e8', fillOpacity:1 }).addTo(lmap);
+    }
     var mode = String(window._cxTravelMode || 'driving').toLowerCase();
     var pts = _cxDecodePoly(wrap.getAttribute('data-poly') || '');
     if(pts.length < 4) pts = [];
@@ -24822,7 +24942,19 @@ function groqStripThink(raw){
     }
     if(!pts.length) pts = await _cxMapFetchProxy(you, pin, mode) || [];
     if(!pts.length) pts = await _cxMapFetchOsrm(you, pin, mode) || [];
-    if(pts.length >= 4) _cxMapPaintLine(pts);
+    if(pts.length >= 4){
+      _cxMapPaintLine(pts);
+      _cxMapUpdateModeEtas();
+    } else if(window._synMapKind === 'leaflet' && window._synMapObj){
+      // No routing service returned a line — still frame the camera on
+      // both points so it's obvious something happened, and say why there's
+      // no route drawn instead of leaving the map looking unresponsive.
+      try{ _cxMapFitBounds(window._synMapObj, window.L, window.L.latLngBounds([[you.lat, you.lng],[pin.lat, pin.lng]])); }catch(_fb2){}
+      // Transit already got its own explanatory message from _cxMapFetchOsrm
+      // (no OSRM transit profile exists) — don't clobber it with the generic
+      // one here.
+      if(mode !== 'transit') _cxMapSetMeta("Found the destination, but no route line available right now");
+    }
   }
   async function _cxMapRefetchRoute(){
     var wrap = document.getElementById('synMapOrb');
@@ -24938,12 +25070,29 @@ function groqStripThink(raw){
     if(you) _cxMapFollowYou(you.lat, you.lng);
     var fromEl = document.getElementById('synMapFrom');
     var toEl = document.getElementById('synMapTo');
-    if(fromEl && !fromEl.value) fromEl.value = you ? 'Your location' : (origin || '');
-    if(toEl && dest) toEl.value = dest;
+    // Leave the From field blank on mount — "Your location" is just the
+    // placeholder text (shown via the input's placeholder attribute), not
+    // an actual value. Routing still works off data-origin/geo cache when
+    // the field is empty (see _cxMapRouteFromFields).
+    // Keep destination field blank on mount — don't echo the spoken/typed
+    // prompt back into it. The map/route already reflects that destination;
+    // this field stays free for the user's next search.
     if(fromEl && toEl && !fromEl._cxAuto && window.google.maps.places){
       try{
         fromEl._cxAuto = new gmaps.places.Autocomplete(fromEl, { fields:['geometry','formatted_address','name'] });
         toEl._cxAuto = new gmaps.places.Autocomplete(toEl, { fields:['geometry','formatted_address','name'] });
+        // Bias suggestions toward wherever the user actually is (~40km box)
+        // instead of returning matches from anywhere on the planet.
+        var biasPt = you || (window._cxGeoCache ? { lat:window._cxGeoCache.lat, lng:window._cxGeoCache.lng } : null);
+        if(biasPt && window.google.maps.LatLngBounds){
+          var d = 0.36; // degrees, roughly a 40km box at mid-latitudes
+          var bounds = new gmaps.LatLngBounds(
+            { lat: biasPt.lat - d, lng: biasPt.lng - d },
+            { lat: biasPt.lat + d, lng: biasPt.lng + d }
+          );
+          fromEl._cxAuto.setBounds(bounds);
+          toEl._cxAuto.setBounds(bounds);
+        }
         fromEl._cxAuto.addListener('place_changed', _cxMapRouteFromFields);
         toEl._cxAuto.addListener('place_changed', _cxMapRouteFromFields);
       }catch(_a){}
@@ -24980,6 +25129,160 @@ function groqStripThink(raw){
     if(dest) _cxMapRouteFromFields();
     setTimeout(_cxMapInvalidate, 80);
   }
+  function _cxMapPickLabel(it){
+    return (it && (it.address || it.formatted_address || it.name)) ||
+      (it && it.lat != null ? (Number(it.lat).toFixed(5)+', '+Number(it.lng).toFixed(5)) : '');
+  }
+  function _cxMapApplyPick(kind, it, label){
+    // Called the moment the user taps a suggestion — we already have exact
+    // coordinates from the pick, so there's no need to re-geocode free text
+    // (which is what was silently failing before and making Go look dead).
+    var wrap = document.getElementById('synMapOrb');
+    if(!wrap || !it || it.lat == null) return;
+    if(kind === 'from'){
+      wrap.setAttribute('data-origin', it.lat+','+it.lng);
+    } else {
+      wrap.setAttribute('data-dest', label || _cxMapPickLabel(it));
+      wrap.setAttribute('data-plat', String(it.lat));
+      wrap.setAttribute('data-plng', String(it.lng));
+      wrap.removeAttribute('data-poly');
+    }
+    _cxMapSetMeta('Finding route…');
+    if(window._synMapKind === 'google') _cxMapRouteFromFields();
+    else _cxMapRefetchRoute();
+    // Only collapse the panel on a "to" pick — that's the destination, the
+    // last thing you'd choose. Picking "from" shouldn't close it since you
+    // likely still want to pick/confirm the destination right after.
+    if(kind === 'to') wrap.classList.remove('search-on');
+  }
+  function _cxMapDist(a, b){
+    // Rough km distance, just for ranking suggestions — doesn't need to be precise.
+    var R = 6371, dLat = (b.lat-a.lat)*Math.PI/180, dLng = (b.lng-a.lng)*Math.PI/180;
+    var s = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    return 2*R*Math.asin(Math.min(1, Math.sqrt(s)));
+  }
+  function _cxMapWireSuggest(inputEl, boxEl, kind){
+    if(!inputEl || !boxEl || inputEl._cxSuggestWired) return;
+    inputEl._cxSuggestWired = true;
+    var debTimer = null, reqId = 0;
+    function hide(){ boxEl.classList.remove('on'); boxEl.innerHTML = ''; }
+    function render(items){
+      boxEl.innerHTML = '';
+      var here = window._cxGeoCache ? { lat:window._cxGeoCache.lat, lng:window._cxGeoCache.lng } : null;
+      var list = (items || []).slice();
+      if(here){
+        // Nearest-first so the app isn't handing back a same-named place
+        // on the other side of the world ahead of the one down the street.
+        list.sort(function(a, b){
+          var da = (a.lat != null) ? _cxMapDist(here, a) : Infinity;
+          var db = (b.lat != null) ? _cxMapDist(here, b) : Infinity;
+          return da - db;
+        });
+      }
+      list = list.slice(0, 6);
+      if(!list.length){
+        var empty = document.createElement('div');
+        empty.className = 'syn-map-suggest-empty';
+        empty.textContent = 'No matches';
+        boxEl.appendChild(empty);
+        boxEl.classList.add('on');
+        return;
+      }
+      list.forEach(function(it){
+        var label = _cxMapPickLabel(it);
+        if(!label) return;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        // mousedown (not click) fires before the input's blur hides the list
+        b.addEventListener('mousedown', function(e){
+          e.preventDefault();
+          inputEl.value = label;
+          inputEl._cxPick = { lat: it.lat, lng: it.lng, label: label };
+          hide();
+          _cxMapApplyPick(kind, it, label);
+        });
+        boxEl.appendChild(b);
+      });
+      boxEl.classList.add('on');
+    }
+    inputEl.addEventListener('input', function(){
+      inputEl._cxPick = null;
+      var q = inputEl.value.trim();
+      clearTimeout(debTimer);
+      if(!q.length){ hide(); return; }
+      // No cached location yet? Kick off a fetch in the background so the
+      // NEXT keystroke already has it to bias against — don't block typing.
+      if(!window._cxGeoCache) _cxGetGeo().catch(function(){});
+      var myReq = ++reqId;
+      debTimer = setTimeout(async function(){
+        try{
+          var here = window._cxGeoCache;
+          var args = { q: q };
+          if(here){ args.lat = here.lat; args.lng = here.lng; args.bias = here.lat+','+here.lng; }
+          var out = await cxAct('maps.geocode', args, false);
+          if(myReq !== reqId) return; // a newer keystroke already superseded this
+          if(out && out.mapsKey) window._cxMapsKeyCache = String(out.mapsKey);
+          render(out && out.items);
+        }catch(_e){ if(myReq === reqId) hide(); }
+      }, 150);
+    });
+    inputEl.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
+    inputEl.addEventListener('blur', function(){ setTimeout(hide, 150); });
+    inputEl.addEventListener('focus', function(){ if(boxEl.children.length) boxEl.classList.add('on'); });
+  }
+  // Fetches the ETA for one travel mode. Google/Live mode uses the real
+  // DirectionsService for every mode; the free/Leaflet map asks the backend
+  // (driving/walking/bicycling only — no transit data available there).
+  function _cxMapFetchModeEta(origin, pin, modeUp){
+    return new Promise(function(resolve){
+      if(window._synMapKind === 'google' && window._cxDirService && window.google && google.maps){
+        var gm = (google.maps.TravelMode && google.maps.TravelMode[modeUp]) || 'DRIVING';
+        var req = { origin: origin, destination: pin, travelMode: gm, provideRouteAlternatives:false };
+        if(gm === google.maps.TravelMode.DRIVING) req.drivingOptions = { departureTime: new Date() };
+        try{
+          window._cxDirService.route(req, function(res, status){
+            var leg = status === 'OK' && res && res.routes[0] && res.routes[0].legs && res.routes[0].legs[0];
+            resolve(leg && leg.duration ? leg.duration.text : null);
+          });
+        }catch(_e){ resolve(null); }
+        return;
+      }
+      var modeLow = String(modeUp||'driving').toLowerCase();
+      if(modeLow === 'transit'){ resolve(null); return; } // no free transit source
+      cxAct('maps.directions', {
+        origin: origin.lat+','+origin.lng,
+        destination: pin.lat+','+pin.lng,
+        mode: modeLow
+      }, false).then(function(out){
+        var first = out && out.items && out.items[0];
+        resolve((first && first.duration) || null);
+      }).catch(function(){ resolve(null); });
+    });
+  }
+  // Populates a "Drive · 12 min" style badge on each mode button so you can
+  // see all four ETAs at a glance instead of clicking through each mode.
+  async function _cxMapUpdateModeEtas(){
+    var wrap = document.getElementById('synMapOrb');
+    var toolsEl = document.getElementById('synMapTools');
+    if(!wrap || !toolsEl) return;
+    var plat = wrap.getAttribute('data-plat'), plng = wrap.getAttribute('data-plng');
+    if(!plat || !plng) return;
+    var pin = { lat:Number(plat), lng:Number(plng) };
+    var origin = _cxMapParseLatLng(wrap.getAttribute('data-origin') || '') ||
+      (window._cxGeoCache ? { lat:window._cxGeoCache.lat, lng:window._cxGeoCache.lng } : null);
+    if(!origin) return;
+    var myReq = (wrap._cxEtaReq = (wrap._cxEtaReq||0) + 1);
+    var btns = [].slice.call(toolsEl.querySelectorAll('[data-mode]'));
+    btns.forEach(function(b){
+      var label = b.getAttribute('data-label') || b.textContent;
+      b.textContent = label + ' · …';
+      _cxMapFetchModeEta(origin, pin, b.getAttribute('data-mode')).then(function(txt){
+        if(wrap._cxEtaReq !== myReq) return; // a newer destination/mode superseded this
+        b.textContent = label + (txt ? ' · '+txt : ' · N/A');
+      });
+    });
+  }
   function _cxMapEnsureTools(wrap, map){
     var box = document.getElementById('synMapSearch');
     if(!box) return;
@@ -24996,10 +25299,10 @@ function groqStripThink(raw){
       var tools = document.createElement('div');
       tools.id = 'synMapTools';
       tools.innerHTML =
-        '<button type="button" data-mode="DRIVING" class="on">Drive</button>'+
-        '<button type="button" data-mode="WALKING">Walk</button>'+
-        '<button type="button" data-mode="TRANSIT">Transit</button>'+
-        '<button type="button" data-mode="BICYCLING">Bike</button>'+
+        '<button type="button" data-mode="DRIVING" data-label="Drive" class="on">Drive</button>'+
+        '<button type="button" data-mode="WALKING" data-label="Walk">Walk</button>'+
+        '<button type="button" data-mode="TRANSIT" data-label="Transit">Transit</button>'+
+        '<button type="button" data-mode="BICYCLING" data-label="Bike">Bike</button>'+
         '<button type="button" data-layer="satellite">Satellite</button>'+
         '<button type="button" data-layer="street">Street View</button>'+
         '<button type="button" data-layer="traffic" class="on">Traffic</button>'+
@@ -25017,6 +25320,8 @@ function groqStripThink(raw){
     if(go) go.onclick = function(e){ e.preventDefault(); e.stopPropagation(); _cxMapSubmitSearch(); };
     var fromEl0 = document.getElementById('synMapFrom');
     var toEl0 = document.getElementById('synMapTo');
+    _cxMapWireSuggest(fromEl0, document.getElementById('synMapFromSuggest'), 'from');
+    _cxMapWireSuggest(toEl0, document.getElementById('synMapToSuggest'), 'to');
     function onEnter(e){ if(e.key === 'Enter'){ e.preventDefault(); _cxMapSubmitSearch(); } }
     if(fromEl0) fromEl0.addEventListener('keydown', onEnter);
     if(toEl0) toEl0.addEventListener('keydown', onEnter);
@@ -25042,14 +25347,43 @@ function groqStripThink(raw){
         return;
       }
       if(layer === 'street'){
-        if(window._synMapKind === 'google' && window._synMapObj && window._synMapObj.getStreetView){
-          var gpin = _cxMapReadPin(document.getElementById('synMapOrb'));
-          var sv = window._synMapObj.getStreetView();
-          if(gpin) sv.setPosition(gpin);
-          sv.setVisible(true);
-        } else {
-          _cxMapOpenStreetView();
+        var wrap1 = document.getElementById('synMapOrb');
+        var openAt = function(){
+          if(window._synMapKind === 'google' && window._synMapObj && window._synMapObj.getStreetView){
+            var gpin = _cxMapReadPin(wrap1);
+            var sv = window._synMapObj.getStreetView();
+            if(gpin) sv.setPosition(gpin);
+            sv.setVisible(true);
+          } else {
+            _cxMapOpenStreetView();
+          }
+        };
+        var pinNow = _cxMapReadPin(wrap1);
+        if(pinNow){ openAt(); return; }
+        // This was the "literally doesn't work" case: with no destination
+        // geocoded yet (data-plat/plng unset), the old code just returned
+        // silently — no pano, no error, nothing. Now it resolves whatever's
+        // typed in the To field first, then drops into Street View there.
+        var toElSv = document.getElementById('synMapTo');
+        var q = (toElSv && toElSv.value || '').trim();
+        if(!q){
+          if(window._cxGeoCache){ openAt(); return; }
+          _cxMapSetMeta('Add a destination first');
+          return;
         }
+        _cxMapSetMeta('Finding location…');
+        cxAct('maps.geocode', { q:q }, false).then(function(looked){
+          var p = looked && looked.items && looked.items[0];
+          if(p && p.lat != null){
+            wrap1.setAttribute('data-plat', String(p.lat));
+            wrap1.setAttribute('data-plng', String(p.lng));
+            wrap1.setAttribute('data-dest', q);
+            _cxMapSetMeta('');
+            openAt();
+          } else {
+            _cxMapSetMeta("Couldn't find '"+q+"' — try picking a suggestion");
+          }
+        }).catch(function(){ _cxMapSetMeta('Street View lookup failed'); });
         return;
       }
       if(layer === 'traffic'){
@@ -25116,7 +25450,7 @@ function groqStripThink(raw){
     iframe.src = src;
     inner.appendChild(iframe);
   }
-  async function _cxMapMountLive(wrap, inner, origin, dest){
+  async function _cxMapMountLiveLeaflet(wrap, inner, origin, dest){
     wrap.classList.add('live-on', 'syn-map-leaf');
     wrap.classList.remove('syn-map-embed', 'syn-map-js');
     var Lmap = await _cxLoadLeaflet();
@@ -25129,25 +25463,73 @@ function groqStripThink(raw){
     var pin = _cxMapReadPin(wrap);
     var center = you || pin || { lat:49.2827, lng:-123.1207 };
     var z = 16;
-    if(you && pin){
-      center = { lat:(you.lat+pin.lat)/2, lng:(you.lng+pin.lng)/2 };
-      z = 15;
-    }
     var map = Lmap.map(inner, { zoomControl:true, attributionControl:false, scrollWheelZoom:true, maxZoom:19 }).setView([center.lat, center.lng], z);
-    Lmap.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(map);
+    Lmap.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, maxNativeZoom:19 }).addTo(map);
     if(map.zoomControl) map.zoomControl.setPosition('bottomleft');
     window._synMapObj = map;
     window._synMapKind = 'leaflet';
     window._cxYouMarker = null;
     window._cxDestMarker = null;
+    var pinIcon = Lmap.divIcon({
+      className: '',
+      html: '<div class="syn-map-pin"><svg viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">'+
+        '<path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 25 15 25s15-14.5 15-25C30 6.7 23.3 0 15 0z" fill="#ea4335"/>'+
+        '<circle cx="15" cy="15" r="6" fill="#fff"/></svg></div>',
+      iconSize: [30, 40],
+      iconAnchor: [15, 40]
+    });
     if(pin){
-      window._cxDestMarker = Lmap.circleMarker([pin.lat, pin.lng], {
-        radius:9, color:'#fff', weight:2, fillColor:'#ea4335', fillOpacity:1
-      }).addTo(map);
+      window._cxDestMarker = Lmap.marker([pin.lat, pin.lng], { icon: pinIcon }).addTo(map);
     }
-    if(you) _cxMapFollowYou(you.lat, you.lng);
+    if(you){
+      var youIcon = Lmap.divIcon({
+        className: '',
+        html: '<div class="syn-map-you-wrap"><div class="syn-map-you-pulse"></div><div class="syn-map-you-dot"></div></div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      window._cxYouMarker = Lmap.marker([you.lat, you.lng], { icon: youIcon, zIndexOffset: 1000 }).addTo(map);
+    }
+    // Frame the camera so both points are visible right away, before the
+    // route line (if any) arrives and re-fits more precisely.
+    if(you && pin){
+      try{ _cxMapFitBounds(map, Lmap, Lmap.latLngBounds([[you.lat, you.lng],[pin.lat, pin.lng]])); }
+      catch(_fb){}
+    } else if(you || pin){
+      var only = you || pin;
+      map.setView([only.lat, only.lng], 16);
+    }
     _cxMapStartWatch();
+    if(you && pin) _cxMapEnsureRoute();
+    _cxMapEnsureTools(wrap, map);
     setTimeout(function(){ try{ map.invalidateSize(); }catch(_i){} }, 80);
+  }
+  async function _cxMapMountLive(wrap, inner, origin, dest){
+    // Try the real Google Maps JS SDK first — gives us traffic, transit,
+    // Street View, and Places autocomplete on top of the live dot. Falls
+    // back to the free Leaflet map if the key/script isn't available.
+    window._cxMapsKeyFailReason = '';
+    var failed = false;
+    try{
+      var key = await _cxMapsKey();
+      var gmaps = await _cxLoadGoogleMaps(key);
+      if(gmaps && gmaps.Map){
+        wrap.classList.add('live-on');
+        _cxMapMountGoogle(gmaps, wrap, inner, origin, dest);
+        _cxMapStartWatch();
+        return;
+      }
+      failed = true;
+    }catch(_g){
+      failed = true;
+      window._cxMapsKeyFailReason = window._cxMapsKeyFailReason || ('threw: ' + (_g && _g.message || _g));
+    }
+    await _cxMapMountLiveLeaflet(wrap, inner, origin, dest);
+    if(failed){
+      var reason = window._cxMapsKeyFailReason || 'unknown reason';
+      console.warn('[synMap] Falling back to free map. Reason:', reason);
+      _cxMapSetMeta('Google Maps failed: ' + reason);
+    }
   }
   function _cxMapToggleLive(){
     var wrap = document.getElementById('synMapOrb');
@@ -25164,9 +25546,14 @@ function groqStripThink(raw){
     var stage = wrap && wrap.querySelector('#synMapOrbStage');
     if(!stage || stage._cxWheel) return;
     stage._cxWheel = true;
+    // Bubble phase (not capture) so Leaflet's own wheel/zoom listener on the
+    // map pane gets first crack at the event. We only stop it from going
+    // further UP past the stage (so the outer page doesn't scroll while
+    // the cursor is over the map) — capture:true was killing the event
+    // before it ever reached Leaflet, which is why scroll-zoom did nothing.
     stage.addEventListener('wheel', function(e){
       e.stopPropagation();
-    }, { capture:true, passive:true });
+    }, { capture:false, passive:true });
   }
   async function _cxMapSubmitSearch(){
     var wrap = document.getElementById('synMapOrb');
@@ -25176,9 +25563,18 @@ function groqStripThink(raw){
     var dest = ((toEl && toEl.value) || '').trim();
     var rawFrom = ((fromEl && fromEl.value) || '').trim();
     if(!dest){ _cxMapSetMeta('Add a destination'); return; }
-    wrap.setAttribute('data-dest', dest);
+    _cxMapSetMeta('Finding route…');
     wrap.removeAttribute('data-poly');
-    if(rawFrom && !_cxIsHerePhrase(rawFrom) && !/^your location$/i.test(rawFrom)){
+    // If the user picked a suggestion from the dropdown, we already have
+    // exact coordinates for it — use those directly instead of re-running
+    // a free-text geocode (that free-text lookup is what could silently
+    // come back empty and leave Go looking like it did nothing).
+    var toPick = toEl && toEl._cxPick && toEl._cxPick.label === dest ? toEl._cxPick : null;
+    var fromPick = fromEl && fromEl._cxPick && fromEl._cxPick.label === rawFrom ? fromEl._cxPick : null;
+    wrap.setAttribute('data-dest', dest);
+    if(fromPick){
+      wrap.setAttribute('data-origin', fromPick.lat+','+fromPick.lng);
+    } else if(rawFrom && !_cxIsHerePhrase(rawFrom) && !/^your location$/i.test(rawFrom)){
       var fromLL = _cxMapParseLatLng(rawFrom);
       if(fromLL){
         wrap.setAttribute('data-origin', fromLL.lat+','+fromLL.lng);
@@ -25194,22 +25590,38 @@ function groqStripThink(raw){
     } else if(window._cxGeoCache){
       wrap.setAttribute('data-origin', window._cxGeoCache.lat+','+window._cxGeoCache.lng);
     }
-    var destLL = _cxMapParseLatLng(dest);
-    if(destLL){
-      wrap.setAttribute('data-plat', String(destLL.lat));
-      wrap.setAttribute('data-plng', String(destLL.lng));
+    var foundDest = false;
+    if(toPick){
+      wrap.setAttribute('data-plat', String(toPick.lat));
+      wrap.setAttribute('data-plng', String(toPick.lng));
+      foundDest = true;
     } else {
-      try{
-        var looked = await cxAct('maps.geocode', { q: dest }, false);
-        if(looked && looked.mapsKey) window._cxMapsKeyCache = String(looked.mapsKey);
-        var p = looked && looked.items && looked.items[0];
-        if(p && p.lat != null){
-          wrap.setAttribute('data-plat', String(p.lat));
-          wrap.setAttribute('data-plng', String(p.lng));
-        }
-      }catch(_g){}
+      var destLL = _cxMapParseLatLng(dest);
+      if(destLL){
+        wrap.setAttribute('data-plat', String(destLL.lat));
+        wrap.setAttribute('data-plng', String(destLL.lng));
+        foundDest = true;
+      } else {
+        try{
+          var looked = await cxAct('maps.geocode', { q: dest }, false);
+          if(looked && looked.mapsKey) window._cxMapsKeyCache = String(looked.mapsKey);
+          var p = looked && looked.items && looked.items[0];
+          if(p && p.lat != null){
+            wrap.setAttribute('data-plat', String(p.lat));
+            wrap.setAttribute('data-plng', String(p.lng));
+            foundDest = true;
+          }
+        }catch(_g){}
+      }
+    }
+    if(!foundDest){
+      // Nothing matched — say so instead of quietly doing nothing, and
+      // nudge toward the dropdown suggestions which are more reliable.
+      _cxMapSetMeta("Couldn't find \"" + dest + "\" — try picking a suggestion from the list");
+      return;
     }
     await _cxMapRefetchRoute();
+    wrap.classList.remove('search-on');
   }
   function _cxMapWireChrome(wrap){
     if(wrap._cxWired) return;
@@ -25222,6 +25634,16 @@ function groqStripThink(raw){
     if(liveBtn) liveBtn.onclick = function(e){
       e.preventDefault(); e.stopPropagation();
       _cxMapToggleLive();
+    };
+    var dirBtn = wrap.querySelector('#synMapDirBtn');
+    if(dirBtn) dirBtn.onclick = function(e){
+      e.preventDefault(); e.stopPropagation();
+      wrap.classList.toggle('search-on');
+      if(wrap.classList.contains('search-on')){
+        _cxMapEnsureTools(wrap, window._synMapObj);
+        var toEl = document.getElementById('synMapTo');
+        if(toEl) setTimeout(function(){ toEl.focus(); }, 60);
+      }
     };
     wrap.querySelector('#synMapOrbBar').addEventListener('mousedown', function(e){
       if(e.target && e.target.tagName === 'BUTTON') return;
@@ -25295,9 +25717,20 @@ function groqStripThink(raw){
         wrap = document.createElement('div');
         wrap.id = 'synMapOrb';
         wrap.innerHTML =
-          '<div id="synMapOrbBar"><button type="button" id="synMapLiveBtn" aria-label="Live GPS">Live</button><button type="button" id="synMapOrbClose" aria-label="Close map">×</button></div>'+
+          '<div id="synMapOrbBar"><button type="button" id="synMapLiveBtn" aria-label="Live GPS">Live</button>'+
+            '<button type="button" id="synMapDirBtn" aria-label="Set start and destination">'+
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+
+                '<circle cx="6" cy="6" r="2.3"></circle><circle cx="18" cy="18" r="2.3"></circle>'+
+                '<path d="M8 7.5 L16 16.5" stroke-dasharray="2 2.3"></path>'+
+              '</svg>'+
+            '</button>'+
+            '<button type="button" id="synMapOrbClose" aria-label="Close map">×</button></div>'+
           '<div id="synMapOrbStage">'+
             '<div id="synMapOrbInner"></div>'+
+            '<div id="synMapSearch">'+
+              '<div class="syn-map-field"><input type="text" id="synMapFrom" placeholder="Your location" autocomplete="off"><div class="syn-map-suggest" id="synMapFromSuggest"></div></div>'+
+              '<div class="syn-map-field"><input type="text" id="synMapTo" placeholder="Choose destination" autocomplete="off"><div class="syn-map-suggest" id="synMapToSuggest"></div></div>'+
+            '</div>'+
           '</div>'+
           '<div id="synMapResizeN"></div><div id="synMapResizeS"></div><div id="synMapResizeW"></div><div id="synMapResizeE"></div><div id="synMapResize"></div>';
         document.body.appendChild(wrap);
@@ -25319,6 +25752,35 @@ function groqStripThink(raw){
           e.preventDefault(); e.stopPropagation();
           _cxMapToggleLive();
         };
+      }
+      if(bar && !wrap.querySelector('#synMapDirBtn')){
+        var closeBtn0 = wrap.querySelector('#synMapOrbClose');
+        var dir0 = document.createElement('button');
+        dir0.type = 'button';
+        dir0.id = 'synMapDirBtn';
+        dir0.setAttribute('aria-label', 'Set start and destination');
+        dir0.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'+
+          '<circle cx="6" cy="6" r="2.3"></circle><circle cx="18" cy="18" r="2.3"></circle>'+
+          '<path d="M8 7.5 L16 16.5" stroke-dasharray="2 2.3"></path></svg>';
+        if(closeBtn0) bar.insertBefore(dir0, closeBtn0); else bar.appendChild(dir0);
+        dir0.onclick = function(e){
+          e.preventDefault(); e.stopPropagation();
+          wrap.classList.toggle('search-on');
+          if(wrap.classList.contains('search-on')){
+            _cxMapEnsureTools(wrap, window._synMapObj);
+            var toEl2 = document.getElementById('synMapTo');
+            if(toEl2) setTimeout(function(){ toEl2.focus(); }, 60);
+          }
+        };
+      }
+      var stage0 = wrap.querySelector('#synMapOrbStage');
+      if(stage0 && !document.getElementById('synMapSearch')){
+        var searchBox0 = document.createElement('div');
+        searchBox0.id = 'synMapSearch';
+        searchBox0.innerHTML =
+          '<div class="syn-map-field"><input type="text" id="synMapFrom" placeholder="Your location" autocomplete="off"><div class="syn-map-suggest" id="synMapFromSuggest"></div></div>'+
+          '<div class="syn-map-field"><input type="text" id="synMapTo" placeholder="Choose destination" autocomplete="off"><div class="syn-map-suggest" id="synMapToSuggest"></div></div>';
+        stage0.appendChild(searchBox0);
       }
       wrap.classList.remove('live-on', 'search-on');
       var dest = _cxCleanDest((hit && hit.args && (hit.args.destination || hit.args.q)) || (items[0] && (items[0].to || items[0].name || items[0].address)) || '');
@@ -25354,8 +25816,16 @@ function groqStripThink(raw){
       }
       var fromEl = document.getElementById('synMapFrom');
       var toEl = document.getElementById('synMapTo');
-      if(fromEl) fromEl.value = origin ? 'Your location' : '';
-      if(toEl) toEl.value = dest || '';
+      // Leave From blank too — "Your location" is just placeholder text now,
+      // not a real value stuffed into the field. Routing still falls back to
+      // data-origin/geo cache when the field is empty.
+      if(fromEl) fromEl.value = '';
+      // Leave the destination field blank rather than echoing back whatever
+      // was said/typed to get here — the map itself already shows that
+      // destination (via data-dest/plat/plng); this field is just for
+      // starting a NEW search, so it shouldn't look pre-filled with the
+      // last prompt.
+      if(toEl) toEl.value = '';
       _cxMapApplyGeom(wrap);
       wrap.classList.add('on');
       _cxMapReload();
