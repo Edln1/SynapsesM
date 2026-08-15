@@ -29700,7 +29700,7 @@ function _positionPlusMenu(){
   var es = document.getElementById('chatEmptyState');
   var onHome = !!(es && !es.classList.contains('hidden'));
   var menuH = m.offsetHeight || Math.min(window.innerHeight * 0.62, 420);
-  var openDown = onHome || spaceAbove < menuH + gap;
+  var openDown = spaceAbove < menuH + gap;
   if(spaceAbove < menuH + gap && spaceBelow < menuH + gap){
     openDown = spaceBelow >= spaceAbove;
   }
