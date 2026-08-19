@@ -43,8 +43,12 @@ app.use((req, res, next) => {
 
 // ── Stripe payment routes (checkout, billing portal, webhook) ──────────────
 // Adds POST /create-checkout-session, POST /create-portal-session, POST /stripe-webhook
-const stripeRoutes = require('./stripe-routes');
-app.use(stripeRoutes);
+try {
+  const stripeRoutes = require('./stripe-routes');
+  app.use(stripeRoutes);
+} catch (e) {
+  console.warn('[STRIPE] stripe-routes.js not found — checkout disabled until that file is next to the server');
+}
 
 const VERIFY_TOKEN = 'synapses_verify_2026';
 
@@ -89,7 +93,57 @@ function checkGuestLimit(req, res, next) {
 
 const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
 const WA_ACCESS_TOKEN = process.env.WA_ACCESS_TOKEN;
-const GROQ_KEYS = (process.env.GROQ_KEYS || '').split(',').filter(Boolean);
+const GROQ_KEYS = (process.env.GROQ_KEYS || '')
+  .split(/[,\n]+/)
+  .map(k => k.trim().replace(/^["']|["']$/g, ''))
+  .filter(Boolean);
+console.log(`[GROQ_KEYS] loaded ${GROQ_KEYS.length} key(s):`, GROQ_KEYS.map(k => k.slice(0, 8) + '…' + k.slice(-4)));
+if (GROQ_KEYS.length < 2) console.warn('[GROQ_KEYS] WARNING: fewer than 2 keys loaded — rotation has nothing to rotate to. Check the GROQ_KEYS env var on the running server.');
+
+// Groq deprecated + shut down llama-3.1-8b-instant and llama-3.3-70b-versatile
+// on 2026-08-16 (see https://console.groq.com/docs/deprecations). Every
+// hardcoded use of those two model strings below now gets a 400
+// model_decommissioned error from Groq's API. Route every Groq call through
+// this helper instead of the literal string so the swap only has to happen
+// once, here — mirrors the client-side groqApplyQwenFlags()/groqLlamaDead()
+// swap in the HTML, which only ever covered the client, not this server.
+const GROQ_REPLACEMENTS = {
+  'llama-3.1-8b-instant': 'openai/gpt-oss-20b',
+  'llama-3.3-70b-versatile': 'qwen/qwen3.6-27b'
+};
+function groqModel(id) {
+  return GROQ_REPLACEMENTS[id] || id;
+}
+
+// qwen/* models on Groq are reasoning models — without these two flags they
+// spend generation tokens on a hidden <think>...</think> scratchpad before
+// ever writing the real answer, and can burn through max_tokens before
+// finishing it, leaving `content` empty. That's the server-side twin of the
+// bug the client's groqApplyQwenFlags() comment already describes ("otherwise
+// finishes with an empty answer") — it was only ever applied client-side.
+// Every Groq call in this file now can land on qwen/qwen3.6-27b via
+// groqModel(), so every one of them was exposed to this; wrap the request
+// body with this before sending.
+//
+// reasoning_format: 'parsed' (not 'hidden') — Groq has a known, documented
+// bug where 'hidden' fails to suppress reasoning specifically when tool
+// calls are involved (open bug report on Groq's community forum: reasoning
+// tokens leak into the visible content field despite 'hidden' being set,
+// for both GPT-OSS and Qwen reasoning models). 'parsed' sidesteps that
+// entirely by putting reasoning in its own separate `reasoning` /
+// `delta.reasoning` field instead of trying to string-suppress it out of
+// `content` — and every caller in this file already only ever reads
+// `.content` / `.delta.content`, so anything that lands in that separate
+// field is naturally dropped rather than leaking into what the user sees.
+function applyGroqReasoningFlags(body) {
+  if (body && typeof body.model === 'string' && body.model.indexOf('qwen/') === 0) {
+    body.reasoning_effort = 'none';
+    body.reasoning_format = 'parsed';
+  }
+  return body;
+
+}
+
 const SUPABASE_URL = 'https://wockoewhlybhboprluxv.supabase.co';
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -134,7 +188,101 @@ async function tavilySearch(params) {
   throw new Error('All Tavily keys rate limited (429)');
 }
 
+const SERPER_KEYS = (process.env.SERPER_KEYS || process.env.SERPER_KEY || '').split(',').filter(Boolean);
+let serperKeyIndex = 0;
+function getSerperKey() {
+  const key = SERPER_KEYS[serperKeyIndex % SERPER_KEYS.length];
+  serperKeyIndex++;
+  return key;
+}
+
+// Serper (Google SERP) search with the same key-rotation-on-429 pattern as
+// tavilySearch. Complements Tavily: Serper returns raw Google results
+// (organic snippets, answerBox, knowledge graph, news) instead of an
+// AI-pre-summarized answer — better breadth/freshness on some queries.
+async function serperSearch(params) {
+  const totalKeys = SERPER_KEYS.length;
+  if (totalKeys === 0) throw new Error('No SERPER_KEYS configured');
+  const startIndex = serperKeyIndex;
+  for (let i = 0; i < totalKeys; i++) {
+    const keyIndex = (startIndex + i) % totalKeys;
+    const key = SERPER_KEYS[keyIndex];
+    serperKeyIndex = (keyIndex + 1) % totalKeys;
+    try {
+      const endpoint = params.type === 'news' ? 'https://google.serper.dev/news' : 'https://google.serper.dev/search';
+      const res = await axios.post(endpoint, {
+        q: params.query,
+        num: params.num_results || 5
+      }, { headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' } });
+      return res.data;
+    } catch (e) {
+      const status = e.response?.status;
+      if (status === 429 && i < totalKeys - 1) {
+        console.log(`[SERPER] Key ${i+1}/${totalKeys} rate limited (429), trying next key...`);
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('All Serper keys rate limited (429)');
+}
+
+// Flatten a Serper response into the same {title, url, content} shape the
+// Tavily context already uses, so prompt-building doesn't need two formats.
+function serperToContext(data) {
+  const out = [];
+  if (data?.answerBox) {
+    out.push({
+      title: data.answerBox.title || 'Answer box',
+      url: data.answerBox.link || '',
+      content: data.answerBox.answer || data.answerBox.snippet || ''
+    });
+  }
+  if (Array.isArray(data?.organic)) {
+    data.organic.slice(0, 5).forEach(r => {
+      out.push({ title: r.title, url: r.link, content: r.snippet || '' });
+    });
+  }
+  if (Array.isArray(data?.news)) {
+    data.news.slice(0, 5).forEach(r => {
+      out.push({ title: r.title, url: r.link, content: (r.snippet || '') + (r.date ? ` (${r.date})` : '') });
+    });
+  }
+  return out;
+}
+
 let groqKeyIndex = Math.floor(Math.random() * 1000);
+
+// Sticky active-key pointer used ONLY by getGroqKey()/the 429-retry loops
+// (agentCallGroqTools, agentStreamFinal, callGroqWithRetry, etc). Unlike
+// groqKeyIndex above (which round-robins on every call and is relied on by
+// runAgentDebate() to hand 5 parallel calls 5 different keys), this pointer
+// does NOT advance on every call — it stays put and serves the same key to
+// everyone until that key actually 429s, at which point advanceGroqKey()
+// moves it forward once, permanently, for all future calls. This means one
+// key gets fully drained before the next one is touched, instead of all
+// keys draining in lockstep together.
+let activeGroqKeyIdx = 1; // starting on the 2nd key for now — key 0 has taken the brunt of today's traffic
+function advanceGroqKey(reason) {
+  const from = activeGroqKeyIdx % GROQ_KEYS.length;
+  activeGroqKeyIdx = (activeGroqKeyIdx + 1) % GROQ_KEYS.length;
+  console.warn(`[GROQ-KEY] sticky pointer advancing: idx ${from} -> ${activeGroqKeyIdx}${reason ? ' (' + reason + ')' : ''}`);
+}
+
+// Not every 429 means "this key is done for the day." Groq returns 429 for
+// short per-minute/burst limits too (recovers in seconds), and those come
+// back with a short Retry-After and a message that says "per minute"/"TPM"/
+// "RPM" rather than "per day"/"TPD"/"RPD". Only a genuine daily-quota 429
+// should cost a key its spot in the sticky rotation for the rest of the day
+// — a burst 429 should just wait and retry the SAME key, since abandoning
+// it permanently over a 2-minute throttle wastes 4/5 of the day's capacity
+// on that key for nothing.
+function isDailyQuotaError(e) {
+  const msg = e?.response?.data?.error?.message || '';
+  return /per day|TPD|RPD/i.test(msg);
+}
+
 const conversationHistory = {};
 const lastGmailAction = {}; // phone -> { type, email } — tracks last email actioned for "reply to that", "archive that" etc
 const lastNotesList = {}; // phone -> notes array for "read note X" command
@@ -266,7 +414,7 @@ async function parseReminder(phone, text) {
     const key = getGroqKey();
     const now = new Date();
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [
         {
           role: 'system',
@@ -430,7 +578,7 @@ async function checkAndFireBriefings() {
             ? `You are Synbot. Daily briefing on "${b.topic}". ONLY include events in Vancouver/BC. Sort earliest to latest. Start with "🌅 *${b.topic} Briefing:*".\nFormat each event: [relevant emoji] *Name* / 🗓 Date / 📍 Location / one line. Use a unique emoji per event based on its topic (🤝 for networking, 🚀 for startups, 🤖 for robotics, 🎤 for talks, etc).\n\n${content}`
             : `You are Synbot. Short morning briefing on "${b.topic}". Start with "🌅 *${b.topic} Briefing:*"\n4-5 bullet points. ONLY use facts from the content below — do NOT add your own knowledge or make up outcomes.\n\n${content}`;
           const summaryRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: 'llama-3.1-8b-instant',
+            model: groqModel('llama-3.1-8b-instant'),
             messages: [{ role: 'user', content: prompt }],
             max_tokens: 500
           }, { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' } });
@@ -556,7 +704,7 @@ async function extractAndSaveMemory(phone, conversation) {
     const key = getGroqKey();
     const existing = await loadMemory(phone);
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [
         {
           role: 'system',
@@ -584,9 +732,7 @@ function memoryToContext(memory) {
   return `What you know about this user: ${facts}.`;
 }
 function getGroqKey() {
-  const key = GROQ_KEYS[groqKeyIndex % GROQ_KEYS.length];
-  groqKeyIndex++;
-  return key;
+  return GROQ_KEYS[activeGroqKeyIdx % GROQ_KEYS.length];
 }
 
 // Groq with auto-retry across keys on 429
@@ -594,12 +740,12 @@ async function callGroqWithRetry(messages, maxTokens=500) {
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
       const res = await axios.post('https://api.groq.com/openai/v1/chat/completions',
-        { model: 'llama-3.1-8b-instant', messages, max_tokens: maxTokens },
+        { model: groqModel('llama-3.1-8b-instant'), messages, max_tokens: maxTokens },
         { headers: { Authorization: `Bearer ${getGroqKey()}`, 'Content-Type': 'application/json' } }
       );
       return res.data.choices[0].message.content;
     } catch(e) {
-      if (e.response?.status === 429) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      if (e.response?.status === 429) { advanceGroqKey('callGroqWithRetry 429'); continue; }
       throw e;
     }
   }
@@ -627,7 +773,7 @@ async function getEmailByPhone(phone) {
 async function generateTitle(text) {
   const key = getGroqKey();
   const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-    model: 'llama-3.1-8b-instant',
+    model: groqModel('llama-3.1-8b-instant'),
     messages: [
       { role: 'system', content: `Generate the most fitting title for this note. Rules:
 - 2-4 words max
@@ -735,7 +881,7 @@ CRITICAL RULES — never break these:
 - Example response: "To delete a reminder, say *delete my first reminder*."
 - Never say things like "Briefings cleared", "Done!", "Reminders deleted" or anything that implies you actually performed the action.`;
   const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-    model: 'llama-3.1-8b-instant',
+    model: groqModel('llama-3.1-8b-instant'),
     messages: [
       { role: 'system', content: systemPrompt },
       ...history,
@@ -787,7 +933,7 @@ async function classifyIntent(text) {
     const key = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
     if (!key) return null;
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'user',
         content: `Classify this WhatsApp message into ONE of these intents, or "none" if it doesn't match any:
@@ -1002,7 +1148,7 @@ ${newsContext.slice(0, 1200)}`;
 
     // Agent 1: Resolution Criteria Agent
     axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: 'You are the Resolution Criteria Agent. Your ONLY job is to analyze the exact resolution criteria of prediction markets and identify how they will likely resolve. You are extremely literal and precise. You identify ambiguities, technicalities, and common misunderstandings. You output JSON only.'
@@ -1016,7 +1162,7 @@ ${newsContext.slice(0, 1200)}`;
 
     // Agent 2: Sentiment Agent
     axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: 'You are the Sentiment Agent. You analyze news sentiment and momentum specifically as it relates to prediction market resolution. You weight recent news more than older news. You distinguish between sentiment about the topic generally vs sentiment about the specific resolution criteria. Output JSON only.'
@@ -1030,7 +1176,7 @@ ${newsContext.slice(0, 1200)}`;
 
     // Agent 3: Base Rate Agent
     axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: 'You are the Base Rate Agent. You think like a superforecaster. You ignore current news and focus purely on historical base rates — how often do events like this historically resolve YES? You use reference classes, outside view thinking, and Fermi estimation. Output JSON only.'
@@ -1044,7 +1190,7 @@ ${newsContext.slice(0, 1200)}`;
 
     // Agent 4: Crowd Psychology Agent
     axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: 'You are the Crowd Psychology Agent. You identify systematic biases in prediction market crowds: recency bias, round number clustering, favorite-longshot bias, overreaction to news, narrative bias. You ask: is the crowd making a predictable mistake here? Output JSON only.'
@@ -1058,7 +1204,7 @@ ${newsContext.slice(0, 1200)}`;
 
     // Agent 5: Devil's Advocate
     axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: 'You are the Devil\'s Advocate Agent. Your ONLY job is to argue NO — always find reasons this will NOT happen. You counterbalance YES bias in the system. Output JSON only.'
@@ -1109,7 +1255,7 @@ CROWD PSYCH AGENT: ${agents.crowdPsych.verdict} (${agents.crowdPsych.confidence}
 DEVIL'S ADVOCATE: Contrarian ${agents.devils.contrarian_verdict} — ${agents.devils.strongest_bear_case || ''} Tail risk: ${agents.devils.tail_risk || ''}`;
 
   const synthRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-    model: 'llama-3.1-8b-instant',
+    model: groqModel('llama-3.1-8b-instant'),
     messages: [{
       role: 'system',
       content: `You are the Fund Manager synthesizer. You receive 5 agent reports and make the final trading decision. Rules: (1) If sportsbook/Vegas odds appear in the agent data with a gap > 3% vs Polymarket, that is your PRIMARY signal. (2) If 3+ agents agree on YES or NO, lean that direction. (3) UNCERTAIN votes = 0.5 each side. (4) Devil's Advocate always argues NO — weigh accordingly. (5) Min edge ${POLYMARKET_MIN_EDGE}% to bet. (6) Be equally willing to BET_YES or BET_NO. Bankroll: $${POLYMARKET_BANKROLL}. Max bet: $${POLYMARKET_MAX_BET}. Output JSON only.`
@@ -1393,7 +1539,7 @@ async function runBrowserTask(instructions, url = null) {
     const pageTitle = await page.title();
 
     const actionRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'user',
         content: `You are controlling a browser. Current page: "${pageTitle}"
@@ -2040,7 +2186,7 @@ async function runSeedancePipeline(collectedOut, userId) {
     const truncatedContext = trendContext.slice(0, 2000);
 
     const finalRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: `You are a world-class AI film director and prompt engineer. You write Seedance AI video prompts at a cinematographer level. You know exactly what goes viral on TikTok for AI-generated content.`
@@ -2241,7 +2387,7 @@ const lastBriefingEvents = {}; // phone -> { events, shown }
     } catch(e) {}
 
     const followUpRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: `You are Synbot, a smart conversational assistant. The user just got a briefing on "${topic}" and wants to continue the conversation naturally. Be conversational, insightful, and engaging — like a knowledgeable friend, not a search engine. No bullet points unless it really helps. Keep it to 3-5 sentences unless they ask for more.`
@@ -2408,7 +2554,7 @@ const lastBriefingEvents = {}; // phone -> { events, shown }
     try {
       const key = getGroqKey();
       const parseRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.1-8b-instant',
+        model: groqModel('llama-3.1-8b-instant'),
         messages: [{
           role: 'system',
           content: `Extract the restaurant name and food item from a DoorDash order request. Reply ONLY with JSON like: {"restaurant":"mcdonalds","item":"Big Mac"}\nIf you can't find both, reply: {"error":"unclear"}`
@@ -2526,7 +2672,7 @@ const lastBriefingEvents = {}; // phone -> { events, shown }
         // Use LLM to summarize the rules into plain posting guidance
         const groqKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
         const guidanceRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'llama-3.1-8b-instant',
+          model: groqModel('llama-3.1-8b-instant'),
           messages: [{ role: 'user', content: `You are helping someone post to r/${subreddit} on Reddit. Here are the subreddit rules:\n${rules}\n\nFlairs available: ${flairs || 'none listed'}\nFlair required: ${requiresFlair}\nPost type allowed: ${postTypes}\n\nIn 3-5 bullet points, tell the user exactly what they need to know before posting here — title format requirements, flair rules, what gets removed, content restrictions. Be specific and concise. End with: "Ready! Now send it exactly like this:\n\npost on r/${subreddit} — Title: your title here — Body: your text here"` }],
           max_tokens: 300
         }, { headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' } });
@@ -2620,7 +2766,7 @@ const lastBriefingEvents = {}; // phone -> { events, shown }
       if (wantsAnalysis) {
         const groqKeyR = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
         const summaryRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'llama-3.1-8b-instant',
+          model: groqModel('llama-3.1-8b-instant'),
           messages: [{
             role: 'user',
             content: `Here are the top posts from r/${sub} right now:\n\n${posts.map(p => `- ${p.data.title} (${p.data.ups} upvotes)`).join('\n')}\n\nSummarize: what are the main themes and topics people are discussing? What's the vibe of the community right now? Keep it punchy — 3-4 sentences max.`
@@ -2999,7 +3145,7 @@ ${posts}
     ).join('\n');
 
     const classifyRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: `You are an email triage assistant. Classify each email as DELETE or KEEP.
@@ -3223,7 +3369,7 @@ Respond ONLY with JSON array: [{"index":1,"action":"DELETE","reason":"newsletter
     try {
       const parseKey = getGroqKey();
       const parseRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.1-8b-instant',
+        model: groqModel('llama-3.1-8b-instant'),
         messages: [{
           role: 'system',
           content: `Extract email fields from a WhatsApp message. Reply ONLY with valid JSON, no explanation:
@@ -3379,7 +3525,7 @@ Respond ONLY with JSON array: [{"index":1,"action":"DELETE","reason":"newsletter
     const parseKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
     const now = new Date().toLocaleString('en-US', { timeZone: 'America/Vancouver' });
     const parseRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'user',
         content: `Current time in Vancouver: ${now}\nUser request: "${text}"\n\nExtract the calendar event. Respond ONLY with JSON (no markdown):\n{"title":"...","startISO":"2026-05-16T09:00:00","endISO":"2026-05-16T10:00:00","description":"..."}`
@@ -3597,7 +3743,7 @@ ${content}`;
 
       const key = getGroqKey();
       const summaryRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.1-8b-instant',
+        model: groqModel('llama-3.1-8b-instant'),
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 600
       }, { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' } });
@@ -3767,6 +3913,96 @@ Type *"brief me now"* to get it immediately.`;
 
 
 // ── /smart-chat — HTML frontend chat with minimal Tavily usage ──────────────
+// ── Document generation (pptx/xlsx/pdf) for "Ask me anything" ───────────────
+const { generateFile } = require('./docgen');
+
+// In-memory store — generated files live 1hr, then get GC'd. Good enough for
+// "here's your file, download it" without standing up Supabase storage.
+const _genFiles = {}; // id -> { buffer, mime, name, createdAt }
+const GEN_FILE_TTL_MS = 60 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const id in _genFiles) if (now - _genFiles[id].createdAt > GEN_FILE_TTL_MS) delete _genFiles[id];
+}, 10 * 60 * 1000);
+
+function storeGenFile(buffer, mime, name) {
+  const id = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  _genFiles[id] = { buffer, mime, name, createdAt: Date.now() };
+  return id;
+}
+
+app.get('/files/:id', (req, res) => {
+  const f = _genFiles[req.params.id];
+  if (!f) return res.status(404).json({ error: 'file not found or expired' });
+  res.setHeader('Content-Type', f.mime || 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${String(f.name||'document.pdf').replace(/"/g,'')}"`);
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+  res.send(f.buffer);
+});
+
+// POST /generate-doc — { message, type? } -> { reply, attachment: {id, name, url, kind} }
+// type is 'pptx' | 'xlsx' | 'pdf'; if omitted we classify it from the message.
+app.post('/generate-doc', async (req, res) => {
+  const { message, type: typeIn } = req.body;
+  if (!message) return res.status(400).json({ error: 'No message' });
+
+  try {
+    let type = typeIn;
+    if (!type) {
+      const classifyKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
+      const c = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+        model: groqModel('llama-3.1-8b-instant'),
+        messages: [
+          { role: 'system', content: 'Classify which document type this request wants. Reply ONLY one word: pptx, xlsx, or pdf.' },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 3, temperature: 0
+      }, { headers: { Authorization: `Bearer ${classifyKey}`, 'Content-Type': 'application/json' } });
+      type = c.data.choices[0].message.content.trim().toLowerCase();
+      if (!['pptx', 'xlsx', 'pdf'].includes(type)) type = 'pdf';
+    }
+
+    // Ask the model to produce the actual structured content for that doc type.
+    const schemaHint = {
+      pptx: `{"title": string, "subtitle"?: string, "slides": [{"title": string, "bullets": [string]}]}`,
+      xlsx: `{"sheets": [{"name": string, "columns": [string], "rows": [[string|number,...],...]}]}`,
+      pdf: `{"title": string, "sections": [{"heading": string, "body": string}]}`
+    }[type];
+
+    const genKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
+    const genRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+      model: groqModel('llama-3.3-70b-versatile'),
+      messages: [
+        { role: 'system', content: `Generate content for a ${type} document based on the user's request. Reply ONLY with valid JSON matching this shape, no markdown, no explanation:\n${schemaHint}` },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 2000, temperature: 0.4,
+      response_format: { type: 'json_object' }
+    }, { headers: { Authorization: `Bearer ${genKey}`, 'Content-Type': 'application/json' } });
+
+    let spec;
+    try { spec = JSON.parse(genRes.data.choices[0].message.content); }
+    catch (e) { return res.status(500).json({ error: 'Model returned invalid JSON for doc spec' }); }
+
+    const { buffer, mime, ext } = await generateFile(type, spec);
+    const name = `${(spec.title || 'document').replace(/[^a-z0-9]+/gi, '_').slice(0, 40)}.${ext}`;
+    const id = storeGenFile(buffer, mime, name);
+
+    res.json({
+      reply: `Here's your ${type.toUpperCase()}: **${spec.title || name}**`,
+      attachment: { id, name, url: `/files/${id}`, kind: 'file', type },
+      spec: spec
+    });
+  } catch (e) {
+    console.error('[GENERATE-DOC]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+// ── End document generation ──────────────────────────────────────────────
+
 app.post('/smart-chat', async (req, res) => {
   const { message, phone, history } = req.body;
   if (!message) return res.status(400).json({ error: 'No message' });
@@ -3776,7 +4012,7 @@ app.post('/smart-chat', async (req, res) => {
     // Step 1: tiny Groq call to classify — needs real-time data or not?
     const classifyKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
     const classifyRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [
         { role: 'system', content: `You decide if a question needs current/real-time information to answer accurately. Reply ONLY with YES or NO. YES = needs live data (news, prices, scores, weather, current events, who holds a job/role right now, recent releases). NO = can be answered from general knowledge (explanations, how-to, history, coding, math, opinions, advice).` },
         { role: 'user', content: message }
@@ -3815,13 +4051,13 @@ app.post('/smart-chat', async (req, res) => {
     let groqRes;
     try {
       groqRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.3-70b-versatile', messages: msgs, max_tokens: 1000, stream: true
+        model: groqModel('llama-3.3-70b-versatile'), messages: msgs, max_tokens: 1000, stream: true
       }, { headers: { Authorization: `Bearer ${groqKey}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
     } catch(e) {
       if (e.response?.status === 429) {
         const fallbackKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
         groqRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'llama-3.1-8b-instant', messages: msgs, max_tokens: 1000, stream: true
+          model: groqModel('llama-3.1-8b-instant'), messages: msgs, max_tokens: 1000, stream: true
         }, { headers: { Authorization: `Bearer ${fallbackKey}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
       } else { throw e; }
     }
@@ -3866,6 +4102,410 @@ app.post('/smart-chat', async (req, res) => {
   }
 });
 
+// ── /agent-chat — tool-calling web search loop (Tavily + Serper) ────────────
+// This is the "let the model decide" front door: instead of a regex +
+// classify + fixed Tavily call, the model gets two search tools and decides
+// for itself whether/what/how many times to search — same loop shape as
+// /ava-self-chat above, just with search tools instead of code-inspection
+// tools. The old regex/classify/tavily pipeline in index.html stays in place
+// as a fallback if this endpoint errors or times out.
+
+const AGENT_SEARCH_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'search_web',
+      description: 'AI-synthesized web search (Tavily). Best for direct factual questions where you want a clean, pre-summarized answer — "who is X", "what happened with Y", general lookups. You get ONE call to this tool per turn — write the query as if it is your only chance, because it is.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'A fully self-contained, specific search query — resolve any pronouns or vague references from the conversation into concrete names/entities/dates first. Bad: "what about him". Good: "Lionel Messi Inter Miami 2026 season stats". Bad: "is it out yet". Good: "GTA 6 release date August 2026".'
+          },
+          depth: { type: 'string', enum: ['basic', 'advanced'], description: 'Use "advanced" ONLY when the question genuinely needs deep multi-source research (comparisons, complex topics) — it costs roughly 2x the credits of "basic". For a normal factual lookup, "basic" with the larger result count is enough; don\'t reach for "advanced" out of caution alone.' }
+        },
+        required: ['query']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_google',
+      description: 'Raw Google search results (Serper) — organic snippets, answer box, and news. Best for very recent/breaking topics, product or shopping lookups, or anything where Tavily\'s summary might be missing breadth. Use type:"news" for breaking-news-style queries. You get ONE call to this tool per turn — write the query as if it\'s your only chance, because it is.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'A fully self-contained, specific search query — resolve any pronouns or vague references from the conversation into concrete names/entities/dates first, same as you would for search_web.'
+          },
+          type: { type: 'string', enum: ['search', 'news'], description: '"news" for breaking/recent news queries' }
+        },
+        required: ['query']
+      }
+    }
+  }
+];
+
+async function agentExecuteTool(name, args) {
+  try {
+    if (name === 'search_web') {
+      // Since this is the only shot this tool gets, pull more per call than
+      // the old 5/basic default: more results, and default to 'advanced'
+      // depth unless the model explicitly said 'basic' for a trivial lookup.
+      // Trimmed from 8/full-content down to 4 results with truncated content —
+      // the untrimmed version got JSON.stringify'd into `messages` and resent
+      // on every later call in the loop (and, since nothing here caps history,
+      // on every later turn too), which is what blew past the 8K TPM cap.
+      const data = await tavilySearch({
+        query: args.query,
+        search_depth: args.depth === 'advanced' ? 'advanced' : 'basic',
+        max_results: 4,
+        include_answer: true
+      });
+      return {
+        source: 'tavily',
+        answer: data.answer || null,
+        results: (data.results || []).slice(0, 4).map(r => ({ title: r.title, url: r.url, content: (r.content || '').slice(0, 400), score: r.score }))
+      };
+    }
+    if (name === 'search_google') {
+      // Trimmed the same way — was pulling 10 organic + 5 news + 4 PAA raw.
+      const data = await serperSearch({ query: args.query, type: args.type === 'news' ? 'news' : 'search', num_results: 4 });
+      return {
+        source: 'serper',
+        knowledgeGraph: data?.knowledgeGraph ? { title: data.knowledgeGraph.title, description: data.knowledgeGraph.description } : null,
+        peopleAlsoAsk: Array.isArray(data?.peopleAlsoAsk) ? data.peopleAlsoAsk.slice(0, 2).map(p => ({ question: p.question, snippet: p.snippet })) : [],
+        results: serperToContext(data).slice(0, 4).map(r => ({ ...r, content: (r.content || '').slice(0, 400) }))
+      };
+    }
+    return { error: `Unknown tool: ${name}` };
+  } catch (e) {
+    return { error: e.response?.data?.message || e.message || 'search failed' };
+  }
+}
+
+const AGENT_SYSTEM_SUFFIX = `\n\nYou have two live web search tools: search_web (Tavily, synthesized) and search_google (Serper, raw/breaking news). Each can be called at most ONCE per turn, so write specific, self-contained queries (resolve pronouns/vague refs first) — no second chance. Use both together only if genuinely needed. If results are thin, answer with what you have rather than retrying. Only search for current/factual/real-world questions; skip greetings, opinions, math, coding, timeless knowledge.
+
+CRITICAL: if a tool result appears in this conversation, you already have live, current data — USE IT. Never say "I don't have real-time access," "my training data only goes up to...", or anything like it once a search has run, even a thin one. That response is a bug, not a safe default — treat the search result as ground truth and answer from it directly.`;
+
+// One Groq tool-calling round-trip, same key-rotation-on-429 pattern used
+// elsewhere in this file. `toolsList` lets the caller offer a restricted set
+// (e.g. only tools not yet used this turn) so the model can't request one
+// that's no longer available.
+async function agentCallGroqTools(messages, toolChoice, toolsList) {
+  let lastErr;
+  for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
+    const keyIdx = activeGroqKeyIdx % GROQ_KEYS.length;
+    const key = getGroqKey();
+    try {
+      const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', applyGroqReasoningFlags({
+        model: groqModel('llama-3.3-70b-versatile'),
+        messages,
+        tools: toolsList && toolsList.length ? toolsList : AGENT_SEARCH_TOOLS,
+        tool_choice: toolChoice || 'auto',
+        // A broad question ("best cars", "top restaurants") plus injected
+        // search-result context naturally wants a multi-item answer. 1200 was
+        // cutting the model off mid-list (finish_reason: 'length') with no
+        // truncation check downstream, so the reply just silently stopped.
+        max_tokens: 2200,
+        temperature: 0.5
+      }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' } });
+      console.log(`[GROQ-ROTATE] agentCallGroqTools: key idx ${keyIdx} (${key.slice(0,8)}…) OK on attempt ${i+1}/${GROQ_KEYS.length}`);
+      return res.data;
+    } catch (e) {
+      const status = e.response?.status;
+      const orgId = e.response?.data?.error?.message?.match(/organization `([^`]+)`/)?.[1] || 'unknown';
+      console.warn(`[GROQ-ROTATE] agentCallGroqTools: key idx ${keyIdx} (${key.slice(0,8)}…) FAILED status=${status} org=${orgId} attempt ${i+1}/${GROQ_KEYS.length}`);
+      lastErr = e;
+      if (status === 429 && i < GROQ_KEYS.length - 1) { advanceGroqKey(`agentCallGroqTools 429 on idx ${keyIdx}`); continue; }
+      throw e;
+    }
+  }
+  throw lastErr || new Error('All Groq keys rate limited');
+}
+
+// Streams ONE Groq completion (tool_choice: 'none', no tools — this is only
+// ever used for the actual final answer turn, after the tool-decision loop
+// below has finished) as SSE deltas, writing directly to `res`. Same
+// key-rotation-on-429 pattern as agentCallGroqTools. Returns the full
+// accumulated text and the finish_reason of the completed stream, so the
+// caller can detect a max_tokens truncation and request a continuation.
+async function agentStreamFinal(messages, res) {
+  let lastErr;
+  for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
+    const keyIdx = activeGroqKeyIdx % GROQ_KEYS.length;
+    const key = getGroqKey();
+    let upstream;
+    try {
+      upstream = await axios.post('https://api.groq.com/openai/v1/chat/completions', applyGroqReasoningFlags({
+        model: groqModel('llama-3.3-70b-versatile'),
+        messages,
+        tool_choice: 'none',
+        max_tokens: 2200,
+        temperature: 0.5,
+        stream: true
+      }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
+      console.log(`[GROQ-ROTATE] agentStreamFinal: key idx ${keyIdx} (${key.slice(0,8)}…) OK on attempt ${i+1}/${GROQ_KEYS.length}`);
+    } catch (e) {
+      const status = e.response?.status;
+      const orgId = e.response?.data?.error?.message?.match(/organization `([^`]+)`/)?.[1] || 'unknown';
+      console.warn(`[GROQ-ROTATE] agentStreamFinal: key idx ${keyIdx} (${key.slice(0,8)}…) FAILED status=${status} org=${orgId} attempt ${i+1}/${GROQ_KEYS.length}`);
+      lastErr = e;
+      if (status === 429 && i < GROQ_KEYS.length - 1) { advanceGroqKey(`agentStreamFinal 429 on idx ${keyIdx}`); continue; }
+      throw e;
+    }
+
+    // Got a live stream — pipe it as our own SSE deltas and resolve once done.
+    return await new Promise((resolve, reject) => {
+      let fullText = '';
+      let finishReason = 'stop';
+      // Defense-in-depth against Groq's documented reasoning-leak bug (see
+      // applyGroqReasoningFlags comment): even with reasoning_format:'parsed',
+      // hold back the first bit of output until we're sure it isn't a raw
+      // <think>...</think> scratchpad leaking into `content`. If a </think>
+      // close tag shows up, drop everything up to it and resume normally. If
+      // we buffer past a small threshold with no <think> in sight, flush the
+      // buffer once and stream everything after that with no further delay —
+      // this only ever adds latency to the first ~60 chars, never the rest.
+      let guardBuf = '';
+      let guardDone = false;
+      const THINK_OPEN = '<think';
+      function emit(text) {
+        if (!text) return;
+        fullText += text;
+        res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
+      }
+      function handleDelta(delta) {
+        if (guardDone) { emit(delta); return; }
+        guardBuf += delta;
+        // Does the buffer so far still look like it could be the start of
+        // "<think"? If it's already diverged (e.g. the reply starts with
+        // "Here's" or "The" — anything that isn't a prefix of "<think"),
+        // there's no leak coming; flush immediately, first chunk or not.
+        const checkLen = Math.min(guardBuf.length, THINK_OPEN.length);
+        const stillPossible = guardBuf.slice(0, checkLen) === THINK_OPEN.slice(0, checkLen);
+        if (!stillPossible) {
+          guardDone = true;
+          emit(guardBuf);
+          return;
+        }
+        const closeIdx = guardBuf.indexOf('</think>');
+        if (closeIdx >= 0) {
+          guardDone = true;
+          emit(guardBuf.slice(closeIdx + '</think>'.length));
+        }
+        // else: still looks like a live "<think" open tag — keep buffering
+        // (it's short and finite: real </think> closes eventually).
+      }
+      upstream.data.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n').filter(l => l.trim());
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6);
+          if (payload === '[DONE]') continue;
+          try {
+            const json = JSON.parse(payload);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (json.choices?.[0]?.finish_reason) finishReason = json.choices[0].finish_reason;
+            if (delta) handleDelta(delta);
+          } catch (e) {}
+        }
+      });
+      upstream.data.on('end', () => {
+        if (!guardDone && guardBuf) { emit(guardBuf); } // stream ended mid-guard — flush whatever we held
+        resolve({ fullText, finishReason });
+      });
+      upstream.data.on('error', (e) => reject(e));
+    });
+  }
+  throw lastErr || new Error('All Groq keys rate limited');
+}
+
+// Shared tail-end for /agent-chat: sends the meta event (search info the
+// client needs for its "live search used" toast), streams the final answer,
+// and — if Groq cuts it off at max_tokens mid-generation — transparently
+// requests and streams a continuation so the client never sees a truncated
+// reply. Always ends the response.
+async function streamAgentFinalAnswer(messages, sourcesUsed, res) {
+  res.write(`data: ${JSON.stringify({ meta: { usedSearch: sourcesUsed.length > 0, searchCount: sourcesUsed.length, sources: sourcesUsed } })}\n\n`);
+
+  let { fullText, finishReason } = await agentStreamFinal(messages, res);
+
+  // finish_reason 'length' means Groq cut the model off mid-generation —
+  // ask it, in one extra streamed turn, to pick up exactly where it left
+  // off rather than shipping a truncated answer.
+  let guard = 0;
+  while (finishReason === 'length' && guard < 2) {
+    guard++;
+    console.warn('[AGENT-CHAT] answer truncated at max_tokens — requesting streamed continuation');
+    messages.push({ role: 'assistant', content: fullText });
+    messages.push({ role: 'user', content: 'Continue exactly where you left off — do not repeat or restart, just finish the rest of the answer.' });
+    const cont = await agentStreamFinal(messages, res);
+    fullText += cont.fullText;
+    finishReason = cont.finishReason;
+  }
+
+  if (!fullText) {
+    res.write(`data: ${JSON.stringify({ delta: "I wasn't able to put together a clean answer — try rephrasing." })}\n\n`);
+  }
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
+
+// Broad "give me the news" / current-events phrasing reliably gets a
+// trained "I don't have real-time access" refusal out of the base model
+// when tool_choice is left at 'auto' — the model just never reaches for the
+// search tool in the first place, so the system prompt's "never say you
+// lack real-time access" instruction never gets a chance to apply (it only
+// governs what happens AFTER a search). Casualty/death-related phrasing is
+// especially prone to this — it reads as a topic to deflect on rather than
+// a lookup to run. Detect that shape of question up front and force the
+// FIRST turn to call a tool (tool_choice: 'required') instead of leaving it
+// to the model's discretion, so a real search always happens before the
+// model is allowed to answer at all.
+//
+// Originally this only caught explicit "news"/"today"/"right now" phrasing.
+// It was missing an entire class of question that ALSO needs live data but
+// doesn't read as a news lookup: "what tools should I learn to keep up",
+// "new AI tools in 2026", "what's new with X" — these get classified by the
+// model as advice/opinion (which the system prompt tells it to skip
+// searching for) even though the honest answer is fully time-dependent.
+// Widened to also force-search on: "what's new", "keep up (to date/with)",
+// "latest <tools/models/apps/releases>", "new(est) <tools/models/apps>",
+// "new generation of", and "as of <year>" (not just "as of today/now").
+const AGENT_FORCE_SEARCH_RE = /\b(news|headlines?|breaking|current events?|top stories|what'?s happening|whats happening|what'?s new|whats new|keep up( to date)?( with)?|latest (updates?|developments?|tools?|models?|apps?|releases?)|new(est)? (generation( of)?|ai )?tools?|today'?s|as of (today|now|right now|20\d\d)|right now|this (morning|week))\b/i;
+
+// POST /agent-chat — body: { messages: [{role, content}, ...], system }
+// Runs the tool-use loop: model decides whether/what to search, we execute
+// against Tavily/Serper, feed results back, repeat until it's ready to give
+// a plain-text answer. Each tool (search_web, search_google) can be called
+// AT MOST ONCE per conversation turn — once used, it's dropped from the
+// tools list offered to the model, so it physically can't call it again.
+//
+// STREAMING: the tool-decision phase (deciding whether/what to search) stays
+// non-streaming — tool-call JSON can't usefully stream token-by-token, and
+// we need the complete decision before we can act on it. But once the model
+// reaches its final answer turn (no more tool calls, either because it chose
+// not to search or because both tools are used up), that call is made again
+// with stream:true and piped to the client as SSE — so the visible text
+// types itself out exactly like a normal chat reply instead of appearing
+// all at once after a pause.
+//
+// Response is SSE (Content-Type: text/event-stream), one JSON payload per
+// `data:` line:
+//   {"meta": {"usedSearch": bool, "searchCount": n, "sources": [...]}}  — sent once, before any deltas
+//   {"delta": "text chunk"}                                            — repeated as the answer streams in
+//   {"error": "message"}                                               — only on failure
+//   [DONE]                                                             — terminator
+app.post('/agent-chat', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  try {
+    // Cap history like /smart-chat does — /agent-chat was resending the ENTIRE
+    // growing conversation on every call with no limit, which is the main
+    // driver of TPM blowing past qwen3.6-27b's 8K/min cap (that plus tool
+    // results getting stuffed into messages below, uncapped, forever).
+    const userMessages = (Array.isArray(req.body?.messages) ? req.body.messages : []).slice(-10);
+    // The model has no built-in awareness of the real current date — without
+    // this, "today"/"this year"/"as of now" in the user's message gets
+    // resolved against whatever date the model's training implies, which can
+    // be badly stale (e.g. answering a "today" news question with headlines
+    // dated years ago). Anchor it explicitly, every request.
+    const dateAnchor = `Today's real date is ${todayStr()} (${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}). When the user says "today", "this year", "currently", "as of now", etc., resolve it against THIS date, not any date implied by your training — and when you search, write queries using this real date/year, not a guessed one.`;
+    const baseSystem = (req.body?.system || 'You are a helpful assistant.') + '\n\n' + dateAnchor + AGENT_SYSTEM_SUFFIX;
+    let messages = [{ role: 'system', content: baseSystem }, ...userMessages];
+
+    // Force-search check runs against the latest user message only (not the
+    // whole history) — same "resolve the actual current question" logic the
+    // tool descriptions already ask the model to do for query-writing.
+    let lastUserMsg = '';
+    for (let i = userMessages.length - 1; i >= 0; i--) {
+      if (userMessages[i]?.role === 'user') { lastUserMsg = userMessages[i].content || ''; break; }
+    }
+    const forceSearchFirstTurn = AGENT_FORCE_SEARCH_RE.test(lastUserMsg);
+
+    // Per-tool one-shot budget: each tool name can fire once total, ever,
+    // in this run. Once used it's removed from the tools list we send —
+    // the model literally can't request it again after that.
+    const toolsUsed = {}; // name -> true once called
+    const sourcesUsed = [];
+    const MAX_ITERATIONS = AGENT_SEARCH_TOOLS.length + 2; // one shot per tool + headroom for final answer turn(s)
+
+    for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+      const availableTools = AGENT_SEARCH_TOOLS.filter(t => !toolsUsed[t.function.name]);
+      const toolChoice = availableTools.length === 0 ? 'none'
+        : (iter === 0 && forceSearchFirstTurn) ? 'required'
+        : 'auto';
+
+      // No tools left to offer — we already know this turn can only be a
+      // final answer, so skip straight to the streaming call instead of
+      // burning a non-streaming round-trip just to find that out.
+      if (toolChoice === 'none') {
+        return await streamAgentFinalAnswer(messages, sourcesUsed, res);
+      }
+
+      const data = await agentCallGroqTools(messages, toolChoice, availableTools);
+      const choice = data.choices[0].message;
+
+      if (choice.tool_calls && choice.tool_calls.length && availableTools.length) {
+        messages.push(choice);
+        const seenThisRound = {};
+        const results = await Promise.all(choice.tool_calls.map(async (call) => {
+          const name = call.function.name;
+          let args = {};
+          try { args = JSON.parse(call.function.arguments || '{}'); } catch (e) {}
+          // Already used (earlier round) or duplicated within this same round —
+          // don't hit the API again, just tell the model plainly.
+          if (toolsUsed[name] || seenThisRound[name]) {
+            return { call, args, result: { error: `${name} has already been used this turn and can only be called once. Use the other tool or answer with what you have.` } };
+          }
+          seenThisRound[name] = true;
+          const result = await agentExecuteTool(name, args);
+          return { call, args, result };
+        }));
+        results.forEach(({ call, args, result }) => {
+          const name = call.function.name;
+          if (result && !result.error) {
+            toolsUsed[name] = true;
+            sourcesUsed.push({ tool: name, query: args.query, result });
+          } else if (!result.error || !result.error.includes('already been used')) {
+            // A real search error (not the dup-guard message) still burns the
+            // one-shot budget — no infinite retries against a failing tool.
+            toolsUsed[name] = true;
+          }
+          messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
+        });
+        continue;
+      }
+
+      // Model chose to answer without using (all/any of) the remaining
+      // tools. We deliberately discard `choice.content` here rather than
+      // sending it — that call already generated it non-streamed, but we
+      // want the client to see it typed out, so we re-issue the same
+      // decision point as a streaming call and stream THAT text instead.
+      return await streamAgentFinalAnswer(messages, sourcesUsed, res);
+    }
+
+    res.write(`data: ${JSON.stringify({ meta: { usedSearch: sourcesUsed.length > 0, searchCount: sourcesUsed.length, sources: sourcesUsed } })}\n\n`);
+    res.write(`data: ${JSON.stringify({ delta: "I searched but ran out of turns before finishing — try narrowing the question." })}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (e) {
+    console.error('[AGENT-CHAT] error:', e.response?.data || e.message);
+    try {
+      res.write(`data: ${JSON.stringify({ error: (e.response?.data && (e.response.data.error?.message || JSON.stringify(e.response.data))) || e.message })}\n\n`);
+      res.write('data: [DONE]\n\n');
+    } catch (e2) {}
+    res.end();
+  }
+});
+
 // ── /classify — classifier + query rewrite for HTML chatbot ─────────────────
 app.post('/classify', async (req, res) => {
   const { message, context } = req.body;
@@ -3896,7 +4536,7 @@ app.post('/classify', async (req, res) => {
     const [clRes, rwRes] = await Promise.all([
       // Classifier — skipped entirely when forceSearch already answered the question
       forceSearch ? Promise.resolve(null) : axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.1-8b-instant',
+        model: groqModel('llama-3.1-8b-instant'),
         max_tokens: 3,
         temperature: 0,
         messages: [
@@ -3906,7 +4546,7 @@ app.post('/classify', async (req, res) => {
       }, { headers: { Authorization: `Bearer ${key1}`, 'Content-Type': 'application/json' }, timeout: 4000 }).catch(() => null),
       // Query rewrite — always runs, forceSearch or not, so Tavily gets a clean query either way
       axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.1-8b-instant',
+        model: groqModel('llama-3.1-8b-instant'),
         max_tokens: 20,
         temperature: 0,
         messages: [
@@ -4167,7 +4807,7 @@ app.post('/source', async (req, res) => {
             const userContent = `Product searched: ${query}\n\nPage text:\n${pageData.text.slice(0, 4500)}\n\nProduct images (in order they appear on page):\n${imageList || 'none'}\n\nFor the image field: assign images in order — first supplier gets first image, second gets second, etc.`;
 
             const parseRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-              model: 'llama-3.3-70b-versatile',
+              model: groqModel('llama-3.3-70b-versatile'),
               messages: [{
                 role: 'system',
                 content: `You are extracting supplier listings from Alibaba page text. Return a JSON array of up to 8 objects.
@@ -4210,7 +4850,7 @@ Sort by score descending. Return ONLY the raw JSON array — no markdown, no exp
         console.log('[SOURCE] Falling back to AI simulation');
         const key3 = getGroqKey();
         const simRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: 'llama-3.3-70b-versatile',
+          model: groqModel('llama-3.3-70b-versatile'),
           messages: [{
             role: 'system',
             content: `Generate 4 realistic Alibaba supplier profiles for this product. Return JSON array with name, moq, price, years, response, score (0-100), notes, url. Return ONLY a JSON array.`
@@ -4251,7 +4891,7 @@ app.post('/source-message', async (req, res) => {
     const key = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
 
     const msgRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.3-70b-versatile',
+      model: groqModel('llama-3.3-70b-versatile'),
       messages: [{
         role: 'system',
         content: `You are an expert at writing Alibaba supplier outreach messages. Write a professional, concise first contact message to a supplier. 
@@ -4835,7 +5475,7 @@ app.post('/vapi', async (req, res) => {
         name: 'Ava',
         model: {
           provider: 'groq',
-          model: 'llama-3.3-70b-versatile',
+          model: groqModel('llama-3.3-70b-versatile'),
           messages: [
             { role: 'system', content: await buildAvaPhonePrompt(callerPhone) }
           ],
@@ -5022,7 +5662,7 @@ async function parseCallRequest(text) {
   try {
     const key = getGroqKey();
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [
         {
           role: 'system',
@@ -5078,7 +5718,7 @@ async function triggerAvaCall(phone, opening, customSystemPrompt) {
       name: 'Ava',
       model: {
         provider: 'groq',
-        model: 'llama-3.3-70b-versatile',
+        model: groqModel('llama-3.3-70b-versatile'),
         messages: [{ role: 'system', content: customSystemPrompt || await buildAvaPhonePrompt(phone) }],
         maxTokens: 150,
         temperature: 0.7
@@ -5101,7 +5741,7 @@ async function summarizeContactReply(contactName, objective, transcript) {
   try {
     const key = getGroqKey();
     const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: 'llama-3.1-8b-instant',
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [{
         role: 'system',
         content: `You summarize ONLY the other person's side of a phone call transcript — their answer, decision, objections, or questions. Do not describe what the AI assistant (Ava) said, only ${contactName || 'the contact'}'s responses. 2-3 sentences, plain and direct.`
@@ -5199,7 +5839,7 @@ async function registerVapiWebhook() {
       name: 'Ava',
       model: {
         provider: 'groq',
-        model: 'llama-3.3-70b-versatile',
+        model: groqModel('llama-3.3-70b-versatile'),
         messages: [{ role: 'system', content: await buildAvaPhonePrompt('caller') }],
         maxTokens: 150,
         temperature: 0.7
@@ -5428,6 +6068,7 @@ app.post('/groq-chat', checkGuestLimit, async (req, res) => {
       const status = e.response?.status;
       if (status === 429 && i < GROQ_KEYS.length - 1) {
         console.log(`[GROQ-CHAT] key ${i+1}/${GROQ_KEYS.length} rate limited, rotating...`);
+        advanceGroqKey('GROQ-CHAT 429');
         continue;
       }
       // For streaming requests that already started, headers may be sent — guard against double-send
@@ -5493,6 +6134,7 @@ app.post('/groq-transcribe', async (req, res) => {
       const status = e.response?.status;
       if (status === 429 && i < GROQ_KEYS.length - 1) {
         console.log(`[GROQ-TRANSCRIBE] key ${i+1}/${GROQ_KEYS.length} rate limited, rotating...`);
+        advanceGroqKey('GROQ-TRANSCRIBE 429');
         continue;
       }
       return res.status(status || 500).json(e.response?.data || { error: e.message });
@@ -5751,7 +6393,7 @@ async function avaCallGroqTools(messages, toolChoice) {
     const key = getGroqKey();
     try {
       const res = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-        model: 'llama-3.3-70b-versatile',
+        model: groqModel('llama-3.3-70b-versatile'),
         messages,
         tools: AVA_TOOLS,
         tool_choice: toolChoice || 'auto',
@@ -5761,7 +6403,7 @@ async function avaCallGroqTools(messages, toolChoice) {
       return res.data;
     } catch (e) {
       lastErr = e;
-      if (e.response?.status === 429 && i < GROQ_KEYS.length - 1) continue;
+      if (e.response?.status === 429 && i < GROQ_KEYS.length - 1) { advanceGroqKey('avaCallGroqTools 429'); continue; }
       throw e;
     }
   }
@@ -6785,6 +7427,17 @@ app.post('/generate-video', checkGuestLimit, async (req, res) => {
 // ── End /generate-video route ────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Per-user Google / GitHub / Notion connectors (OAuth + /connectors/act)
+try {
+  require('./connectors').mount(app, {
+    axios,
+    SUPABASE_URL,
+    SUPABASE_KEY
+  });
+} catch (e) {
+  console.warn('[CONNECTORS] connectors.js not loaded —', e.message);
+}
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
