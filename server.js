@@ -50,6 +50,17 @@ try {
   console.warn('[STRIPE] stripe-routes.js not found — checkout disabled until that file is next to the server');
 }
 
+// ── StemSplit stem-separation (Stem Studio) ──────────────────────────────
+// POST /api/stems/create-from-upload | create-from-url | create-from-youtube
+// GET  /api/stems/status/:jobId
+try {
+  const stemsplitRoutes = require('./stemsplit-routes');
+  app.use('/api/stems', stemsplitRoutes);
+  console.log('[STEMS] /api/stems mounted (StemSplit)' + (process.env.STEMSPLIT_API_KEY ? '' : ' — set STEMSPLIT_API_KEY on Render'));
+} catch (e) {
+  console.warn('[STEMS] stemsplit-routes.js not loaded —', e && e.message ? e.message : e);
+}
+
 const VERIFY_TOKEN = 'synapses_verify_2026';
 
 // ── Guest usage gate (server-side, by IP) ──
@@ -254,20 +265,15 @@ function serperToContext(data) {
 
 let groqKeyIndex = Math.floor(Math.random() * 1000);
 
-// Sticky active-key pointer used ONLY by getGroqKey()/the 429-retry loops
-// (agentCallGroqTools, agentStreamFinal, callGroqWithRetry, etc). Unlike
-// groqKeyIndex above (which round-robins on every call and is relied on by
-// runAgentDebate() to hand 5 parallel calls 5 different keys), this pointer
-// does NOT advance on every call — it stays put and serves the same key to
-// everyone until that key actually 429s, at which point advanceGroqKey()
-// moves it forward once, permanently, for all future calls. This means one
-// key gets fully drained before the next one is touched, instead of all
-// keys draining in lockstep together.
-let activeGroqKeyIdx = 1; // starting on the 2nd key for now — key 0 has taken the brunt of today's traffic
+// One sticky pointer for chat/agent/transcribe. Stay on a key until it 429s,
+// then move to the next and stay there. groqKeyIndex still exists for
+// background fan-out (debate) that wants different keys in parallel.
+let activeGroqKeyIdx = 0;
 function advanceGroqKey(reason) {
+  if (!GROQ_KEYS.length) return;
   const from = activeGroqKeyIdx % GROQ_KEYS.length;
-  activeGroqKeyIdx = (activeGroqKeyIdx + 1) % GROQ_KEYS.length;
-  console.warn(`[GROQ-KEY] sticky pointer advancing: idx ${from} -> ${activeGroqKeyIdx}${reason ? ' (' + reason + ')' : ''}`);
+  activeGroqKeyIdx = (from + 1) % GROQ_KEYS.length;
+  console.warn(`[GROQ-KEY] ${from} → ${activeGroqKeyIdx} (${reason || '429'}) stay until this key 429s`);
 }
 
 // Not every 429 means "this key is done for the day." Groq returns 429 for
@@ -281,6 +287,27 @@ function advanceGroqKey(reason) {
 function isDailyQuotaError(e) {
   const msg = e?.response?.data?.error?.message || '';
   return /per day|TPD|RPD/i.test(msg);
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function groqRetryAfterMs(e) {
+  const h = e?.response?.headers || {};
+  const ra = parseFloat(h['retry-after'] || h['Retry-After'] || 0);
+  if (ra > 0 && ra < 90) return Math.max(3000, Math.ceil(ra * 1000));
+  const msg = e?.response?.data?.error?.message || '';
+  const m = msg.match(/try again in ([\d.]+)\s*s/i);
+  if (m) return Math.min(25000, Math.max(3000, Math.ceil(parseFloat(m[1]) * 1000)));
+  return 10000;
+}
+
+function isTpmRateLimit(e) {
+  if (e?.response?.status !== 429) return false;
+  if (isDailyQuotaError(e)) return false;
+  const msg = e?.response?.data?.error?.message || '';
+  return /per minute|TPM|RPM|tokens per minute|rate_limit|429/i.test(msg) || !msg;
 }
 
 const conversationHistory = {};
@@ -800,7 +827,7 @@ Reply with ONLY the title, nothing else.` },
 }
 
 async function saveNote(phone, text) {
-  const email = phone.startsWith('web_') ? phone.replace('web_', '') : await getEmailByPhone(phone);
+  const email = phone.startsWith('web_') ? phone.replace('web_', '').toLowerCase() : await getEmailByPhone(phone);
   const title = await generateTitle(text);
   await sbPost('notes', {
     user_phone: phone.startsWith('web_') ? null : phone,
@@ -812,10 +839,11 @@ async function saveNote(phone, text) {
 
 async function getNotes(phone) {
   if (phone.startsWith('web_')) {
-    const email = phone.replace('web_', '');
+    const email = phone.replace('web_', '').toLowerCase();
     console.log('[NOTES] web user, querying by email:', email);
-    // Try email first
-    const byEmail = await sbGet(`notes?user_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=10`);
+    // Try email first — ilike so older notes saved under a different case
+    // (before the frontend/server lowercasing fix) still match.
+    const byEmail = await sbGet(`notes?user_email=ilike.${encodeURIComponent(email)}&order=created_at.desc&limit=10`);
     console.log('[NOTES] by email result count:', byEmail.length);
     if (byEmail.length) return byEmail;
     // Fallback: try phone_links to get the real phone, then query by phone
@@ -3972,9 +4000,13 @@ app.post('/generate-doc', async (req, res) => {
       pdf: `{"title": string, "sections": [{"heading": string, "body": string}]}`
     }[type];
 
+    // Moved off qwen (llama-3.3-70b-versatile) onto gpt-oss-20b — this is a
+    // structured-JSON background generation job, not conversational output,
+    // so it doesn't need qwen-level quality. Frees qwen's TPM budget for the
+    // now-unified /agent-chat path, which needs that budget for real chat.
     const genKey = GROQ_KEYS[groqKeyIndex++ % GROQ_KEYS.length];
     const genRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-      model: groqModel('llama-3.3-70b-versatile'),
+      model: groqModel('llama-3.1-8b-instant'),
       messages: [
         { role: 'system', content: `Generate content for a ${type} document based on the user's request. Reply ONLY with valid JSON matching this shape, no markdown, no explanation:\n${schemaHint}` },
         { role: 'user', content: message }
@@ -4115,16 +4147,10 @@ const AGENT_SEARCH_TOOLS = [
     type: 'function',
     function: {
       name: 'search_web',
-      description: 'AI-synthesized web search (Tavily). Best for direct factual questions where you want a clean, pre-summarized answer — "who is X", "what happened with Y", general lookups. You get ONE call to this tool per turn — write the query as if it is your only chance, because it is.',
+      description: 'Tavily search. Best for a short factual answer. One search per turn.',
       parameters: {
         type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'A fully self-contained, specific search query — resolve any pronouns or vague references from the conversation into concrete names/entities/dates first. Bad: "what about him". Good: "Lionel Messi Inter Miami 2026 season stats". Bad: "is it out yet". Good: "GTA 6 release date August 2026".'
-          },
-          depth: { type: 'string', enum: ['basic', 'advanced'], description: 'Use "advanced" ONLY when the question genuinely needs deep multi-source research (comparisons, complex topics) — it costs roughly 2x the credits of "basic". For a normal factual lookup, "basic" with the larger result count is enough; don\'t reach for "advanced" out of caution alone.' }
-        },
+        properties: { query: { type: 'string', description: 'Self-contained search query' } },
         required: ['query']
       }
     }
@@ -4133,52 +4159,96 @@ const AGENT_SEARCH_TOOLS = [
     type: 'function',
     function: {
       name: 'search_google',
-      description: 'Raw Google search results (Serper) — organic snippets, answer box, and news. Best for very recent/breaking topics, product or shopping lookups, or anything where Tavily\'s summary might be missing breadth. Use type:"news" for breaking-news-style queries. You get ONE call to this tool per turn — write the query as if it\'s your only chance, because it is.',
+      description: 'Google via Serper. Best for breaking news, shopping, raw listings. One search per turn. Do not also call search_web.',
       parameters: {
         type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'A fully self-contained, specific search query — resolve any pronouns or vague references from the conversation into concrete names/entities/dates first, same as you would for search_web.'
-          },
-          type: { type: 'string', enum: ['search', 'news'], description: '"news" for breaking/recent news queries' }
-        },
+        properties: { query: { type: 'string', description: 'Self-contained search query' } },
         required: ['query']
       }
     }
   }
 ];
 
-async function agentExecuteTool(name, args) {
+// Same shape as the two search tools above, but only ever added to the
+// tools array when the request carries a userId — a guest/anonymous chat
+// has nothing to read, and giving the model a tool it can't use just
+// invites it to call it and get an error back.
+const AGENT_NOTES_TOOL = {
+  type: 'function',
+  function: {
+    name: 'read_notes',
+    description: 'Read the user\'s own saved notes (things they told the assistant to remember/save earlier, via WhatsApp or the app). Use when they ask what they saved, reference a note, or want to discuss something they asked to be remembered.',
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'Optional keyword to filter their notes by title/body. Omit to just get their most recent notes.' } }
+    }
+  }
+};
+
+// Compacts a search result down to plain text before it goes into the
+// message history, same style /smart-chat already used ("Current info: ...")
+// instead of JSON.stringify-ing the whole structured result object. The full
+// JSON version was ~300-600 tokens per search (4 results x ~400 chars
+// content each, plus title/url/score fields); this caps it to the synthesized
+// answer (if Tavily gave one) or the top 2 results at 150 chars each — real
+// info loss is minimal since the model rarely needs more than 1-2 solid
+// facts to answer, and it can still ask again if truly thin (though each
+// tool is one-shot per turn, so in practice it just answers with what it has).
+function compactToolResult(name, result) {
+  if (name === 'read_notes') return compactNotesResult(result);
+  if (result?.error) return `Search error: ${result.error}`;
+  const items = (result?.results || []).slice(0, 6);
+  const lines = [];
+  if (result?.answer) lines.push('Summary: ' + String(result.answer).slice(0, 400));
+  items.forEach((r, i) => {
+    const bit = `${r.title || 'Result'}: ${(r.content || '').slice(0, 280)}`;
+    if (bit.trim()) lines.push((i + 1) + '. ' + bit);
+  });
+  if (!lines.length) return 'No relevant results found.';
+  return 'Current info:\n' + lines.join('\n');
+}
+
+// Same compacting job as compactToolResult above, just for notes instead of
+// search hits — title + body, most recent first, capped so a long note
+// doesn't eat the whole context window.
+function compactNotesResult(result) {
+  if (result?.error) return `Notes error: ${result.error}`;
+  const notes = result?.notes || [];
+  if (!notes.length) return 'No saved notes found.';
+  const lines = notes.map((n, i) => `${i + 1}. ${n.title || 'Untitled'}: ${String(n.body || '').slice(0, 300)}`);
+  return 'Saved notes:\n' + lines.join('\n');
+}
+
+async function agentExecuteTool(name, args, userId) {
   try {
+    if (name === 'read_notes') {
+      if (!userId) return { error: 'no user context to read notes for' };
+      const all = await getNotes(userId);
+      const q = String(args?.query || '').trim().toLowerCase();
+      const filtered = q
+        ? all.filter(n => (n.title || '').toLowerCase().includes(q) || (n.body || '').toLowerCase().includes(q))
+        : all;
+      return { notes: filtered.slice(0, 10).map(n => ({ title: n.title, body: n.body })) };
+    }
     if (name === 'search_web') {
-      // Since this is the only shot this tool gets, pull more per call than
-      // the old 5/basic default: more results, and default to 'advanced'
-      // depth unless the model explicitly said 'basic' for a trivial lookup.
-      // Trimmed from 8/full-content down to 4 results with truncated content —
-      // the untrimmed version got JSON.stringify'd into `messages` and resent
-      // on every later call in the loop (and, since nothing here caps history,
-      // on every later turn too), which is what blew past the 8K TPM cap.
       const data = await tavilySearch({
         query: args.query,
-        search_depth: args.depth === 'advanced' ? 'advanced' : 'basic',
-        max_results: 4,
+        search_depth: 'basic',
+        max_results: args.wide ? 8 : 5,
         include_answer: true
       });
       return {
         source: 'tavily',
         answer: data.answer || null,
-        results: (data.results || []).slice(0, 4).map(r => ({ title: r.title, url: r.url, content: (r.content || '').slice(0, 400), score: r.score }))
+        results: (data.results || []).slice(0, 5).map(r => ({ title: r.title, url: r.url, content: (r.content || '').slice(0, 280), score: r.score }))
       };
     }
     if (name === 'search_google') {
-      // Trimmed the same way — was pulling 10 organic + 5 news + 4 PAA raw.
-      const data = await serperSearch({ query: args.query, type: args.type === 'news' ? 'news' : 'search', num_results: 4 });
+      const data = await serperSearch({ query: args.query, type: 'search', num_results: 3 });
       return {
         source: 'serper',
-        knowledgeGraph: data?.knowledgeGraph ? { title: data.knowledgeGraph.title, description: data.knowledgeGraph.description } : null,
-        peopleAlsoAsk: Array.isArray(data?.peopleAlsoAsk) ? data.peopleAlsoAsk.slice(0, 2).map(p => ({ question: p.question, snippet: p.snippet })) : [],
-        results: serperToContext(data).slice(0, 4).map(r => ({ ...r, content: (r.content || '').slice(0, 400) }))
+        answer: data?.answerBox ? (data.answerBox.answer || data.answerBox.snippet || null) : null,
+        results: serperToContext(data).slice(0, 3).map(r => ({ title: r.title, url: r.url, content: (r.content || '').slice(0, 300) }))
       };
     }
     return { error: `Unknown tool: ${name}` };
@@ -4187,16 +4257,61 @@ async function agentExecuteTool(name, args) {
   }
 }
 
-const AGENT_SYSTEM_SUFFIX = `\n\nYou have two live web search tools: search_web (Tavily, synthesized) and search_google (Serper, raw/breaking news). Each can be called at most ONCE per turn, so write specific, self-contained queries (resolve pronouns/vague refs first) — no second chance. Use both together only if genuinely needed. If results are thin, answer with what you have rather than retrying. Only search for current/factual/real-world questions; skip greetings, opinions, math, coding, timeless knowledge.
+// Full version — only needed on the DECISION call, since that's the only
+// call where tools are actually attached and the model needs to know how to
+// use them.
+const AGENT_TOOL_SUFFIX = `\n\nLive search tools: search_web (Tavily, short answers) or search_google (Serper/Google, news/listings). Use ONE only, never both. Search for current/factual/real-world questions; skip greetings, opinions, math, coding, timeless knowledge. Resolve pronouns in the query. If you search, wait for the result; never say you lack real-time access.`;
 
-CRITICAL: if a tool result appears in this conversation, you already have live, current data — USE IT. Never say "I don't have real-time access," "my training data only goes up to...", or anything like it once a search has run, even a thin one. That response is a bug, not a safe default — treat the search result as ground truth and answer from it directly.`;
+// Short version — used on the FINAL ANSWER call, which never has tools
+// attached (tool_choice:'none', no tools param). It doesn't need the "how to
+// use search_web/search_google" instructions at all, just the one line that
+// stops it from refusing after a search already ran. Cuts ~120 tokens off
+// every single answer call versus reusing the full tool-explanation suffix.
+const AGENT_ANSWER_SUFFIX = `\n\nYou already have live search results above. Answer from those facts. Never reply with only a search-query or headline (e.g. "Iran Strait of Hormuz closure latest news"). Never say you lack real-time access.`;
+const AGENT_LIST_MORE_RE = /\b(list more|more of (these|those|them)|other (ones?|tools?|models?|apps?)|such as|for example|e\.g\.|\betc\b|rank|top \d+)\b/i;
+const AGENT_LIST_ANSWER_SUFFIX = `\n\nThey asked for MORE tools like their examples, not a recap of the two they already named. From Current info, list 8–12 distinct tools/models (mention their examples at most once, then move on). One short line each: name — what it is. Rank roughly by how useful they are to learn in 2026. Do not say you will list more later. Do not stop after two items.`;
+
+function broadenSearchQuery(q) {
+  const raw = String(q || '').trim();
+  if (!raw || !AGENT_LIST_MORE_RE.test(raw)) return raw;
+  let broad = raw
+    .replace(/\b(such as|like|e\.g\.|eg\.|for example)\b[\s\S]*$/i, ' ')
+    .replace(/\b(list more|more of these|more of those|more of them)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (broad.length < 16) {
+    broad = /\b(ai|model|tool)/i.test(raw)
+      ? 'best new AI tools and models released in 2026 worth learning'
+      : raw.slice(0, 120);
+  }
+  if (/\b2026\b/.test(raw) && !/\b2026\b/.test(broad)) broad += ' 2026';
+  if (!/\b(best|top|new|latest|list)\b/i.test(broad)) broad = 'best new ' + broad;
+  return broad.slice(0, 160);
+}
 
 // One Groq tool-calling round-trip, same key-rotation-on-429 pattern used
 // elsewhere in this file. `toolsList` lets the caller offer a restricted set
 // (e.g. only tools not yet used this turn) so the model can't request one
 // that's no longer available.
-async function agentCallGroqTools(messages, toolChoice, toolsList) {
+//
+// UNIFIED SINGLE-MODEL DESIGN (matches how ChatGPT/Claude tool-calling
+// actually works): this call and the final-answer call in
+// streamAgentFinalAnswer/agentStreamFinal now both run on the SAME model —
+// qwen/qwen3.6-27b — instead of splitting the decision step onto a separate
+// model (gpt-oss-20b). One model decides whether to search AND writes the
+// eventual answer, same as a standard OpenAI/Anthropic function-calling
+// agent loop. This is simpler and easier to reason about than the old split.
+//
+// This is only safe because the background/structured-JSON call sites that
+// used to share qwen's 8000 TPM budget (doc-spec generation, Alibaba listing
+// extraction/simulation, call-request parsing — none of which are
+// conversational and none of which need qwen-level quality) have been moved
+// onto groqModel('llama-3.1-8b-instant') (-> gpt-oss-20b) instead, freeing
+// qwen's budget for this user-facing chat path. If you add new qwen call
+// sites elsewhere in this file, budget for them — this pool is still finite.
+async function agentCallGroqTools(messages, toolChoice, toolsList, maxTokens) {
   let lastErr;
+  let tpmWaited = false;
   for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
     const keyIdx = activeGroqKeyIdx % GROQ_KEYS.length;
     const key = getGroqKey();
@@ -4206,11 +4321,9 @@ async function agentCallGroqTools(messages, toolChoice, toolsList) {
         messages,
         tools: toolsList && toolsList.length ? toolsList : AGENT_SEARCH_TOOLS,
         tool_choice: toolChoice || 'auto',
-        // A broad question ("best cars", "top restaurants") plus injected
-        // search-result context naturally wants a multi-item answer. 1200 was
-        // cutting the model off mid-list (finish_reason: 'length') with no
-        // truncation check downstream, so the reply just silently stopped.
-        max_tokens: 2200,
+        // First call may BE the answer (no tool) — needs a real reply budget,
+        // not just room for a tool-call JSON blob.
+        max_tokens: maxTokens || 1000,
         temperature: 0.5
       }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' } });
       console.log(`[GROQ-ROTATE] agentCallGroqTools: key idx ${keyIdx} (${key.slice(0,8)}…) OK on attempt ${i+1}/${GROQ_KEYS.length}`);
@@ -4233,8 +4346,9 @@ async function agentCallGroqTools(messages, toolChoice, toolsList) {
 // key-rotation-on-429 pattern as agentCallGroqTools. Returns the full
 // accumulated text and the finish_reason of the completed stream, so the
 // caller can detect a max_tokens truncation and request a continuation.
-async function agentStreamFinal(messages, res) {
+async function agentStreamFinal(messages, res, maxTokens, silent) {
   let lastErr;
+  let tpmWaited = false;
   for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
     const keyIdx = activeGroqKeyIdx % GROQ_KEYS.length;
     const key = getGroqKey();
@@ -4244,7 +4358,10 @@ async function agentStreamFinal(messages, res) {
         model: groqModel('llama-3.3-70b-versatile'),
         messages,
         tool_choice: 'none',
-        max_tokens: 2200,
+        // Matched to /smart-chat's cap — 2200 was giving the model room to
+        // write noticeably longer replies than the old pipeline ever did,
+        // which is real extra cost, not extra usefulness for most turns.
+        max_tokens: maxTokens || 1000,
         temperature: 0.5,
         stream: true
       }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
@@ -4276,7 +4393,7 @@ async function agentStreamFinal(messages, res) {
       function emit(text) {
         if (!text) return;
         fullText += text;
-        res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
+        if (!silent) res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
       }
       function handleDelta(delta) {
         if (guardDone) { emit(delta); return; }
@@ -4300,22 +4417,28 @@ async function agentStreamFinal(messages, res) {
         // else: still looks like a live "<think" open tag — keep buffering
         // (it's short and finite: real </think> closes eventually).
       }
+      let sseBuf = '';
+      function handleSseLine(line) {
+        const t = String(line || '').trim();
+        if (!t.startsWith('data: ')) return;
+        const payload = t.slice(6).trim();
+        if (!payload || payload === '[DONE]') return;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (json.choices?.[0]?.finish_reason) finishReason = json.choices[0].finish_reason;
+          if (delta) handleDelta(delta);
+        } catch (e) {}
+      }
       upstream.data.on('data', (chunk) => {
-        const lines = chunk.toString().split('\n').filter(l => l.trim());
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const payload = line.slice(6);
-          if (payload === '[DONE]') continue;
-          try {
-            const json = JSON.parse(payload);
-            const delta = json.choices?.[0]?.delta?.content;
-            if (json.choices?.[0]?.finish_reason) finishReason = json.choices[0].finish_reason;
-            if (delta) handleDelta(delta);
-          } catch (e) {}
-        }
+        sseBuf += chunk.toString();
+        const parts = sseBuf.split('\n');
+        sseBuf = parts.pop();
+        for (const line of parts) handleSseLine(line);
       });
       upstream.data.on('end', () => {
-        if (!guardDone && guardBuf) { emit(guardBuf); } // stream ended mid-guard — flush whatever we held
+        if (sseBuf) handleSseLine(sseBuf);
+        if (!guardDone && guardBuf) { emit(guardBuf); }
         resolve({ fullText, finishReason });
       });
       upstream.data.on('error', (e) => reject(e));
@@ -4329,25 +4452,65 @@ async function agentStreamFinal(messages, res) {
 // and — if Groq cuts it off at max_tokens mid-generation — transparently
 // requests and streams a continuation so the client never sees a truncated
 // reply. Always ends the response.
-async function streamAgentFinalAnswer(messages, sourcesUsed, res) {
+async function streamAgentFinalAnswer(messages, sourcesUsed, res, maxTokens) {
   res.write(`data: ${JSON.stringify({ meta: { usedSearch: sourcesUsed.length > 0, searchCount: sourcesUsed.length, sources: sourcesUsed } })}\n\n`);
 
-  let { fullText, finishReason } = await agentStreamFinal(messages, res);
+  // Hold the first news draft off-screen — Qwen often dumps the search query
+  // as the whole reply. We only stream once it's a real briefing.
+  const hold = sourcesUsed.length > 0;
+  let { fullText, finishReason } = await agentStreamFinal(messages, res, maxTokens, hold);
 
-  // finish_reason 'length' means Groq cut the model off mid-generation —
-  // ask it, in one extra streamed turn, to pick up exactly where it left
-  // off rather than shipping a truncated answer.
   let guard = 0;
-  while (finishReason === 'length' && guard < 2) {
+  while (finishReason === 'length' && guard < 1) {
     guard++;
     console.warn('[AGENT-CHAT] answer truncated at max_tokens — requesting streamed continuation');
     messages.push({ role: 'assistant', content: fullText });
     messages.push({ role: 'user', content: 'Continue exactly where you left off — do not repeat or restart, just finish the rest of the answer.' });
-    const cont = await agentStreamFinal(messages, res);
+    const cont = await agentStreamFinal(messages, res, maxTokens, hold);
     fullText += cont.fullText;
     finishReason = cont.finishReason;
   }
 
+  let lastUserForGuard = '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i] && messages[i].role === 'user') { lastUserForGuard = messages[i].content || ''; break; }
+  }
+
+  if (hold && looksLikeBareSearchQuery(fullText, lastUserForGuard)) {
+    console.warn('[AGENT-CHAT] answer was a search query, rewriting briefing:', String(fullText).slice(0, 80));
+    messages.push({ role: 'assistant', content: fullText });
+    messages.push({ role: 'user', content: 'That was the search query, not the answer. Write a real briefing from the Current info results: name specific tools/models and one line each. Do not repeat the query or a headline.' });
+    const again = await agentStreamFinal(messages, res, maxTokens, true);
+    if (again.fullText && !looksLikeBareSearchQuery(again.fullText, lastUserForGuard) && again.fullText.length > 80) {
+      fullText = again.fullText;
+    } else {
+      fullText = briefingFromSources(sourcesUsed) || again.fullText || '';
+    }
+    if (fullText) {
+      for (let i = 0; i < fullText.length; i += 48) {
+        res.write(`data: ${JSON.stringify({ delta: fullText.slice(i, i + 48) })}\n\n`);
+      }
+    }
+  } else if (hold && fullText) {
+    for (let i = 0; i < fullText.length; i += 48) {
+      res.write(`data: ${JSON.stringify({ delta: fullText.slice(i, i + 48) })}\n\n`);
+    }
+  }
+
+  if (!fullText) {
+    console.warn('[AGENT-CHAT] streamed answer empty — non-stream fallback');
+    try {
+      const fb = await agentCallGroqTools(messages, 'none', AGENT_SEARCH_TOOLS, maxTokens || 1000);
+      fullText = (fb.choices && fb.choices[0] && fb.choices[0].message && fb.choices[0].message.content) || '';
+      if (fullText) {
+        for (let i = 0; i < fullText.length; i += 48) {
+          res.write(`data: ${JSON.stringify({ delta: fullText.slice(i, i + 48) })}\n\n`);
+        }
+      }
+    } catch (e) {
+      console.warn('[AGENT-CHAT] non-stream answer fallback failed:', e.message);
+    }
+  }
   if (!fullText) {
     res.write(`data: ${JSON.stringify({ delta: "I wasn't able to put together a clean answer — try rephrasing." })}\n\n`);
   }
@@ -4376,30 +4539,268 @@ async function streamAgentFinalAnswer(messages, sourcesUsed, res) {
 // Widened to also force-search on: "what's new", "keep up (to date/with)",
 // "latest <tools/models/apps/releases>", "new(est) <tools/models/apps>",
 // "new generation of", and "as of <year>" (not just "as of today/now").
-const AGENT_FORCE_SEARCH_RE = /\b(news|headlines?|breaking|current events?|top stories|what'?s happening|whats happening|what'?s new|whats new|keep up( to date)?( with)?|latest (updates?|developments?|tools?|models?|apps?|releases?)|new(est)? (generation( of)?|ai )?tools?|today'?s|as of (today|now|right now|20\d\d)|right now|this (morning|week))\b/i;
+const AGENT_FORCE_SEARCH_RE = /\b(news|headlines?|breaking|current(ly)?|current events?|top stories|what'?s happening|whats happening|what'?s new|whats new|keep up( to date)?( with)?|latest|who won|who is the|score|standings|stock|crypto|weather|temperature|price of|how much (is|does)|released? yet|is it out|election|president|prime minister|today'?s|as of (today|now|right now|20\d\d)|right now|this (morning|week))\b/i;
+// Forces the notes tool the same way AGENT_FORCE_SEARCH_RE forces search —
+// left on 'auto', the model tends to answer "I don't have access to your
+// notes" from its own generic-assistant priors instead of actually calling
+// read_notes, even with the tool sitting right there in its tools list.
+// Two tiers: the loose one just makes read_notes visible so the model can
+// choose to call it (auto, same trust level as maps/calendar). The strict
+// one forces the call (tool_choice:'required'), for phrasings unambiguous
+// enough to bypass the model's "I don't have access to your notes" prior —
+// left on 'auto' even with the tool offered, it tends to answer from that
+// generic-assistant instinct instead of actually calling read_notes.
+const AGENT_NOTES_LOOSE_RE = /\bnotes?\b/i;
+const AGENT_FORCE_NOTES_RE = /\b(my notes?|saved notes?|what did i save|what have i saved|show (me )?my notes|read (me )?my notes|check my notes|what'?s in my notes|whats in my notes)\b/i;
+const AGENT_VOICE_PERSONAL_RE = /\b(how are you|how('?re| are) you|what are you (doing|up to)|how('?s| is) your (day|night)|i (feel|miss|love)|i'?m (sad|tired|lonely|good)|your (day|garden|cottage|feelings))\b/i;
+// Spoken phrasings text-chat rarely uses — without these, voice stays "auto"
+// and Ava's persona answers from memory instead of searching.
+const AGENT_VOICE_WORLD_RE = /\b(going on (in|with)|situation (in|with)|update on|any (news|update)|what about|heard about|tell me (the |about )?(news|latest)|in (iran|ukraine|israel|gaza|russia|china)|who('?s| is) (winning|president|prime)|bitcoin|crypto)\b/i;
+
+const AGENT_VOICE_TOOL_SUFFIX = `\n\nYou have search_web and search_google. Call one if they need current real-world facts. Skip if they don't. Same voice as always.`;
 
 // POST /agent-chat — body: { messages: [{role, content}, ...], system }
-// Runs the tool-use loop: model decides whether/what to search, we execute
-// against Tavily/Serper, feed results back, repeat until it's ready to give
-// a plain-text answer. Each tool (search_web, search_google) can be called
-// AT MOST ONCE per conversation turn — once used, it's dropped from the
-// tools list offered to the model, so it physically can't call it again.
-//
-// STREAMING: the tool-decision phase (deciding whether/what to search) stays
-// non-streaming — tool-call JSON can't usefully stream token-by-token, and
-// we need the complete decision before we can act on it. But once the model
-// reaches its final answer turn (no more tool calls, either because it chose
-// not to search or because both tools are used up), that call is made again
-// with stream:true and piped to the client as SSE — so the visible text
-// types itself out exactly like a normal chat reply instead of appearing
-// all at once after a pause.
-//
-// Response is SSE (Content-Type: text/event-stream), one JSON payload per
-// `data:` line:
-//   {"meta": {"usedSearch": bool, "searchCount": n, "sources": [...]}}  — sent once, before any deltas
-//   {"delta": "text chunk"}                                            — repeated as the answer streams in
-//   {"error": "message"}                                               — only on failure
-//   [DONE]                                                             — terminator
+// Lean tool loop: ONE Qwen call with search_web attached.
+//   - If the model writes text, that IS the answer (no second Qwen pass).
+//   - If it calls search_web, run Tavily once, then ONE streamed answer call.
+// Response is SSE:
+//   {"meta": {"usedSearch": bool, "searchCount": n, "sources": [...]}}
+//   {"delta": "text chunk"}
+//   {"error": "message"}
+//   [DONE]
+function capAgentSystem(s, max) {
+  s = String(s || 'You are a helpful assistant.');
+  return s.length > max ? s.slice(0, max) + '\n[trimmed]' : s;
+}
+
+function mergeToolCallDeltas(acc, deltas) {
+  if (!Array.isArray(deltas)) return;
+  for (const tc of deltas) {
+    const i = typeof tc.index === 'number' ? tc.index : acc.length;
+    if (!acc[i]) acc[i] = { id: '', type: 'function', function: { name: '', arguments: '' } };
+    if (tc.id) acc[i].id = tc.id;
+    if (tc.function) {
+      if (tc.function.name) acc[i].function.name += tc.function.name;
+      if (tc.function.arguments) acc[i].function.arguments += tc.function.arguments;
+    }
+  }
+}
+
+function isRealSpokenAnswer(s) {
+  s = String(s || '').trim();
+  if (s.length >= 200) return true;
+  const stops = (s.match(/[.!?]/g) || []).length;
+  if (stops >= 2 && s.length >= 80) return true;
+  return false;
+}
+
+function _normQueryText(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Qwen sometimes writes the search query as the whole reply
+// ("new ai tools models released in 2026 worth learning") — not an answer.
+function looksLikeBareSearchQuery(s, userQ) {
+  s = String(s || '').trim().replace(/^["'`]+|["'`]+$/g, '');
+  if (s.length < 8 || s.length > 240) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length < 3 || words.length > 28) return false;
+  const stops = (s.match(/[.!?]/g) || []).length;
+  if (stops >= 2 && s.length >= 120) return false;
+
+  const a = _normQueryText(s);
+  const b = _normQueryText(userQ);
+  if (b && (a === b || (a.length > 12 && (b.includes(a) || a.includes(b))))) return true;
+  if (b) {
+    const aw = a.split(' ').filter(w => w.length > 2);
+    const bw = new Set(b.split(' ').filter(w => w.length > 2));
+    if (aw.length >= 4) {
+      const hits = aw.filter(w => bw.has(w)).length;
+      if (hits / aw.length >= 0.65) return true;
+    }
+  }
+
+  const keywordHit = /\b(status|latest|news|headline|price|score|release[ds]?|today|currently|worth learning|as of|tools? (to|we should)|models? released|keep up)\b/i.test(s);
+  const caps = words.filter(w => /^[A-Z]/.test(w) && w.length > 1).length;
+  if (stops === 0 && words.length <= 18 && (keywordHit || caps >= 2)) return true;
+  return false;
+}
+
+function briefingFromSources(sourcesUsed) {
+  const bits = [];
+  for (const s of sourcesUsed || []) {
+    const r = s.result || {};
+    if (r.answer) bits.push(String(r.answer).trim());
+    (r.results || []).slice(0, 4).forEach((item) => {
+      const t = String(item.title || '').trim();
+      const c = String(item.content || '').trim();
+      if (t && c) bits.push(t + ': ' + c);
+      else if (c) bits.push(c);
+    });
+  }
+  return bits.filter(Boolean).join('\n\n').trim().slice(0, 1400);
+}
+
+function syntheticSearchCall(query) {
+  return {
+    kind: 'tools',
+    message: {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call_query',
+        type: 'function',
+        function: { name: 'search_web', arguments: JSON.stringify({ query: String(query || '').trim() }) }
+      }]
+    }
+  };
+}
+// Same idea as syntheticSearchCall above, for when the required-tool
+// decision call comes back with plain text instead of an actual tool_call
+// (happens occasionally) — without this, that fallback always defaulted to
+// search_web, so a forced notes turn could silently end up running a WEB
+// search instead of ever reading the user's notes.
+function syntheticNotesCall(query) {
+  return {
+    kind: 'tools',
+    message: {
+      role: 'assistant',
+      content: null,
+      tool_calls: [{
+        id: 'call_notes',
+        type: 'function',
+        function: { name: 'read_notes', arguments: JSON.stringify({ query: String(query || '').trim() }) }
+      }]
+    }
+  };
+}
+
+// Stream the FIRST Qwen call WITH search_web attached.
+// If the model talks, tokens go to the client immediately (same feel as /groq-chat).
+// If it emits tool_calls, we do not send any text — caller runs Tavily then streams the answer.
+async function agentStreamFirstCall(messages, toolChoice, res, maxTokens, flushSoon, toolsList) {
+  let lastErr;
+  let tpmWaited = false;
+  for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
+    const keyIdx = activeGroqKeyIdx % GROQ_KEYS.length;
+    const key = getGroqKey();
+    let upstream;
+    try {
+      upstream = await axios.post('https://api.groq.com/openai/v1/chat/completions', applyGroqReasoningFlags({
+        model: groqModel('llama-3.3-70b-versatile'),
+        messages,
+        tools: toolsList && toolsList.length ? toolsList : AGENT_SEARCH_TOOLS,
+        tool_choice: toolChoice || 'auto',
+        parallel_tool_calls: false,
+        max_tokens: maxTokens || 1000,
+        temperature: 0.5,
+        stream: true
+      }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
+      console.log(`[GROQ-ROTATE] agentStreamFirstCall: key idx ${keyIdx} (${key.slice(0,8)}…) OK on attempt ${i+1}/${GROQ_KEYS.length}`);
+    } catch (e) {
+      const status = e.response?.status;
+      const orgId = e.response?.data?.error?.message?.match(/organization `([^`]+)`/)?.[1] || 'unknown';
+      console.warn(`[GROQ-ROTATE] agentStreamFirstCall: key idx ${keyIdx} (${key.slice(0,8)}…) FAILED status=${status} org=${orgId} attempt ${i+1}/${GROQ_KEYS.length}`);
+      lastErr = e;
+      if (status === 429 && i < GROQ_KEYS.length - 1) { advanceGroqKey(`agentStreamFirstCall 429 on idx ${keyIdx}`); continue; }
+      throw e;
+    }
+
+    return await new Promise((resolve, reject) => {
+      let mode = null; // 'content' | 'tools'
+      let flushed = false;
+      let hold = '';
+      let fullText = '';
+      let finishReason = 'stop';
+      const toolAcc = [];
+      let sseBuf = '';
+      function emit(text) {
+        if (!text) return;
+        fullText += text;
+        res.write(`data: ${JSON.stringify({ delta: text })}\n\n`);
+      }
+      function commitContent() {
+        if (flushed || mode === 'tools') return;
+        mode = 'content';
+        flushed = true;
+        res.write(`data: ${JSON.stringify({ meta: { usedSearch: false, searchCount: 0, sources: [] } })}\n\n`);
+        if (hold) emit(hold);
+        hold = '';
+      }
+      function ingestJson(json) {
+        const choice = json.choices && json.choices[0];
+        if (!choice) return;
+        if (choice.finish_reason) finishReason = choice.finish_reason;
+        const delta = choice.delta || {};
+        const msg = choice.message;
+        const toolBits = (delta.tool_calls && delta.tool_calls.length)
+          ? delta.tool_calls
+          : (msg && msg.tool_calls);
+        if (toolBits && toolBits.length) {
+          mode = 'tools';
+          mergeToolCallDeltas(toolAcc, toolBits);
+          return;
+        }
+        const piece = (typeof delta.content === 'string' && delta.content)
+          ? delta.content
+          : (msg && typeof msg.content === 'string' ? msg.content : '');
+        if (!piece || mode === 'tools') return;
+        // Voice flushSoon used to call commitContent() on every token after the
+        // first letter. commitContent() no-ops once flushed, and the emit()
+        // branch never ran — so STS only ever got 1 letter/word then [DONE].
+        if (!flushed) {
+          hold += piece;
+          if (flushSoon ? hold.trim().length >= 1 : isRealSpokenAnswer(hold)) commitContent();
+        } else {
+          emit(piece);
+        }
+      }
+      function handleSseLine(line) {
+        const t = String(line || '').trim();
+        if (!t.startsWith('data: ')) return;
+        const payload = t.slice(6).trim();
+        if (!payload || payload === '[DONE]') return;
+        try { ingestJson(JSON.parse(payload)); } catch (e) {}
+      }
+      upstream.data.on('data', (chunk) => {
+        sseBuf += chunk.toString();
+        const parts = sseBuf.split('\n');
+        sseBuf = parts.pop();
+        for (const line of parts) handleSseLine(line);
+      });
+      upstream.data.on('end', () => {
+        if (sseBuf) handleSseLine(sseBuf);
+        const tools = toolAcc.filter(Boolean).map((t, idx) => ({
+          id: t.id || ('call_' + idx),
+          type: 'function',
+          function: { name: t.function.name, arguments: t.function.arguments }
+        })).filter(t => t.function && t.function.name);
+        const held = (fullText || hold || '').trim();
+        if (finishReason === 'tool_calls' || tools.length) {
+          resolve({
+            kind: 'tools',
+            message: { role: 'assistant', content: null, tool_calls: tools }
+          });
+          return;
+        }
+        if (looksLikeBareSearchQuery(held)) {
+          console.warn('[AGENT-CHAT] model wrote a search query as text, running search instead:', held.slice(0, 80));
+          resolve(syntheticSearchCall(held));
+          return;
+        }
+        if (!flushed) {
+          mode = 'content';
+          res.write(`data: ${JSON.stringify({ meta: { usedSearch: false, searchCount: 0, sources: [] } })}\n\n`);
+          if (hold) emit(hold);
+        }
+        resolve({ kind: 'content', fullText: fullText || hold });
+      });
+      upstream.data.on('error', (e) => reject(e));
+    });
+  }
+  throw lastErr || new Error('All Groq keys rate limited');
+}
+
 app.post('/agent-chat', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -4407,99 +4808,155 @@ app.post('/agent-chat', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
-    // Cap history like /smart-chat does — /agent-chat was resending the ENTIRE
-    // growing conversation on every call with no limit, which is the main
-    // driver of TPM blowing past qwen3.6-27b's 8K/min cap (that plus tool
-    // results getting stuffed into messages below, uncapped, forever).
-    const userMessages = (Array.isArray(req.body?.messages) ? req.body.messages : []).slice(-10);
-    // The model has no built-in awareness of the real current date — without
-    // this, "today"/"this year"/"as of now" in the user's message gets
-    // resolved against whatever date the model's training implies, which can
-    // be badly stale (e.g. answering a "today" news question with headlines
-    // dated years ago). Anchor it explicitly, every request.
-    const dateAnchor = `Today's real date is ${todayStr()} (${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}). When the user says "today", "this year", "currently", "as of now", etc., resolve it against THIS date, not any date implied by your training — and when you search, write queries using this real date/year, not a guessed one.`;
-    const baseSystem = (req.body?.system || 'You are a helpful assistant.') + '\n\n' + dateAnchor + AGENT_SYSTEM_SUFFIX;
-    let messages = [{ role: 'system', content: baseSystem }, ...userMessages];
+    const isVoice = !!req.body?.voice;
+    // Same id shape connectors.js already uses for notes/gmail/calendar —
+    // raw WhatsApp phone, or 'web_'+email for the web app. Whichever the
+    // client sends (or neither, for a logged-out/guest session — in which
+    // case read_notes just never gets added below).
+    const userId = String(req.body?.user_id || req.body?.phone || '').trim();
+    const reqMax = parseInt(req.body?.max_tokens, 10);
+    const maxTokens = (reqMax > 0 && reqMax <= 2000) ? reqMax : (isVoice ? 640 : 1000);
+    const MAX_HISTORY_CHARS = 400;
+    const truncateMsg = (s) => {
+      if (typeof s !== 'string' || s.length <= MAX_HISTORY_CHARS) return s;
+      const head = Math.ceil(MAX_HISTORY_CHARS * 0.6);
+      const tail = MAX_HISTORY_CHARS - head;
+      return s.slice(0, head) + ' …[truncated]… ' + s.slice(-tail);
+    };
+    const histN = isVoice ? 4 : 10;
+    const userMessages = (Array.isArray(req.body?.messages) ? req.body.messages : [])
+      .slice(-histN)
+      .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: truncateMsg(typeof m?.content === 'string' ? m.content : '') }));
 
-    // Force-search check runs against the latest user message only (not the
-    // whole history) — same "resolve the actual current question" logic the
-    // tool descriptions already ask the model to do for query-writing.
     let lastUserMsg = '';
     for (let i = userMessages.length - 1; i >= 0; i--) {
       if (userMessages[i]?.role === 'user') { lastUserMsg = userMessages[i].content || ''; break; }
     }
-    const forceSearchFirstTurn = AGENT_FORCE_SEARCH_RE.test(lastUserMsg);
+    // Voice: model decides (auto), same as ChatGPT. Do not force a tool —
+    // "what are you doing right now" must stay a normal spoken reply.
+    const voicePersonal = isVoice && AGENT_VOICE_PERSONAL_RE.test(lastUserMsg);
+    const wantsLookup = !isVoice && AGENT_FORCE_SEARCH_RE.test(lastUserMsg);
+    const wantsNotes = !!userId && AGENT_FORCE_NOTES_RE.test(lastUserMsg);
+    const mentionsNotes = !!userId && AGENT_NOTES_LOOSE_RE.test(lastUserMsg);
+    const toolChoice = ((wantsLookup && !voicePersonal) || wantsNotes) ? 'required' : 'auto';
 
-    // Per-tool one-shot budget: each tool name can fire once total, ever,
-    // in this run. Once used it's removed from the tools list we send —
-    // the model literally can't request it again after that.
-    const toolsUsed = {}; // name -> true once called
-    const sourcesUsed = [];
-    const MAX_ITERATIONS = AGENT_SEARCH_TOOLS.length + 2; // one shot per tool + headroom for final answer turn(s)
+    // Only attach the notes tool (+ its system-prompt suffix) on turns that
+    // could plausibly be about notes — saves the ~85 tokens on unrelated
+    // requests. wantsNotes forces the call outright; mentionsNotes (any
+    // bare "notes") just offers the tool on 'auto' and lets the model decide,
+    // same as maps/calendar.
+    const toolsList = (wantsNotes || mentionsNotes) ? AGENT_SEARCH_TOOLS.concat([AGENT_NOTES_TOOL]) : AGENT_SEARCH_TOOLS;
 
-    for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-      const availableTools = AGENT_SEARCH_TOOLS.filter(t => !toolsUsed[t.function.name]);
-      const toolChoice = availableTools.length === 0 ? 'none'
-        : (iter === 0 && forceSearchFirstTurn) ? 'required'
-        : 'auto';
+    const dateAnchor = `Today's real date is ${todayStr()} (${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}). Resolve "today"/"this year"/"currently" against THIS date.`;
+    const notesSuffix = (wantsNotes || mentionsNotes) ? `\n\nYou also have read_notes — the user's own saved notes. Use it when they ask what they saved, mention a note, or reference something they told you to remember.` : '';
+    const toolSuffix = (isVoice ? AGENT_VOICE_TOOL_SUFFIX : AGENT_TOOL_SUFFIX) + notesSuffix;
+    const cappedSys = capAgentSystem(req.body?.system, isVoice ? 4000 : 2000);
+    let messages = [{ role: 'system', content: cappedSys + '\n\n' + dateAnchor + toolSuffix }, ...userMessages];
 
-      // No tools left to offer — we already know this turn can only be a
-      // final answer, so skip straight to the streaming call instead of
-      // burning a non-streaming round-trip just to find that out.
-      if (toolChoice === 'none') {
-        return await streamAgentFinalAnswer(messages, sourcesUsed, res);
+    let first;
+    if (toolChoice === 'required') {
+      // Do NOT stream this turn. With tool_choice:required, Qwen often prints
+      // the Tavily query as if it were the answer ("Iran Strait of Hormuz…").
+      // When notes intent is what forced this, only offer read_notes here —
+      // otherwise 'required' just guarantees SOME tool call, which could
+      // still land on search_web for a notes question.
+      const decisionTools = wantsNotes ? [AGENT_NOTES_TOOL] : toolsList;
+      const decision = await agentCallGroqTools(messages, 'required', decisionTools, 300);
+      const choice = decision.choices && decision.choices[0] && decision.choices[0].message;
+      if (choice && choice.tool_calls && choice.tool_calls.length) {
+        first = { kind: 'tools', message: choice };
+      } else if (wantsNotes) {
+        // Not a keyword filter — this fallback fires on generic "what did
+        // I save"/"show my notes" phrasing, so an empty query (= most
+        // recent notes) is the right default, not the raw sentence (which
+        // would just fail to match any note text and come back empty).
+        first = syntheticNotesCall('');
+      } else {
+        const q = (choice && looksLikeBareSearchQuery(choice.content, lastUserMsg)) ? choice.content : lastUserMsg;
+        first = syntheticSearchCall(q);
       }
-
-      const data = await agentCallGroqTools(messages, toolChoice, availableTools);
-      const choice = data.choices[0].message;
-
-      if (choice.tool_calls && choice.tool_calls.length && availableTools.length) {
-        messages.push(choice);
-        const seenThisRound = {};
-        const results = await Promise.all(choice.tool_calls.map(async (call) => {
-          const name = call.function.name;
-          let args = {};
-          try { args = JSON.parse(call.function.arguments || '{}'); } catch (e) {}
-          // Already used (earlier round) or duplicated within this same round —
-          // don't hit the API again, just tell the model plainly.
-          if (toolsUsed[name] || seenThisRound[name]) {
-            return { call, args, result: { error: `${name} has already been used this turn and can only be called once. Use the other tool or answer with what you have.` } };
-          }
-          seenThisRound[name] = true;
-          const result = await agentExecuteTool(name, args);
-          return { call, args, result };
-        }));
-        results.forEach(({ call, args, result }) => {
-          const name = call.function.name;
-          if (result && !result.error) {
-            toolsUsed[name] = true;
-            sourcesUsed.push({ tool: name, query: args.query, result });
-          } else if (!result.error || !result.error.includes('already been used')) {
-            // A real search error (not the dup-guard message) still burns the
-            // one-shot budget — no infinite retries against a failing tool.
-            toolsUsed[name] = true;
-          }
-          messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
-        });
-        continue;
+    } else {
+      first = await agentStreamFirstCall(messages, toolChoice, res, maxTokens, isVoice, toolsList);
+      if (first.kind !== 'tools' && looksLikeBareSearchQuery(first.fullText, lastUserMsg)) {
+        first = syntheticSearchCall(first.fullText);
       }
+    }
+    const firstTools = (first.kind === 'tools' && first.message && first.message.tool_calls) ? first.message.tool_calls : [];
+    console.log(`[AGENT-CHAT] first kind=${first.kind} tools=${firstTools.map(t => t.function && t.function.name).join(',') || 'none'} textLen=${(first.fullText || '').length}`);
 
-      // Model chose to answer without using (all/any of) the remaining
-      // tools. We deliberately discard `choice.content` here rather than
-      // sending it — that call already generated it non-streamed, but we
-      // want the client to see it typed out, so we re-issue the same
-      // decision point as a streaming call and stream THAT text instead.
-      return await streamAgentFinalAnswer(messages, sourcesUsed, res);
+    // Stream parser missed a tool-call (common when Groq splits the JSON) —
+    // one non-stream retry collects the complete function call reliably.
+    if (first.kind !== 'tools' && !first.fullText) {
+      console.warn('[AGENT-CHAT] empty first stream — retrying non-stream tool call');
+      try {
+        const retry = await agentCallGroqTools(messages, toolChoice, toolsList, Math.min(maxTokens, 400));
+        const choice = retry.choices && retry.choices[0] && retry.choices[0].message;
+        if (choice && choice.tool_calls && choice.tool_calls.length) {
+          first = { kind: 'tools', message: choice };
+        } else if (choice && choice.content && looksLikeBareSearchQuery(choice.content, lastUserMsg)) {
+          first = syntheticSearchCall(choice.content);
+        } else if (choice && choice.content) {
+          res.write(`data: ${JSON.stringify({ meta: { usedSearch: false, searchCount: 0, sources: [] } })}\n\n`);
+          const bits = String(choice.content);
+          for (let i = 0; i < bits.length; i += 48) {
+            res.write(`data: ${JSON.stringify({ delta: bits.slice(i, i + 48) })}\n\n`);
+          }
+          res.write('data: [DONE]\n\n');
+          res.end();
+          return;
+        }
+      } catch (retryErr) {
+        console.warn('[AGENT-CHAT] non-stream retry failed:', retryErr.message);
+      }
     }
 
-    res.write(`data: ${JSON.stringify({ meta: { usedSearch: sourcesUsed.length > 0, searchCount: sourcesUsed.length, sources: sourcesUsed } })}\n\n`);
-    res.write(`data: ${JSON.stringify({ delta: "I searched but ran out of turns before finishing — try narrowing the question." })}\n\n`);
+    if (first.kind === 'tools' && first.message && first.message.tool_calls && first.message.tool_calls.length) {
+      const sourcesUsed = [];
+      messages.push(first.message);
+      let usedOne = false;
+      for (const call of first.message.tool_calls) {
+        let name = call.function && call.function.name;
+        let args = {};
+        try { args = JSON.parse((call.function && call.function.arguments) || '{}'); } catch (e) {}
+        if (!name && args.query) name = 'search_web';
+        const allowed = name === 'search_web' || name === 'search_google' || (name === 'read_notes' && userId);
+        if (!allowed || (usedOne && name !== 'read_notes')) {
+          messages.push({ role: 'tool', tool_call_id: call.id, content: compactToolResult(name, { error: 'use only one of search_web or search_google per turn' }) });
+          continue;
+        }
+        if (name !== 'read_notes') usedOne = true;
+        if (name === 'search_web' && AGENT_LIST_MORE_RE.test(lastUserMsg)) {
+          args.query = broadenSearchQuery(lastUserMsg);
+          args.wide = true;
+        }
+        const result = await agentExecuteTool(name, args, userId);
+        console.log(`[AGENT-CHAT] ran ${name} query="${String(args.query || '').slice(0, 80)}" ok=${!(result && result.error)}`);
+        if (result && !result.error && (name === 'search_web' || name === 'search_google')) sourcesUsed.push({ tool: name, query: args.query, result });
+        messages.push({ role: 'tool', tool_call_id: call.id, content: compactToolResult(name, result) });
+      }
+      const listAsk = AGENT_LIST_MORE_RE.test(lastUserMsg);
+      messages[0] = { role: 'system', content: cappedSys + '\n\n' + dateAnchor + AGENT_ANSWER_SUFFIX + (listAsk ? AGENT_LIST_ANSWER_SUFFIX : '') };
+      return await streamAgentFinalAnswer(messages, sourcesUsed, res, listAsk ? Math.max(maxTokens, 800) : (isVoice ? Math.max(maxTokens, 480) : maxTokens));
+    }
+
+    // Streamed as the answer already. Close the SSE.
+    if (!first.fullText) {
+      res.write(`data: ${JSON.stringify({ meta: { usedSearch: false, searchCount: 0, sources: [] } })}\n\n`);
+      res.write(`data: ${JSON.stringify({ delta: "I wasn't able to put together a clean answer — try rephrasing." })}\n\n`);
+    }
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (e) {
     console.error('[AGENT-CHAT] error:', e.response?.data || e.message);
     try {
-      res.write(`data: ${JSON.stringify({ error: (e.response?.data && (e.response.data.error?.message || JSON.stringify(e.response.data))) || e.message })}\n\n`);
+      const raw = (e.response?.data && (e.response.data.error?.message || JSON.stringify(e.response.data))) || e.message;
+      const tpm = e.response?.status === 429 || /rate limit|TPM|429/i.test(String(raw || ''));
+      const spoken = tpm
+        ? 'Too many live searches in a row — give me about ten seconds and ask again.'
+        : "I wasn't able to put together a clean answer — try rephrasing.";
+      res.write(`data: ${JSON.stringify({ meta: { usedSearch: false, searchCount: 0, sources: [] } })}\n\n`);
+      res.write(`data: ${JSON.stringify({ delta: spoken })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: raw })}\n\n`);
       res.write('data: [DONE]\n\n');
     } catch (e2) {}
     res.end();
@@ -4652,13 +5109,14 @@ app.get('/news-headlines', async (req, res) => {
 app.post('/tavily-search', async (req, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'No query' });
+  const maxResults = Math.min(8, parseInt(req.body.max_results, 10) || 3);
   try {
-    const data = await tavilySearch({ query, search_depth: 'basic', max_results: 3, include_answer: true });
-    if (data.answer) return res.json({ context: data.answer });
+    const data = await tavilySearch({ query, search_depth: 'basic', max_results: maxResults, include_answer: true });
     const results = (data.results || []);
-    if (!results.length) return res.json({ context: null });
-    const context = results.map(r => `[${r.title}]: ${r.content.slice(0, 400)}`).join('\n\n');
-    res.json({ context });
+    const context = data.answer
+      ? data.answer
+      : (results.length ? results.map(r => `[${r.title}]: ${String(r.content || '').slice(0, 400)}`).join('\n\n') : null);
+    res.json({ context, results: results.slice(0, maxResults).map(r => ({ title: r.title, url: r.url, content: String(r.content || '').slice(0, 280) })) });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -4806,8 +5264,11 @@ app.post('/source', async (req, res) => {
             console.log('[SOURCE] images found:', pageData.images?.length || 0);
             const userContent = `Product searched: ${query}\n\nPage text:\n${pageData.text.slice(0, 4500)}\n\nProduct images (in order they appear on page):\n${imageList || 'none'}\n\nFor the image field: assign images in order — first supplier gets first image, second gets second, etc.`;
 
+            // Structured-JSON extraction, not conversational — moved off
+            // qwen onto gpt-oss-20b to keep qwen's TPM budget free for
+            // /agent-chat.
             const parseRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-              model: groqModel('llama-3.3-70b-versatile'),
+              model: groqModel('llama-3.1-8b-instant'),
               messages: [{
                 role: 'system',
                 content: `You are extracting supplier listings from Alibaba page text. Return a JSON array of up to 8 objects.
@@ -4849,8 +5310,9 @@ Sort by score descending. Return ONLY the raw JSON array — no markdown, no exp
       if (!suppliers.length) {
         console.log('[SOURCE] Falling back to AI simulation');
         const key3 = getGroqKey();
+        // Same rationale — structured JSON fallback, moved off qwen.
         const simRes = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-          model: groqModel('llama-3.3-70b-versatile'),
+          model: groqModel('llama-3.1-8b-instant'),
           messages: [{
             role: 'system',
             content: `Generate 4 realistic Alibaba supplier profiles for this product. Return JSON array with name, moq, price, years, response, score (0-100), notes, url. Return ONLY a JSON array.`
@@ -5920,6 +6382,142 @@ async function registerVapiWebhook() {
 // Rotates across GROQ_KEYS on 429, same pattern as getGroqKey()/callGroqWithRetry().
 // ONE-SHOT LIFE WIRE: if the system prompt is Ava (or body.avaLife=true), inject
 // the continuous life-mind fragment so solitude ticks actually shape replies.
+function writeOpenAIDelta(res, text) {
+  if (!text) return;
+  res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`);
+}
+
+async function groqChatVoiceTools(payload, res) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const maxTokens = payload.max_tokens || 320;
+  const msgs = Array.isArray(payload.messages) ? payload.messages.map(m => ({ ...m })) : [];
+  const si = msgs.findIndex(m => m && m.role === 'system');
+  if (si >= 0) msgs[si].content = String(msgs[si].content || '') + AGENT_VOICE_TOOL_SUFFIX;
+  let lastErr;
+  for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
+    const key = getGroqKey();
+    try {
+      const upstream = await axios.post('https://api.groq.com/openai/v1/chat/completions', applyGroqReasoningFlags({
+        model: payload.model || groqModel('llama-3.3-70b-versatile'),
+        messages: msgs,
+        tools: AGENT_SEARCH_TOOLS,
+        tool_choice: 'auto',
+        parallel_tool_calls: false,
+        max_tokens: maxTokens,
+        temperature: payload.temperature || 0.5,
+        stream: true
+      }), { headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
+
+      const parsed = await new Promise((resolve, reject) => {
+        let mode = null;
+        const toolAcc = [];
+        let sseBuf = '';
+        function ingest(json) {
+          const choice = json.choices && json.choices[0];
+          if (!choice) return;
+          const delta = choice.delta || {};
+          if (delta.tool_calls && delta.tool_calls.length) {
+            mode = 'tools';
+            mergeToolCallDeltas(toolAcc, delta.tool_calls);
+            return;
+          }
+          if (typeof delta.content === 'string' && delta.content) {
+            if (mode === 'tools') return;
+            mode = 'content';
+            writeOpenAIDelta(res, delta.content);
+          }
+        }
+        upstream.data.on('data', (chunk) => {
+          sseBuf += chunk.toString();
+          const parts = sseBuf.split('\n');
+          sseBuf = parts.pop();
+          for (const line of parts) {
+            const t = line.trim();
+            if (!t.startsWith('data: ')) continue;
+            const p = t.slice(6).trim();
+            if (!p || p === '[DONE]') continue;
+            try { ingest(JSON.parse(p)); } catch (e) {}
+          }
+        });
+        upstream.data.on('end', () => {
+          const tools = toolAcc.filter(Boolean).map((t, idx) => ({
+            id: t.id || ('call_' + idx),
+            type: 'function',
+            function: { name: t.function.name, arguments: t.function.arguments }
+          })).filter(t => t.function && t.function.name);
+          resolve({ mode: tools.length ? 'tools' : 'content', tools });
+        });
+        upstream.data.on('error', reject);
+      });
+
+      if (parsed.mode === 'tools' && parsed.tools.length) {
+        msgs.push({ role: 'assistant', content: null, tool_calls: parsed.tools });
+        let used = false;
+        for (const call of parsed.tools) {
+          let name = call.function && call.function.name;
+          let args = {};
+          try { args = JSON.parse((call.function && call.function.arguments) || '{}'); } catch (e) {}
+          if (!name && args.query) name = 'search_web';
+          if (used || (name !== 'search_web' && name !== 'search_google')) {
+            msgs.push({ role: 'tool', tool_call_id: call.id, content: 'use one search only' });
+            continue;
+          }
+          used = true;
+          const result = await agentExecuteTool(name, args);
+          msgs.push({ role: 'tool', tool_call_id: call.id, content: compactToolResult(name, result) });
+        }
+        const key2 = getGroqKey();
+        const up2 = await axios.post('https://api.groq.com/openai/v1/chat/completions', applyGroqReasoningFlags({
+          model: payload.model || groqModel('llama-3.3-70b-versatile'),
+          messages: msgs,
+          tool_choice: 'none',
+          max_tokens: Math.max(maxTokens, 480),
+          temperature: payload.temperature || 0.5,
+          stream: true
+        }), { headers: { Authorization: `Bearer ${key2}`, 'Content-Type': 'application/json' }, responseType: 'stream' });
+        await new Promise((resolve, reject) => {
+          let sseBuf = '';
+          up2.data.on('data', (chunk) => {
+            sseBuf += chunk.toString();
+            const parts = sseBuf.split('\n');
+            sseBuf = parts.pop();
+            for (const line of parts) {
+              const t = line.trim();
+              if (!t.startsWith('data: ')) continue;
+              const p = t.slice(6).trim();
+              if (!p || p === '[DONE]') continue;
+              try {
+                const json = JSON.parse(p);
+                const c = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+                if (c) writeOpenAIDelta(res, c);
+              } catch (e) {}
+            }
+          });
+          up2.data.on('end', resolve);
+          up2.data.on('error', reject);
+        });
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (e.response?.status === 429 && i < GROQ_KEYS.length - 1) {
+        advanceGroqKey('groqChatVoiceTools 429');
+        continue;
+      }
+      console.error('[GROQ-CHAT-VOICE-TOOLS]', e.response?.data || e.message);
+      if (!res.headersSent) return res.status(e.response?.status || 500).json({ error: e.message });
+      try { res.end(); } catch (e2) {}
+      return;
+    }
+  }
+  if (!res.headersSent) res.status(429).json({ error: lastErr?.message || 'All Groq keys rate limited' });
+}
+
 app.post('/groq-chat', checkGuestLimit, async (req, res) => {
   const payload = { ...req.body };
   delete payload.userId; // internal flag only — Groq doesn't need/want this field
@@ -6032,6 +6630,13 @@ app.post('/groq-chat', checkGuestLimit, async (req, res) => {
     console.warn('[LIFE] groq-chat inject failed:', lifeInjErr.message);
   }
   const wantsStream = !!payload.stream;
+  const voiceTools = !!payload.voiceTools;
+  delete payload.voiceTools;
+  if (payload.model) payload.model = groqModel(payload.model);
+  applyGroqReasoningFlags(payload);
+  if (wantsStream && voiceTools) {
+    return groqChatVoiceTools(payload, res);
+  }
   let lastErr;
   for (let i = 0; i < Math.max(GROQ_KEYS.length, 1); i++) {
     const key = getGroqKey();
