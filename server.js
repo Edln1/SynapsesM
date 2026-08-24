@@ -25,6 +25,7 @@ const app = express();
 // stripe-routes.js supplies its own express.raw() specifically for it.
 app.use((req, res, next) => {
   if (req.path === '/stripe-webhook') return next();
+  if (req.path === '/api/stems/create-from-upload') return next();
   // Default express.json() limit is 100kb — fine for normal chat, but the
   // client can now attach images to /groq-chat as base64 data URLs inside
   // the JSON body (for the qwen/qwen3.6-27b vision model), which are easily
@@ -100,6 +101,16 @@ function checkGuestLimit(req, res, next) {
   }
   guestUsage[ip].count++;
   next();
+}
+
+// ── AI Build (Bolt/v0/Lovable-style generator) ──────────────────────────
+// POST /api/build/generate | POST /api/build/reset
+try {
+  const buildRoutes = require('./build-routes');
+  buildRoutes.mount(app, { checkGuestLimit: checkGuestLimit });
+  console.log('[BUILD] build-routes.js mounted');
+} catch (e) {
+  console.warn('[BUILD] build-routes.js not loaded —', e && e.message ? e.message : e);
 }
 
 const WA_PHONE_NUMBER_ID = process.env.WA_PHONE_NUMBER_ID;
