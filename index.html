@@ -1289,6 +1289,13 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
   .top-bar.hidden{
     border-color:transparent!important;opacity:0!important;
     pointer-events:none!important;
+    /* Collapse the bar's own box too, not just fade it — otherwise the ~60-80px
+       min/max-height from the base .top-bar rule keeps reserving that space in
+       the flex column even while invisible. That left a blank gap above
+       sections that stay in normal flow when the bar is "hidden" (Welcome,
+       Notes) — the gap should only exist once the bar is actually revealed. */
+    max-height:0!important;min-height:0!important;
+    padding-top:0!important;padding-bottom:0!important;
   }
   /* body.llm-thread is set in JS while a real conversation is open.
      Header floats over the thread (same fade as Good afternoon). Welcome
@@ -15470,15 +15477,57 @@ function _buildStudioImageCard(opts){
     e.stopPropagation();
     downloadGeneratedImage(src, filename, img);
   };
+  card.appendChild(img);
+  card.appendChild(dl);
+  if(prompt){
+    var cp = document.createElement('button');
+    cp.type = 'button';
+    cp.innerHTML = '⧉';
+    cp.title = 'Copy prompt';
+    cp.setAttribute('aria-label', 'Copy prompt used for this image');
+    cp.style.cssText = 'position:absolute;top:6px;right:40px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;';
+    cp.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      _copyStudioPrompt(prompt);
+    };
+    card.appendChild(cp);
+  }
   card.onclick = function(e){
     e.preventDefault();
     e.stopPropagation();
     openStudioImageLightbox(src, { prompt: prompt, filename: filename });
   };
-  card.appendChild(img);
-  card.appendChild(dl);
   return card;
 }
+
+/** Copy a generation prompt to the clipboard with a toast fallback for older WebViews. */
+function _copyStudioPrompt(prompt){
+  if(!prompt) return;
+  function ok(){ if(typeof showToast === 'function') showToast('Prompt copied'); }
+  function fail(){ if(typeof showToast === 'function') showToast('Could not copy prompt'); }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(prompt).then(ok, fail);
+      return;
+    }
+  }catch(_c){}
+  try{
+    var ta = document.createElement('textarea');
+    ta.value = prompt;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var success = document.execCommand('copy');
+    document.body.removeChild(ta);
+    success ? ok() : fail();
+  }catch(_e){
+    fail();
+  }
+}
+window._copyStudioPrompt = _copyStudioPrompt;
 
 /** Full-size viewer for Studio images (does NOT reload prompt). Includes download. */
 function openStudioImageLightbox(src, meta){
@@ -15511,6 +15560,16 @@ function openStudioImageLightbox(src, meta){
   dlBtn.title = 'Save image to device';
   dlBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:702;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.72);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:none;letter-spacing:0.01em;';
 
+  var cpBtn = null;
+  if(meta.prompt){
+    dlBtn.style.transform = 'translateX(calc(-50% + 78px))';
+    cpBtn = document.createElement('button');
+    cpBtn.type = 'button';
+    cpBtn.innerHTML = '<span style="opacity:0.7;font-size:12px;line-height:1;">⧉</span><span>Copy prompt</span>';
+    cpBtn.title = 'Copy the prompt used for this image';
+    cpBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(calc(-50% - 78px));z-index:702;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.72);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:none;letter-spacing:0.01em;white-space:nowrap;';
+  }
+
   function close(){
     lb.style.opacity = '0';
     lb.style.transition = 'opacity .15s';
@@ -15527,11 +15586,19 @@ function openStudioImageLightbox(src, meta){
     e.stopPropagation();
     downloadGeneratedImage(src, meta.filename || ('synapses-image-' + Date.now() + '.jpg'), img);
   };
+  if(cpBtn){
+    cpBtn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      _copyStudioPrompt(meta.prompt);
+    };
+  }
 
   document.addEventListener('keydown', onKey);
   lb.appendChild(img);
   lb.appendChild(closeBtn);
   lb.appendChild(dlBtn);
+  if(cpBtn) lb.appendChild(cpBtn);
   document.body.appendChild(lb);
 }
 window.openStudioImageLightbox = openStudioImageLightbox;
@@ -73665,6 +73732,54 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     font-size: 11px; color: rgba(200,195,225,0.42); letter-spacing: .04em;
   }
   #stemStudio .ss-bottombar .ss-spacer { flex: 1; min-width: 24px; }
+
+  /* ── Mobile / Android fit fix ──
+     The topbar and tracklist were built for desktop widths with no wrap and a
+     fixed 268px rail, so on phone-width screens (Android Chrome etc.) the
+     right-hand controls ran off the edge and got clipped by #stemStudio's
+     overflow:hidden, and the tracklist ate almost the whole screen leaving
+     no room for the timeline. This lets the topbar wrap onto extra rows and
+     shrinks/trims the tracklist so everything stays visible and reachable. */
+  @media (max-width: 760px) {
+    #stemStudio .ss-topbar {
+      flex-wrap: wrap;
+      row-gap: 6px;
+      padding: 8px 10px;
+    }
+    #stemStudio .ss-brand { display: none; }
+    #stemStudio .ss-projname { max-width: 60vw; }
+    #stemStudio .ss-spacer { flex: 0 0 auto; min-width: 0; }
+    #stemStudio .ss-transport {
+      flex: 1 1 100%;
+      order: 3;
+      justify-content: center;
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    #stemStudio .ss-homebtn { order: 1; }
+    #stemStudio .ss-top-actions {
+      order: 4;
+      flex: 1 1 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+    #stemStudio .ss-bpm-project-all { display: none; }
+
+    #stemStudio .ss-tracklist { width: 108px; }
+    #stemStudio .ss-trackname { font-size: 10px; }
+    #stemStudio .ss-avatar { width: 15px; height: 15px; }
+    #stemStudio .ss-bpm,
+    #stemStudio .ss-dlstem,
+    #stemStudio .ss-cuebtn { display: none; }
+    #stemStudio .ss-track-btns { flex-wrap: wrap; gap: 3px; }
+    #stemStudio .ss-mutebtn, #stemStudio .ss-solobtn, #stemStudio .ss-volbtn {
+      width: 19px; height: 19px;
+    }
+
+    #ssLibrary { width: min(280px, 92vw); }
+    #stemStudioImport .ss-import-card { width: min(420px, 92vw); padding: 18px 16px 20px; }
+  }
 
   /* Sun (easyview): exact Image Studio generate field from purplebackgroundreferenceforsun.html
      (#studioGenerateView #imageGenScrollCol). Void uses the same non-trueblack stage. */
