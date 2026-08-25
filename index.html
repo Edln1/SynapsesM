@@ -15482,14 +15482,14 @@ function _buildStudioImageCard(opts){
   if(prompt){
     var cp = document.createElement('button');
     cp.type = 'button';
-    cp.innerHTML = '⧉';
-    cp.title = 'Copy prompt';
-    cp.setAttribute('aria-label', 'Copy prompt used for this image');
+    cp.innerHTML = '↺';
+    cp.title = 'Use this prompt';
+    cp.setAttribute('aria-label', 'Send this prompt to the prompt bar');
     cp.style.cssText = 'position:absolute;top:6px;right:40px;width:28px;height:28px;border-radius:8px;border:none;background:rgba(0,0,0,0.55);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;';
     cp.onclick = function(e){
       e.preventDefault();
       e.stopPropagation();
-      _copyStudioPrompt(prompt);
+      _useStudioPrompt(prompt);
     };
     card.appendChild(cp);
   }
@@ -15501,33 +15501,18 @@ function _buildStudioImageCard(opts){
   return card;
 }
 
-/** Copy a generation prompt to the clipboard with a toast fallback for older WebViews. */
-function _copyStudioPrompt(prompt){
+/** Drops a generation prompt straight into the Studio prompt bar, ready to
+ *  edit/regenerate — no manual copy/paste required. Mirrors reuseHistoryImage. */
+function _useStudioPrompt(prompt){
   if(!prompt) return;
-  function ok(){ if(typeof showToast === 'function') showToast('Prompt copied'); }
-  function fail(){ if(typeof showToast === 'function') showToast('Could not copy prompt'); }
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(prompt).then(ok, fail);
-      return;
-    }
-  }catch(_c){}
-  try{
-    var ta = document.createElement('textarea');
-    ta.value = prompt;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    var success = document.execCommand('copy');
-    document.body.removeChild(ta);
-    success ? ok() : fail();
-  }catch(_e){
-    fail();
-  }
+  var el = document.getElementById('imageGenPrompt');
+  if(!el) return;
+  el.value = prompt;
+  try{ el.dispatchEvent(new Event('input', { bubbles: true })); }catch(_e){}
+  try{ el.focus(); }catch(_f){}
+  if(typeof showToast === 'function') showToast('Prompt loaded — tap ↑ to generate it again.');
 }
-window._copyStudioPrompt = _copyStudioPrompt;
+window._useStudioPrompt = _useStudioPrompt;
 
 /** Full-size viewer for Studio images (does NOT reload prompt). Includes download. */
 function openStudioImageLightbox(src, meta){
@@ -15565,8 +15550,8 @@ function openStudioImageLightbox(src, meta){
     dlBtn.style.transform = 'translateX(calc(-50% + 78px))';
     cpBtn = document.createElement('button');
     cpBtn.type = 'button';
-    cpBtn.innerHTML = '<span style="opacity:0.7;font-size:12px;line-height:1;">⧉</span><span>Copy prompt</span>';
-    cpBtn.title = 'Copy the prompt used for this image';
+    cpBtn.innerHTML = '<span style="opacity:0.7;font-size:12px;line-height:1;">↺</span><span>Use prompt</span>';
+    cpBtn.title = 'Send this prompt to the prompt bar';
     cpBtn.style.cssText = 'position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(calc(-50% - 78px));z-index:702;padding:8px 16px;border-radius:22px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.72);font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:none;letter-spacing:0.01em;white-space:nowrap;';
   }
 
@@ -15590,7 +15575,8 @@ function openStudioImageLightbox(src, meta){
     cpBtn.onclick = function(e){
       e.preventDefault();
       e.stopPropagation();
-      _copyStudioPrompt(meta.prompt);
+      _useStudioPrompt(meta.prompt);
+      close();
     };
   }
 
@@ -73221,7 +73207,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   /* ── Top bar — original left headers, glass strip ── */
   #stemStudio .ss-topbar {
     display: flex; align-items: center; gap: 14px;
-    padding: 10px 16px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
     border-bottom: 1px solid var(--border);
     background: transparent;
     flex-shrink: 0;
@@ -73734,35 +73720,48 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   #stemStudio .ss-bottombar .ss-spacer { flex: 1; min-width: 24px; }
 
   /* ── Mobile / Android fit fix ──
-     The topbar and tracklist were built for desktop widths with no wrap and a
-     fixed 268px rail, so on phone-width screens (Android Chrome etc.) the
-     right-hand controls ran off the edge and got clipped by #stemStudio's
-     overflow:hidden, and the tracklist ate almost the whole screen leaving
-     no room for the timeline. This lets the topbar wrap onto extra rows and
-     shrinks/trims the tracklist so everything stays visible and reachable. */
+     Two real bugs here, both from a topbar built with no phone-width layout:
+     1) #stemStudio has no top padding for the status bar / notch at all, so on
+        Android (which draws edge-to-edge behind a transparent status bar) the
+        Home button and project name sat right under/behind the status bar —
+        effectively off-screen and untappable. Fixed above via
+        env(safe-area-inset-top) + the android-status-blend override below.
+     2) Every control (transport, BPM box, zoom, New/Import/Save/Export/Library)
+        sat in one non-wrapping row. On phone widths they ran past the edge and
+        got clipped by #stemStudio's overflow:hidden. Fixed by giving every
+        child an explicit order and letting each group wrap onto its own row
+        instead of guessing at default flex order. */
+  html.android-status-blend #stemStudio .ss-topbar {
+    padding-top: calc(10px + var(--android-status-inset, 28px)) !important;
+  }
   @media (max-width: 760px) {
     #stemStudio .ss-topbar {
       flex-wrap: wrap;
-      row-gap: 6px;
-      padding: 8px 10px;
+      row-gap: 8px;
+      padding-left: 10px; padding-right: 10px;
     }
-    #stemStudio .ss-brand { display: none; }
-    #stemStudio .ss-projname { max-width: 60vw; }
-    #stemStudio .ss-spacer { flex: 0 0 auto; min-width: 0; }
-    #stemStudio .ss-transport {
-      flex: 1 1 100%;
-      order: 3;
-      justify-content: center;
-      flex-wrap: wrap;
-      row-gap: 6px;
+    #stemStudio .ss-brand,
+    #stemStudio .ss-topbar > .ss-spacer { display: none; }
+
+    /* Row 1: Home (left) + project name (left-aligned, content-sized — NOT
+       centered/full-width) so the right side of the row stays open for the
+       speech-to-speech icon to land instead of the title spanning under it. */
+    #stemStudio .ss-homebtn { order: 1; flex: 0 0 auto; }
+    #stemStudio .ss-projname {
+      order: 2; flex: 0 1 auto; max-width: 48vw; text-align: left;
     }
-    #stemStudio .ss-homebtn { order: 1; }
+
+    /* Row 2: New / Import / Save / Export / Library — icon-only to save width */
     #stemStudio .ss-top-actions {
-      order: 4;
-      flex: 1 1 100%;
-      justify-content: center;
-      flex-wrap: wrap;
-      row-gap: 6px;
+      order: 3; flex: 1 1 100%;
+      justify-content: center; flex-wrap: wrap; row-gap: 6px;
+    }
+    #stemStudio .ss-topbtn { font-size: 0; gap: 0; padding: 6px 9px; }
+
+    /* Row 3: transport (only present once a project is active) */
+    #stemStudio .ss-transport {
+      order: 4; flex: 1 1 100%;
+      justify-content: center; flex-wrap: wrap; row-gap: 6px;
     }
     #stemStudio .ss-bpm-project-all { display: none; }
 
@@ -73777,7 +73776,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       width: 19px; height: 19px;
     }
 
-    #ssLibrary { width: min(280px, 92vw); }
+    #ssLibrary { width: min(240px, 78vw); }
     #stemStudioImport .ss-import-card { width: min(420px, 92vw); padding: 18px 16px 20px; }
   }
 
@@ -73797,6 +73796,8 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   #ssLibrary {
     position: absolute; top: 0; right: 0; bottom: 0;
     width: min(320px, 88vw);
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
     background: rgba(22,22,32,0.55);
     border-left: 1px solid rgba(255,255,255,0.08);
     backdrop-filter: blur(60px);
@@ -73807,6 +73808,9 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     display: flex; flex-direction: column;
     pointer-events: none;
     overflow-x: hidden;
+  }
+  html.android-status-blend #ssLibrary {
+    padding-top: var(--android-status-inset, 28px) !important;
   }
   #ssLibrary.open { transform: translateX(0); pointer-events: auto; }
   #ssLibrary .ss-lib-head {
