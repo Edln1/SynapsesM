@@ -111,6 +111,7 @@
   </style>
 
 <meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -768,6 +769,56 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-balance-card.bnav-cc-muted .bnav-cc-wave-svg{filter:saturate(0.45) brightness(0.8);}
 .bnav-cc-balance-card.bnav-cc-muted:hover .bnav-cc-wave-svg{filter:saturate(0.55) brightness(0.92);}
 .bnav-cc-balance-card.bnav-cc-muted .bnav-cc-balance-dot{background:linear-gradient(135deg,#8a8aa0,#5f5f78);box-shadow:0 0 8px 2px rgba(120,120,140,0.5);}
+/* ── Control Centre TV — retro sci-fi "channel" window ────────────────
+   Sits in the center column next to Balance. Off by default (idle glass
+   + standby glow); tunes in with a static-flicker transition whenever
+   the assistant recognizes a video-worthy ask (news, space, music…). */
+.bnav-cc-tv-card{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,#141018,#0a080d 60%);border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;padding:10px;width:190px;height:190px;flex-shrink:0;z-index:2;box-sizing:border-box;transition:width .5s cubic-bezier(.22,.9,.3,1),height .5s cubic-bezier(.22,.9,.3,1),box-shadow .4s ease;box-shadow:0 0 0 rgba(124,106,247,0);cursor:pointer;}
+.bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 24px rgba(124,106,247,0.18);cursor:default;}
+.bnav-cc-tv-card.tv-expanded{width:396px;height:262px;}
+@media(max-width:900px){.bnav-cc-tv-card.tv-expanded{width:100%;height:auto;aspect-ratio:16/11;}}
+.bnav-cc-tv-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2px 8px;flex-shrink:0;}
+.bnav-cc-tv-brand{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;}
+.bnav-cc-tv-led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;transition:background .3s ease,box-shadow .3s ease;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-led{background:#ff4d6d;box-shadow:0 0 6px rgba(255,77,109,0.8);animation:tvLedPulse 2s ease-in-out infinite;}
+@keyframes tvLedPulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
+.bnav-cc-tv-power{background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:6px;transition:color .15s ease,background .15s ease;}
+.bnav-cc-tv-power:hover{color:#fff;background:rgba(255,255,255,0.08);}
+.bnav-cc-tv-ask-row{padding:0 1px 7px;flex-shrink:0;}
+.bnav-cc-tv-ask{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;font-size:10.5px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s ease,background .15s ease;}
+.bnav-cc-tv-ask::placeholder{color:rgba(255,255,255,0.32);}
+.bnav-cc-tv-ask:focus{border-color:var(--accent,#7c6af7);background:rgba(255,255,255,0.08);}
+.bnav-cc-tv-screen{position:relative;flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;}
+.bnav-cc-tv-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-poster{opacity:1;}
+.bnav-cc-tv-screen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;background:#000;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-screen iframe{opacity:1;}
+.bnav-cc-tv-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,0.28);text-align:center;padding:10px;font-family:'DM Sans',sans-serif;transition:opacity .3s ease;}
+.bnav-cc-tv-idle svg{opacity:0.5;}
+.bnav-cc-tv-idle b{font-size:11px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.02em;}
+.bnav-cc-tv-idle span{font-size:10px;line-height:1.4;max-width:150px;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-idle{opacity:0;pointer-events:none;}
+.bnav-cc-tv-card.tv-on.tv-offair .bnav-cc-tv-idle{opacity:1;pointer-events:none;}
+.bnav-cc-tv-card.tv-on.tv-offair .bnav-cc-tv-screen iframe{opacity:0;}
+.bnav-cc-tv-scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,0.05) 0px,rgba(255,255,255,0.05) 1px,transparent 1px,transparent 3px);mix-blend-mode:overlay;opacity:0;transition:opacity .3s ease;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-scan{opacity:0.12;}
+.bnav-cc-tv-static{position:absolute;inset:0;pointer-events:none;opacity:0;background:
+  repeating-conic-gradient(from 0deg,rgba(255,255,255,0.9) 0deg 0.5deg,rgba(0,0,0,0.9) 0.5deg 1deg);
+  background-size:3px 3px;mix-blend-mode:screen;}
+.bnav-cc-tv-card.tv-tuning .bnav-cc-tv-static{opacity:0.55;animation:tvStaticJitter .09s steps(2) infinite;}
+@keyframes tvStaticJitter{0%{transform:translate(0,0);}50%{transform:translate(-1px,1px);}100%{transform:translate(1px,-1px);}}
+.bnav-cc-tv-card.tv-tuning .bnav-cc-tv-screen iframe{opacity:1;}
+.bnav-cc-tv-label{position:absolute;left:8px;bottom:6px;display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);opacity:0;transition:opacity .3s ease .15s;pointer-events:none;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-label{opacity:1;}
+.bnav-cc-tv-label i{width:5px;height:5px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 5px #ff4d6d;flex-shrink:0;animation:tvLedPulse 1.4s ease-in-out infinite;}
+.bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;transition:opacity .3s ease .15s,color .15s ease,background .15s ease;backdrop-filter:blur(4px);}
+.bnav-cc-tv-open:hover{color:#fff;background:rgba(0,0,0,0.7);}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-open{opacity:1;}
+.bnav-cc-tv-chans{position:absolute;right:6px;bottom:6px;display:flex;gap:4px;opacity:0;transition:opacity .3s ease .15s;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-chans{opacity:1;}
+.bnav-cc-tv-chip{width:20px;height:16px;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease;backdrop-filter:blur(4px);}
+.bnav-cc-tv-chip:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);}
+.bnav-cc-tv-chip.active{border-color:var(--accent3,#00d9a8);color:var(--accent3,#00d9a8);}
 .bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;}
 /* Calendar card hosts the real (formerly floating-only) calendar widget
    inline, sized up instead of the old 4-row summary list. The card itself
@@ -10706,7 +10757,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       {icon:'📓', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
       {icon:'🎚️', label:'Stem Studio', fn:function(){ if(typeof openStemStudio==='function') openStemStudio(); }},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbgcc" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbgcc)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbgcc)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbgcc)" stroke-width="1.8"/></svg>', label:'Browse Tools', fn:function(){ if(typeof showTools==='function') showTools('all'); }},
-      {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }}
+      {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }},
+      {icon:'📺', label:'SYN-TV', fn:function(){ if(typeof tuneControlCentreTV==='function') tuneControlCentreTV('news'); }}
     ];
     var toolTiles = [
       {icon:'🎵', label:'Music', cat:'music'},
@@ -10821,6 +10873,27 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
             '<div class="bnav-cc-balance-hint">Tap to open Health AI</div>'+
           '</div>'+
         '</div>'+
+        '<div class="bnav-cc-tv-card" id="bnavCCTV" data-cc-id="tv" title="Tap to tune in, or just ask">'+
+          '<div class="bnav-cc-tv-topbar">'+
+            '<div class="bnav-cc-tv-brand"><span class="bnav-cc-tv-led"></span>SYN-TV</div>'+
+            '<button class="bnav-cc-tv-power" id="bnavCCTVPower" title="Power off">⏻</button>'+
+          '</div>'+
+          '<div class="bnav-cc-tv-ask-row"><input id="bnavCCTVAsk" class="bnav-cc-tv-ask" placeholder="Ask… e.g. \'show me the news\'" /></div>'+
+          '<div class="bnav-cc-tv-screen">'+
+            '<div class="bnav-cc-tv-idle">'+
+              '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 22h8M12 19v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'+
+              '<b>No signal</b>'+
+              '<span>Ask about the news, space or music and it\'ll tune in here</span>'+
+            '</div>'+
+            '<img id="bnavCCTVPoster" class="bnav-cc-tv-poster" alt="" />'+
+            '<iframe id="bnavCCTVFrame" src="about:blank" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" title="SYN-TV"></iframe>'+
+            '<div class="bnav-cc-tv-scan"></div>'+
+            '<div class="bnav-cc-tv-static"></div>'+
+            '<div class="bnav-cc-tv-label" id="bnavCCTVLabel"><i></i><span>SYN-NEWS-1</span></div>'+
+            '<a class="bnav-cc-tv-open" id="bnavCCTVOpen" href="#" target="_blank" rel="noopener" title="If the picture doesn\'t load, open it directly on YouTube">Open on YouTube ↗</a>'+
+            '<div class="bnav-cc-tv-chans" id="bnavCCTVChans"></div>'+
+          '</div>'+
+        '</div>'+
       '</div>'+
       '<div class="bnav-cc-right">'+widgetsHtml+'</div>'+
       '<div class="bnav-cc-tray-wrap' + (_ccTrayHidden ? ' bnav-cc-tray-collapsed' : '') + '" id="bnavCCTrayWrap">'+
@@ -10840,7 +10913,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     _ccInitWidgetDrag(panel.querySelector('.bnav-cc-left'), 'synapses_cc_order_left');
     _ccInitWidgetDrag(panel.querySelector('.bnav-cc-right'), 'synapses_cc_order_right');
 
-    function runNav(i){ closeControlCentre(); var it = navItems[i]; if(it) it.fn(); }
+    function runNav(i){ var it = navItems[i]; if(!it) return; if(it.label!=='SYN-TV') closeControlCentre(); it.fn(); }
     panel.querySelectorAll('[data-nav]').forEach(function(el){
       el.addEventListener('click', function(){ runNav(parseInt(el.getAttribute('data-nav'),10)); });
     });
@@ -10899,6 +10972,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         if(typeof goHuman==='function') goHuman();
       });
     })();
+    if(typeof _ccInitTV==='function') _ccInitTV(panel);
 
     // The center column is a full drop zone like left/right — the Balance
     // orb itself is draggable now too (it's just a card, not special), and
@@ -11525,6 +11599,146 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // "openControlCentre is not defined" instead of opening the panel.
   window.openControlCentre = openControlCentre;
   window.closeControlCentre = closeControlCentre;
+
+  // ── SYN-TV — retro "ask and it shows you" channel window ──────────────
+  // Small, hand-picked line-up so it works with zero API keys. 'channel'
+  // entries tune whatever that channel currently has live (can 404/error
+  // if that broadcaster is off-air or blocks embedding — some do); 'video'
+  // entries point at one fixed, evergreen stream, which is far more
+  // reliable. Swap in your own IDs / add topics here any time — this list
+  // is the whole config surface for the feature.
+  // Fixed video IDs (verified embeddable via YouTube oEmbed). Do not hit
+  // Render for the picture — that iframe is blocked, and the live lookup
+  // was returning random VODs. This is how every site embeds YouTube.
+  var SYN_TV_CHANNELS = [
+    { key:'news',  label:'SYN-NEWS-1',  type:'video', id:'gCNeDWCI0vo', icon:'📰',
+      watch:'https://www.youtube.com/watch?v=gCNeDWCI0vo',
+      match:['news','headline','headlines','breaking','world news','what\'s happening','whats happening','current events'] },
+    { key:'space',  label:'SYN-SPACE-1', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
+      watch:'https://www.youtube.com/watch?v=M3HKLzjvKPc',
+      match:['space','nasa','rocket','launch','iss','astronaut','mars','spacex'] },
+    { key:'music',  label:'SYN-CHILL-1', type:'video', id:'jfKfPfyJRdk', icon:'🎵',
+      watch:'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+      match:['music','lofi','lo-fi','play something','play some music','beats','chill'] }
+  ];
+  var _ccTV = { on:false, key:null };
+
+  function _ccTvDirectEmbedUrl(videoId){
+    return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute=1&rel=0&playsinline=1&modestbranding=1&feature=oembed';
+  }
+  function _ccTvPutFrame(src){
+    var old = document.getElementById('bnavCCTVFrame');
+    if(!old || !old.parentNode) return null;
+    var frame = document.createElement('iframe');
+    frame.id = 'bnavCCTVFrame';
+    frame.title = 'YouTube video player';
+    frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    frame.setAttribute('allowfullscreen', 'allowfullscreen');
+    frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    frame.setAttribute('frameborder', '0');
+    frame.src = src;
+    old.parentNode.replaceChild(frame, old);
+    return frame;
+  }
+  function _ccTvPlayVideo(videoId){
+    if(!videoId) return;
+    var poster = document.getElementById('bnavCCTVPoster');
+    if(poster) poster.src = 'https://i.ytimg.com/vi/'+videoId+'/hqdefault.jpg';
+    _ccTvPutFrame(_ccTvDirectEmbedUrl(videoId));
+  }
+  function _ccTvFindChannel(key){
+    for(var i=0;i<SYN_TV_CHANNELS.length;i++){ if(SYN_TV_CHANNELS[i].key===key) return SYN_TV_CHANNELS[i]; }
+    return null;
+  }
+  function detectTVTopic(text){
+    if(!text) return null;
+    var t = String(text).toLowerCase();
+    for(var i=0;i<SYN_TV_CHANNELS.length;i++){
+      var chan = SYN_TV_CHANNELS[i];
+      for(var j=0;j<chan.match.length;j++){ if(t.indexOf(chan.match[j])!==-1) return chan.key; }
+    }
+    return null;
+  }
+  function _ccTvSyncChips(){
+    var wrap = document.getElementById('bnavCCTVChans'); if(!wrap) return;
+    wrap.querySelectorAll('.bnav-cc-tv-chip').forEach(function(chip){
+      chip.classList.toggle('active', chip.getAttribute('data-tv-key')===_ccTV.key);
+    });
+  }
+  function tuneControlCentreTV(key){
+    var chan = _ccTvFindChannel(key); if(!chan) return;
+    var card = document.getElementById('bnavCCTV'),
+        label = document.querySelector('#bnavCCTVLabel span');
+    if(!card) return;
+    var frame = document.getElementById('bnavCCTVFrame');
+    var already = _ccTV.on && _ccTV.key===key && frame && /youtube\.com\/embed\//.test(frame.src||'');
+    if(already){ card.classList.add('tv-on','tv-expanded'); return; }
+    card.classList.add('tv-on','tv-expanded');
+    card.classList.remove('tv-offair','tv-tuning');
+    _ccTV.key = key;
+    _ccTV.on = true;
+    _ccTvSyncChips();
+    if(label) label.textContent = chan.label;
+    var openLink = document.getElementById('bnavCCTVOpen');
+    var watch = chan.watch || ('https://www.youtube.com/watch?v='+chan.id);
+    if(openLink) openLink.href = watch;
+    _ccTvPlayVideo(chan.id);
+  }
+  function closeControlCentreTV(){
+    var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
+    if(!card) return;
+    card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning');
+    _ccTV.on = false; _ccTV.key = null;
+    setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
+  }
+  // Called only from real live speech (Whisper-transcribed mic audio in the
+  // speech-to-speech voice loop) — deliberately NOT from typed chat or the
+  // home "Ask me anything" bar. Also deliberately does NOT open Control
+  // Centre on its own: it only tunes in if the user is already looking at
+  // that page. Talking about the news elsewhere in the app won't summon it.
+  function maybeTuneControlCentreTV(text){
+    try{
+      var panel = document.getElementById('bnavCCPanel');
+      if(!panel || !panel.classList.contains('bnav-cc-open')) return; // not on this page — no-op
+      var key = detectTVTopic(text); if(!key) return;
+      tuneControlCentreTV(key);
+    }catch(e){}
+  }
+  function _ccInitTV(panel){
+    var card = panel.querySelector('#bnavCCTV'); if(!card || card._tvInit) return;
+    card._tvInit = true;
+    var chansWrap = card.querySelector('#bnavCCTVChans');
+    chansWrap.innerHTML = SYN_TV_CHANNELS.map(function(c){
+      return '<div class="bnav-cc-tv-chip" data-tv-key="'+c.key+'" title="'+c.label+'">'+c.icon+'</div>';
+    }).join('');
+    chansWrap.querySelectorAll('[data-tv-key]').forEach(function(chip){
+      chip.addEventListener('click', function(e){ e.stopPropagation(); tuneControlCentreTV(chip.getAttribute('data-tv-key')); });
+    });
+    var powerBtn = card.querySelector('#bnavCCTVPower');
+    powerBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(_ccTV.on) closeControlCentreTV();
+      else tuneControlCentreTV(_ccTV.key || SYN_TV_CHANNELS[0].key);
+    });
+    var openLink = card.querySelector('#bnavCCTVOpen');
+    if(openLink) openLink.addEventListener('click', function(e){ e.stopPropagation(); });
+    var askInput = card.querySelector('#bnavCCTVAsk');
+    if(askInput){
+      askInput.addEventListener('click', function(e){ e.stopPropagation(); });
+      askInput.addEventListener('keydown', function(e){
+        if(e.key!=='Enter') return;
+        e.preventDefault();
+        var v = askInput.value.trim(); if(!v) return;
+        var key = detectTVTopic(v);
+        if(key){ tuneControlCentreTV(key); askInput.value=''; }
+        else if(typeof showToast==='function'){ showToast('No channel for that yet — try news, space, or music'); }
+      });
+    }
+    card.addEventListener('click', function(){ if(!_ccTV.on) tuneControlCentreTV(SYN_TV_CHANNELS[0].key); });
+  }
+  window.maybeTuneControlCentreTV = maybeTuneControlCentreTV;
+  window.tuneControlCentreTV = tuneControlCentreTV;
+  window.closeControlCentreTV = closeControlCentreTV;
   function initCloud(){
     var b = bar();
     if(!b || b._cloudInit) return;
@@ -22185,6 +22399,7 @@ var _djStemGainNodes = { a: {}, b: {} };
 async function _djRunStems(d) {
   var dk = _djDecks && _djDecks[d];
   if (!dk || !dk._rawFile) { alert('Load a track first.'); return; }
+  if (!REPLICATE_TOKEN) { alert('REPLICATE_TOKEN is not set — add your Replicate API token before running stem split.'); return; }
 
   var btn  = document.getElementById('_vdj_stems_run_' + d);
   var prog = document.getElementById('_vdj_stems_prog_' + d);
@@ -22225,8 +22440,10 @@ async function _djRunStems(d) {
       })
     });
     if (!startRes.ok) {
-      var err = await startRes.json();
-      throw new Error(err.detail || JSON.stringify(err));
+      var err = await startRes.json().catch(function(){ return {}; });
+      var _detail = err.detail;
+      if (_detail && typeof _detail === 'object') _detail = JSON.stringify(_detail);
+      throw new Error(_detail || JSON.stringify(err) || ('HTTP ' + startRes.status));
     }
     var prediction = await startRes.json();
     if (prog) prog.style.width = '25%';
@@ -22269,7 +22486,8 @@ async function _djRunStems(d) {
     console.error(err);
     if (btn)  { btn.disabled=false; btn.textContent='✦ SPLIT STEMS'; btn.style.color=''; }
     if (wrap) wrap.style.display='none';
-    alert('Stem separation failed: ' + err.message);
+    var _msg = (err && err.message) ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+    alert('Stem separation failed: ' + _msg);
   }
 }
 
@@ -22282,7 +22500,13 @@ async function _djPollReplicate(id, prog) {
     });
     var data = await res.json();
     if (data.status === 'succeeded') return data;
-    if (data.status === 'failed') throw new Error('Replicate failed: ' + data.error);
+    if (data.status === 'failed' || data.status === 'canceled') {
+      var _errMsg = data.error;
+      if (_errMsg && typeof _errMsg === 'object') {
+        _errMsg = _errMsg.detail || _errMsg.message || JSON.stringify(_errMsg);
+      }
+      throw new Error('Replicate failed: ' + (_errMsg || 'unknown error (status: ' + data.status + ')'));
+    }
     pct = Math.min(80, pct + 3);
     if (prog) prog.style.width = pct + '%';
   }
@@ -62581,7 +62805,13 @@ function speakVoiceReply(text) {
           if (_overlap / _textWords.length >= 0.6) isHallucination = true;
         }
       }
-      if (text && wordCount >= 1 && !isNoise && !isHallucination) { ask(text); }
+      if (text && wordCount >= 1 && !isNoise && !isHallucination) {
+        // SYN-TV only tunes from real spoken speech (this is genuine
+        // Whisper-transcribed mic audio, not typed chat) — and only when
+        // Control Centre is the page the user is actually looking at.
+        try{ if(typeof maybeTuneControlCentreTV==='function') maybeTuneControlCentreTV(text); }catch(_tve){}
+        ask(text);
+      }
       else { console.log('[Voice] Dropped as noise/hallucination:', JSON.stringify(text)); _bargeTurnActive = false; _bargeHoldToast = false; try { toastHide(true); } catch (eH) {} _busy = false; _busySince = 0; if (_on) record(); }
     }).catch(function(e) {
       clearTimeout(_sttTimer);
@@ -74166,6 +74396,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   let ssAuroraWasOn = null;
   let ssPollTimer = null;
   let ssAddPollTimer = null;
+  let ssLastFile = null;
   let ssTracks = [];       // [{ name, url, audioEl, buffer, gainNode, muted, solo }]
   let ssAudioCtx = null;
   let ssIsPlaying = false;
@@ -74420,6 +74651,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       fi.files = dt.files;
     } catch (e) { return false; }
     ssUpdateDropLabel();
+    ssLastFile = file;
     try { file._ssSongId = ssRememberSong(file); } catch (eR) {}
     ssMode = 'upload';
     try { ssSwitchTab('upload'); } catch (eS) {}
@@ -74430,6 +74662,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       if (typeof showToast === 'function') showToast('Drop an MP3, WAV, FLAC, or M4A');
       return;
     }
+    ssAssignUploadFile(file);
     ssAddAudioFiles([file]);
   }
   function ssClearDemoTracks() {
@@ -74521,7 +74754,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         const data = await ssReadJson(r);
         if (!r.ok) {
           misses++;
-          ssSetStatus('Status: ' + (data.error || data.message || r.status));
+          ssSetStatus('Status: ' + ssErrText(data.error || data.message || r.status));
           if (misses > 8 || r.status === 404 || r.status === 501) {
             clearInterval(ssAddPollTimer);
             if (addBtn) addBtn.disabled = false;
@@ -74547,7 +74780,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           if (addBtn) addBtn.disabled = false;
         } else if (st === 'FAILED' || st === 'EXPIRED') {
           clearInterval(ssAddPollTimer);
-          ssSetStatus('Conversion failed: ' + (data.error || data.errorMessage || st.toLowerCase()));
+          ssSetStatus('Conversion failed: ' + ssErrText(data.error || data.errorMessage || st.toLowerCase()));
           if (addBtn) addBtn.disabled = false;
         } else {
           const pct = typeof data.progress === 'number' ? Math.round(data.progress) + '%' : '';
@@ -74649,6 +74882,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     try { window.ssCloseImport(); } catch (eC) {}
     for (let i = 0; i < list.length; i++) {
       const file = list[i];
+      ssLastFile = file;
       let songId = file._ssSongId || null;
       if (!songId) { try { songId = ssRememberSong(file); } catch (eR) {} }
       try {
@@ -74882,8 +75116,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       }
       let res, job, projName = 'Stem Studio';
       if (ssMode === 'upload') {
-        const file = document.getElementById('ssFileInput').files[0];
+        const fi = document.getElementById('ssFileInput');
+        const file = (fi && fi.files && fi.files[0]) || ssLastFile;
         if (!file) { ssSetStatus('Pick a file first.'); goBtn.disabled = false; ssRefundHold(); return; }
+        ssLastFile = file;
         projName = file.name.replace(/\.[^.]+$/, '');
         job = await ssUploadFileJob(file);
       } else if (ssMode === 'url') {
@@ -74901,7 +75137,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         if (!youtubeUrl) { ssSetStatus('Paste a YouTube link first.'); goBtn.disabled = false; ssRefundHold(); return; }
         res = await fetch(API_BASE + '/create-from-youtube', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ youtubeUrl }),
+          body: JSON.stringify({ youtubeUrl, outputType: 'FOUR_STEMS' }),
         });
         job = await res.json();
         if (!res.ok) throw new Error(job.error || job.message || 'job creation failed');
@@ -74925,6 +75161,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     }
   };
 
+  // Some upstream error payloads (StemSplit/Replicate-style) return `error`
+  // as an object instead of a string — string-concatenating that yields the
+  // literal text "[object Object]". Always route error display through this.
+  function ssErrText(val) {
+    if (!val) return 'unknown error';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') return val.message || val.detail || val.reason || JSON.stringify(val);
+    return String(val);
+  }
   async function ssReadJson(res) {
     const text = await res.text();
     try { return JSON.parse(text); } catch (e) { return { error: text.slice(0, 180) || ('HTTP ' + res.status) }; }
@@ -74952,7 +75197,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           return;
         }
         if (xhr.status >= 200 && xhr.status < 300) return resolve(data);
-        reject(new Error(data.error || data.message || ('upload failed (' + xhr.status + ')')));
+        reject(new Error(ssErrText(data.error || data.message) !== 'unknown error' ? ssErrText(data.error || data.message) : ('upload failed (' + xhr.status + ')')));
       };
       xhr.onerror = function () {
         reject(new Error('Could not reach the stem server. Use YouTube or From URL, or check Render.'));
@@ -74991,7 +75236,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         }
         misses = 0;
         if (!r.ok) {
-          ssSetStatus('Status: ' + (data.error || data.message || r.status));
+          ssSetStatus('Status: ' + ssErrText(data.error || data.message || r.status));
           if (r.status === 404 || r.status === 501) {
             clearInterval(ssPollTimer);
             if (goBtn) goBtn.disabled = false;
@@ -75000,11 +75245,13 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         }
         const st = String(data.status || '').toUpperCase();
         if (typeof data.progress === 'number') ssSetProgress(data.progress);
-        if (st === 'COMPLETED') {
+        if (st === 'COMPLETED' || st === 'SUCCESS' || st === 'DONE' || st === 'SUCCEEDED') {
           clearInterval(ssPollTimer);
           ssSetProgress(100);
-          const stems = ssFlattenStemOutputs(data.outputs || data.stems || {});
+          const rawOut = data.outputs || data.stems || (data.result && (data.result.outputs || data.result.stems || data.result)) || (data.data && (data.data.outputs || data.data.stems)) || {};
+          const stems = ssFlattenStemOutputs(rawOut);
           if (!Object.keys(stems).length) {
+            console.warn('[stems] completed with no URLs', data);
             ssSetStatus('Job finished but no stem URLs came back.');
             if (goBtn) goBtn.disabled = false;
             ssRefundHold();
@@ -75012,11 +75259,22 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           }
           ssPendingHold = 0;
           ssSetStatus('Loading stems into the studio…');
-          await ssLoadDAW(stems);
+          const dur = Number(
+            (data.input && (data.input.durationSeconds || data.input.duration)) ||
+            data.videoDuration || data.duration || data.trackDuration || 0
+          );
+          try {
+            await ssLoadDAW(stems, { duration: dur > 0 ? dur : undefined });
+            ssSetStatus('');
+            if (typeof showToast === 'function') showToast(ssTracks.length + ' stems loaded');
+          } catch (loadErr) {
+            console.error(loadErr);
+            ssSetStatus('Could not load stems onto the timeline: ' + ((loadErr && loadErr.message) || 'unknown error'));
+          }
           if (goBtn) goBtn.disabled = false;
         } else if (st === 'FAILED' || st === 'EXPIRED') {
           clearInterval(ssPollTimer);
-          ssSetStatus('Job failed: ' + (data.error || data.errorMessage || st.toLowerCase()));
+          ssSetStatus('Job failed: ' + ssErrText(data.error || data.errorMessage || st.toLowerCase()));
           if (goBtn) goBtn.disabled = false;
           ssRefundHold();
         } else {
@@ -75039,52 +75297,131 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     ssPollTimer = setInterval(tick, 2500);
   }
 
+  function ssIsStemUrl(s) {
+    if (typeof s !== 'string') return false;
+    const u = s.trim();
+    return /^https?:\/\//i.test(u) || /^\/api\/stems\//i.test(u);
+  }
+  function ssStemUrlFrom(val) {
+    if (!val) return '';
+    if (typeof val === 'string') return ssIsStemUrl(val) ? val.trim() : '';
+    if (typeof val !== 'object') return '';
+    const keys = ['url', 'downloadUrl', 'fileUrl', 'signedUrl', 'href', 'mp3', 'wav', 'flac'];
+    for (let i = 0; i < keys.length; i++) {
+      const v = val[keys[i]];
+      if (typeof v === 'string' && ssIsStemUrl(v)) return v.trim();
+      if (v && typeof v === 'object' && ssIsStemUrl(v.url)) return String(v.url).trim();
+    }
+    return '';
+  }
   function ssFlattenStemOutputs(outputs) {
-    if (!outputs || typeof outputs !== 'object') return {};
     const flat = {};
-    Object.keys(outputs).forEach(function (name) {
-      const v = outputs[name];
-      if (!v) return;
-      if (typeof v === 'string') flat[name] = v;
-      else if (typeof v === 'object' && v.url) flat[name] = v.url;
-    });
+    function take(name, val) {
+      if (val == null) return;
+      if (typeof val === 'string') {
+        if (ssIsStemUrl(val) && name) flat[name] = val.trim();
+        return;
+      }
+      if (Array.isArray(val)) {
+        val.forEach(function (item, i) {
+          if (typeof item === 'string' && !ssIsStemUrl(item)) return;
+          const n = (item && item.name) || (item && item.stem) || name || ('stem_' + (i + 1));
+          take(n, item);
+        });
+        return;
+      }
+      if (typeof val !== 'object') return;
+      const direct = ssStemUrlFrom(val);
+      if (direct && name) {
+        flat[name] = direct;
+        return;
+      }
+      Object.keys(val).forEach(function (k) {
+        if (k === 'expiresAt' || k === 'expiry' || k === 'size' || k === 'format') return;
+        take(k, val[k]);
+      });
+    }
+    take('', outputs);
     return flat;
+  }
+  function ssStemHost() {
+    return API_BASE.replace(/\/api\/stems\/?$/, '');
+  }
+  function ssAbsStemUrl(url) {
+    url = String(url || '').trim();
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.charAt(0) === '/') return ssStemHost() + url;
+    return url;
+  }
+  function ssStemProxyUrl(url) {
+    const abs = ssAbsStemUrl(url);
+    if (!abs) return '';
+    if (abs.indexOf(ssStemHost()) === 0) return abs;
+    if (!/^https?:\/\//i.test(abs)) return abs;
+    return API_BASE + '/audio?url=' + encodeURIComponent(abs);
+  }
+  async function ssDecodeStem(track) {
+    if (!track) return null;
+    await ssEnsureCtx();
+    const ctx = ssAudioCtx;
+    const urls = [];
+    if (track.proxyUrl) urls.push(track.proxyUrl);
+    if (track.url && track.url !== track.proxyUrl) urls.push(track.url);
+    if (track.cdnUrl && urls.indexOf(track.cdnUrl) === -1) urls.push(track.cdnUrl);
+    let lastErr = null;
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const r = await fetch(urls[i], { mode: 'cors', cache: 'no-store' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const buf = await r.arrayBuffer();
+        const decoded = await ctx.decodeAudioData(buf.slice(0));
+        if (!decoded) continue;
+        track.buffer = decoded;
+        track.peaks = ssPeaksFromBuffer(decoded);
+        ssDuration = Math.max(ssDuration || 0, decoded.duration);
+        ssPaintLane(track);
+        ssPaintClip(track);
+        ssUpdateTimeDisplay();
+        if (ssZoomFitPending) { ssZoomFitPending = false; ssApplyZoomFitInstant(); ssResizeTimeline(); }
+        else ssRequestResize();
+        ssReconcileDuration();
+        try { ssRunBPMDetect(track); } catch (eB) {}
+        ssRememberSoon();
+        return decoded;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (lastErr) console.warn('waveform decode failed for', track.name, lastErr);
+    return null;
   }
 
   // ── Switch into the DAW once stems are ready ──
   async function ssLoadDAW(outputs, meta) {
     outputs = ssFlattenStemOutputs(outputs);
     meta = meta || {};
-    document.getElementById('stemStudioImport').style.display = 'none';
+    const entries = Object.entries(outputs).filter(function (pair) { return !!ssAbsStemUrl(pair[1]); });
+    if (!entries.length) throw new Error('no stem URLs');
+
     document.getElementById('stemStudioDAW').classList.add('open');
     document.getElementById('ssTransport').style.display = '';
+    try { window.ssCloseImport(); } catch (eI) {}
+
+    const keepDur = (typeof meta.duration === 'number' && meta.duration > 0) ? meta.duration : (ssDuration > 0.05 ? ssDuration : 0);
 
     ssPlayToken++;
     ssIsPlaying = false;
     ssKillPlayback();
-    document.querySelectorAll('#stemStudio > audio').forEach(function (el) {
-      try { el.pause(); el.removeAttribute('src'); el.load(); } catch (e) {}
-      if (el.parentNode) el.parentNode.removeChild(el);
+    ssTracks.slice().forEach(function (t) {
+      if (t.audioEl && t.audioEl.parentNode) t.audioEl.parentNode.removeChild(t.audioEl);
     });
-    if (ssAudioCtx && ssAudioCtx.state !== 'closed') {
-      try { ssAudioCtx.close(); } catch (e) {}
-    }
-    ssAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    ssMaster = null;
     ssTracks = [];
-    ssDuration = (typeof meta.duration === 'number' && meta.duration > 0) ? meta.duration : 0;
-    ssDurationSettled = false; // server's reported duration is just a starting estimate until every stem actually decodes
-    document.getElementById('ssPlayhead').classList.add('show');
-    const entries = Object.entries(outputs).filter(([, url]) => !!url);
-    document.getElementById('ssStemCount').textContent = entries.length + ' stems';
-    if (ssDuration) { ssApplyZoomFitInstant(); ssResizeTimeline(); ssZoomFitPending = false; }
-    else ssZoomFitPending = true; // no duration yet — fit once the first stem reports one
-
     const trackListEl = document.getElementById('ssTrackList');
     const lanesEl = document.getElementById('ssLanes');
-    trackListEl.innerHTML = '';
-    lanesEl.innerHTML = '';
-    if (!lanesEl._ssHoverBound) {
+    if (trackListEl) trackListEl.innerHTML = '';
+    if (lanesEl) lanesEl.innerHTML = '';
+    if (lanesEl && !lanesEl._ssHoverBound) {
       lanesEl._ssHoverBound = true;
       lanesEl.addEventListener('pointermove', function (e) {
         ssPtrX = e.clientX; ssPtrY = e.clientY;
@@ -75096,20 +75433,35 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       });
     }
 
-    for (const [name, url] of entries) {
-      const proxyUrl = API_BASE + '/audio?url=' + encodeURIComponent(url);
+    await ssEnsureCtx();
+    ssMaster = null;
+
+    ssDuration = keepDur;
+    ssDurationSettled = false;
+    document.getElementById('ssPlayhead').classList.add('show');
+    document.getElementById('ssStemCount').textContent = entries.length + ' stems';
+    if (ssDuration) { ssApplyZoomFitInstant(); ssResizeTimeline(); ssZoomFitPending = false; }
+    else ssZoomFitPending = true;
+
+    for (let i = 0; i < entries.length; i++) {
+      const rawName = String(entries[i][0] || 'stem');
+      const name = rawName.replace(/\s+/g, '_').toLowerCase();
+      const cdnUrl = ssAbsStemUrl(entries[i][1]);
+      const proxyUrl = ssStemProxyUrl(cdnUrl);
+      const playUrl = proxyUrl || cdnUrl;
       const audioEl = new Audio();
       audioEl.preload = 'auto';
       audioEl.controls = false;
       audioEl.referrerPolicy = 'no-referrer';
       audioEl.crossOrigin = null;
-      audioEl.src = url;
+      audioEl.src = playUrl;
       audioEl.style.display = 'none';
       document.getElementById('stemStudio').appendChild(audioEl);
 
       const tone = ssTone(name);
-      const pretty = (DEMO_LABELS && DEMO_LABELS[name]) || String(name).replace(/_/g, ' ');
-      trackListEl.appendChild(ssBuildTrackRow(name, pretty, tone));
+      const pretty = (DEMO_LABELS && DEMO_LABELS[name]) || String(rawName).replace(/_/g, ' ');
+      const row = ssBuildTrackRow(name, pretty, tone);
+      trackListEl.appendChild(row);
 
       const lane = document.createElement('div');
       lane.className = 'ss-lane';
@@ -75127,7 +75479,15 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       const clipParts = ssMakeClipEl(lane);
       lanesEl.appendChild(lane);
 
-      const track = { name, laneId: name, url, proxyUrl, audioEl, gainNode: null, source: null, muted: false, solo: false, cued: false, volDimmed: false, prevVol: 1, volume: 1, buffer: null, peaks: (meta.peaks && meta.peaks[name]) || null, canvas: canvas, waveColor: tone.wave, selEl: selEl, lane: lane, row: row, offset: 0, trimStart: 0, trimEnd: 0, clipEl: clipParts.clipEl, handleL: clipParts.handleL, handleR: clipParts.handleR };
+      const track = {
+        name: name, laneId: name, url: playUrl, proxyUrl: proxyUrl, cdnUrl: cdnUrl,
+        audioEl: audioEl, gainNode: null, source: null, muted: false, solo: false, cued: false,
+        volDimmed: false, prevVol: 1, volume: 1, buffer: null,
+        peaks: (meta.peaks && (meta.peaks[name] || meta.peaks[rawName])) || null,
+        canvas: canvas, waveColor: tone.wave, selEl: selEl, lane: lane, row: row,
+        offset: 0, trimStart: 0, trimEnd: 0,
+        clipEl: clipParts.clipEl, handleL: clipParts.handleL, handleR: clipParts.handleR
+      };
       ssBindClipDrag(track);
       ssBindTrackGain(track);
       ssTracks.push(track);
@@ -75146,43 +75506,25 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         }
       });
       audioEl.addEventListener('error', function () {
-        if (audioEl.getAttribute('data-src-try') !== 'proxy') {
-          audioEl.setAttribute('data-src-try', 'proxy');
-          audioEl.src = proxyUrl;
+        if (audioEl.getAttribute('data-src-try') !== 'cdn' && track.cdnUrl) {
+          audioEl.setAttribute('data-src-try', 'cdn');
+          audioEl.src = track.cdnUrl;
         }
       });
-
-      function onDecoded(decoded) {
-        if (!decoded) return;
-        track.buffer = decoded;
-        track.peaks = ssPeaksFromBuffer(decoded);
-        const grew = decoded.duration > ssDuration + 0.05;
-        ssDuration = Math.max(ssDuration, decoded.duration);
-        ssPaintLane(track);
-        ssUpdateTimeDisplay();
-        if (ssZoomFitPending) { ssZoomFitPending = false; ssApplyZoomFitInstant(); ssResizeTimeline(); }
-        else if (grew) ssRequestResize();
-        ssReconcileDuration();
-        ssRunBPMDetect(track);
-        ssRememberSoon();
-      }
-      const fetchOpts = { referrerPolicy: 'no-referrer', mode: 'cors', cache: 'no-store' };
-      fetch(url, fetchOpts).then(function (r) {
-        if (!r.ok) throw new Error('cdn ' + r.status);
-        return r.arrayBuffer();
-      }).then(function (buf) { return ssAudioCtx.decodeAudioData(buf.slice(0)); })
-        .then(onDecoded)
-        .catch(function () {
-          return fetch(proxyUrl, { cache: 'no-store' }).then(function (r) {
-            if (!r.ok) throw new Error('proxy ' + r.status);
-            return r.arrayBuffer();
-          }).then(function (buf) { return ssAudioCtx.decodeAudioData(buf.slice(0)); })
-            .then(onDecoded);
-        })
-        .catch(function (err) { console.warn('waveform decode failed for', name, err); });
     }
 
+    if (!ssDuration) ssDuration = 120;
+    ssResizeTimeline();
     ssUpdateTimeDisplay();
+    await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
+    ssResizeTimeline();
+    ssPaintAllLanes();
+    ssPaintClips();
+
+    await Promise.all(ssTracks.map(function (t) { return ssDecodeStem(t); }));
+    ssResizeTimeline();
+    ssUpdateTimeDisplay();
+    ssUpdatePlayhead(ssCurrentTime());
     ssRememberProject();
   }
 
