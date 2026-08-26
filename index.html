@@ -802,8 +802,8 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
 .bnav-cc-tv-card.tv-resizing{transition:none;}
 @media(max-width:900px){.bnav-cc-tv-card.tv-expanded{width:100%;height:auto;min-width:0;aspect-ratio:16/10;max-width:none;}}
 .bnav-cc-tv-resize{display:none;position:absolute;right:5px;bottom:5px;width:16px;height:16px;z-index:8;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 48%,rgba(255,255,255,0.25) 48% 52%,transparent 52% 70%,rgba(255,255,255,0.35) 70% 74%,transparent 74%);}
-.bnav-cc-tv-card.tv-on .bnav-cc-tv-resize{display:block;}
-@media(max-width:900px){.bnav-cc-tv-card.tv-on .bnav-cc-tv-resize{display:none;}}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-resize{display:block;}
+@media(max-width:900px){.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-resize{display:none;}}
 .bnav-cc-tv-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2px 8px;flex-shrink:0;}
 .bnav-cc-tv-brand{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;}
 .bnav-cc-tv-led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;transition:background .3s ease,box-shadow .3s ease;}
@@ -819,11 +819,12 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
 html[data-theme="trueblack"] .bnav-cc-tv-ask:focus{border-color:rgba(255,255,255,0.28);}
 html[data-theme="trueblack"] .bnav-cc-tv-ask::selection,
 html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255,255,255,0.28);color:#fff;}
-.bnav-cc-tv-screen{position:relative;flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;}
-.bnav-cc-tv-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;}
+.bnav-cc-tv-screen{position:relative;flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;color-scheme:dark;}
+.bnav-cc-tv-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;z-index:2;background:#000;}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-poster{opacity:1;}
-.bnav-cc-tv-screen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;background:#000;}
-.bnav-cc-tv-card.tv-on .bnav-cc-tv-screen iframe{opacity:1;}
+.bnav-cc-tv-card.tv-on.tv-ready .bnav-cc-tv-poster{opacity:0;}
+.bnav-cc-tv-screen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;background:#000;color-scheme:dark;}
+.bnav-cc-tv-card.tv-on.tv-ready .bnav-cc-tv-screen iframe{opacity:1;}
 .bnav-cc-tv-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,0.28);text-align:center;padding:10px;font-family:'DM Sans',sans-serif;transition:opacity .3s ease;}
 .bnav-cc-tv-idle svg{opacity:0.5;}
 .bnav-cc-tv-idle b{font-size:11px;font-weight:600;color:rgba(255,255,255,0.4);letter-spacing:0.02em;}
@@ -839,14 +840,26 @@ html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255
 .bnav-cc-tv-card.tv-tuning .bnav-cc-tv-static{opacity:0.55;animation:tvStaticJitter .09s steps(2) infinite;}
 @keyframes tvStaticJitter{0%{transform:translate(0,0);}50%{transform:translate(-1px,1px);}100%{transform:translate(1px,-1px);}}
 .bnav-cc-tv-card.tv-tuning .bnav-cc-tv-screen iframe{opacity:0;}
-.bnav-cc-tv-label{position:absolute;left:8px;bottom:6px;display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);opacity:0;transition:opacity .3s ease .15s;pointer-events:none;}
-.bnav-cc-tv-card.tv-on .bnav-cc-tv-label{opacity:1;}
+.bnav-cc-tv-label{position:absolute;left:8px;bottom:6px;display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:7;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-label{opacity:1;}
 .bnav-cc-tv-label i{width:5px;height:5px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 5px #ff4d6d;flex-shrink:0;animation:tvLedPulse 1.4s ease-in-out infinite;}
-.bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;transition:opacity .3s ease .15s,color .15s ease,background .15s ease;backdrop-filter:blur(4px);}
+.bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;pointer-events:none;transition:opacity .25s ease,color .15s ease,background .15s ease;backdrop-filter:blur(4px);z-index:8;}
 .bnav-cc-tv-open:hover{color:#fff;background:rgba(0,0,0,0.7);}
-.bnav-cc-tv-card.tv-on .bnav-cc-tv-open{opacity:1;}
-.bnav-cc-tv-chans{position:absolute;right:20px;bottom:6px;display:flex;gap:4px;align-items:center;opacity:0;transition:opacity .3s ease .15s;z-index:7;}
-.bnav-cc-tv-card.tv-on .bnav-cc-tv-chans{opacity:1;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-open{opacity:1;pointer-events:auto;}
+.bnav-cc-tv-chans{position:absolute;right:20px;bottom:6px;display:flex;gap:4px;align-items:center;opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:8;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chans{opacity:1;pointer-events:auto;}
+.bnav-cc-tv-coming{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;background:radial-gradient(ellipse at 50% 42%,rgba(90,16,32,0.5),rgba(0,0,0,0.92) 70%);opacity:0;pointer-events:none;cursor:pointer;transition:opacity .35s ease;}
+.bnav-cc-tv-card.tv-coming .bnav-cc-tv-coming{opacity:1;pointer-events:auto;}
+.bnav-cc-tv-card.tv-coming .bnav-cc-tv-static{opacity:0.16;}
+.bnav-cc-tv-card.tv-coming .bnav-cc-tv-poster{opacity:0.32;}
+.bnav-cc-tv-card.tv-coming .bnav-cc-tv-screen iframe{opacity:0;}
+.bnav-cc-tv-coming-ring{width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.42);box-shadow:0 0 0 4px rgba(255,77,109,0.12),0 0 18px rgba(255,77,109,0.35);display:flex;align-items:center;justify-content:center;animation:tvComingRing 1.8s ease-in-out infinite;}
+.bnav-cc-tv-coming-ring span{width:0;height:0;border-style:solid;border-width:6px 0 6px 11px;border-color:transparent transparent transparent #fff;margin-left:2px;}
+@keyframes tvComingRing{0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(255,77,109,0.12),0 0 18px rgba(255,77,109,0.35);}50%{transform:scale(1.08);box-shadow:0 0 0 7px rgba(255,77,109,0.18),0 0 22px rgba(255,77,109,0.5);}}
+.bnav-cc-tv-coming-kicker{font-size:8.5px;font-weight:700;letter-spacing:0.46em;color:#ff6b81;text-indent:0.46em;}
+.bnav-cc-tv-coming-topic{font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fff;text-align:center;line-height:1.25;max-width:92%;text-shadow:0 0 16px rgba(255,80,100,0.4);animation:tvComingFlicker 2.4s steps(2) infinite;}
+@keyframes tvComingFlicker{0%,88%,100%{opacity:1;}92%{opacity:0.55;}}
+.bnav-cc-tv-coming-sub{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.45);text-align:center;max-width:92%;line-height:1.35;}
 .bnav-cc-tv-chip{width:20px;height:16px;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease;backdrop-filter:blur(4px);}
 .bnav-cc-tv-chip:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);}
 .bnav-cc-tv-chip.active{border-color:rgba(255,255,255,0.55);color:#fff;}
@@ -10814,7 +10827,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // that's now packed with its own clickable day pills, event rows,
       // +Event/+Bill buttons, and week-nav arrows; without this exclusion
       // every click in there was being swallowed as a drag-start on the card.
-      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,iframe')){
+      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,#bnavCCTVComing,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,iframe')){
         return;
       }
       // Arm the pending-drag state only — nothing about the card changes
@@ -10980,6 +10993,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
             '<iframe id="bnavCCTVFrame" src="about:blank" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" title="SYN-TV"></iframe>'+
             '<div class="bnav-cc-tv-scan"></div>'+
             '<div class="bnav-cc-tv-static"></div>'+
+            '<div class="bnav-cc-tv-coming" id="bnavCCTVComing" title="Tap to watch with sound">'+
+              '<div class="bnav-cc-tv-coming-ring"><span></span></div>'+
+              '<div class="bnav-cc-tv-coming-kicker">COMING UP</div>'+
+              '<div class="bnav-cc-tv-coming-topic" id="bnavCCTVComingTopic"></div>'+
+              '<div class="bnav-cc-tv-coming-sub" id="bnavCCTVComingSub">finding the signal</div>'+
+            '</div>'+
             '<div class="bnav-cc-tv-label" id="bnavCCTVLabel"><i></i><span>SYN-NEWS-1</span></div>'+
             '<a class="bnav-cc-tv-open" id="bnavCCTVOpen" href="#" target="_blank" rel="noopener" title="If the picture doesn\'t load, open it directly on YouTube">Open on YouTube ↗</a>'+
             '<div class="bnav-cc-tv-chans" id="bnavCCTVChans"></div>'+
@@ -11786,11 +11805,29 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   var _ccTV = { on:false, key:null, list:[], idx:0, query:'' };
 
   function _ccTvDirectEmbedUrl(videoId){
-    return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute=1&rel=0&playsinline=1&modestbranding=1&feature=oembed';
+    return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute=0&rel=0&playsinline=1&modestbranding=1&feature=oembed';
+  }
+  function _ccTvShowComing(topic, sub){
+    var card = document.getElementById('bnavCCTV');
+    var t = document.getElementById('bnavCCTVComingTopic');
+    var s = document.getElementById('bnavCCTVComingSub');
+    if(t) t.textContent = String(topic || 'SYN-TV').toUpperCase();
+    if(s) s.textContent = sub || 'finding the signal';
+    if(card){
+      card.classList.add('tv-coming', 'tv-tuning');
+      card.classList.remove('tv-ready', 'tv-offair');
+    }
+    _ccTV.comingAt = Date.now();
+  }
+  function _ccTvHideComing(){
+    var card = document.getElementById('bnavCCTV');
+    if(card) card.classList.remove('tv-coming');
   }
   function _ccTvPutFrame(src){
     var old = document.getElementById('bnavCCTVFrame');
     if(!old || !old.parentNode) return null;
+    var card = document.getElementById('bnavCCTV');
+    if(card){ card.classList.add('tv-tuning'); card.classList.remove('tv-ready'); }
     var frame = document.createElement('iframe');
     frame.id = 'bnavCCTVFrame';
     frame.title = 'YouTube video player';
@@ -11798,6 +11835,22 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     frame.setAttribute('allowfullscreen', 'allowfullscreen');
     frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     frame.setAttribute('frameborder', '0');
+    frame.style.background = '#000';
+    var reveal = function(){
+      if(document.getElementById('bnavCCTVFrame') !== frame) return;
+      var c = document.getElementById('bnavCCTV');
+      if(!c) return;
+      var minBumper = c.classList.contains('tv-coming') ? 1100 : 0;
+      var wait = Math.max(320, minBumper - (Date.now() - (_ccTV.comingAt || 0)));
+      setTimeout(function(){
+        if(document.getElementById('bnavCCTVFrame') !== frame) return;
+        c.classList.remove('tv-tuning', 'tv-coming');
+        c.classList.add('tv-ready', 'tv-hud');
+        setTimeout(function(){ if(c.classList.contains('tv-ready')) c.classList.remove('tv-hud'); }, 2400);
+      }, wait);
+    };
+    frame.addEventListener('load', reveal);
+    setTimeout(reveal, 2800);
     frame.src = src;
     old.parentNode.replaceChild(frame, old);
     return frame;
@@ -11899,24 +11952,32 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       .replace(/[?!.,]+$/g, '')
       .trim();
   }
+  function _ccTvIdFromUrl(url){
+    var s = String(url || '');
+    if(/\/(channel|user|c|@|playlist|results|feed)\b/i.test(s) && !/[?&]v=/.test(s)) return '';
+    var m = s.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || s.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/) || s.match(/\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]{11})/);
+    return (m && m[1]) || '';
+  }
   function _ccTvNormalizeResults(raw){
     var items = [];
-    var list = Array.isArray(raw) ? raw : (raw && (raw.items || raw.videos)) || [];
+    var seen = {};
+    var list = Array.isArray(raw) ? raw : (raw && (raw.items || raw.videos || raw.results)) || [];
     list.forEach(function(it){
       if(!it) return;
+      if(it.type && it.type !== 'stream' && it.type !== 'video' && it.type !== 'short') return;
       var id = it.videoId || (typeof it.id === 'string' ? it.id : '') || '';
       if(!id && it.id && it.id.videoId) id = it.id.videoId;
-      if(!id && typeof it.url === 'string'){
-        var m = it.url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || it.url.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/) || it.url.match(/(?:youtu\.be\/|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
-        if(m) id = m[1];
+      if(!id) id = _ccTvIdFromUrl(it.url || it.link || it.webpage_url || '');
+      if(id && /^[a-zA-Z0-9_-]{11}$/.test(id) && !seen[id]){
+        seen[id] = 1;
+        items.push({ videoId:id, title: it.title || it.name || '' });
       }
-      if(id && /^[a-zA-Z0-9_-]{11}$/.test(id)) items.push({ videoId:id, title: it.title || it.name || '' });
     });
     return items;
   }
   function _ccTvExtractIds(text){
     var ids = [], seen = {};
-    var re = /(?:v=|youtu\.be\/|\/embed\/|\/shorts\/|\/watch\/)([a-zA-Z0-9_-]{11})/g;
+    var re = /(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/)([a-zA-Z0-9_-]{11})/g;
     var m;
     var s = String(text || '');
     while((m = re.exec(s))){ if(!seen[m[1]]){ seen[m[1]] = 1; ids.push(m[1]); } }
@@ -11924,17 +11985,46 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     while((m = re.exec(s))){ if(!seen[m[1]]){ seen[m[1]] = 1; ids.push(m[1]); } }
     return ids;
   }
-  function _ccTvTavilySearch(q){
+  function _ccTvItemScore(it, q){
+    var t = String((it && it.title) || '').toLowerCase();
+    var ql = String(q || '').toLowerCase();
+    var score = 0;
+    var words = ql.split(/\s+/).filter(function(w){ return w.length > 1; });
+    words.forEach(function(w){ if(t.indexOf(w) !== -1) score += 4; });
+    if(ql && t.indexOf(ql) !== -1) score += 8;
+    if(/\bofficial\b/.test(t)) score += 5;
+    if(/\b(official video|official 4k|official audio|music video)\b/.test(t)) score += 4;
+    if(/\b(lyric|lyrics|hour|hours|compilation|nightcore|karaoke|slowed|reverb)\b/.test(t)) score -= 3;
+    if(/\b(live|performance|vevo)\b/.test(t)) score += 1;
+    return score;
+  }
+  function _ccTvRankItems(items, q){
+    return (items || []).slice().sort(function(a, b){ return _ccTvItemScore(b, q) - _ccTvItemScore(a, q); });
+  }
+  function _ccTvFetchJson(url, ms){
+    return new Promise(function(resolve, reject){
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var t = setTimeout(function(){
+        try{ if(ctrl) ctrl.abort(); }catch(e){}
+        reject(new Error('timeout'));
+      }, ms || 7000);
+      fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function(r){
+        if(!r.ok) throw new Error('http '+r.status);
+        return r.json();
+      }).then(function(data){ clearTimeout(t); resolve(data); }).catch(function(e){ clearTimeout(t); reject(e); });
+    });
+  }
+  function _ccTvTavilyOnce(query){
     var base = (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY.replace(/\/$/,'') : 'https://synbot-whatsapp-2.onrender.com';
     return fetch(base + '/tavily-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q + ' site:youtube.com', max_results: 8, search_depth: 'basic' })
+      body: JSON.stringify({ query: query, max_results: 8, search_depth: 'basic' })
     }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('tavily')); }).then(function(data){
       var items = [];
       var seen = {};
       ((data && data.results) || []).forEach(function(r){
-        var id = _ccTvExtractIds((r && r.url) || '')[0];
+        var id = _ccTvIdFromUrl((r && r.url) || '') || _ccTvExtractIds(((r && r.url) || '') + ' ' + ((r && r.content) || ''))[0];
         if(id && !seen[id]){ seen[id] = 1; items.push({ videoId:id, title:(r && r.title) || '' }); }
       });
       _ccTvExtractIds(JSON.stringify(data)).forEach(function(id){
@@ -11944,27 +12034,39 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       return items;
     });
   }
-  function _ccTvClientSearch(q){
-    var urls = [
-      'https://pipedapi.kavin.rocks/search?q=' + encodeURIComponent(q) + '&filter=videos',
-      'https://pipedapi.adminforge.de/search?q=' + encodeURIComponent(q) + '&filter=videos',
-      'https://invidious.projectsegfau.lt/api/v1/search?q=' + encodeURIComponent(q) + '&type=video',
-      'https://yewtu.be/api/v1/search?q=' + encodeURIComponent(q) + '&type=video'
+  function _ccTvTavilySearch(q){
+    var queries = [
+      q + ' official video site:youtube.com/watch',
+      q + ' site:youtube.com/watch',
+      q + ' site:youtu.be'
     ];
-    return _ccTvTavilySearch(q).catch(function(){
-      return new Promise(function(resolve, reject){
-        var i = 0;
-        function next(){
-          if(i >= urls.length) return reject(new Error('no search'));
-          var url = urls[i++];
-          fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(data){
-            var items = _ccTvNormalizeResults(data);
-            if(items.length) resolve(items); else next();
-          }).catch(next);
-        }
-        next();
-      });
+    var i = 0;
+    function next(){
+      if(i >= queries.length) return Promise.reject(new Error('no yt ids'));
+      return _ccTvTavilyOnce(queries[i++]).catch(next);
+    }
+    return next();
+  }
+  function _ccTvPipedSearch(q){
+    var urls = [
+      'https://api.piped.private.coffee/search?q=' + encodeURIComponent(q) + '&filter=videos',
+      'https://watchapi.whatever.social/search?q=' + encodeURIComponent(q) + '&filter=videos',
+      'https://pipedapi.kavin.rocks/search?q=' + encodeURIComponent(q) + '&filter=videos'
+    ];
+    return new Promise(function(resolve, reject){
+      var i = 0;
+      function next(){
+        if(i >= urls.length) return reject(new Error('no search'));
+        _ccTvFetchJson(urls[i++], 6500).then(function(data){
+          var items = _ccTvNormalizeResults(data);
+          if(items.length) resolve(items); else next();
+        }).catch(next);
+      }
+      next();
     });
+  }
+  function _ccTvClientSearch(q){
+    return _ccTvPipedSearch(q).catch(function(){ return _ccTvTavilySearch(q); });
   }
   function _ccTvExpand(card){
     if(!card) return;
@@ -12032,21 +12134,21 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!card) return;
     var q = _ccTvCleanQuery(query);
     if(!q) return;
-    card.classList.add('tv-tuning');
     _ccTvExpand(card);
-    card.classList.remove('tv-offair');
+    _ccTvShowComing(q, 'finding the best video');
     _ccTV.key = 'search';
     _ccTV.query = q;
     _ccTvSyncChips();
     var label = document.querySelector('#bnavCCTVLabel span');
-    if(label) label.textContent = 'TUNING…';
+    if(label) label.textContent = 'COMING UP';
     var token = 'search|' + q;
     _ccTV._fetchToken = token;
     function playItems(items){
       if(_ccTV._fetchToken !== token) return;
-      card.classList.remove('tv-tuning');
-      items = _ccTvNormalizeResults(items);
+      items = _ccTvRankItems(_ccTvNormalizeResults(items), q);
       if(!items.length){
+        _ccTvHideComing();
+        card.classList.remove('tv-tuning');
         card.classList.add('tv-offair');
         if(label) label.textContent = 'NO SIGNAL';
         _ccTV.list = []; _ccTV.idx = 0;
@@ -12054,18 +12156,17 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         if(typeof showToast==='function') showToast('Nothing on for that — try another topic');
         return;
       }
+      _ccTvShowComing(q, items[0].title || 'now playing');
       _ccTvSetList(items, 0, 'search', q, false);
     }
     function failOut(){
       if(_ccTV._fetchToken !== token) return;
+      _ccTvHideComing();
       card.classList.remove('tv-tuning');
       card.classList.add('tv-offair');
       if(label) label.textContent = 'NO SIGNAL';
     }
-    fetch(_ccTvSearchUrl(q)).then(function(r){
-      if(!r.ok) throw new Error('http '+r.status);
-      return r.json();
-    }).then(function(data){
+    _ccTvFetchJson(_ccTvSearchUrl(q), 2500).then(function(data){
       var items = (data && data.items) || [];
       if(items.length) playItems(items);
       else return _ccTvClientSearch(q).then(playItems);
@@ -12080,15 +12181,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var frame = document.getElementById('bnavCCTVFrame');
     var already = _ccTV.on && _ccTV.key===key && frame && /youtube\.com\/embed\//.test(frame.src||'');
     if(already){ card.classList.add('tv-on','tv-expanded'); _ccTvApplySavedSize(card); return; }
+    _ccTvHideComing();
     _ccTvExpand(card);
-    card.classList.remove('tv-tuning');
+    card.classList.remove('tv-offair');
     _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
     _ccTvFetchTopic(chan.match[0] || chan.label, key, chan.id, chan.label);
   }
   function closeControlCentreTV(){
     var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
     if(!card) return;
-    card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning');
+    card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning','tv-ready','tv-coming','tv-hud');
     _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0;
     setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
   }
@@ -12132,6 +12234,31 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     });
     var openLink = card.querySelector('#bnavCCTVOpen');
     if(openLink) openLink.addEventListener('click', function(e){ e.stopPropagation(); });
+    var coming = card.querySelector('#bnavCCTVComing');
+    if(coming){
+      coming.addEventListener('click', function(e){
+        e.stopPropagation();
+        _ccTV.wantSound = true;
+        _ccTvHideComing();
+        var item = _ccTV.list && _ccTV.list[_ccTV.idx];
+        if(item) _ccTvPlayVideo(item.videoId);
+        else card.classList.remove('tv-tuning');
+      });
+    }
+    var hudT;
+    function showTvHud(){
+      if(!_ccTV.on) return;
+      card.classList.add('tv-hud');
+      clearTimeout(hudT);
+      hudT = setTimeout(function(){ card.classList.remove('tv-hud'); }, 2400);
+    }
+    card.addEventListener('mousemove', showTvHud);
+    card.addEventListener('mouseenter', showTvHud);
+    card.addEventListener('mouseleave', function(e){
+      if(e.relatedTarget && card.contains(e.relatedTarget)) return;
+      clearTimeout(hudT);
+      card.classList.remove('tv-hud');
+    });
     var askInput = card.querySelector('#bnavCCTVAsk');
     if(askInput){
       askInput.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -12140,6 +12267,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         e.preventDefault();
         var v = askInput.value.trim(); if(!v) return;
         var cleaned = _ccTvCleanQuery(v) || v;
+        _ccTV.wantSound = true;
         var key = detectTVTopic(cleaned);
         var t = cleaned.toLowerCase();
         var presetOnly = key === 'news' || key === 'space' || (key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4);
