@@ -838,7 +838,7 @@ html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255
   background-size:3px 3px;mix-blend-mode:screen;}
 .bnav-cc-tv-card.tv-tuning .bnav-cc-tv-static{opacity:0.55;animation:tvStaticJitter .09s steps(2) infinite;}
 @keyframes tvStaticJitter{0%{transform:translate(0,0);}50%{transform:translate(-1px,1px);}100%{transform:translate(1px,-1px);}}
-.bnav-cc-tv-card.tv-tuning .bnav-cc-tv-screen iframe{opacity:1;}
+.bnav-cc-tv-card.tv-tuning .bnav-cc-tv-screen iframe{opacity:0;}
 .bnav-cc-tv-label{position:absolute;left:8px;bottom:6px;display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:700;letter-spacing:0.06em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);opacity:0;transition:opacity .3s ease .15s;pointer-events:none;}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-label{opacity:1;}
 .bnav-cc-tv-label i{width:5px;height:5px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 5px #ff4d6d;flex-shrink:0;animation:tvLedPulse 1.4s ease-in-out infinite;}
@@ -11914,24 +11914,56 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     });
     return items;
   }
+  function _ccTvExtractIds(text){
+    var ids = [], seen = {};
+    var re = /(?:v=|youtu\.be\/|\/embed\/|\/shorts\/|\/watch\/)([a-zA-Z0-9_-]{11})/g;
+    var m;
+    var s = String(text || '');
+    while((m = re.exec(s))){ if(!seen[m[1]]){ seen[m[1]] = 1; ids.push(m[1]); } }
+    re = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
+    while((m = re.exec(s))){ if(!seen[m[1]]){ seen[m[1]] = 1; ids.push(m[1]); } }
+    return ids;
+  }
+  function _ccTvTavilySearch(q){
+    var base = (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY.replace(/\/$/,'') : 'https://synbot-whatsapp-2.onrender.com';
+    return fetch(base + '/tavily-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q + ' site:youtube.com', max_results: 8, search_depth: 'basic' })
+    }).then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('tavily')); }).then(function(data){
+      var items = [];
+      var seen = {};
+      ((data && data.results) || []).forEach(function(r){
+        var id = _ccTvExtractIds((r && r.url) || '')[0];
+        if(id && !seen[id]){ seen[id] = 1; items.push({ videoId:id, title:(r && r.title) || '' }); }
+      });
+      _ccTvExtractIds(JSON.stringify(data)).forEach(function(id){
+        if(!seen[id]){ seen[id] = 1; items.push({ videoId:id, title:'' }); }
+      });
+      if(!items.length) throw new Error('no yt ids');
+      return items;
+    });
+  }
   function _ccTvClientSearch(q){
     var urls = [
       'https://pipedapi.kavin.rocks/search?q=' + encodeURIComponent(q) + '&filter=videos',
       'https://pipedapi.adminforge.de/search?q=' + encodeURIComponent(q) + '&filter=videos',
-      'https://invidious.fdn.fr/api/v1/search?q=' + encodeURIComponent(q) + '&type=video',
+      'https://invidious.projectsegfau.lt/api/v1/search?q=' + encodeURIComponent(q) + '&type=video',
       'https://yewtu.be/api/v1/search?q=' + encodeURIComponent(q) + '&type=video'
     ];
-    return new Promise(function(resolve, reject){
-      var i = 0;
-      function next(){
-        if(i >= urls.length) return reject(new Error('no search'));
-        var url = urls[i++];
-        fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(data){
-          var items = _ccTvNormalizeResults(data);
-          if(items.length) resolve(items); else next();
-        }).catch(next);
-      }
-      next();
+    return _ccTvTavilySearch(q).catch(function(){
+      return new Promise(function(resolve, reject){
+        var i = 0;
+        function next(){
+          if(i >= urls.length) return reject(new Error('no search'));
+          var url = urls[i++];
+          fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(data){
+            var items = _ccTvNormalizeResults(data);
+            if(items.length) resolve(items); else next();
+          }).catch(next);
+        }
+        next();
+      });
     });
   }
   function _ccTvExpand(card){
@@ -12000,8 +12032,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!card) return;
     var q = _ccTvCleanQuery(query);
     if(!q) return;
-    _ccTvExpand(card);
     card.classList.add('tv-tuning');
+    _ccTvExpand(card);
     card.classList.remove('tv-offair');
     _ccTV.key = 'search';
     _ccTV.query = q;
