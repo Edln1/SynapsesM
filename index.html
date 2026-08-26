@@ -745,14 +745,33 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-gauge span{width:42px;height:42px;border-radius:50%;background:#161022;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;}
 .bnav-cc-gauge-label{font-size:10px;color:rgba(255,255,255,0.45);}
 .bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:flex-start;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;padding:12px;}
-.bnav-cc-center>.bnav-cc-card{width:190px;flex:0 0 190px;}
+.bnav-cc-center>.bnav-cc-card{width:190px;flex:0 0 190px;min-width:0;max-width:190px;box-sizing:border-box;overflow:hidden;}
 .bnav-cc-balance-card{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(124,106,247,0.10),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(0,217,168,0.08),transparent 55%),rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;min-width:0;cursor:pointer;width:190px;height:190px;flex-shrink:0;z-index:2;transition:box-shadow .15s ease;}
 .bnav-cc-balance-card.cc-nest-target{box-shadow:0 0 0 2px rgba(124,106,247,0.6),0 0 10px rgba(124,106,247,0.35);}
 /* Fuse: a docked widget lives INSIDE the balance card's own frame — same
    border/background, no separate box — as a section stacked below its
    existing content, divided by a hairline. The card grows to fit. */
 .bnav-cc-balance-card.cc-has-nest{height:auto;min-height:190px;align-items:stretch;justify-content:flex-start;}
-.bnav-cc-balance-card.cc-relocated{height:auto;min-height:0;align-items:stretch;justify-content:flex-start;}
+/* Off its home square: match the row. Center wrap → stretch to that
+   row's tallest tile. Left/right columns → full column width, content height. */
+.bnav-cc-balance-card.cc-relocated{
+  height:auto!important;
+  min-height:0;
+  width:100%;
+  flex:0 0 auto;
+  align-self:stretch;
+  align-items:stretch;
+  justify-content:flex-start;
+}
+.bnav-cc-center>.bnav-cc-balance-card.cc-relocated{
+  width:190px;
+  flex:0 0 190px;
+  align-self:stretch;
+}
+.bnav-cc-balance-card.cc-relocated .bnav-cc-balance{
+  flex:1 1 auto;
+  min-height:0;
+}
 .cc-nest-body{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:10px;}
 .bnav-cc-card.cc-nested-fused{position:static;width:100%;flex:none;border-radius:14px;border:1px dashed rgba(255,255,255,0.16);background:rgba(255,255,255,0.02);box-shadow:none;}
 .bnav-cc-balance{flex-shrink:0;min-height:160px;}
@@ -774,9 +793,17 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
    + standby glow); tunes in with a static-flicker transition whenever
    the assistant recognizes a video-worthy ask (news, space, music…). */
 .bnav-cc-tv-card{position:relative;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,#141018,#0a080d 60%);border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;padding:10px;width:190px;height:190px;flex-shrink:0;z-index:2;box-sizing:border-box;transition:width .5s cubic-bezier(.22,.9,.3,1),height .5s cubic-bezier(.22,.9,.3,1),box-shadow .4s ease;box-shadow:0 0 0 rgba(124,106,247,0);cursor:pointer;}
-.bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 24px rgba(124,106,247,0.18);cursor:default;}
-.bnav-cc-tv-card.tv-expanded{width:396px;height:262px;}
-@media(max-width:900px){.bnav-cc-tv-card.tv-expanded{width:100%;height:auto;aspect-ratio:16/11;}}
+.bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 18px rgba(255,255,255,0.08);cursor:default;}
+html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 16px rgba(255,255,255,0.1);}
+.bnav-cc-tv-card.tv-expanded{width:var(--tv-w, 190px);height:var(--tv-h, 190px);min-width:0;min-height:0;max-width:100%;max-height:min(72vh, 680px);}
+.bnav-cc-center>.bnav-cc-tv-card.tv-expanded{flex:0 0 var(--tv-w, 190px);width:var(--tv-w, 190px);max-width:min(100%, var(--tv-w, 190px));}
+.bnav-cc-left>.bnav-cc-tv-card,.bnav-cc-right>.bnav-cc-tv-card{width:100%;max-width:none;height:auto;aspect-ratio:1/1;}
+.bnav-cc-left>.bnav-cc-tv-card.tv-expanded,.bnav-cc-right>.bnav-cc-tv-card.tv-expanded{aspect-ratio:auto;height:var(--tv-h, 220px);}
+.bnav-cc-tv-card.tv-resizing{transition:none;}
+@media(max-width:900px){.bnav-cc-tv-card.tv-expanded{width:100%;height:auto;min-width:0;aspect-ratio:16/10;max-width:none;}}
+.bnav-cc-tv-resize{display:none;position:absolute;right:5px;bottom:5px;width:16px;height:16px;z-index:8;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 48%,rgba(255,255,255,0.25) 48% 52%,transparent 52% 70%,rgba(255,255,255,0.35) 70% 74%,transparent 74%);}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-resize{display:block;}
+@media(max-width:900px){.bnav-cc-tv-card.tv-on .bnav-cc-tv-resize{display:none;}}
 .bnav-cc-tv-topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2px 8px;flex-shrink:0;}
 .bnav-cc-tv-brand{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;}
 .bnav-cc-tv-led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;transition:background .3s ease,box-shadow .3s ease;}
@@ -785,9 +812,13 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-tv-power{background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:6px;transition:color .15s ease,background .15s ease;}
 .bnav-cc-tv-power:hover{color:#fff;background:rgba(255,255,255,0.08);}
 .bnav-cc-tv-ask-row{padding:0 1px 7px;flex-shrink:0;}
-.bnav-cc-tv-ask{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;font-size:10.5px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s ease,background .15s ease;}
+.bnav-cc-tv-ask{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;font-size:10.5px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;caret-color:#f2f2f5;transition:border-color .15s ease,background .15s ease;}
 .bnav-cc-tv-ask::placeholder{color:rgba(255,255,255,0.32);}
-.bnav-cc-tv-ask:focus{border-color:var(--accent,#7c6af7);background:rgba(255,255,255,0.08);}
+.bnav-cc-tv-ask:focus{border-color:rgba(255,255,255,0.32);background:rgba(255,255,255,0.08);}
+.bnav-cc-tv-ask::selection,.bnav-cc-tv-ask::-moz-selection{background:rgba(255,255,255,0.28);color:#fff;}
+html[data-theme="trueblack"] .bnav-cc-tv-ask:focus{border-color:rgba(255,255,255,0.28);}
+html[data-theme="trueblack"] .bnav-cc-tv-ask::selection,
+html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255,255,255,0.28);color:#fff;}
 .bnav-cc-tv-screen{position:relative;flex:1;min-height:0;border-radius:10px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center;}
 .bnav-cc-tv-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-poster{opacity:1;}
@@ -814,19 +845,61 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;transition:opacity .3s ease .15s,color .15s ease,background .15s ease;backdrop-filter:blur(4px);}
 .bnav-cc-tv-open:hover{color:#fff;background:rgba(0,0,0,0.7);}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-open{opacity:1;}
-.bnav-cc-tv-chans{position:absolute;right:6px;bottom:6px;display:flex;gap:4px;opacity:0;transition:opacity .3s ease .15s;}
+.bnav-cc-tv-chans{position:absolute;right:20px;bottom:6px;display:flex;gap:4px;align-items:center;opacity:0;transition:opacity .3s ease .15s;z-index:7;}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-chans{opacity:1;}
-.bnav-cc-tv-chip{width:20px;height:16px;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease;backdrop-filter:blur(4px);}
+.bnav-cc-tv-chip{width:20px;height:16px;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.7);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease;backdrop-filter:blur(4px);}
 .bnav-cc-tv-chip:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);}
-.bnav-cc-tv-chip.active{border-color:var(--accent3,#00d9a8);color:var(--accent3,#00d9a8);}
-.bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;}
+.bnav-cc-tv-chip.active{border-color:rgba(255,255,255,0.55);color:#fff;}
+html[data-theme="trueblack"] .bnav-cc-tv-chip.active{border-color:rgba(255,255,255,0.7);color:#fff;}
+.bnav-cc-tv-swap{width:18px;height:16px;padding:0;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);}
+.bnav-cc-tv-swap:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);color:#fff;}
+.bnav-cc-tv-swap:disabled{opacity:0.32;cursor:default;}
+.bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-y:overlay;min-height:0;min-width:0;scrollbar-width:none;}
+.bnav-cc-right::-webkit-scrollbar{width:0;height:0;}
+.bnav-cc-right.cc-scroll-on{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.12) transparent;}
+.bnav-cc-right.cc-scroll-on::-webkit-scrollbar{width:3px;height:3px;}
+.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-track{background:transparent;}
+.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:99px;}
+.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
+html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on{scrollbar-color:rgba(255,255,255,0.12) transparent;}
+html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12)!important;}
+html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22)!important;}
 /* Calendar card hosts the real (formerly floating-only) calendar widget
    inline, sized up instead of the old 4-row summary list. The card itself
    drops its own padding/border since the mounted widget already draws its
    own panel chrome — otherwise it'd double up into a border-in-a-border. */
-.bnav-cc-card.bnav-cc-cal-host{padding:10px 10px 12px;flex-shrink:0;}
-.bnav-cc-cal-host .bnav-cc-cal-head{padding:0 2px;margin-bottom:6px;}
-.bnav-cc-cal-host #bnavCCCalList{min-height:60px;}
+.bnav-cc-card.bnav-cc-cal-host{padding:10px 10px 12px;flex-shrink:0;min-width:0;overflow:hidden;box-sizing:border-box;}
+/* Keep the glassy CC card, but use a solid hairline — the dashed
+   placeholder border is what read as random lines on true black. */
+.bnav-cc-cal-host.cc-placeholder{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);}
+.bnav-cc-cal-host .bnav-cc-cal-head{padding:0 2px;margin-bottom:6px;min-width:0;}
+.bnav-cc-cal-host #bnavCCCalList{min-height:60px;min-width:0;overflow:hidden;}
+.bnav-cc-cal-host{position:relative;}
+#cxCalBwToggle{
+  flex-shrink:0;
+  width:20px;
+  height:20px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:transparent;
+  border:none;
+  border-radius:50%;
+  color:var(--muted,rgba(255,255,255,0.32));
+  cursor:pointer;
+}
+#cxCalBwToggle svg{display:block;width:14px;height:14px;overflow:visible;}
+.cxCalHeadSwap{position:relative;display:grid;align-items:center;min-width:0;flex:1;}
+.cxCalHeadSwap>span{grid-area:1/1;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text,#f2f2f5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;}
+.cxCalHeadSwap .cxCalHeadDate{animation:cxCalHeadA 18s ease-in-out infinite;}
+.cxCalHeadSwap .cxCalHeadLine{animation:cxCalHeadB 18s ease-in-out infinite;}
+@keyframes cxCalHeadA{0%,42%{opacity:1}50%,92%{opacity:0}100%{opacity:1}}
+@keyframes cxCalHeadB{0%,42%{opacity:0}50%,92%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .cxCalHeadSwap .cxCalHeadDate{animation:none;opacity:1;}
+  .cxCalHeadSwap .cxCalHeadLine{animation:none;opacity:0;}
+}
 .bnav-cc-navpill{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:100px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.8);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .18s ease;text-align:left;opacity:0;transform:translateX(8px);flex-shrink:0;}
 .bnav-cc-panel.bnav-cc-open .bnav-cc-navpill{opacity:1;transform:translateX(0);transition:opacity .35s ease var(--cc-delay,0ms),transform .35s cubic-bezier(.34,1.56,.64,1) var(--cc-delay,0ms),background .15s,border-color .15s;}
 .bnav-cc-navpill:hover{background:rgba(124,106,247,0.12);border-color:rgba(124,106,247,0.4);}
@@ -864,6 +937,10 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
    plainer static list style used by Recent Chats / Quick Notes. */
 @keyframes bnavCcRowIn{0%{opacity:0;transform:translateY(-9px);}100%{opacity:1;transform:translateY(0);}}
 .bnav-cc-rich-row{animation:bnavCcRowIn .32s cubic-bezier(.22,.9,.3,1) both;animation-delay:var(--ri,0ms);display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:10px;cursor:pointer;transition:background .15s ease,transform .12s ease;}
+/* Control Centre: calendar + inbox must already be painted when the panel
+   opens — no "Loading…" height jump and no second entrance animation. */
+.bnav-cc-panel .bnav-cc-rich-row{animation:none!important;opacity:1;transform:none;}
+.bnav-cc-cal-host .cxCalCard{animation:none!important;opacity:1;transform:none;}
 .bnav-cc-rich-row:hover{background:rgba(124,106,247,0.1);}
 .bnav-cc-rich-row:active{transform:scale(.98);}
 .bnav-cc-ev-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);}
@@ -10360,11 +10437,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // regular tiles, it should size like they do (auto height, fit its own
   // content) instead of staying a stubborn fixed square that clashes with
   // whatever row-height the other tiles in that row establish.
-  function _ccSyncBalanceSize(col){
-    if(!col) return;
-    var bc = col.querySelector('#bnavCCBalance');
+  function _ccSyncBalanceSize(){
+    var bc = document.getElementById('bnavCCBalance');
     if(!bc) return;
-    var isHome = col.firstElementChild === bc;
+    var parent = bc.parentElement;
+    if(!parent || (parent.classList && parent.classList.contains('cc-nest-body'))){
+      bc.classList.remove('cc-relocated');
+      return;
+    }
+    var inCenter = parent.classList && parent.classList.contains('bnav-cc-center');
+    var isHome = inCenter && parent.firstElementChild === bc;
     bc.classList.toggle('cc-relocated', !isHome);
   }
 
@@ -10696,6 +10778,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       card.style.opacity = '';
       card.style.pointerEvents = '';
       card.classList.remove('bnav-cc-dragging');
+      _ccSyncBalanceSize();
 
       cards.forEach(function(c){
         var f = first[c], l = c.getBoundingClientRect();
@@ -10714,6 +10797,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       touchedCols.forEach(_ccSaveColOrder);
       touchedCols.forEach(_ccSyncBalanceSize);
       homeCol = curCol;
+      card._ccJustDragged = true;
+      setTimeout(function(){ card._ccJustDragged = false; }, 40);
     }
 
     card.addEventListener('pointerdown', function(e){
@@ -10723,7 +10808,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // that's now packed with its own clickable day pills, event rows,
       // +Event/+Bill buttons, and week-nav arrows; without this exclusion
       // every click in there was being swallowed as a drag-start on the card.
-      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList')){
+      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,iframe')){
         return;
       }
       // Arm the pending-drag state only — nothing about the card changes
@@ -10873,17 +10958,17 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
             '<div class="bnav-cc-balance-hint">Tap to open Health AI</div>'+
           '</div>'+
         '</div>'+
-        '<div class="bnav-cc-tv-card" id="bnavCCTV" data-cc-id="tv" title="Tap to tune in, or just ask">'+
+        '<div class="bnav-cc-card bnav-cc-tv-card" id="bnavCCTV" data-cc-id="tv" title="Tap to tune in, or just ask">'+
           '<div class="bnav-cc-tv-topbar">'+
             '<div class="bnav-cc-tv-brand"><span class="bnav-cc-tv-led"></span>SYN-TV</div>'+
             '<button class="bnav-cc-tv-power" id="bnavCCTVPower" title="Power off">⏻</button>'+
           '</div>'+
-          '<div class="bnav-cc-tv-ask-row"><input id="bnavCCTVAsk" class="bnav-cc-tv-ask" placeholder="Ask… e.g. \'show me the news\'" /></div>'+
+          '<div class="bnav-cc-tv-ask-row"><input id="bnavCCTVAsk" class="bnav-cc-tv-ask" placeholder="Ask any topic…" /></div>'+
           '<div class="bnav-cc-tv-screen">'+
             '<div class="bnav-cc-tv-idle">'+
               '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 22h8M12 19v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'+
               '<b>No signal</b>'+
-              '<span>Ask about the news, space or music and it\'ll tune in here</span>'+
+              '<span>Ask any topic — news, space, music, or whatever\'s on</span>'+
             '</div>'+
             '<img id="bnavCCTVPoster" class="bnav-cc-tv-poster" alt="" />'+
             '<iframe id="bnavCCTVFrame" src="about:blank" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" title="SYN-TV"></iframe>'+
@@ -10893,6 +10978,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
             '<a class="bnav-cc-tv-open" id="bnavCCTVOpen" href="#" target="_blank" rel="noopener" title="If the picture doesn\'t load, open it directly on YouTube">Open on YouTube ↗</a>'+
             '<div class="bnav-cc-tv-chans" id="bnavCCTVChans"></div>'+
           '</div>'+
+          '<div class="bnav-cc-tv-resize" id="bnavCCTVResize" title="Drag to resize"></div>'+
         '</div>'+
       '</div>'+
       '<div class="bnav-cc-right">'+widgetsHtml+'</div>'+
@@ -10956,9 +11042,13 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     // second call for the actual items) rather than any locally-held state.
     // Calendar — same real widget as Inbox, backed by the same connector
     // pattern (synConnectors).
+    _ccRestoreCalWidgetSync();
+    if(document.getElementById('bnavCCMailList') && _ccMailCache.out && _ccMailCache.out.ok){
+      _ccPaintMailList(document.getElementById('bnavCCMailList'), _ccMailCache.out);
+    }
     _ccRenderCalendarWidget();
     var calRefreshBtn = panel.querySelector('#bnavCCCalRefresh');
-    if(calRefreshBtn) calRefreshBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccRenderCalendarWidget(); });
+    if(calRefreshBtn) calRefreshBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccRenderCalendarWidget(true); });
     _ccRenderMailWidget();
     var mailRefreshBtn = panel.querySelector('#bnavCCMailRefresh');
     if(mailRefreshBtn) mailRefreshBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccRenderMailWidget(true); });
@@ -11090,22 +11180,62 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // full calendar popup shows what's actually on the widget instead of a
   // hardcoded empty list.
   var _ccLastCalItems = [];
-  async function _ccRenderCalendarWidget(){
+  function _ccCalMounted(list){
+    return !!(list && list.querySelector('#cxCalCircleRow, .cxCalHeadSwap'));
+  }
+  function _ccCalItemsEqual(a, b){
+    a = a || []; b = b || [];
+    if(a.length !== b.length) return false;
+    for(var i=0;i<a.length;i++){
+      if((a[i].title||'') !== (b[i].title||'')) return false;
+      if(String(a[i].start||'') !== String(b[i].start||'')) return false;
+    }
+    return true;
+  }
+  function _ccMountCalendar(list, items){
+    _ccLastCalItems = items || [];
+    if(typeof window._cxShowCalendarPopup === 'function'){
+      window._cxShowCalendarPopup('upcoming', { items: items || [], days: 7 }, { inline: true, container: list });
+    } else {
+      list.innerHTML = (items && items.length) ? '' : '<div class="bnav-cc-widget-empty">Nothing on your calendar this week</div>';
+    }
+  }
+  function _ccRestoreCalWidgetSync(){
+    var list = document.getElementById('bnavCCCalList');
+    if(!list || _ccCalMounted(list)) return;
+    if(_ccCalCache.out && _ccCalCache.out.ok){
+      _ccMountCalendar(list, _ccCalCache.out.items || []);
+    }
+  }
+  async function _ccRenderCalendarWidget(force){
     var list = document.getElementById('bnavCCCalList');
     if(!list) return;
+    if(!force && _ccCalMounted(list)){
+      if(_ccCalCache.out && (Date.now() - _ccCalCache.ts) < _CC_CAL_TTL_MS) return;
+      var fresh = await _ccFetchCal(false);
+      if(!list.isConnected || !fresh || !fresh.ok) return;
+      if(_ccCalItemsEqual(_ccLastCalItems, fresh.items || [])) return;
+      _ccMountCalendar(list, fresh.items || []);
+      return;
+    }
+    if(!force && _ccCalCache.out && _ccCalCache.out.ok){
+      _ccMountCalendar(list, _ccCalCache.out.items || []);
+    }
     var connected = await _ccGoogleConnected();
-    if(!list.isConnected) return; // panel may have closed while this was in flight
+    if(!list.isConnected) return;
     if(!connected){
+      if(_ccCalMounted(list)) return;
       list.innerHTML = _ccConnectRowHtml('Connect Google Calendar to see what\u2019s coming up.');
       _ccWireConnectBtn(list);
       return;
     }
-    list.innerHTML = '<div class="bnav-cc-widget-empty">Loading…</div>';
-    var out;
-    try{ out = await window.synConnectors.act('calendar.upcoming', { days: 7 }, false); }
-    catch(e){ out = { ok:false, error: (e && e.message) || 'network error' }; }
+    if(!_ccCalMounted(list) && !(_ccCalCache.out && _ccCalCache.out.ok)){
+      list.innerHTML = '<div class="bnav-cc-widget-empty">Loading…</div>';
+    }
+    var out = await _ccFetchCal(!!force);
     if(!list.isConnected) return;
     if(!out || !out.ok){
+      if(_ccCalMounted(list)) return;
       console.warn('[Control Centre] calendar.upcoming failed:', out);
       var calNeedsReconnect = out && out.needConnect;
       list.innerHTML = calNeedsReconnect
@@ -11115,16 +11245,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       return;
     }
     var items = out.items || [];
-    _ccLastCalItems = items;
-    // Mount the exact same calendar widget used everywhere else in the app
-    // (day strip, event list, +Event/+Bill forms) docked inline in this
-    // card instead of a summary list — see the `inline`/`container` opts
-    // on _cxShowCalendarPopup.
-    if(typeof window._cxShowCalendarPopup === 'function'){
-      window._cxShowCalendarPopup('upcoming', { items: items, days: 7 }, { inline: true, container: list });
-    } else {
-      list.innerHTML = items.length ? '' : '<div class="bnav-cc-widget-empty">Nothing on your calendar this week</div>';
-    }
+    if(!force && _ccCalMounted(list) && _ccCalItemsEqual(_ccLastCalItems, items)) return;
+    _ccMountCalendar(list, items);
   }
   // Shared inbox cache — both the Control Centre widget and the welcome-feed
   // popover show the same "unread mail" data, but used to each run their own
@@ -11136,6 +11258,13 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // request instead of firing two.
   var _ccMailCache = { out:null, ts:0, inFlight:null };
   var _CC_MAIL_TTL_MS = 90000; // don't re-hit the server more than ~once/90s per open
+  try{
+    var _mailSnap = JSON.parse(localStorage.getItem('syn_cc_mail_cache_v1') || 'null');
+    if(_mailSnap && _mailSnap.ok && Array.isArray(_mailSnap.items)){
+      _ccMailCache.out = { ok:true, items:_mailSnap.items };
+      _ccMailCache.ts = _mailSnap.ts || 0;
+    }
+  }catch(eMailSnap){}
   function _ccFetchMail(force){
     var now = Date.now();
     if(!force && _ccMailCache.out && (now - _ccMailCache.ts) < _CC_MAIL_TTL_MS){
@@ -11146,7 +11275,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       var out;
       try{ out = await window.synConnectors.act('gmail.unread', {}, false); }
       catch(e){ out = { ok:false, error: (e && e.message) || 'network error' }; }
-      if(out && out.ok){ _ccMailCache.out = out; _ccMailCache.ts = Date.now(); }
+      if(out && out.ok){
+        _ccMailCache.out = out; _ccMailCache.ts = Date.now();
+        try{ localStorage.setItem('syn_cc_mail_cache_v1', JSON.stringify({ ok:true, items: out.items||[], ts: _ccMailCache.ts })); }catch(eM){}
+      }
       _ccMailCache.inFlight = null;
       return out;
     })();
@@ -11188,9 +11320,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       _ccWireConnectBtn(list);
       return;
     }
+    var already = !!list.querySelector('.bnav-cc-rich-row, .bnav-cc-connect-row');
+    if(!force && already){
+      if(_ccMailCache.out && (Date.now() - _ccMailCache.ts) < _CC_MAIL_TTL_MS) return;
+      var quiet = await _ccFetchMail(false);
+      if(list.isConnected && quiet && quiet.ok) _ccPaintMailList(list, quiet);
+      return;
+    }
     var hadCache = !!(_ccMailCache.out && _ccMailCache.out.ok);
     if(hadCache) _ccPaintMailList(list, _ccMailCache.out);
-    else list.innerHTML = '<div class="bnav-cc-widget-empty">Loading…</div>';
+    else if(!already) list.innerHTML = '<div class="bnav-cc-widget-empty">Loading…</div>';
     var out = await _ccFetchMail(force);
     if(!list.isConnected) return;
     if(!out || !out.ok){
@@ -11227,6 +11366,14 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // the static, data-less _ccCalWeekStripHtml() and so never showed events.
   var _ccCalCache = { out:null, ts:0, inFlight:null };
   var _CC_CAL_TTL_MS = 90000;
+  try{
+    var _calSnap = JSON.parse(localStorage.getItem('syn_cc_cal_cache_v1') || 'null');
+    if(_calSnap && _calSnap.ok && Array.isArray(_calSnap.items)){
+      _ccCalCache.out = { ok:true, items:_calSnap.items };
+      _ccCalCache.ts = _calSnap.ts || 0;
+      _ccLastCalItems = _calSnap.items;
+    }
+  }catch(eCalSnap){}
   function _ccFetchCal(force){
     var now = Date.now();
     if(!force && _ccCalCache.out && (now - _ccCalCache.ts) < _CC_CAL_TTL_MS){
@@ -11237,12 +11384,18 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       var out;
       try{ out = await window.synConnectors.act('calendar.upcoming', { days: 7 }, false); }
       catch(e){ out = { ok:false, error: (e && e.message) || 'network error' }; }
-      if(out && out.ok){ _ccCalCache.out = out; _ccCalCache.ts = Date.now(); }
+      if(out && out.ok){
+        _ccCalCache.out = out; _ccCalCache.ts = Date.now();
+        try{ localStorage.setItem('syn_cc_cal_cache_v1', JSON.stringify({ ok:true, items: out.items||[], ts: _ccCalCache.ts })); }catch(eC){}
+      }
       _ccCalCache.inFlight = null;
       return out;
     })();
     return _ccCalCache.inFlight;
   }
+  setTimeout(function(){
+    try{ if(window.synConnectors){ _ccFetchCal(false); _ccFetchMail(false); } }catch(e){}
+  }, 500);
   function _ccPaintCalList(list, out){
     var CX_DOW = ['S','M','T','W','T','F','S'];
     var today = new Date();
@@ -11531,6 +11684,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     else { _ccApplyBalanceText(document.getElementById('bnavCCBalanceTitle'), document.getElementById('bnavCCBalanceSub')); }
     backdrop.classList.add('bnav-cc-open');
     panel.classList.add('bnav-cc-open');
+    var _ccRight = panel.querySelector('.bnav-cc-right');
+    if(_ccRight){
+      _ccRight.classList.remove('cc-scroll-on');
+      clearTimeout(_ccRight._ccScrollT);
+      _ccRight._ccScrollT = setTimeout(function(){ _ccRight.classList.add('cc-scroll-on'); }, 480);
+    }
 
     // refresh Activity bars + Session gauges — these reflect live app state, not just first-open values
     var _actCats2 = [
@@ -11582,15 +11741,20 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         jobNum.textContent = jc;
         if(jobLabel) jobLabel.textContent = 'open role'+(jc===1?'':'s');
       }
-      // Calendar — live widget, same connector round-trip as Inbox.
-      _ccRenderCalendarWidget();
-      _ccRenderMailWidget();
+      // Painted state stays on screen. A quiet refresh runs after open and
+      // only remounts if the data actually changed.
+      _ccRenderCalendarWidget(false);
+      _ccRenderMailWidget(false);
     })();
   }
   function closeControlCentre(){
     var backdrop = document.getElementById('bnavCCBackdrop'), panel = document.getElementById('bnavCCPanel');
     if(backdrop) backdrop.classList.remove('bnav-cc-open');
-    if(panel) panel.classList.remove('bnav-cc-open');
+    if(panel){
+      panel.classList.remove('bnav-cc-open');
+      var _ccRight = panel.querySelector('.bnav-cc-right');
+      if(_ccRight){ clearTimeout(_ccRight._ccScrollT); _ccRight.classList.remove('cc-scroll-on'); }
+    }
   }
   // Exposed on window: openControlCentre/closeControlCentre previously only
   // needed to be callable from inside this same closure (the orb's hold
@@ -11611,17 +11775,17 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // Render for the picture — that iframe is blocked, and the live lookup
   // was returning random VODs. This is how every site embeds YouTube.
   var SYN_TV_CHANNELS = [
-    { key:'news',  label:'SYN-NEWS-1',  type:'video', id:'gCNeDWCI0vo', icon:'📰',
-      watch:'https://www.youtube.com/watch?v=gCNeDWCI0vo',
-      match:['news','headline','headlines','breaking','world news','what\'s happening','whats happening','current events'] },
-    { key:'space',  label:'SYN-SPACE-1', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
+    { key:'news',  label:'ABC NEWS LIVE', type:'video', id:'iipR5yUp36o', icon:'📰',
+      watch:'https://www.youtube.com/watch?v=iipR5yUp36o',
+      match:['news','headline','headlines','breaking','world news','what\'s happening','whats happening','current events','abc'] },
+    { key:'space',  label:'NASA ISS', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
       watch:'https://www.youtube.com/watch?v=M3HKLzjvKPc',
       match:['space','nasa','rocket','launch','iss','astronaut','mars','spacex'] },
-    { key:'music',  label:'SYN-CHILL-1', type:'video', id:'jfKfPfyJRdk', icon:'🎵',
-      watch:'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    { key:'music',  label:'SYN-CHILL-1', type:'video', id:'rFZHOHl-L8A', icon:'🎵',
+      watch:'https://www.youtube.com/watch?v=rFZHOHl-L8A',
       match:['music','lofi','lo-fi','play something','play some music','beats','chill'] }
   ];
-  var _ccTV = { on:false, key:null };
+  var _ccTV = { on:false, key:null, list:[], idx:0, query:'' };
 
   function _ccTvDirectEmbedUrl(videoId){
     return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute=1&rel=0&playsinline=1&modestbranding=1&feature=oembed';
@@ -11665,30 +11829,185 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       chip.classList.toggle('active', chip.getAttribute('data-tv-key')===_ccTV.key);
     });
   }
+  function _ccTvSyncSwap(){
+    var n = (_ccTV.list && _ccTV.list.length) || 0;
+    var prev = document.getElementById('bnavCCTVPrev');
+    var next = document.getElementById('bnavCCTVNext');
+    if(prev) prev.disabled = n < 2;
+    if(next) next.disabled = n < 2;
+  }
+  function _ccTvClampSize(w, h, card){
+    var maxW = Math.min(960, (window.innerWidth || 800) * 0.92);
+    var maxH = Math.min(680, (window.innerHeight || 600) * 0.72);
+    var parent = card && card.parentElement;
+    if(parent && parent.classList && parent.classList.contains('bnav-cc-center')){
+      var avail = parent.clientWidth - 24;
+      if(avail > 400) maxW = Math.min(maxW, avail - 200);
+      else maxW = Math.min(maxW, avail);
+    }
+    return { w: Math.max(190, Math.min(maxW, w)), h: Math.max(190, Math.min(maxH, h)) };
+  }
+  function _ccTvSaveSize(card){
+    if(!card) return;
+    try{ localStorage.setItem('syn_tv_size', JSON.stringify({ w: card.offsetWidth, h: card.offsetHeight })); }catch(e){}
+  }
+  function _ccTvApplySavedSize(card){
+    if(!card) return;
+    try{
+      var raw = localStorage.getItem('syn_tv_size');
+      if(!raw) return;
+      var s = JSON.parse(raw);
+      if(!s || !s.w || !s.h) return;
+      var c = _ccTvClampSize(s.w, s.h, card);
+      card.style.setProperty('--tv-w', c.w+'px');
+      card.style.setProperty('--tv-h', c.h+'px');
+    }catch(e){}
+  }
+  function _ccTvBindResize(card){
+    var handle = card.querySelector('#bnavCCTVResize');
+    if(!handle || handle._tvResize) return;
+    handle._tvResize = true;
+    handle.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var startX = e.clientX, startY = e.clientY;
+      var startW = card.offsetWidth, startH = card.offsetHeight;
+      card.classList.add('tv-resizing');
+      function move(ev){
+        var c = _ccTvClampSize(startW + (ev.clientX - startX), startH + (ev.clientY - startY), card);
+        card.style.setProperty('--tv-w', c.w+'px');
+        card.style.setProperty('--tv-h', c.h+'px');
+      }
+      function up(ev){
+        try{ handle.releasePointerCapture(ev.pointerId); }catch(err){}
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        card.classList.remove('tv-resizing');
+        _ccTvSaveSize(card);
+      }
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+  }
+  function _ccTvSearchUrl(q){
+    var base = (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY.replace(/\/$/,'') : 'https://synbot-whatsapp-2.onrender.com';
+    return base + '/api/youtube-live/search?q=' + encodeURIComponent(q);
+  }
+  function _ccTvExpand(card){
+    if(!card) return;
+    card.classList.add('tv-on','tv-expanded');
+    card.classList.remove('tv-offair');
+    _ccTvApplySavedSize(card);
+    _ccTV.on = true;
+  }
+  function _ccTvSetList(list, idx, key, query, keepFrame){
+    var prevId = (_ccTV.list && _ccTV.list[_ccTV.idx] && _ccTV.list[_ccTV.idx].videoId) || '';
+    _ccTV.list = list || [];
+    _ccTV.idx = Math.max(0, Math.min(idx || 0, Math.max(0, _ccTV.list.length - 1)));
+    _ccTV.key = key;
+    _ccTV.query = query || '';
+    _ccTvSyncChips();
+    _ccTvSyncSwap();
+    var item = _ccTV.list[_ccTV.idx];
+    if(!item) return;
+    var label = document.querySelector('#bnavCCTVLabel span');
+    if(label){
+      var title = item.title || key || 'SYN-TV';
+      var n = _ccTV.list.length;
+      label.textContent = n > 1 ? (title + '  ' + (_ccTV.idx + 1) + '/' + n) : title;
+    }
+    var openLink = document.getElementById('bnavCCTVOpen');
+    if(openLink) openLink.href = 'https://www.youtube.com/watch?v=' + item.videoId;
+    if(!(keepFrame && item.videoId === prevId)) _ccTvPlayVideo(item.videoId);
+  }
+  function _ccTvStep(dir){
+    if(!_ccTV.list || _ccTV.list.length < 2) return;
+    var n = _ccTV.list.length;
+    var next = ((_ccTV.idx + dir) % n + n) % n;
+    _ccTvSetList(_ccTV.list, next, _ccTV.key, _ccTV.query, false);
+  }
+  function _ccTvMergeTopicResults(items, keepId, keepTitle){
+    var seen = {};
+    var out = [];
+    if(keepId){
+      seen[keepId] = true;
+      out.push({ videoId: keepId, title: keepTitle || '' });
+    }
+    (items || []).forEach(function(it){
+      if(!it || !it.videoId || seen[it.videoId]) return;
+      seen[it.videoId] = true;
+      out.push(it);
+    });
+    return out;
+  }
+  function _ccTvFetchTopic(q, key, keepId, keepTitle){
+    if(!q) return;
+    var token = q + '|' + (key || '');
+    _ccTV._fetchToken = token;
+    fetch(_ccTvSearchUrl(q)).then(function(r){ return r.json(); }).then(function(data){
+      if(_ccTV._fetchToken !== token) return;
+      var merged = _ccTvMergeTopicResults((data && data.items) || [], keepId, keepTitle);
+      if(!merged.length) return;
+      var curId = (_ccTV.list && _ccTV.list[_ccTV.idx] && _ccTV.list[_ccTV.idx].videoId) || keepId;
+      var idx = 0;
+      for(var i=0;i<merged.length;i++){ if(merged[i].videoId === curId){ idx = i; break; } }
+      _ccTvSetList(merged, idx, key, q, true);
+    }).catch(function(){});
+  }
+  function _ccTvSearch(query){
+    var card = document.getElementById('bnavCCTV');
+    if(!card) return;
+    var q = String(query || '').trim();
+    if(!q) return;
+    _ccTvExpand(card);
+    card.classList.add('tv-tuning');
+    card.classList.remove('tv-offair');
+    _ccTV.key = 'search';
+    _ccTV.query = q;
+    _ccTvSyncChips();
+    var label = document.querySelector('#bnavCCTVLabel span');
+    if(label) label.textContent = 'TUNING…';
+    var token = 'search|' + q;
+    _ccTV._fetchToken = token;
+    fetch(_ccTvSearchUrl(q)).then(function(r){ return r.json(); }).then(function(data){
+      if(_ccTV._fetchToken !== token) return;
+      card.classList.remove('tv-tuning');
+      var items = (data && data.items) || [];
+      if(!items.length){
+        card.classList.add('tv-offair');
+        if(label) label.textContent = 'NO SIGNAL';
+        _ccTV.list = []; _ccTV.idx = 0;
+        _ccTvSyncSwap();
+        if(typeof showToast==='function') showToast('Nothing on for that — try another topic');
+        return;
+      }
+      _ccTvSetList(items, 0, 'search', q, false);
+    }).catch(function(){
+      if(_ccTV._fetchToken !== token) return;
+      card.classList.remove('tv-tuning');
+      card.classList.add('tv-offair');
+      if(label) label.textContent = 'NO SIGNAL';
+    });
+  }
   function tuneControlCentreTV(key){
     var chan = _ccTvFindChannel(key); if(!chan) return;
-    var card = document.getElementById('bnavCCTV'),
-        label = document.querySelector('#bnavCCTVLabel span');
+    var card = document.getElementById('bnavCCTV');
     if(!card) return;
     var frame = document.getElementById('bnavCCTVFrame');
     var already = _ccTV.on && _ccTV.key===key && frame && /youtube\.com\/embed\//.test(frame.src||'');
-    if(already){ card.classList.add('tv-on','tv-expanded'); return; }
-    card.classList.add('tv-on','tv-expanded');
-    card.classList.remove('tv-offair','tv-tuning');
-    _ccTV.key = key;
-    _ccTV.on = true;
-    _ccTvSyncChips();
-    if(label) label.textContent = chan.label;
-    var openLink = document.getElementById('bnavCCTVOpen');
-    var watch = chan.watch || ('https://www.youtube.com/watch?v='+chan.id);
-    if(openLink) openLink.href = watch;
-    _ccTvPlayVideo(chan.id);
+    if(already){ card.classList.add('tv-on','tv-expanded'); _ccTvApplySavedSize(card); return; }
+    _ccTvExpand(card);
+    card.classList.remove('tv-tuning');
+    _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
+    _ccTvFetchTopic(chan.match[0] || chan.label, key, chan.id, chan.label);
   }
   function closeControlCentreTV(){
     var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
     if(!card) return;
     card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning');
-    _ccTV.on = false; _ccTV.key = null;
+    _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0;
     setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
   }
   // Called only from real live speech (Whisper-transcribed mic audio in the
@@ -11696,6 +12015,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // home "Ask me anything" bar. Also deliberately does NOT open Control
   // Centre on its own: it only tunes in if the user is already looking at
   // that page. Talking about the news elsewhere in the app won't summon it.
+  // Speech still only maps to the three presets (news / space / music).
   function maybeTuneControlCentreTV(text){
     try{
       var panel = document.getElementById('bnavCCPanel');
@@ -11708,17 +12028,25 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var card = panel.querySelector('#bnavCCTV'); if(!card || card._tvInit) return;
     card._tvInit = true;
     var chansWrap = card.querySelector('#bnavCCTVChans');
-    chansWrap.innerHTML = SYN_TV_CHANNELS.map(function(c){
-      return '<div class="bnav-cc-tv-chip" data-tv-key="'+c.key+'" title="'+c.label+'">'+c.icon+'</div>';
-    }).join('');
+    chansWrap.innerHTML =
+      '<button type="button" class="bnav-cc-tv-swap" id="bnavCCTVPrev" title="Previous on this topic">‹</button>' +
+      '<button type="button" class="bnav-cc-tv-swap" id="bnavCCTVNext" title="Next on this topic">›</button>' +
+      SYN_TV_CHANNELS.map(function(c){
+        return '<div class="bnav-cc-tv-chip" data-tv-key="'+c.key+'" title="'+c.label+'">'+c.icon+'</div>';
+      }).join('');
     chansWrap.querySelectorAll('[data-tv-key]').forEach(function(chip){
       chip.addEventListener('click', function(e){ e.stopPropagation(); tuneControlCentreTV(chip.getAttribute('data-tv-key')); });
     });
+    var prevBtn = chansWrap.querySelector('#bnavCCTVPrev');
+    var nextBtn = chansWrap.querySelector('#bnavCCTVNext');
+    if(prevBtn) prevBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStep(-1); });
+    if(nextBtn) nextBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStep(1); });
+    _ccTvSyncSwap();
     var powerBtn = card.querySelector('#bnavCCTVPower');
     powerBtn.addEventListener('click', function(e){
       e.stopPropagation();
       if(_ccTV.on) closeControlCentreTV();
-      else tuneControlCentreTV(_ccTV.key || SYN_TV_CHANNELS[0].key);
+      else tuneControlCentreTV(_ccTV.key && _ccTvFindChannel(_ccTV.key) ? _ccTV.key : SYN_TV_CHANNELS[0].key);
     });
     var openLink = card.querySelector('#bnavCCTVOpen');
     if(openLink) openLink.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -11730,11 +12058,17 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         e.preventDefault();
         var v = askInput.value.trim(); if(!v) return;
         var key = detectTVTopic(v);
-        if(key){ tuneControlCentreTV(key); askInput.value=''; }
-        else if(typeof showToast==='function'){ showToast('No channel for that yet — try news, space, or music'); }
+        if(key) tuneControlCentreTV(key);
+        else _ccTvSearch(v);
+        askInput.value='';
       });
     }
-    card.addEventListener('click', function(){ if(!_ccTV.on) tuneControlCentreTV(SYN_TV_CHANNELS[0].key); });
+    card.addEventListener('click', function(){
+      if(card._ccJustDragged) return;
+      if(!_ccTV.on) tuneControlCentreTV(SYN_TV_CHANNELS[0].key);
+    });
+    _ccTvBindResize(card);
+    _ccTvApplySavedSize(card);
   }
   window.maybeTuneControlCentreTV = maybeTuneControlCentreTV;
   window.tuneControlCentreTV = tuneControlCentreTV;
@@ -18151,9 +18485,15 @@ function syncWhatsAppNotes(email, silent, force) {
 function _applyRemoteNotes(data) {
   if (!data) return;
   var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // Preserve any manually-dragged positions before we rebuild notes from the remote rows
-  var _prevPositions = {};
-  userNotes.forEach(function(n){ if(n._supabaseId && n._left && n._top){ _prevPositions[n._supabaseId] = {_left:n._left, _top:n._top}; } });
+  // Preserve drag positions + pin flags — the notes table has no `pinned` column,
+  // so a full remote replace used to wipe pins on every refresh/sync.
+  var _prevById = {};
+  var _prevByKey = {};
+  userNotes.forEach(function(n){
+    var local = { _left:n._left, _top:n._top, pinned:!!n.pinned };
+    if(n._supabaseId) _prevById[n._supabaseId] = local;
+    _prevByKey[(n.title||'')+'|'+(n.date||'')] = local;
+  });
   // Full replace with remote so deleted rows disappear everywhere
   var remoteNotes = data.map(function(n) {
     var d = new Date(n.created_at);
@@ -18170,8 +18510,12 @@ function _applyRemoteNotes(data) {
       _category: cat,
       _fromCloud: true
     };
-    var _pos = _prevPositions[n.id];
-    if (_pos) { _note._left = _pos._left; _note._top = _pos._top; }
+    var _prev = _prevById[n.id] || _prevByKey[(_note.title||'')+'|'+(_note.date||'')];
+    if (_prev) {
+      if (_prev._left) _note._left = _prev._left;
+      if (_prev._top) _note._top = _prev._top;
+      if (_prev.pinned) _note.pinned = true;
+    }
     return _note;
   });
   userNotes = remoteNotes;
@@ -22558,6 +22902,15 @@ var _stickyColorsTrueBlack = [
 function _getStickyColorPalette(){
   return (typeof _isTrueBlackTheme === 'function' && _isTrueBlackTheme()) ? _stickyColorsTrueBlack : _stickyColors;
 }
+function _stickyIsTrueBlack(){
+  try { return typeof _isTrueBlackTheme === 'function' && _isTrueBlackTheme(); } catch(e){ return false; }
+}
+function _stickyPinInk(col){
+  return _stickyIsTrueBlack() ? '#e8e8ee' : ((col && col.pin) || '#a78bfa');
+}
+function _stickyPinSvg(){
+  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
+}
 
 // Legacy slot array kept for reference only — positioning now uses smart right-column layout
 var _stickySlots = [
@@ -22574,6 +22927,30 @@ var _stickySlots = [
 function runStickyNoteLaser(el){ /* removed */ }
 
 window._stickyNotesVisible = localStorage.getItem('notesVisible') !== '0';
+window._stickyNotesOpen = localStorage.getItem('stickyNotesOpen') === '1' || (typeof userNotes !== 'undefined' && userNotes.some(function(n){ return n && n.pinned; }));
+function _stickyNoteShouldShow(note){
+  if(window._stickyNotesVisible) return true;
+  return !!(note && note.pinned);
+}
+function _applyStickyHiddenState(){
+  var layer = document.getElementById('stickyNotesLayer');
+  if(!layer) return;
+  var keepLayer = !!window._stickyNotesVisible;
+  Array.from(layer.children).forEach(function(c){
+    if(c.id === '_globalNoteOrb'){
+      c.style.display = window._stickyNotesVisible ? '' : 'none';
+      return;
+    }
+    var idx = parseInt(c.dataset && c.dataset.noteIdx, 10);
+    var note = (!isNaN(idx) && userNotes[idx]) ? userNotes[idx] : null;
+    var show = _stickyNoteShouldShow(note);
+    if(show) keepLayer = true;
+    c.style.display = show ? '' : 'none';
+    c.style.opacity = show ? '1' : '0';
+    c.style.pointerEvents = show ? 'auto' : 'none';
+  });
+  layer.style.opacity = keepLayer ? '1' : '0';
+}
 
 function _ensureNotesToggleBtn() {
   var btn = document.getElementById('notesToggleBtn');
@@ -22598,31 +22975,13 @@ function toggleStickyNotes() {
   layer.style.transition = 'opacity 0.2s';
   if (window._stickyNotesVisible) {
     layer.style.opacity = '1';
-    Array.from(layer.children).forEach(function(c){ c.style.display=''; c.style.opacity='1'; c.style.pointerEvents='auto'; });
+    Array.from(layer.children).forEach(function(c){
+      if(c.id === '_globalNoteOrb'){ c.style.display=''; return; }
+      c.style.display=''; c.style.opacity='1'; c.style.pointerEvents='auto';
+    });
     if (btn) { btn.style.opacity='1'; btn.style.color='rgba(180,175,210,0.35)'; btn.title=''; }
   } else {
-    // Fade out unpinned notes; keep pinned notes visible
-    var layerChildren = Array.from(layer.children);
-    var hasPinned = layerChildren.some(function(c){ var idx = parseInt(c.dataset && c.dataset.noteIdx, 10); return !isNaN(idx) && userNotes[idx] && userNotes[idx].pinned; });
-    if(hasPinned){
-      layerChildren.forEach(function(c){
-        var idx = parseInt(c.dataset && c.dataset.noteIdx, 10);
-        var isPinned = !isNaN(idx) && userNotes[idx] && userNotes[idx].pinned;
-        if(!isPinned){ c.style.transition='opacity 0.2s'; c.style.opacity='0'; setTimeout(function(){ if(!window._stickyNotesVisible) c.style.display='none'; }, 220); }
-      });
-      layer.style.opacity = '1';
-    } else {
-      layer.style.opacity = '0';
-    }
-    setTimeout(function(){
-      if(!window._stickyNotesVisible){
-        layerChildren.forEach(function(c){
-          var idx = parseInt(c.dataset && c.dataset.noteIdx, 10);
-          var isPinned = !isNaN(idx) && userNotes[idx] && userNotes[idx].pinned;
-          if(!isPinned) c.style.display='none';
-        });
-      }
-    }, 220);
+    _applyStickyHiddenState();
     if (btn) { btn.style.opacity='0.55'; btn.style.color='rgba(150,140,220,0.18)'; btn.title=''; }
   }
 }
@@ -22648,7 +23007,8 @@ function openStickyNotesFly(){
   }
   setTimeout(function(){
     window._stickyNotesVisible = true;
-    try{ localStorage.setItem('notesVisible', '1'); }catch(e){}
+    window._stickyNotesOpen = true;
+    try{ localStorage.setItem('notesVisible', '1'); localStorage.setItem('stickyNotesOpen', '1'); }catch(e){}
     var layer = document.getElementById('stickyNotesLayer');
     if(layer) layer.style.opacity = '1';
     var ntb = document.getElementById('notesToggleBtn');
@@ -22761,7 +23121,10 @@ function _syncNotesToggleVisibility(){
   if(isHome){
     if(!btn){ btn = _ensureNotesToggleBtn(); }
     if(btn) btn.style.display = 'flex';
-    if(layer){ layer.style.opacity = window._stickyNotesVisible ? '1' : '0'; }
+    if(layer){
+      if(window._stickyNotesVisible) layer.style.opacity = '1';
+      else _applyStickyHiddenState();
+    }
   } else {
     if(btn) btn.style.display = 'none';
     if(layer){
@@ -22891,8 +23254,13 @@ function renderStickyNotes(laserOnNew){
   var layer = document.getElementById('stickyNotesLayer');
   if(!layer) return;
   if(!window._stickyNotesOpen){
-    layer.innerHTML = ''; // Quick Notes widget disabled on the front page — never show, even after login/note sync
-    return;
+    if(userNotes.some(function(n){ return n && n.pinned; })){
+      window._stickyNotesOpen = true;
+      try{ localStorage.setItem('stickyNotesOpen', '1'); }catch(eO){}
+    } else {
+      layer.innerHTML = '';
+      return;
+    }
   }
   // Read fresh from storage but don't overwrite in-memory userNotes (avoids race with saveNote)
   var _storedNotes; try{ _storedNotes = JSON.parse(localStorage.getItem('synapses_notes')||'[]'); }catch(e){ _storedNotes=[]; }
@@ -23099,13 +23467,14 @@ function renderStickyNotes(laserOnNew){
 
     // PIN BADGE — shown on card when note is pinned
     if(note.pinned){
+      var pinInk = _stickyPinInk(col);
       var pinBadge = document.createElement('div');
       pinBadge.style.cssText =
         'position:absolute;top:6px;left:7px;' +
-        'font-size:9px;color:'+col.pin+';opacity:0.85;' +
-        'pointer-events:none;z-index:50;line-height:1;' +
-        'text-shadow:0 0 6px '+col.glow+';';
-      pinBadge.textContent = '📌';
+        'display:flex;align-items:center;justify-content:center;' +
+        'color:'+pinInk+';opacity:0.9;pointer-events:none;z-index:50;line-height:1;' +
+        'filter:drop-shadow(0 0 4px '+(_stickyIsTrueBlack()?'rgba(255,255,255,0.18)':col.glow)+');';
+      pinBadge.innerHTML = _stickyPinSvg();
       el.appendChild(pinBadge);
     }
 
@@ -23233,6 +23602,11 @@ function renderStickyNotes(laserOnNew){
     });
 
     wrapper.appendChild(el);
+    if(!_stickyNoteShouldShow(note)){
+      wrapper.style.display = 'none';
+      wrapper.style.opacity = '0';
+      wrapper.style.pointerEvents = 'none';
+    }
     layer.appendChild(wrapper);
     wrapperRefs.push({ wrapper: wrapper, note: note, slot: slot });
   });
@@ -23374,6 +23748,7 @@ function renderStickyNotes(laserOnNew){
     window._noteOrbStartPending = true;
     setTimeout(function(){ window._noteOrbStartPending = false; _startNoteOrb(); }, 600);
   }
+  _applyStickyHiddenState();
 }
 
 
@@ -23560,12 +23935,21 @@ function _openNoteEdit(idx){
   var isPinned = !!note.pinned;
   var btnPin = document.createElement('button');
   var _updatePinBtn = function(){
-    btnPin.textContent = isPinned ? '📌 Pinned' : '📌 Pin';
-    btnPin.style.cssText = 'padding:9px 14px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:12px;cursor:pointer;transition:all .2s;flex-shrink:0;' + (isPinned ? ('border:1px solid rgba('+_accent+','+(_tb?0.75:0.6)+');background:rgba('+_accent+','+(_tb?0.28:0.22)+');color:'+(_tb?'rgba(230,230,236,0.95)':'rgba(190,180,255,0.95)')+';') : 'border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.35);');
+    btnPin.innerHTML = _stickyPinSvg() + '<span>' + (isPinned ? 'Pinned' : 'Pin') + '</span>';
+    btnPin.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:12px;cursor:pointer;transition:all .2s;flex-shrink:0;' + (isPinned
+      ? (_tb
+        ? 'border:1px solid rgba(200,200,208,0.28);background:rgba(255,255,255,0.08);color:rgba(232,232,238,0.95);'
+        : 'border:1px solid rgba('+_accent+','+0.6+');background:rgba('+_accent+','+0.22+');color:rgba(190,180,255,0.95);')
+      : 'border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.35);');
   };
   _updatePinBtn();
   btnPin.title = 'Pinned notes stay visible when Quick Notes are hidden';
-  btnPin.onmouseenter = function(){ if(!isPinned){ btnPin.style.background='rgba('+_accent+','+(_tb?0.14:0.1)+')'; btnPin.style.borderColor='rgba('+_accent+','+(_tb?0.4:0.3)+')'; btnPin.style.color=_tb?'rgba(220,220,228,0.8)':'rgba(180,170,255,0.8)'; } };
+  btnPin.onmouseenter = function(){
+    if(!isPinned){
+      if(_tb){ btnPin.style.background='rgba(255,255,255,0.07)'; btnPin.style.borderColor='rgba(200,200,208,0.28)'; btnPin.style.color='rgba(232,232,238,0.85)'; }
+      else { btnPin.style.background='rgba('+_accent+',0.1)'; btnPin.style.borderColor='rgba('+_accent+',0.3)'; btnPin.style.color='rgba(180,170,255,0.8)'; }
+    }
+  };
   btnPin.onmouseleave = function(){ _updatePinBtn(); };
   btnPin.onclick = function(){ isPinned = !isPinned; _updatePinBtn(); };
 
@@ -23649,6 +24033,10 @@ function _openNoteEdit(idx){
     userNotes[idx].body  = bodyInp.value.trim();
     userNotes[idx].colorIdx = colorIdxMap[pickerPos];
     userNotes[idx].pinned = isPinned;
+    if(isPinned){
+      window._stickyNotesOpen = true;
+      try{ localStorage.setItem('stickyNotesOpen', '1'); }catch(eP){}
+    }
     try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); nlSave(true); }catch(e){}
     modal.remove();
     renderStickyNotes();
@@ -27138,8 +27526,11 @@ function groqStripThink(raw){
   // choice still persists across opens/reloads like bills/events do.
   var _CX_CAL_BW_LS_KEY = 'cxCalBwMode_v1';
   function _cxLoadCalBwMode(){
-    try{ return localStorage.getItem(_CX_CAL_BW_LS_KEY) === 'white' ? 'white' : 'black'; }
-    catch(e){ return 'black'; }
+    try{
+      var m = localStorage.getItem(_CX_CAL_BW_LS_KEY);
+      if(m === 'white' || m === 'black' || m === 'glass') return m;
+    }catch(e){}
+    return 'glass';
   }
   function _cxSaveCalBwMode(m){
     try{ localStorage.setItem(_CX_CAL_BW_LS_KEY, m); }
@@ -27336,6 +27727,7 @@ function groqStripThink(raw){
   function _cxDateKey(d){ var x = new Date(d); x.setHours(0,0,0,0); return x.getTime(); }
   function _cxBillsForDate(d){ var k = _cxDateKey(d); return _cxBills.filter(function(b){ return b.dateKey === k; }); }
   function _cxCloseCalPopup(){
+    if(window._cxCalHeadTimer){ clearInterval(window._cxCalHeadTimer); window._cxCalHeadTimer = null; }
     if(_cxCalPopupReposition){
       window.removeEventListener('resize', _cxCalPopupReposition);
       _cxCalPopupReposition = null;
@@ -27454,7 +27846,10 @@ function groqStripThink(raw){
     // The black/white toggle only ever shows up when the sitewide theme is
     // True Black — Sun and Dark Mode already have their own calendar look,
     // so there's nothing to flip there.
-    var isTrueBlackTheme = document.documentElement.getAttribute('data-theme') === 'trueblack';
+    var isTrueBlackTheme = (typeof _isTrueBlackTheme === 'function')
+      ? _isTrueBlackTheme()
+      : (document.documentElement.getAttribute('data-theme') === 'trueblack'
+        || document.documentElement.getAttribute('data-theme') === 'pitchblack');
     var _calSelTextColor = (_cxCalBwMode === 'white' && isTrueBlackTheme) ? '#ffffff' : '#0d0d0d';
     if(window.console && console.debug) console.debug('[calendar] raw items from backend:', payload.items);
     var items = (payload.items || []).map(function(it){
@@ -27590,36 +27985,12 @@ function groqStripThink(raw){
 
     var panel = document.createElement('div');
     panel.style.cssText = _inline ? [
-      // Inline-docked mount: this lives inside the CC card's own
-      // .bnav-cc-card.cc-placeholder box (dashed border, faint bg) — same
-      // shell Job Board/Quick Notes use. Painting the popup's own solid
-      // background+border+shadow+blur on top of that (as the floating
-      // popup below does) produced a card nested inside a card. Inline
-      // mode gets none of that chrome; it just fills the parent card.
       'position:relative','width:100%','box-sizing:border-box',
-      // overflow:hidden pins this box to whatever width its parent card
-      // actually gives it — a long unbroken event title, location string,
-      // etc. can no longer bubble up and stretch the card itself; it just
-      // clips (the nowrap+ellipsis rules on individual text lines below
-      // handle the visible truncation) instead of widening everything,
-      // which was what threw the day-pill off position (see movePill).
       'overflow:hidden',
-      // Stays truly transparent (blending into the parent CC card) in
-      // every normal theme. NOTE: can't use `var(--surface,transparent)`
-      // here — --surface is always defined at :root (e.g. #0d0d0d for
-      // True Black), so that fallback never actually triggers and the
-      // panel would paint solid instead of blending in. applyCalBwMode()
-      // sets panel.style.background directly to the real --surface white
-      // when it flips the popup white, and resets it back to 'transparent'
-      // here otherwise — same token the floating popup paints itself
-      // with, so the two never end up with two different whites.
       'background:transparent','border:none','box-shadow:none',
       'padding:0','font-family:\'DM Sans\',sans-serif'
     ].join(';') : [
       'position:relative','width:100%','box-sizing:border-box',
-      // Same fixed-width guarantee as the inline branch above — `wrap`
-      // already hard-sets a pixel width for the popup (min(340px,90vw)),
-      // this just makes sure nothing inside can push past that box either.
       'overflow:hidden',
       'background:var(--surface,#0d0d0d)',
       'border:1px solid var(--border,rgba(255,255,255,0.1))','border-radius:16px',
@@ -27656,11 +28027,60 @@ function groqStripThink(raw){
         ? 'display:block;position:absolute;left:-6px;right:-6px;top:-6px;bottom:-8px;border-radius:14px;background:var(--surface2,#161616);z-index:0;'
         : 'display:none;';
     }
+    function _cxPaintCalHost(host, look){
+      if(!host) return;
+      var titleLbl = host.querySelector('.bnav-cc-card-title');
+      var refreshBtn = host.querySelector('#bnavCCCalRefresh');
+      host.classList.remove('cx-cal-solid');
+      if(look === 'white'){
+        host.style.background = '#ffffff';
+        host.style.border = '1px solid rgba(0,0,0,0.10)';
+        host.style.boxShadow = '0 0 0 1px rgba(0,0,0,0.05) inset,0 20px 60px rgba(0,0,0,0.16)';
+        if(titleLbl) titleLbl.style.color = 'rgba(0,0,0,0.55)';
+        if(refreshBtn){
+          refreshBtn.style.color = 'rgba(0,0,0,0.55)';
+          refreshBtn.style.background = 'rgba(0,0,0,0.05)';
+          refreshBtn.style.borderColor = 'rgba(0,0,0,0.12)';
+        }
+      } else if(look === 'black'){
+        host.style.background = 'var(--surface,#0d0d0d)';
+        host.style.border = '1px solid var(--border,rgba(255,255,255,0.1))';
+        host.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.04) inset,0 20px 60px rgba(0,0,0,0.4)';
+        if(titleLbl) titleLbl.style.color = '';
+        if(refreshBtn){
+          refreshBtn.style.color = '';
+          refreshBtn.style.background = '';
+          refreshBtn.style.borderColor = '';
+        }
+      } else {
+        host.style.background = '';
+        host.style.border = '';
+        host.style.boxShadow = '';
+        if(titleLbl) titleLbl.style.color = '';
+        if(refreshBtn){
+          refreshBtn.style.color = '';
+          refreshBtn.style.background = '';
+          refreshBtn.style.borderColor = '';
+        }
+      }
+    }
     function applyCalBwMode(mode){
       var white = mode === 'white' && isTrueBlackTheme;
+      var glass = _inline && mode === 'glass';
+      var hostCard = (_inline && _inlineContainer) ? _inlineContainer.closest('.bnav-cc-card') : null;
+      var look = white ? 'white' : ((glass && _inline) ? 'glass' : 'black');
+      wrap.style.removeProperty('--surface');
+      wrap.style.removeProperty('--surface2');
+      wrap.style.removeProperty('--border');
+      wrap.style.removeProperty('--text');
+      wrap.style.removeProperty('--muted');
+      wrap.style.removeProperty('--cal-pill-bg');
+      wrap.style.removeProperty('--cal-today-bg');
+      wrap.style.removeProperty('--cal-input-bg');
+      wrap.style.removeProperty('--cal-bill-shadow');
       if(white){
         wrap.style.setProperty('--surface', '#ffffff');
-        wrap.style.setProperty('--surface2', '#f5f5f7');
+        wrap.style.setProperty('--surface2', '#f2f2f7');
         wrap.style.setProperty('--border', 'rgba(0,0,0,0.10)');
         wrap.style.setProperty('--text', '#0d0d0d');
         wrap.style.setProperty('--muted', '#8a8a90');
@@ -27668,101 +28088,47 @@ function groqStripThink(raw){
         wrap.style.setProperty('--cal-today-bg', 'rgba(0,0,0,0.06)');
         wrap.style.setProperty('--cal-input-bg', 'rgba(0,0,0,0.045)');
         wrap.style.setProperty('--cal-bill-shadow', '0 0 0 1px rgba(0,0,0,0.05) inset,0 14px 40px rgba(0,0,0,0.14)');
-        panel.style.boxShadow = '0 0 0 1px rgba(0,0,0,0.05) inset,0 20px 60px rgba(0,0,0,0.16)';
-        if(_inline) panel.style.background = '#ffffff';
-        // Inline mode has no box of its own to paint (see panel.style.cssText
-        // above) — it sits flush inside the CC card's own box. So "flip the
-        // whole card white" means recoloring THAT box directly, not adding a
-        // second white layer inside it (that's what produced the half-solid/
-        // half-transparent look last time: panel went white but the padding
-        // ring around it — the actual visible card — stayed dark).
-        if(_inline && _inlineContainer){
-          var hostCard = _inlineContainer.closest('.bnav-cc-card');
-          if(hostCard){
-            hostCard.style.background = '#ffffff';
-            hostCard.style.borderColor = 'rgba(0,0,0,0.10)';
-            // The host card's default border is dashed (cc-placeholder
-            // look) — fine against the dark glassy card background, but
-            // it read as a different, mismatched white next to the
-            // floating popup's solid-bordered white card. Match that here.
-            hostCard.style.borderStyle = 'solid';
-            // Copied from panel's own white boxShadow above — same card,
-            // same shadow, so inline and popup read as identical chrome.
-            hostCard.style.boxShadow = '0 0 0 1px rgba(0,0,0,0.05) inset,0 20px 60px rgba(0,0,0,0.16)';
-            // .bnav-cc-widget-add (the refresh button in the card's own
-            // header, outside `wrap`/`panel` entirely) is hardcoded near-
-            // white — invisible once the card behind it goes white.
-            var refreshBtn = hostCard.querySelector('.bnav-cc-widget-add');
-            if(refreshBtn){
-              refreshBtn.style.color = 'rgba(0,0,0,0.55)';
-              refreshBtn.style.background = 'rgba(0,0,0,0.05)';
-              refreshBtn.style.borderColor = 'rgba(0,0,0,0.12)';
-            }
-            // .bnav-cc-card-title (the small "Calendar" label in that same
-            // header) is hardcoded rgba(255,255,255,0.55) — same problem as
-            // the refresh button: fine on the dark card, invisible once the
-            // card goes white. This is the gap that left the strip above
-            // "What's on your calendar" looking unfilled instead of a flat
-            // match for the rest of the white card.
-            var titleLbl = hostCard.querySelector('.bnav-cc-card-title');
-            if(titleLbl) titleLbl.style.color = 'rgba(0,0,0,0.55)';
-          }
-        }
         _calSelTextColor = '#ffffff';
       } else {
-        wrap.style.removeProperty('--surface');
-        wrap.style.removeProperty('--surface2');
-        wrap.style.removeProperty('--border');
-        wrap.style.removeProperty('--text');
-        wrap.style.removeProperty('--muted');
-        wrap.style.removeProperty('--cal-pill-bg');
-        wrap.style.removeProperty('--cal-today-bg');
-        wrap.style.removeProperty('--cal-input-bg');
-        panel.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.04) inset,0 20px 60px rgba(0,0,0,0.4)';
-        if(_inline) panel.style.background = 'transparent';
-        if(_inline && _inlineContainer){
-          var hostCard2 = _inlineContainer.closest('.bnav-cc-card');
-          if(hostCard2){
-            hostCard2.style.background = '';
-            hostCard2.style.borderColor = '';
-            hostCard2.style.borderStyle = '';
-            hostCard2.style.boxShadow = '';
-            var refreshBtn2 = hostCard2.querySelector('.bnav-cc-widget-add');
-            if(refreshBtn2){
-              refreshBtn2.style.color = '';
-              refreshBtn2.style.background = '';
-              refreshBtn2.style.borderColor = '';
-            }
-            var titleLbl2 = hostCard2.querySelector('.bnav-cc-card-title');
-            if(titleLbl2) titleLbl2.style.color = '';
-          }
-        }
         _calSelTextColor = '#0d0d0d';
+      }
+      if(_inline){
+        panel.style.background = 'transparent';
+        panel.style.border = 'none';
+        panel.style.boxShadow = 'none';
+        panel.style.padding = '0';
+        _cxPaintCalHost(hostCard, look);
+      } else if(white){
+        panel.style.background = '#ffffff';
+        panel.style.border = '1px solid rgba(0,0,0,0.10)';
+        panel.style.borderRadius = '16px';
+        panel.style.boxShadow = '0 0 0 1px rgba(0,0,0,0.05) inset,0 20px 60px rgba(0,0,0,0.16)';
+        panel.style.padding = '16px';
+      } else {
+        panel.style.background = 'var(--surface,#0d0d0d)';
+        panel.style.border = '1px solid var(--border,rgba(255,255,255,0.1))';
+        panel.style.borderRadius = '16px';
+        panel.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.04) inset,0 20px 60px rgba(0,0,0,0.4)';
+        panel.style.padding = '16px';
       }
       var weekBlockTintEl = panel.querySelector('#cxCalWeekBlockTint');
       if(weekBlockTintEl) weekBlockTintEl.style.cssText = _cxWeekBlockTintStyle();
-      // Each day pill's own background is baked in at render time
-      // (circleRowHtmlFor), so toggling black/white live needs to
-      // recompute it here too -- otherwise pills stay whatever color they
-      // were built with (e.g. still transparent after switching to white),
-      // which is what was breaking the black fill/white pill look on toggle.
       panel.querySelectorAll('.cxCalDayBtn').forEach(function(btn){
         var i = parseInt(btn.getAttribute('data-idx'),10);
         var circle = btn.querySelector('.cxCalDayCircle');
         if(!circle) return;
         var isToday = weekOffset===0 && i===0;
         circle.style.background = isToday ? 'var(--cal-today-bg,rgba(255,255,255,0.08))' : (white ? 'var(--surface,#ffffff)' : 'transparent');
+        circle.style.border = glass && _inline && !white
+          ? '1px solid rgba(255,255,255,0.06)'
+          : '1px solid var(--border,rgba(255,255,255,0.1))';
       });
-      // Looked up by document id, not panel.querySelector: in inline mode
-      // this button gets relocated out of `panel` into the host card's own
-      // header (next to the refresh button) right after mount, so scoping
-      // the lookup to panel would silently stop finding it afterwards.
       var toggleBtn = document.getElementById('cxCalBwToggle');
       if(toggleBtn){
-        var sun = toggleBtn.querySelector('.cxCalBwSun');
-        var moon = toggleBtn.querySelector('.cxCalBwMoon');
-        if(sun) sun.style.display = white ? 'none' : 'block';
-        if(moon) moon.style.display = white ? 'block' : 'none';
+        var look = white ? 'white' : ((glass && _inline) ? 'glass' : 'black');
+        toggleBtn.innerHTML = _cxCalBwIconSvg(look);
+        toggleBtn.style.color = white ? '#3a3a40' : '#e8e8ed';
+        toggleBtn.title = look === 'white' ? 'Calendar: white' : (look === 'glass' ? 'Calendar: glass' : 'Calendar: solid');
       }
       updateDayStyles(selectedIdx);
       if(typeof movePill === 'function') movePill(selectedIdx, false);
@@ -27772,17 +28138,93 @@ function groqStripThink(raw){
     // identity worth flipping between two looks — Sun is already light and
     // Dark Mode is already its own (purple-tinted) thing, so the toggle
     // itself only shows up in True Black.
+    // One complete glyph per look so nothing can be "there but opacity 0".
+    function _cxCalBwIconSvg(look){
+      if(look === 'white'){
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 13.2A8.2 8.2 0 1 1 10.8 4a6.6 6.6 0 0 0 9.2 9.2z"/></svg>';
+      }
+      if(look === 'glass'){
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.2" fill="currentColor"/></svg>';
+      }
+      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.6"/></svg>';
+    }
+    var _cxCalBwLookNow = (_cxCalBwMode === 'white' && isTrueBlackTheme)
+      ? 'white'
+      : ((_inline && _cxCalBwMode === 'glass') ? 'glass' : 'black');
     var bwToggleHtml = isTrueBlackTheme
-      ? '<button id="cxCalBwToggle" title="Toggle calendar black/white" style="position:absolute;top:10px;right:'+(_inline?'10px':'36px')+';width:20px;height:20px;padding:0;background:transparent;border:none;border-radius:50%;color:var(--muted,rgba(255,255,255,0.32));cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s ease,background .15s ease;z-index:3;">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none">' +
-            '<circle class="cxCalBwSun" cx="12" cy="12" r="4.6" fill="currentColor" style="display:'+(_cxCalBwMode==='white'?'none':'block')+';"/>' +
-            '<path class="cxCalBwMoon" d="M20 13.2A8.2 8.2 0 1 1 10.8 4a6.6 6.6 0 0 0 9.2 9.2z" fill="currentColor" style="display:'+(_cxCalBwMode==='white'?'block':'none')+';"/>' +
-          '</svg>' +
+      ? '<button type="button" id="cxCalBwToggle" class="cxCalBwToggle" title="Toggle calendar look" aria-label="Toggle calendar look" style="position:absolute;top:10px;right:'+(_inline?'10px':'36px')+';z-index:6;color:'+(_cxCalBwLookNow==='white'?'#3a3a40':'#e8e8ed')+';">' +
+          _cxCalBwIconSvg(_cxCalBwLookNow) +
         '</button>'
       : '';
 
     var calSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text,#f2f2f5);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
-    var headTitle = mode === 'created' ? 'Added to your calendar' : "What's on your calendar";
+    var _cxNow = new Date();
+    var _cxTodayLabel = _cxNow.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    function _cxHeadEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function _cxHeadShort(t){
+      t = String(t||'').replace(/\s+/g,' ').trim();
+      if(t.length > 26) t = t.slice(0, 24).replace(/\s+\S*$/,'') + '\u2026';
+      return t;
+    }
+    function _cxHeadTime(d){
+      if(!d || isNaN(d.getTime())) return '';
+      var h = d.getHours(), m = d.getMinutes();
+      if(h === 0 && m === 0) return '';
+      var h12 = h % 12; if(!h12) h12 = 12;
+      return h12 + (m ? ':' + (m<10?'0':'')+m : '') + (h<12?'am':'pm');
+    }
+    function _cxHeadSameDay(a, b){
+      return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    }
+    var _cxHeadLines = (function(){
+      // Standard calendar-widget copy only (iOS / Google / Outlook):
+      // date, "What's on your calendar", event counts, Next, Tomorrow,
+      // "No upcoming events" / "Nothing scheduled today".
+      var lines = ["What's on your calendar"];
+      var today0 = new Date(_cxNow); today0.setHours(0,0,0,0);
+      var tom0 = new Date(today0); tom0.setDate(tom0.getDate()+1);
+      var week0 = new Date(today0); week0.setDate(week0.getDate()+7);
+      var todayItems = items.filter(function(it){ return _cxHeadSameDay(it.start, today0); });
+      var tomItems = items.filter(function(it){ return _cxHeadSameDay(it.start, tom0); });
+      var nextUp = null;
+      for(var ni=0; ni<items.length; ni++){
+        if(items[ni].start && items[ni].start.getTime() >= _cxNow.getTime() - 60000){ nextUp = items[ni]; break; }
+      }
+      if(!nextUp && todayItems.length) nextUp = todayItems[0];
+      var weekBills = [];
+      for(var bi=0; bi<_cxBills.length; bi++){
+        var bd = new Date(_cxBills[bi].dateKey);
+        if(!isNaN(bd.getTime()) && bd >= today0 && bd < week0) weekBills.push(_cxBills[bi]);
+      }
+      if(todayItems.length === 1){
+        var t1 = _cxHeadTime(todayItems[0].start);
+        lines.push(t1 ? (_cxHeadShort(todayItems[0].title) + ' at ' + t1) : _cxHeadShort(todayItems[0].title));
+      } else if(todayItems.length > 1){
+        lines.push(todayItems.length + ' events today');
+      }
+      if(nextUp && !(todayItems.length === 1 && nextUp === todayItems[0])){
+        var nt = _cxHeadTime(nextUp.start);
+        lines.push('Next: ' + _cxHeadShort(nextUp.title) + (nt ? ' at ' + nt : ''));
+      }
+      if(tomItems.length === 1) lines.push('Tomorrow: ' + _cxHeadShort(tomItems[0].title));
+      else if(tomItems.length > 1) lines.push(tomItems.length + ' events tomorrow');
+      if(!items.length) lines.push('No upcoming events');
+      else if(!todayItems.length) lines.push('Nothing scheduled today');
+      if(weekBills.length === 1) lines.push(_cxHeadShort(weekBills[0].title) + ' due this week');
+      else if(weekBills.length > 1) lines.push(weekBills.length + ' bills due this week');
+      var seen = {};
+      return lines.filter(function(s){
+        if(!s || seen[s]) return false;
+        seen[s] = true;
+        return true;
+      });
+    })();
+    var headTitleHtml = mode === 'created'
+      ? '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;color:var(--text,#f2f2f5);">Added to your calendar</div>'
+      : '<div class="cxCalHeadSwap">' +
+          '<span class="cxCalHeadDate">'+_cxHeadEsc(_cxTodayLabel)+'</span>' +
+          '<span class="cxCalHeadLine">'+_cxHeadEsc(_cxHeadLines[0] || "What's on your calendar")+'</span>' +
+        '</div>';
     var subLine = mode === 'created'
       ? (items[0] ? items[0].title : 'Event added')
       : (items.length ? items.length + (items.length===1?' event':' events') + ' in the next ' + (payload.days||1) + (payload.days===1?' day':' days') : 'Nothing coming up');
@@ -27832,9 +28274,9 @@ function groqStripThink(raw){
       '<button id="cxCalPopupClose" title="Close" style="position:absolute;top:10px;right:10px;width:20px;height:20px;padding:0;background:transparent;border:none;border-radius:50%;color:var(--muted,rgba(255,255,255,0.32));cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s ease,background .15s ease;z-index:3;">' +
         '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>' +
       '</button>' +
-      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;padding-bottom:10px;padding-right:'+(isTrueBlackTheme?'44px':'22px')+';border-bottom:1px solid var(--border,rgba(255,255,255,0.1));">' +
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;padding-bottom:10px;padding-right:'+(_inline?'0':(isTrueBlackTheme?'44px':'22px'))+';min-width:0;overflow:hidden;border-bottom:1px solid var(--border,rgba(255,255,255,0.1));">' +
         calSvg +
-        '<div style="font-family:\'Syne\',sans-serif;font-size:15px;font-weight:700;color:var(--text,#f2f2f5);">'+headTitle+'</div>' +
+        headTitleHtml +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;margin:10px 0 0;">' +
         '<div style="flex:1;min-width:0;font-size:11.5px;color:var(--muted,#7a7a8a);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+subLine.replace(/</g,'')+'</div>' +
@@ -27895,44 +28337,22 @@ function groqStripThink(raw){
     panel.appendChild(caret);
 
     if(_inline){
-      // No caret (nothing to point at), no close button (this is a
-      // permanently-docked widget, not a dismissable popup).
       caret.style.display = 'none';
       var _inlineCloseBtn = panel.querySelector('#cxCalPopupClose');
       if(_inlineCloseBtn) _inlineCloseBtn.style.display = 'none';
       if(_inlineContainer){ _inlineContainer.innerHTML = ''; _inlineContainer.appendChild(wrap); }
       wrap.appendChild(panel);
       _cxCalInlineWrapEl = wrap;
-      // The bw toggle renders absolutely-positioned by default (matching
-      // where it sits in the floating popup), but inline it has nowhere
-      // of its own to be "top-right of" — the widget it's docked in has
-      // no corner, it's the refresh button in the CC card's own header
-      // above it that reads as its anchor. Move the actual node up into
-      // that header, immediately to the left of the refresh button, and
-      // drop it out of absolute positioning so it sits in that row's
-      // normal flex flow instead.
       var _cxBwToggleEl = panel.querySelector('#cxCalBwToggle');
       if(_cxBwToggleEl){
         var _calHostCard = _inlineContainer && _inlineContainer.closest('.bnav-cc-card');
         var _calRefreshBtn = _calHostCard && _calHostCard.querySelector('#bnavCCCalRefresh');
         if(_calRefreshBtn && _calRefreshBtn.parentNode){
-          // Every re-render (day click, week nav, refresh) builds a brand
-          // new toggle node inside the new panel and relocates it here —
-          // but the previous render's node, already moved into this same
-          // header, never gets cleaned up by the normal panel/wrap
-          // teardown since it's not inside panel/wrap anymore. Without
-          // this it piles up a duplicate toggle on every single re-render.
           var _staleToggle = _calRefreshBtn.parentNode.querySelector('#cxCalBwToggle');
           if(_staleToggle && _staleToggle.parentNode) _staleToggle.parentNode.removeChild(_staleToggle);
           _cxBwToggleEl.style.position = 'static';
           _cxBwToggleEl.style.top = '';
           _cxBwToggleEl.style.right = '';
-          // .bnav-cc-widget-head is a 2-item space-between row (title …
-          // refresh). Dropping a 3rd item in between would get its own
-          // even share of that spacing instead of sitting snug against
-          // the refresh button — margin-left:auto is what actually pulls
-          // it (and the refresh button after it) flush to the right edge
-          // as a pair, title unaffected on the left.
           _cxBwToggleEl.style.marginLeft = 'auto';
           _cxBwToggleEl.style.marginRight = '4px';
           _calRefreshBtn.parentNode.insertBefore(_cxBwToggleEl, _calRefreshBtn);
@@ -28753,7 +29173,9 @@ function groqStripThink(raw){
     if(_cxCalBwBtn){
       _cxCalBwBtn.onclick = function(e){
         e.stopPropagation();
-        _cxCalBwMode = _cxCalBwMode === 'white' ? 'black' : 'white';
+        var _order = _inline ? ['glass','white','black'] : ['black','white'];
+        var _at = _order.indexOf(_cxCalBwMode);
+        _cxCalBwMode = _order[(_at < 0 ? 0 : _at + 1) % _order.length];
         _cxSaveCalBwMode(_cxCalBwMode);
         applyCalBwMode(_cxCalBwMode);
       };
@@ -28763,6 +29185,19 @@ function groqStripThink(raw){
     // Apply the stored black/white preference right away so the popup opens
     // already looking correct instead of flashing the default look first.
     applyCalBwMode(_cxCalBwMode);
+
+    if(mode !== 'created' && _cxHeadLines.length > 1){
+      if(window._cxCalHeadTimer){ clearInterval(window._cxCalHeadTimer); window._cxCalHeadTimer = null; }
+      var _cxHeadI = 0;
+      var _cxHeadEl = panel.querySelector('.cxCalHeadLine');
+      window._cxCalHeadTimer = setInterval(function(){
+        if(!_cxHeadEl || !_cxHeadEl.isConnected){
+          clearInterval(window._cxCalHeadTimer); window._cxCalHeadTimer = null; return;
+        }
+        _cxHeadI = (_cxHeadI + 1) % _cxHeadLines.length;
+        _cxHeadEl.textContent = _cxHeadLines[_cxHeadI];
+      }, 18000);
+    }
   }
   window._cxShowCalendarPopup = _cxShowCalendarPopup;
 
