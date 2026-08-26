@@ -687,8 +687,8 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .bnav-orb-wrap.bnav-charging .bnav-orb{animation-name:bnavPuddleSwirl,none,bnavOrbMorph,none;transition:filter var(--bnav-hold-ms,1800ms) ease,box-shadow var(--bnav-hold-ms,1800ms) ease;filter:brightness(1.5) saturate(1.4);box-shadow:0 0 10px 2px rgba(124,106,247,0.55),0 0 26px 8px rgba(124,106,247,0.4),0 0 12px 3px rgba(0,217,168,0.16),inset 0 0 18px rgba(255,255,255,0.7);}
 .bnav-cc-backdrop{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;background:transparent;z-index:9998;opacity:0;pointer-events:none;transition:opacity .35s ease,top .2s ease,left .2s ease;}
 .bnav-cc-backdrop.bnav-cc-open{opacity:1;pointer-events:auto;}
-.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;transform:scale(0.97);transform-origin:center;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),transform .45s cubic-bezier(.34,1.56,.64,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr 96px;grid-template-areas:"left center right" "tray tray tray";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
-.bnav-cc-panel.bnav-cc-open{opacity:1;transform:scale(1);filter:blur(0);pointer-events:auto;}
+.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;transform:none;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr 96px;grid-template-areas:"left center right" "tray tray tray";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
+.bnav-cc-panel.bnav-cc-open{opacity:1;filter:blur(0);pointer-events:auto;}
 /* CC panel background is transparent (aurora shows through) — but the
    chat empty-state's whole greeting header (orb, time-based greeting,
    "Synapses · Neural Interface" label) + fingerprint pad sit underneath
@@ -854,16 +854,15 @@ html[data-theme="trueblack"] .bnav-cc-tv-chip.active{border-color:rgba(255,255,2
 .bnav-cc-tv-swap{width:18px;height:16px;padding:0;border-radius:4px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.8);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);}
 .bnav-cc-tv-swap:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.35);color:#fff;}
 .bnav-cc-tv-swap:disabled{opacity:0.32;cursor:default;}
-.bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-y:overlay;min-height:0;min-width:0;scrollbar-width:none;}
-.bnav-cc-right::-webkit-scrollbar{width:0;height:0;}
-.bnav-cc-right.cc-scroll-on{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.12) transparent;}
-.bnav-cc-right.cc-scroll-on::-webkit-scrollbar{width:3px;height:3px;}
-.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-track{background:transparent;}
-.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:99px;}
-.bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
-html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on{scrollbar-color:rgba(255,255,255,0.12) transparent;}
-html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12)!important;}
-html[data-theme="trueblack"] .bnav-cc-right.cc-scroll-on::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22)!important;}
+.bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-x:hidden;overflow-y:auto;min-height:0;min-width:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.12) transparent;}
+.bnav-cc-right::-webkit-scrollbar{width:3px!important;height:0!important;}
+.bnav-cc-right::-webkit-scrollbar:horizontal{display:none;height:0!important;}
+.bnav-cc-right::-webkit-scrollbar-track{background:transparent;}
+.bnav-cc-right::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:99px;}
+.bnav-cc-right::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
+html[data-theme="trueblack"] .bnav-cc-right{scrollbar-color:rgba(255,255,255,0.12) transparent;}
+html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12)!important;}
+html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22)!important;}
 /* Calendar card hosts the real (formerly floating-only) calendar widget
    inline, sized up instead of the old 4-row summary list. The card itself
    drops its own padding/border since the mounted widget already draws its
@@ -10399,36 +10398,41 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // floats free at an arbitrary pixel position.
   var _ccDragCols = [];
   function _ccInitWidgetDrag(col, storageKey){
-    if(!col || col._ccDragInit) return;
+    if(!col) return;
+    var exists = false;
+    for(var i=0;i<_ccDragCols.length;i++){ if(_ccDragCols[i].el === col){ exists = true; break; } }
+    if(!exists) _ccDragCols.push({ el: col, key: storageKey });
     col._ccDragInit = true;
-    _ccDragCols.push({ el: col, key: storageKey });
-
-    // Restore any previously-saved order for this column before wiring drag.
-    try{
-      var savedOrder = JSON.parse(localStorage.getItem(storageKey) || 'null');
-      if(savedOrder && savedOrder.length){
-        var frag = document.createDocumentFragment();
-        var byId = {};
-        Array.prototype.forEach.call(col.children, function(c){
-          var id = c.getAttribute('data-cc-id');
-          if(id) byId[id] = c;
+  }
+  function _ccRestoreAllColOrders(){
+    var panel = document.getElementById('bnavCCPanel');
+    if(!panel) return;
+    var byId = {};
+    Array.prototype.forEach.call(panel.querySelectorAll('.bnav-cc-left > [data-cc-id], .bnav-cc-center > [data-cc-id], .bnav-cc-right > [data-cc-id]'), function(c){
+      var id = c.getAttribute('data-cc-id');
+      if(id) byId[id] = c;
+    });
+    _ccDragCols.forEach(function(entry){
+      try{
+        var order = JSON.parse(localStorage.getItem(entry.key) || 'null');
+        if(!order || !order.length) return;
+        order.forEach(function(id){
+          var card = byId[id];
+          if(card) entry.el.appendChild(card);
         });
-        savedOrder.forEach(function(id){ if(byId[id]) frag.appendChild(byId[id]); });
-        // Any card not present in the saved order (new widget added later) gets appended after.
-        Array.prototype.forEach.call(col.children, function(c){ if(c.parentNode !== frag) frag.appendChild(c); });
-        col.appendChild(frag);
-      }
-    }catch(err){}
-    _ccSyncBalanceSize(col);
-
-    // Capture the flat child list BEFORE restoring fused widgets — restore
-    // moves any previously-fused card out of col.children and into the
-    // balance tile's .cc-nest-body, so wiring drag from col.children
-    // afterward would silently skip it (leaving it undraggable forever).
-    var cardsToWire = Array.prototype.slice.call(col.children);
-    if(storageKey === 'synapses_cc_order_center') _ccRestoreNestedStack(col);
-
-    cardsToWire.forEach(function(card){ _ccWireDragCard(card, col); });
+      }catch(err){}
+    });
+    _ccSyncBalanceSize();
+  }
+  function _ccFinishWidgetDragInit(){
+    if(_ccFinishWidgetDragInit._done) return;
+    _ccFinishWidgetDragInit._done = true;
+    _ccRestoreAllColOrders();
+    _ccDragCols.forEach(function(entry){
+      var cardsToWire = Array.prototype.slice.call(entry.el.children);
+      if(entry.key === 'synapses_cc_order_center') _ccRestoreNestedStack(entry.el);
+      cardsToWire.forEach(function(card){ _ccWireDragCard(card, entry.el); });
+    });
   }
 
   // The health/balance tile is pinned at a fixed 190x190 square by default so
@@ -10543,6 +10547,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 
   function _ccWireDragCard(card, homeCol){
     if(!card.classList || !card.classList.contains('bnav-cc-card')) return;
+    if(card._ccDragWired) return;
+    card._ccDragWired = true;
     card.classList.add('bnav-cc-draggable');
 
     var dragging = false, placeholder = null, grabOffX = 0, grabOffY = 0, curCol = homeCol;
@@ -11068,7 +11074,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     // orb itself is draggable now too (it's just a card, not special), and
     // any other tile can be dragged in next to or below it.
     _ccInitWidgetDrag(panel.querySelector('.bnav-cc-center'), 'synapses_cc_order_center');
-    _ccInitWidgetDrag(panel.querySelector('.bnav-cc-center'), 'synapses_cc_order_center');
+    _ccFinishWidgetDragInit();
 
     backdrop.addEventListener('click', closeControlCentre);
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeControlCentre(); });
@@ -11684,12 +11690,6 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     else { _ccApplyBalanceText(document.getElementById('bnavCCBalanceTitle'), document.getElementById('bnavCCBalanceSub')); }
     backdrop.classList.add('bnav-cc-open');
     panel.classList.add('bnav-cc-open');
-    var _ccRight = panel.querySelector('.bnav-cc-right');
-    if(_ccRight){
-      _ccRight.classList.remove('cc-scroll-on');
-      clearTimeout(_ccRight._ccScrollT);
-      _ccRight._ccScrollT = setTimeout(function(){ _ccRight.classList.add('cc-scroll-on'); }, 480);
-    }
 
     // refresh Activity bars + Session gauges — these reflect live app state, not just first-open values
     var _actCats2 = [
@@ -11741,20 +11741,18 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         jobNum.textContent = jc;
         if(jobLabel) jobLabel.textContent = 'open role'+(jc===1?'':'s');
       }
-      // Painted state stays on screen. A quiet refresh runs after open and
-      // only remounts if the data actually changed.
-      _ccRenderCalendarWidget(false);
-      _ccRenderMailWidget(false);
+      // Don't remount after reveal — that grows the column and pops the
+      // scrollbar in late. Quiet refresh only if the widgets are still empty.
+      var calEl = document.getElementById('bnavCCCalList');
+      var mailEl = document.getElementById('bnavCCMailList');
+      if(calEl && !_ccCalMounted(calEl)) _ccRenderCalendarWidget(false);
+      if(mailEl && !mailEl.querySelector('.bnav-cc-rich-row, .bnav-cc-connect-row')) _ccRenderMailWidget(false);
     })();
   }
   function closeControlCentre(){
     var backdrop = document.getElementById('bnavCCBackdrop'), panel = document.getElementById('bnavCCPanel');
     if(backdrop) backdrop.classList.remove('bnav-cc-open');
-    if(panel){
-      panel.classList.remove('bnav-cc-open');
-      var _ccRight = panel.querySelector('.bnav-cc-right');
-      if(_ccRight){ clearTimeout(_ccRight._ccScrollT); _ccRight.classList.remove('cc-scroll-on'); }
-    }
+    if(panel) panel.classList.remove('bnav-cc-open');
   }
   // Exposed on window: openControlCentre/closeControlCentre previously only
   // needed to be callable from inside this same closure (the orb's hold
@@ -11895,6 +11893,47 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var base = (typeof GROQ_PROXY === 'string' && GROQ_PROXY) ? GROQ_PROXY.replace(/\/$/,'') : 'https://synbot-whatsapp-2.onrender.com';
     return base + '/api/youtube-live/search?q=' + encodeURIComponent(q);
   }
+  function _ccTvCleanQuery(q){
+    return String(q||'')
+      .replace(/^\s*(show me|put on|tune (in )?to|watch|find|play me|play)\s+/i, '')
+      .replace(/[?!.,]+$/g, '')
+      .trim();
+  }
+  function _ccTvNormalizeResults(raw){
+    var items = [];
+    var list = Array.isArray(raw) ? raw : (raw && (raw.items || raw.videos)) || [];
+    list.forEach(function(it){
+      if(!it) return;
+      var id = it.videoId || (typeof it.id === 'string' ? it.id : '') || '';
+      if(!id && it.id && it.id.videoId) id = it.id.videoId;
+      if(!id && typeof it.url === 'string'){
+        var m = it.url.match(/[?&]v=([a-zA-Z0-9_-]{11})/) || it.url.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/) || it.url.match(/(?:youtu\.be\/|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
+        if(m) id = m[1];
+      }
+      if(id && /^[a-zA-Z0-9_-]{11}$/.test(id)) items.push({ videoId:id, title: it.title || it.name || '' });
+    });
+    return items;
+  }
+  function _ccTvClientSearch(q){
+    var urls = [
+      'https://pipedapi.kavin.rocks/search?q=' + encodeURIComponent(q) + '&filter=videos',
+      'https://pipedapi.adminforge.de/search?q=' + encodeURIComponent(q) + '&filter=videos',
+      'https://invidious.fdn.fr/api/v1/search?q=' + encodeURIComponent(q) + '&type=video',
+      'https://yewtu.be/api/v1/search?q=' + encodeURIComponent(q) + '&type=video'
+    ];
+    return new Promise(function(resolve, reject){
+      var i = 0;
+      function next(){
+        if(i >= urls.length) return reject(new Error('no search'));
+        var url = urls[i++];
+        fetch(url).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(data){
+          var items = _ccTvNormalizeResults(data);
+          if(items.length) resolve(items); else next();
+        }).catch(next);
+      }
+      next();
+    });
+  }
   function _ccTvExpand(card){
     if(!card) return;
     card.classList.add('tv-on','tv-expanded');
@@ -11959,7 +11998,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   function _ccTvSearch(query){
     var card = document.getElementById('bnavCCTV');
     if(!card) return;
-    var q = String(query || '').trim();
+    var q = _ccTvCleanQuery(query);
     if(!q) return;
     _ccTvExpand(card);
     card.classList.add('tv-tuning');
@@ -11971,10 +12010,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(label) label.textContent = 'TUNING…';
     var token = 'search|' + q;
     _ccTV._fetchToken = token;
-    fetch(_ccTvSearchUrl(q)).then(function(r){ return r.json(); }).then(function(data){
+    function playItems(items){
       if(_ccTV._fetchToken !== token) return;
       card.classList.remove('tv-tuning');
-      var items = (data && data.items) || [];
+      items = _ccTvNormalizeResults(items);
       if(!items.length){
         card.classList.add('tv-offair');
         if(label) label.textContent = 'NO SIGNAL';
@@ -11984,12 +12023,23 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         return;
       }
       _ccTvSetList(items, 0, 'search', q, false);
-    }).catch(function(){
+    }
+    function failOut(){
       if(_ccTV._fetchToken !== token) return;
       card.classList.remove('tv-tuning');
       card.classList.add('tv-offair');
       if(label) label.textContent = 'NO SIGNAL';
-    });
+    }
+    fetch(_ccTvSearchUrl(q)).then(function(r){
+      if(!r.ok) throw new Error('http '+r.status);
+      return r.json();
+    }).then(function(data){
+      var items = (data && data.items) || [];
+      if(items.length) playItems(items);
+      else return _ccTvClientSearch(q).then(playItems);
+    }).catch(function(){
+      return _ccTvClientSearch(q).then(playItems);
+    }).catch(failOut);
   }
   function tuneControlCentreTV(key){
     var chan = _ccTvFindChannel(key); if(!chan) return;
@@ -12057,9 +12107,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         if(e.key!=='Enter') return;
         e.preventDefault();
         var v = askInput.value.trim(); if(!v) return;
-        var key = detectTVTopic(v);
-        if(key) tuneControlCentreTV(key);
-        else _ccTvSearch(v);
+        var cleaned = _ccTvCleanQuery(v) || v;
+        var key = detectTVTopic(cleaned);
+        var t = cleaned.toLowerCase();
+        var presetOnly = key === 'news' || key === 'space' || (key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4);
+        if(presetOnly) tuneControlCentreTV(key);
+        else _ccTvSearch(cleaned);
         askInput.value='';
       });
     }
