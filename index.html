@@ -8248,12 +8248,6 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
 html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
-/* Mobile sun aurora: same beam strength as desktop, hue locked to 212107 indigo */
-@media (max-width:900px){
-  #globalBeamsCanvas{opacity:0.7;filter:blur(38px);}
-  html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
-  #chatBeamsWrap,#chatBeamsCanvas{opacity:0.7;}
-}
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
    already is for Dark Mode / True Black above. Now applies on mobile too (was PC-only, which is
@@ -43746,19 +43740,6 @@ async function confirmWorldApproach(){
   }
 }
 
-function _sunAuroraMobile(){
-  try{
-    return !!(window.matchMedia && (window.matchMedia('(max-width:900px)').matches || window.matchMedia('(pointer:coarse)').matches));
-  }catch(e){ return false; }
-}
-function _sunAuroraHue(i, n){
-  if(_sunAuroraMobile()) return 228 + ((i % 8) * 1.5);
-  return 190 + (i * 70) / Math.max(1, n);
-}
-function _sunAuroraPaint(hue, a){
-  return 'hsla('+hue+',85%,65%,'+a+')';
-}
-
 // ── Global Beams Background (all sections) ──
 (function(){
   var canvas=document.getElementById('globalBeamsCanvas');
@@ -43769,7 +43750,7 @@ function _sunAuroraPaint(hue, a){
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
 
   function resize(){
     var dpr=window.devicePixelRatio||1;
@@ -43787,7 +43768,7 @@ function _sunAuroraPaint(hue, a){
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.6;
     beam.width=70+Math.random()*90;
     beam.speed=0.45+Math.random()*0.4;
-    beam.hue=_sunAuroraHue(i,total);
+    beam.hue=190+(i*70)/total;
     beam.opacity=0.14+Math.random()*0.1;
   }
 
@@ -43798,13 +43779,14 @@ function _sunAuroraPaint(hue, a){
     var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var _isDeepSea=document.documentElement.getAttribute('data-theme')==='deepsea';
     var hue=_isDeepSea ? (beam.hue+30)%360 : beam.hue;
+    var sat=_isDeepSea ? '70%' : '85%';
     var g=ctx.createLinearGradient(0,0,0,beam.length);
-    g.addColorStop(0,_sunAuroraPaint(hue,0));
-    g.addColorStop(0.1,_sunAuroraPaint(hue,op*0.5));
-    g.addColorStop(0.4,_sunAuroraPaint(hue,op));
-    g.addColorStop(0.6,_sunAuroraPaint(hue,op));
-    g.addColorStop(0.9,_sunAuroraPaint(hue,op*0.5));
-    g.addColorStop(1,_sunAuroraPaint(hue,0));
+    g.addColorStop(0,'hsla('+hue+','+sat+',65%,0)');
+    g.addColorStop(0.1,'hsla('+hue+','+sat+',65%,'+(op*0.5)+')');
+    g.addColorStop(0.4,'hsla('+hue+','+sat+',65%,'+op+')');
+    g.addColorStop(0.6,'hsla('+hue+','+sat+',65%,'+op+')');
+    g.addColorStop(0.9,'hsla('+hue+','+sat+',65%,'+(op*0.5)+')');
+    g.addColorStop(1,'hsla('+hue+','+sat+',65%,0)');
     ctx.fillStyle=g;
     ctx.fillRect(-beam.width/2,0,beam.width,beam.length);
     ctx.restore();
@@ -43852,7 +43834,7 @@ function _sunAuroraPaint(hue, a){
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
 
   function resize(){
     var sec=document.getElementById('sec-chat');
@@ -43872,7 +43854,7 @@ function _sunAuroraPaint(hue, a){
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.5;
     beam.width=80+Math.random()*80;
     beam.speed=0.5+Math.random()*0.4;
-    beam.hue=_sunAuroraHue(i,total);
+    beam.hue=190+(i*70)/total;
     beam.opacity=0.18+Math.random()*0.1;
     return beam;
   }
@@ -43883,12 +43865,12 @@ function _sunAuroraPaint(hue, a){
     ctx.rotate(beam.angle*Math.PI/180);
     var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var g=ctx.createLinearGradient(0,0,0,beam.length);
-    g.addColorStop(0,_sunAuroraPaint(beam.hue,0));
-    g.addColorStop(0.1,_sunAuroraPaint(beam.hue,op*0.5));
-    g.addColorStop(0.4,_sunAuroraPaint(beam.hue,op));
-    g.addColorStop(0.6,_sunAuroraPaint(beam.hue,op));
-    g.addColorStop(0.9,_sunAuroraPaint(beam.hue,op*0.5));
-    g.addColorStop(1,_sunAuroraPaint(beam.hue,0));
+    g.addColorStop(0,'hsla('+beam.hue+',85%,65%,0)');
+    g.addColorStop(0.1,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');
+    g.addColorStop(0.4,'hsla('+beam.hue+',85%,65%,'+op+')');
+    g.addColorStop(0.6,'hsla('+beam.hue+',85%,65%,'+op+')');
+    g.addColorStop(0.9,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');
+    g.addColorStop(1,'hsla('+beam.hue+',85%,65%,0)');
     ctx.fillStyle=g;
     ctx.fillRect(-beam.width/2,0,beam.width,beam.length);
     ctx.restore();
