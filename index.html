@@ -11882,11 +11882,11 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   }
   function _ccTvIsBarePreset(query, key){
     if(!key) return false;
-    var t = String(query||'').toLowerCase().replace(/[^\w\s']/g,' ').replace(/\s+/g,' ').trim();
+    var t = String(query||'').toLowerCase().replace(/['’]/g,'').replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
     var stop = {
-      news: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','news','headline','headlines','breaking','world','whats','what','s','happening','current','events','abc'],
-      space: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','space','nasa','rocket','launch','iss','astronaut','mars','spacex'],
-      music: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','play','music','lofi','lo','fi','beats','chill','something']
+      news: ['the','a','an','me','some','on','to','in','of','for','is','are','was','were','it','this','about','any','please','live','channel','tv','show','put','watch','tune','news','headline','headlines','breaking','world','whats','what','s','happening','current','events','abc'],
+      space: ['the','a','an','me','some','on','to','in','of','for','is','are','was','were','it','this','about','any','please','live','channel','tv','show','put','watch','tune','space','nasa','rocket','launch','iss','astronaut','mars','spacex'],
+      music: ['the','a','an','me','some','on','to','in','of','for','is','are','please','live','channel','tv','show','put','watch','tune','play','music','lofi','lo','fi','beats','chill','something']
     };
     var extra = t.split(/\s+/).filter(function(w){ return w && (stop[key] || []).indexOf(w) === -1; });
     return extra.length === 0;
@@ -12153,6 +12153,11 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!card) return;
     var q = _ccTvCleanQuery(query);
     if(!q) return;
+    var presetKey = detectTVTopic(q);
+    if((presetKey === 'news' || presetKey === 'space') && _ccTvIsBarePreset(q, presetKey)){
+      tuneControlCentreTV(presetKey);
+      return;
+    }
     _ccTV.mute = false;
     _ccTvExpand(card);
     _ccTvShowComing(q, 'finding the best video');
@@ -62444,7 +62449,7 @@ function speakVoiceReply(text) {
       var _tvKey = window._voiceTvTuned;
       window._voiceTvTuned = null;
       if (_tvKey === 'news') {
-        window._voiceNewsBrief = true;
+        // Live news briefing uses search_web — don't skip the LLM.
       } else {
         _vcHandled = true;
         var _tvAck = _tvKey === 'music' ? 'Putting some music on.'
@@ -63173,20 +63178,9 @@ function speakVoiceReply(text) {
     if (_agentSysVoice.indexOf('You have live web search') === -1) {
       _agentSysVoice = _voiceSearchMandate + _agentSysVoice;
     }
-    if (window._voiceNewsBrief) {
-      window._voiceNewsBrief = false;
-      _agentSysVoice =
-        'THIS TURN IS A LIVE NEWS BRIEFING. You MUST call search_web now with a query like "top world news headlines today" BEFORE you speak. ' +
-        'SYN-TV is already showing the live news picture. Do not say you are putting the news on, showing the news, or that you cannot play news. ' +
-        'Speak a natural 4-6 sentence briefing of the actual current headlines from the search — names, places, what happened. No markdown.\n\n' +
-        _agentSysVoice;
-      _agentVoiceMsgs = _agentVoiceMsgs.slice();
-      if (_agentVoiceMsgs.length) {
-        _agentVoiceMsgs[_agentVoiceMsgs.length - 1] = {
-          role: 'user',
-          content: 'What is the current news right now? Brief me on the latest headlines today.'
-        };
-      }
+    var _clearNewsAsk = /\b((what'?s|whats|what is)\s+(the\s+)?news|show me (the )?news|tell me (the )?news|give me (the )?news|headlines|breaking news|top stories|current events)\b/i.test(text || '');
+    if (_clearNewsAsk) {
+      _agentSysVoice = 'THIS TURN IS A NEWS BRIEFING. You MUST call search_web before speaking (query like "top world news headlines today"). Do not say you are putting the news on or that you cannot play news. Speak the actual current headlines from the search. Vague chat like "what\'s going on" or "what\'s new" is NOT this — only clear news asks.\n\n' + _agentSysVoice;
       _maxTok = Math.max(_maxTok || 0, 720);
     }
     if (_agentSysVoice.length > 2000) _agentSysVoice = _agentSysVoice.slice(0, 2000);
