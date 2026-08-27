@@ -12008,22 +12008,21 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     { key:'space',  label:'NASA ISS', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
       watch:'https://www.youtube.com/watch?v=M3HKLzjvKPc',
       match:['space','nasa','rocket','launch','iss','astronaut','mars','spacex'] },
-    { key:'music',  label:'LOCKED IN', type:'video', id:'cKQrxCtWnkY', icon:'🎵',
-      watch:'https://www.youtube.com/watch?v=cKQrxCtWnkY',
+    { key:'music',  label:'DEEP HOUSE', type:'video', id:'AF89ERsJNDs', icon:'🎵',
+      watch:'https://www.youtube.com/watch?v=AF89ERsJNDs',
       match:['music','lofi','lo-fi','play something','play some music','beats','chill'],
-      // Matches the "pov: locked in / it finally paid off" dark ambient
-      // deep-focus style the user pointed at (same #QuietPower #DeepFocus
-      // #darkambient tag family), not lofi hip-hop.
-      topicQuery:'pov locked in dark ambient deep focus',
-      // Known-good live/long-form streams in that same "pov: locked in"
-      // dark ambient lane, merged in as a guaranteed fallback so Prev/Next
-      // always has more than one channel to flip to even if the live
-      // search fails or returns nothing.
+      // Deep house + architecture/house visuals, focus/lock-in vibe — the
+      // style the user pointed at with youtube.com/watch?v=AF89ERsJNDs.
+      topicQuery:'deep house focus lock in architecture',
+      // Known-good matches in that same deep-house/architecture lane,
+      // merged in as a guaranteed fallback so Prev/Next always has more
+      // than one channel to flip to, weighted toward this style per the
+      // user's request, with the lofi stream kept as one of the options.
       fallback:[
-        { videoId:'cKQrxCtWnkY', title:'pov: you finally locked in — 1 Hour Focus' },
-        { videoId:'7ssuZb_ADPI', title:'pov: you\u2019re so close to achieving this\u2026' },
-        { videoId:'90cCAAdwlNc', title:'lock in at 2am — dark ambient for focus & flow' },
-        { videoId:'w6zKG1U8LDM', title:'Cyberpunk Ambient for Deep Focus' },
+        { videoId:'AF89ERsJNDs', title:'Deep House — house architecture focus mix' },
+        { videoId:'y1sTOIhhphc', title:'DEEP CONCENTRATION — focus deep house mix' },
+        { videoId:'TDooSZdG0gE', title:'Dark House for Deep Focus in a Cyberpunk Reality' },
+        { videoId:'njqjpKpL1Mk', title:'Deep Focus House Mix' },
         { videoId:'rFZHOHl-L8A', title:'SYN-CHILL-1 — lofi live' }
       ] }
   ];
@@ -12440,6 +12439,22 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       return _ccTvClientSearch(q).then(playItems);
     }).catch(failOut);
   }
+  function _ccTvStopRefresh(){
+    if(_ccTV.refreshTimer){ clearInterval(_ccTV.refreshTimer); _ccTV.refreshTimer = null; }
+  }
+  function _ccTvStartRefresh(chan, key){
+    _ccTvStopRefresh();
+    if(!chan || !chan.topicQuery) return; // only channels with a live search query refresh
+    // Re-run the live search periodically so the channel picks up newer
+    // matches over time instead of staying frozen on the same fixed list.
+    // The known-good entries in chan.fallback always stay available as a
+    // safety net if a refresh comes back empty or fails.
+    _ccTV.refreshTimer = setInterval(function(){
+      if(!_ccTV.on || _ccTV.key !== key) { _ccTvStopRefresh(); return; }
+      var curItem = _ccTV.list[_ccTV.idx];
+      _ccTvFetchTopic(chan.topicQuery, key, curItem ? curItem.videoId : chan.id, curItem ? curItem.title : chan.label, chan.fallback);
+    }, 10 * 60 * 1000); // every 10 min
+  }
   function tuneControlCentreTV(key, opts){
     var chan = _ccTvFindChannel(key); if(!chan) return;
     var card = document.getElementById('bnavCCTV');
@@ -12453,12 +12468,14 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     card.classList.remove('tv-offair');
     _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
     _ccTvFetchTopic(chan.topicQuery || chan.match[0] || chan.label, key, chan.id, chan.label, chan.fallback);
+    _ccTvStartRefresh(chan, key);
   }
   function closeControlCentreTV(){
     var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
     if(!card) return;
     card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning','tv-ready','tv-coming','tv-hud');
     _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0;
+    _ccTvStopRefresh();
     setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
   }
   // Called only from real live speech (Whisper-transcribed mic audio in the
