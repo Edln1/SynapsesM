@@ -12008,9 +12008,24 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     { key:'space',  label:'NASA ISS', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
       watch:'https://www.youtube.com/watch?v=M3HKLzjvKPc',
       match:['space','nasa','rocket','launch','iss','astronaut','mars','spacex'] },
-    { key:'music',  label:'SYN-CHILL-1', type:'video', id:'rFZHOHl-L8A', icon:'🎵',
-      watch:'https://www.youtube.com/watch?v=rFZHOHl-L8A',
-      match:['music','lofi','lo-fi','play something','play some music','beats','chill'] }
+    { key:'music',  label:'LOCKED IN', type:'video', id:'cKQrxCtWnkY', icon:'🌑',
+      watch:'https://www.youtube.com/watch?v=cKQrxCtWnkY',
+      match:['music','lofi','lo-fi','play something','play some music','beats','chill'],
+      // Matches the "pov: locked in / it finally paid off" dark ambient
+      // deep-focus style the user pointed at (same #QuietPower #DeepFocus
+      // #darkambient tag family), not lofi hip-hop.
+      topicQuery:'pov locked in dark ambient deep focus',
+      // Known-good live/long-form streams in that same "pov: locked in"
+      // dark ambient lane, merged in as a guaranteed fallback so Prev/Next
+      // always has more than one channel to flip to even if the live
+      // search fails or returns nothing.
+      fallback:[
+        { videoId:'cKQrxCtWnkY', title:'pov: you finally locked in — 1 Hour Focus' },
+        { videoId:'7ssuZb_ADPI', title:'pov: you\u2019re so close to achieving this\u2026' },
+        { videoId:'90cCAAdwlNc', title:'lock in at 2am — dark ambient for focus & flow' },
+        { videoId:'w6zKG1U8LDM', title:'Cyberpunk Ambient for Deep Focus' },
+        { videoId:'rFZHOHl-L8A', title:'SYN-CHILL-1 — lofi live' }
+      ] }
   ];
   var _ccTV = { on:false, key:null, list:[], idx:0, query:'' };
 
@@ -12325,7 +12340,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var next = ((_ccTV.idx + dir) % n + n) % n;
     _ccTvSetList(_ccTV.list, next, _ccTV.key, _ccTV.query, false);
   }
-  function _ccTvMergeTopicResults(items, keepId, keepTitle){
+  function _ccTvMergeTopicResults(items, keepId, keepTitle, fallback){
     var seen = {};
     var out = [];
     if(keepId){
@@ -12337,21 +12352,42 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       seen[it.videoId] = true;
       out.push(it);
     });
+    // Guaranteed extra channels for topics whose live-search results are
+    // unreliable (e.g. "music" is too generic to reliably return good
+    // live streams) — keeps CH prev/next from getting stuck on one item.
+    (fallback || []).forEach(function(it){
+      if(!it || !it.videoId || seen[it.videoId]) return;
+      seen[it.videoId] = true;
+      out.push(it);
+    });
     return out;
   }
-  function _ccTvFetchTopic(q, key, keepId, keepTitle){
-    if(!q) return;
+  function _ccTvFetchTopic(q, key, keepId, keepTitle, fallback){
+    if(!q){
+      if(fallback && fallback.length){
+        var merged0 = _ccTvMergeTopicResults([], keepId, keepTitle, fallback);
+        _ccTvSetList(merged0, 0, key, keepTitle, true);
+      }
+      return;
+    }
     var token = q + '|' + (key || '');
     _ccTV._fetchToken = token;
     fetch(_ccTvSearchUrl(q)).then(function(r){ return r.json(); }).then(function(data){
       if(_ccTV._fetchToken !== token) return;
-      var merged = _ccTvMergeTopicResults((data && data.items) || [], keepId, keepTitle);
+      var merged = _ccTvMergeTopicResults((data && data.items) || [], keepId, keepTitle, fallback);
       if(!merged.length) return;
       var curId = (_ccTV.list && _ccTV.list[_ccTV.idx] && _ccTV.list[_ccTV.idx].videoId) || keepId;
       var idx = 0;
       for(var i=0;i<merged.length;i++){ if(merged[i].videoId === curId){ idx = i; break; } }
       _ccTvSetList(merged, idx, key, q, true);
-    }).catch(function(){});
+    }).catch(function(){
+      // Live search failed — still surface the fallback channels rather
+      // than leaving the swap control stuck on a single item.
+      if(_ccTV._fetchToken !== token) return;
+      var merged = _ccTvMergeTopicResults([], keepId, keepTitle, fallback);
+      if(merged.length < 2) return;
+      _ccTvSetList(merged, 0, key, keepTitle, true);
+    });
   }
   function _ccTvSearch(query){
     var card = document.getElementById('bnavCCTV');
@@ -12416,7 +12452,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     _ccTvExpand(card);
     card.classList.remove('tv-offair');
     _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
-    _ccTvFetchTopic(chan.match[0] || chan.label, key, chan.id, chan.label);
+    _ccTvFetchTopic(chan.topicQuery || chan.match[0] || chan.label, key, chan.id, chan.label, chan.fallback);
   }
   function closeControlCentreTV(){
     var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
