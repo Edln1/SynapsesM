@@ -872,6 +872,11 @@ html[data-theme="trueblack"] .bnav-cc-tv-chip.active{background:rgba(255,255,255
 .bnav-cc-tv-swap:disabled{opacity:0.28;cursor:default;background:transparent;}
 .bnav-cc-tv-chgroup.is-off .bnav-cc-tv-chlabel{opacity:0.38;}
 .bnav-cc-tv-chan-sep{width:1px;height:11px;margin:0 4px 0 5px;background:rgba(255,255,255,0.14);flex-shrink:0;border-radius:1px;}
+.bnav-cc-tv-genres{position:absolute;left:50%;right:auto;top:auto;bottom:34px;display:flex;gap:1px;align-items:center;padding:3px 6px;border-radius:999px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
+.bnav-cc-tv-genres.gn-visible{display:flex;}
+.bnav-cc-tv-genres:not(.gn-visible){display:none;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-genres.gn-visible{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+.bnav-cc-tv-genre-label{font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.85);padding:0 6px;line-height:1;pointer-events:none;user-select:none;min-width:64px;text-align:center;}
 .bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-x:hidden;overflow-y:auto;min-height:0;min-width:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.12) transparent;}
 .bnav-cc-right::-webkit-scrollbar{width:3px!important;height:0!important;}
 .bnav-cc-right::-webkit-scrollbar:horizontal{display:none;height:0!important;}
@@ -11068,6 +11073,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
             '<div class="bnav-cc-tv-label" id="bnavCCTVLabel"><i></i><span>SYN-NEWS-1</span></div>'+
             '<a class="bnav-cc-tv-open" id="bnavCCTVOpen" href="#" target="_blank" rel="noopener" title="If the picture doesn\'t load, open it directly on YouTube">Open on YouTube ↗</a>'+
             '<div class="bnav-cc-tv-chans" id="bnavCCTVChans"></div>'+
+            '<div class="bnav-cc-tv-genres" id="bnavCCTVGenres"></div>'+
           '</div>'+
           '<div class="bnav-cc-tv-resize" id="bnavCCTVResize" title="Drag to resize"></div>'+
         '</div>'+
@@ -12008,25 +12014,45 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     { key:'space',  label:'NASA ISS', type:'video', id:'M3HKLzjvKPc', icon:'🚀',
       watch:'https://www.youtube.com/watch?v=M3HKLzjvKPc',
       match:['space','nasa','rocket','launch','iss','astronaut','mars','spacex'] },
-    { key:'music',  label:'DEEP HOUSE', type:'video', id:'AF89ERsJNDs', icon:'🎵',
+    { key:'music',  label:'MUSIC', type:'video', id:'AF89ERsJNDs', icon:'🎵',
       watch:'https://www.youtube.com/watch?v=AF89ERsJNDs',
       match:['music','lofi','lo-fi','play something','play some music','beats','chill'],
-      // Deep house + architecture/house visuals, focus/lock-in vibe — the
-      // style the user pointed at with youtube.com/watch?v=AF89ERsJNDs.
-      topicQuery:'deep house focus lock in architecture',
-      // Known-good matches in that same deep-house/architecture lane,
-      // merged in as a guaranteed fallback so Prev/Next always has more
-      // than one channel to flip to, weighted toward this style per the
-      // user's request, with the lofi stream kept as one of the options.
-      fallback:[
-        { videoId:'AF89ERsJNDs', title:'Deep House — house architecture focus mix' },
-        { videoId:'y1sTOIhhphc', title:'DEEP CONCENTRATION — focus deep house mix' },
-        { videoId:'TDooSZdG0gE', title:'Dark House for Deep Focus in a Cyberpunk Reality' },
-        { videoId:'njqjpKpL1Mk', title:'Deep Focus House Mix' },
-        { videoId:'rFZHOHl-L8A', title:'SYN-CHILL-1 — lofi live' }
+      // Multiple genres under one "music" channel. CH prev/next (bottom
+      // row) swaps tracks within the current genre; GN prev/next (row
+      // above it) swaps between genres. Each genre keeps its own
+      // topicQuery + guaranteed fallback tracks, same pattern as before.
+      genres:[
+        { key:'lockedin', label:'LOCKED IN', icon:'🚗',
+          topicQuery:'pov locked in dark ambient deep focus',
+          fallback:[
+            { videoId:'cKQrxCtWnkY', title:'pov: you finally locked in — 1 Hour Focus' },
+            { videoId:'7ssuZb_ADPI', title:'pov: you\u2019re so close to achieving this\u2026' },
+            { videoId:'90cCAAdwlNc', title:'lock in at 2am — dark ambient for focus & flow' },
+            { videoId:'w6zKG1U8LDM', title:'Cyberpunk Ambient for Deep Focus' }
+          ] },
+        { key:'deephouse', label:'DEEP HOUSE', icon:'🏠',
+          topicQuery:'deep house focus lock in architecture',
+          fallback:[
+            { videoId:'AF89ERsJNDs', title:'Deep House — house architecture focus mix' },
+            { videoId:'y1sTOIhhphc', title:'DEEP CONCENTRATION — focus deep house mix' },
+            { videoId:'TDooSZdG0gE', title:'Dark House for Deep Focus in a Cyberpunk Reality' },
+            { videoId:'njqjpKpL1Mk', title:'Deep Focus House Mix' }
+          ] },
+        { key:'piano', label:'PIANO', icon:'🎹',
+          topicQuery:'lonely sad piano ambient music',
+          fallback:[
+            { videoId:'13E2nMlP6rE', title:'When Silence Glows — Piano & Ethereal Strings' },
+            { videoId:'_U3ZLbL0lAM', title:'Lonely — One Hour Piano Instrumental' },
+            { videoId:'COaMdIbxops', title:'A Lonely Room — Dark Calm Ambient for Deep Thought' }
+          ] },
+        { key:'lofi', label:'LOFI', icon:'🎧',
+          topicQuery:'lofi hip hop radio live',
+          fallback:[
+            { videoId:'rFZHOHl-L8A', title:'SYN-CHILL-1 — lofi live' }
+          ] }
       ] }
   ];
-  var _ccTV = { on:false, key:null, list:[], idx:0, query:'' };
+  var _ccTV = { on:false, key:null, list:[], idx:0, query:'', genreIdx:0 };
 
   function _ccTvDirectEmbedUrl(videoId){
     var mute = _ccTV.mute ? '1' : '0';
@@ -12466,15 +12492,51 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     _ccTvHideComing();
     _ccTvExpand(card);
     card.classList.remove('tv-offair');
-    _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
-    _ccTvFetchTopic(chan.topicQuery || chan.match[0] || chan.label, key, chan.id, chan.label, chan.fallback);
-    _ccTvStartRefresh(chan, key);
+    if(chan.genres && chan.genres.length){
+      _ccTvTuneGenre(chan, key, (opts && typeof opts.genreIdx === 'number') ? opts.genreIdx : 0);
+    } else {
+      _ccTV.genreIdx = 0;
+      _ccTvSetList([{ videoId: chan.id, title: chan.label }], 0, key, chan.label, false);
+      _ccTvFetchTopic(chan.topicQuery || chan.match[0] || chan.label, key, chan.id, chan.label, chan.fallback);
+      _ccTvStartRefresh(chan, key);
+    }
+    _ccTvSyncGenreRow();
+  }
+  // Tunes to a specific genre within a multi-genre channel (e.g. music:
+  // deep house / piano / lofi). Reuses the same fetch+fallback+refresh
+  // machinery as a normal channel, just scoped to that genre's own
+  // topicQuery and track list.
+  function _ccTvTuneGenre(chan, key, idx){
+    var genres = chan.genres; if(!genres || !genres.length) return;
+    idx = ((idx % genres.length) + genres.length) % genres.length;
+    _ccTV.genreIdx = idx;
+    var genre = genres[idx];
+    var first = (genre.fallback && genre.fallback[0]) || { videoId: chan.id, title: genre.label };
+    _ccTvSetList([{ videoId: first.videoId, title: first.title }], 0, key, genre.label, false);
+    _ccTvFetchTopic(genre.topicQuery, key, first.videoId, first.title, genre.fallback);
+    _ccTvStartRefresh(genre, key);
+    _ccTvSyncGenreRow();
+  }
+  function _ccTvStepGenre(dir){
+    var chan = _ccTvFindChannel(_ccTV.key);
+    if(!chan || !chan.genres || chan.genres.length < 2) return;
+    _ccTvTuneGenre(chan, _ccTV.key, (_ccTV.genreIdx || 0) + dir);
+  }
+  function _ccTvSyncGenreRow(){
+    var wrap = document.getElementById('bnavCCTVGenres'); if(!wrap) return;
+    var chan = _ccTvFindChannel(_ccTV.key);
+    var hasGenres = !!(chan && chan.genres && chan.genres.length > 1);
+    wrap.classList.toggle('gn-visible', hasGenres);
+    if(!hasGenres) return;
+    var label = wrap.querySelector('#bnavCCTVGenreLabel');
+    var genre = chan.genres[_ccTV.genreIdx || 0];
+    if(label) label.textContent = (genre && genre.label) || '';
   }
   function closeControlCentreTV(){
     var card = document.getElementById('bnavCCTV'), frame = document.getElementById('bnavCCTVFrame');
     if(!card) return;
     card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning','tv-ready','tv-coming','tv-hud');
-    _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0;
+    _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0; _ccTV.genreIdx = 0;
     _ccTvStopRefresh();
     setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
   }
@@ -12534,6 +12596,21 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(prevBtn) prevBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStep(-1); });
     if(nextBtn) nextBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStep(1); });
     _ccTvSyncSwap();
+    // Secondary swap row: switches between genres (e.g. deep house / piano
+    // / lofi) within whichever channel currently has multiple genres.
+    // Hidden entirely for channels with no genres (news/space).
+    var genresWrap = card.querySelector('#bnavCCTVGenres');
+    if(genresWrap){
+      genresWrap.innerHTML =
+        '<button type="button" class="bnav-cc-tv-swap" id="bnavCCTVGenrePrev" title="Previous genre"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M7.6 2.4L3.6 6l4 3.6" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+        '<span class="bnav-cc-tv-genre-label" id="bnavCCTVGenreLabel"></span>' +
+        '<button type="button" class="bnav-cc-tv-swap" id="bnavCCTVGenreNext" title="Next genre"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M4.4 2.4L8.4 6l-4 3.6" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+      var gPrev = genresWrap.querySelector('#bnavCCTVGenrePrev');
+      var gNext = genresWrap.querySelector('#bnavCCTVGenreNext');
+      if(gPrev) gPrev.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStepGenre(-1); });
+      if(gNext) gNext.addEventListener('click', function(e){ e.stopPropagation(); _ccTvStepGenre(1); });
+    }
+    _ccTvSyncGenreRow();
     var powerBtn = card.querySelector('#bnavCCTVPower');
     powerBtn.addEventListener('click', function(e){
       e.stopPropagation();
