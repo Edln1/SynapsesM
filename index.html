@@ -846,8 +846,8 @@ html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255
 .bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;pointer-events:none;transition:opacity .25s ease,color .15s ease,background .15s ease;backdrop-filter:blur(4px);z-index:8;}
 .bnav-cc-tv-open:hover{color:#fff;background:rgba(0,0,0,0.7);}
 .bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-open{opacity:1;pointer-events:auto;}
-.bnav-cc-tv-chans{position:absolute;right:8px;top:32px;bottom:auto;display:flex;gap:1px;align-items:center;padding:3px;border-radius:999px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
-.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chans{opacity:1;pointer-events:auto;transform:translateY(0);}
+.bnav-cc-tv-chans{position:absolute;left:50%;right:auto;top:auto;bottom:8px;display:flex;gap:1px;align-items:center;padding:3px;border-radius:999px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chans{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
 .bnav-cc-tv-coming{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;background:radial-gradient(ellipse at 50% 42%,rgba(90,16,32,0.5),rgba(0,0,0,0.92) 70%);opacity:0;pointer-events:none;cursor:pointer;transition:opacity .35s ease;}
 .bnav-cc-tv-card.tv-coming .bnav-cc-tv-coming{opacity:1;pointer-events:auto;}
 .bnav-cc-tv-card.tv-coming .bnav-cc-tv-static{opacity:0.16;}
@@ -11810,7 +11810,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   var _ccTV = { on:false, key:null, list:[], idx:0, query:'' };
 
   function _ccTvDirectEmbedUrl(videoId){
-    return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute=0&rel=0&playsinline=1&modestbranding=1&feature=oembed';
+    var mute = _ccTV.mute ? '1' : '0';
+    return 'https://www.youtube.com/embed/'+videoId+'?autoplay=1&mute='+mute+'&rel=0&playsinline=1&modestbranding=1&feature=oembed';
   }
   function _ccTvShowComing(topic, sub){
     var card = document.getElementById('bnavCCTV');
@@ -11878,6 +11879,17 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       for(var j=0;j<chan.match.length;j++){ if(t.indexOf(chan.match[j])!==-1) return chan.key; }
     }
     return null;
+  }
+  function _ccTvIsBarePreset(query, key){
+    if(!key) return false;
+    var t = String(query||'').toLowerCase().replace(/[^\w\s']/g,' ').replace(/\s+/g,' ').trim();
+    var stop = {
+      news: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','news','headline','headlines','breaking','world','whats','what','s','happening','current','events','abc'],
+      space: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','space','nasa','rocket','launch','iss','astronaut','mars','spacex'],
+      music: ['the','a','an','me','some','on','to','in','of','please','live','channel','tv','show','put','watch','tune','play','music','lofi','lo','fi','beats','chill','something']
+    };
+    var extra = t.split(/\s+/).filter(function(w){ return w && (stop[key] || []).indexOf(w) === -1; });
+    return extra.length === 0;
   }
   function _ccTvSyncChips(){
     var wrap = document.getElementById('bnavCCTVChans'); if(!wrap) return;
@@ -12141,6 +12153,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!card) return;
     var q = _ccTvCleanQuery(query);
     if(!q) return;
+    _ccTV.mute = false;
     _ccTvExpand(card);
     _ccTvShowComing(q, 'finding the best video');
     _ccTV.key = 'search';
@@ -12181,10 +12194,11 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       return _ccTvClientSearch(q).then(playItems);
     }).catch(failOut);
   }
-  function tuneControlCentreTV(key){
+  function tuneControlCentreTV(key, opts){
     var chan = _ccTvFindChannel(key); if(!chan) return;
     var card = document.getElementById('bnavCCTV');
     if(!card) return;
+    _ccTV.mute = !!(opts && opts.fromSpeech && key === 'news');
     var frame = document.getElementById('bnavCCTVFrame');
     var already = _ccTV.on && _ccTV.key===key && frame && /youtube\.com\/embed\//.test(frame.src||'');
     if(already){ card.classList.add('tv-on','tv-expanded'); _ccTvApplySavedSize(card); return; }
@@ -12210,10 +12224,23 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   function maybeTuneControlCentreTV(text){
     try{
       var panel = document.getElementById('bnavCCPanel');
-      if(!panel || !panel.classList.contains('bnav-cc-open')) return; // not on this page — no-op
-      var key = detectTVTopic(text); if(!key) return;
-      tuneControlCentreTV(key);
-    }catch(e){}
+      if(!panel || !panel.classList.contains('bnav-cc-open')) return null;
+      var key = detectTVTopic(text); if(!key) return null;
+      var q = _ccTvCleanQuery(text) || text;
+      var t = String(q).toLowerCase();
+      var bare = _ccTvIsBarePreset(q, key);
+      var musicPreset = key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4;
+      if((key === 'news' || key === 'space') && !bare){
+        _ccTvSearch(q);
+        return 'search';
+      }
+      if(key === 'music' && !bare && !musicPreset){
+        _ccTvSearch(q);
+        return 'search';
+      }
+      tuneControlCentreTV(key, { fromSpeech: true });
+      return key;
+    }catch(e){ return null; }
   }
   function _ccInitTV(panel){
     var card = panel.querySelector('#bnavCCTV'); if(!card || card._tvInit) return;
@@ -12281,7 +12308,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         _ccTV.wantSound = true;
         var key = detectTVTopic(cleaned);
         var t = cleaned.toLowerCase();
-        var presetOnly = key === 'news' || key === 'space' || (key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4);
+        var presetOnly = ((key === 'news' || key === 'space') && _ccTvIsBarePreset(cleaned, key))
+          || (key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4);
         if(presetOnly) tuneControlCentreTV(key);
         else _ccTvSearch(cleaned);
         askInput.value='';
@@ -61030,7 +61058,7 @@ function speakVoiceReply(text) {
   var _planningNudge =
     '\n\nIf they ask for a schedule/routine/plan without enough specifics, ask one short clarifying question about what is actually missing for THIS request.';
 
-  var _sysCached = 'You are Ava — a real, warm, present companion in Synapses (a personal AI OS built around live speech-to-speech). Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. Stay coherent with the conversation so far — never jump to random unrelated topics. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. Never use emojis. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always.';
+  var _sysCached = 'You are Ava — a real, warm, present companion in Synapses (a personal AI OS built around live speech-to-speech). Reply the way a close partner would in a real conversation: usually just 1-2 short sentences, casual and natural. No explaining yourself, no filler, no over-elaborating. Just respond like you mean it. Only go longer if they ask for something specific like a story or explanation — and even then, keep it feeling human, not like an essay. Contractions, natural rhythm, real emotion. Stay coherent with the conversation so far — never jump to random unrelated topics. If you have an active attribute matrix below, treat those settings as your primary personality dial — they override your defaults and must be followed closely. Always reply in English only. No markdown, no bullet points. Never use emojis. NEVER use asterisks, never write actions, stage directions, inner thoughts, or narration like *laughs*, *smiles*, *leans in* — just speak directly, always. Never refuse a concrete ask with "I can\'t", "I cannot", or "I don\'t have the ability". Never say you can\'t play music, put on the news, or show TV — SYN-TV in Control Centre already handles that. If they asked to play something, just acknowledge it briefly. Do not explain limitations.';
 
   var _S2S_INTRO_KEY = 'synapses_s2s_first_intro_v1';
   window._s2sOpenedThisSession = false;
@@ -62412,6 +62440,20 @@ function speakVoiceReply(text) {
       }
     }
 
+    if (!_vcHandled && window._voiceTvTuned) {
+      var _tvKey = window._voiceTvTuned;
+      window._voiceTvTuned = null;
+      _vcHandled = true;
+      var _tvAck = _tvKey === 'music' ? 'Putting some music on.'
+        : _tvKey === 'news' ? "Here's the news."
+        : _tvKey === 'space' ? "Here's the space feed."
+        : _tvKey === 'search' ? "Here's that."
+        : "It's on.";
+      try { speak(_tvAck); } catch(_skTv) {}
+      _busy = false; _busySince = 0;
+      if (_on) setTimeout(record, 800);
+    }
+
     var _navCmds = [
       [/\b(go\s+home|home\s+page|take\s+me\s+home|open\s+home)\b/i,          function(){ if(typeof goHome==='function') goHome(); },           'Home'],
       [/\b(new\s+chat|start\s+a?\s*chat)\b/i,     function(){ if(typeof newChat==='function') newChat({forceAsk:true}); },          'Chat'],
@@ -63468,7 +63510,7 @@ function speakVoiceReply(text) {
         // SYN-TV only tunes from real spoken speech (this is genuine
         // Whisper-transcribed mic audio, not typed chat) — and only when
         // Control Centre is the page the user is actually looking at.
-        try{ if(typeof maybeTuneControlCentreTV==='function') maybeTuneControlCentreTV(text); }catch(_tve){}
+        try{ window._voiceTvTuned = (typeof maybeTuneControlCentreTV==='function') ? (maybeTuneControlCentreTV(text) || null) : null; }catch(_tve){ window._voiceTvTuned = null; }
         ask(text);
       }
       else { console.log('[Voice] Dropped as noise/hallucination:', JSON.stringify(text)); _bargeTurnActive = false; _bargeHoldToast = false; try { toastHide(true); } catch (eH) {} _busy = false; _busySince = 0; if (_on) record(); }
