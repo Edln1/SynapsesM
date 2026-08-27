@@ -8248,12 +8248,11 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
 html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
-/* Mobile sun: full-bleed indigo floor — CSS blur on the whole canvas
-   faded the edges into body #000, which read as true black. */
-@media (max-width:900px), (pointer:coarse){
-  #globalBeamsCanvas{opacity:1!important;filter:none!important;}
-  html[data-theme="easyview"] #globalBeamsCanvas{opacity:1!important;}
-  #chatBeamsWrap,#chatBeamsCanvas{opacity:1;}
+/* Mobile sun aurora: same beam strength as desktop, hue locked to 212107 indigo */
+@media (max-width:900px){
+  #globalBeamsCanvas{opacity:0.7;filter:blur(38px);}
+  html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
+  #chatBeamsWrap,#chatBeamsCanvas{opacity:0.7;}
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
@@ -43759,14 +43758,6 @@ function _sunAuroraHue(i, n){
 function _sunAuroraPaint(hue, a){
   return 'hsla('+hue+',85%,65%,'+a+')';
 }
-function _sunAuroraFloor(ctx, w, h){
-  var g=ctx.createRadialGradient(w*0.5, h*0.58, 0, w*0.48, h*0.46, Math.max(w,h)*0.84);
-  g.addColorStop(0,'rgb(20,18,48)');
-  g.addColorStop(0.42,'rgb(14,14,38)');
-  g.addColorStop(1,'rgb(11,11,30)');
-  ctx.fillStyle=g;
-  ctx.fillRect(0,0,w,h);
-}
 
 // ── Global Beams Background (all sections) ──
 (function(){
@@ -43774,12 +43765,11 @@ function _sunAuroraFloor(ctx, w, h){
   if(!canvas)return;
   var ctx=canvas.getContext('2d');
   var beams=[];
-  var BEAM_COUNT=_sunAuroraMobile()?40:32;
+  var BEAM_COUNT=32;
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    var mob=_sunAuroraMobile();
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:(mob?90:35)+Math.random()*(mob?110:65),length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:(mob?0.16:0.10)+Math.random()*(mob?0.12:0.13),hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
 
   function resize(){
     var dpr=window.devicePixelRatio||1;
@@ -43792,40 +43782,29 @@ function _sunAuroraFloor(ctx, w, h){
 
   function resetBeam(beam,i,total){
     var w=window.innerWidth,h=window.innerHeight;
-    var mob=_sunAuroraMobile();
     var col=i%5,spacing=w/5;
     beam.y=h+100;
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.6;
-    beam.width=(mob?140:70)+Math.random()*(mob?160:90);
+    beam.width=70+Math.random()*90;
     beam.speed=0.45+Math.random()*0.4;
     beam.hue=_sunAuroraHue(i,total);
-    beam.opacity=(mob?0.18:0.14)+Math.random()*0.1;
+    beam.opacity=0.14+Math.random()*0.1;
   }
 
   function drawBeam(beam){
     ctx.save();
     ctx.translate(beam.x,beam.y);
     ctx.rotate(beam.angle*Math.PI/180);
-    var mob=_sunAuroraMobile();
-    var op=beam.opacity*(mob?(0.92+Math.sin(beam.pulse)*0.08):(0.8+Math.sin(beam.pulse)*0.2));
+    var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var _isDeepSea=document.documentElement.getAttribute('data-theme')==='deepsea';
     var hue=_isDeepSea ? (beam.hue+30)%360 : beam.hue;
     var g=ctx.createLinearGradient(0,0,0,beam.length);
-    if(_isDeepSea){
-      g.addColorStop(0,'hsla('+hue+',70%,65%,0)');
-      g.addColorStop(0.1,'hsla('+hue+',70%,65%,'+(op*0.5)+')');
-      g.addColorStop(0.4,'hsla('+hue+',70%,65%,'+op+')');
-      g.addColorStop(0.6,'hsla('+hue+',70%,65%,'+op+')');
-      g.addColorStop(0.9,'hsla('+hue+',70%,65%,'+(op*0.5)+')');
-      g.addColorStop(1,'hsla('+hue+',70%,65%,0)');
-    }else{
-      g.addColorStop(0,_sunAuroraPaint(hue,0));
-      g.addColorStop(0.1,_sunAuroraPaint(hue,op*0.5));
-      g.addColorStop(0.4,_sunAuroraPaint(hue,op));
-      g.addColorStop(0.6,_sunAuroraPaint(hue,op));
-      g.addColorStop(0.9,_sunAuroraPaint(hue,op*0.5));
-      g.addColorStop(1,_sunAuroraPaint(hue,0));
-    }
+    g.addColorStop(0,_sunAuroraPaint(hue,0));
+    g.addColorStop(0.1,_sunAuroraPaint(hue,op*0.5));
+    g.addColorStop(0.4,_sunAuroraPaint(hue,op));
+    g.addColorStop(0.6,_sunAuroraPaint(hue,op));
+    g.addColorStop(0.9,_sunAuroraPaint(hue,op*0.5));
+    g.addColorStop(1,_sunAuroraPaint(hue,0));
     ctx.fillStyle=g;
     ctx.fillRect(-beam.width/2,0,beam.width,beam.length);
     ctx.restore();
@@ -43838,19 +43817,12 @@ function _sunAuroraFloor(ctx, w, h){
     _beamLast=ts;
     var w=window.innerWidth,h=window.innerHeight;
     ctx.clearRect(0,0,w,h);
-    var mob=_sunAuroraMobile();
-    if(mob){
-      ctx.filter='none';
-      _sunAuroraFloor(ctx,w,h);
-      ctx.filter='blur(38px)';
-    }
     var total=beams.length;
     beams.forEach(function(beam,i){
       beam.y-=beam.speed;beam.pulse+=beam.pulseSpeed;
       if(beam.y+beam.length<-100)resetBeam(beam,i,total);
       drawBeam(beam);
     });
-    if(mob) ctx.filter='none';
     requestAnimationFrame(animate);
   }
 
@@ -43876,12 +43848,11 @@ function _sunAuroraFloor(ctx, w, h){
   var ctx=canvas.getContext('2d');
   var beams=[];
   var animId=null;
-  var BEAM_COUNT=_sunAuroraMobile()?32:22;
+  var BEAM_COUNT=22;
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    var mob=_sunAuroraMobile();
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:(mob?80:30)+Math.random()*(mob?100:60),length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:(mob?0.16:0.12)+Math.random()*(mob?0.12:0.16),hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
 
   function resize(){
     var sec=document.getElementById('sec-chat');
@@ -43896,14 +43867,13 @@ function _sunAuroraFloor(ctx, w, h){
   }
 
   function resetBeam(beam,i,total,w,h){
-    var mob=_sunAuroraMobile();
     var col=i%3,spacing=w/3;
     beam.y=h+100;
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.5;
-    beam.width=(mob?140:80)+Math.random()*(mob?140:80);
+    beam.width=80+Math.random()*80;
     beam.speed=0.5+Math.random()*0.4;
     beam.hue=_sunAuroraHue(i,total);
-    beam.opacity=(mob?0.18:0.18)+Math.random()*0.1;
+    beam.opacity=0.18+Math.random()*0.1;
     return beam;
   }
 
@@ -43911,8 +43881,7 @@ function _sunAuroraFloor(ctx, w, h){
     ctx.save();
     ctx.translate(beam.x,beam.y);
     ctx.rotate(beam.angle*Math.PI/180);
-    var mob=_sunAuroraMobile();
-    var op=beam.opacity*(mob?(0.92+Math.sin(beam.pulse)*0.08):(0.8+Math.sin(beam.pulse)*0.2));
+    var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var g=ctx.createLinearGradient(0,0,0,beam.length);
     g.addColorStop(0,_sunAuroraPaint(beam.hue,0));
     g.addColorStop(0.1,_sunAuroraPaint(beam.hue,op*0.5));
@@ -43934,7 +43903,6 @@ function _sunAuroraFloor(ctx, w, h){
     _chatBeamLast=ts;
     var w=sec.offsetWidth,h=sec.offsetHeight;
     ctx.clearRect(0,0,w,h);
-    if(_sunAuroraMobile()) _sunAuroraFloor(ctx,w,h);
     ctx.filter='blur(35px)';
     var total=beams.length;
     beams.forEach(function(beam,i){
