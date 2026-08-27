@@ -12431,6 +12431,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // Centre on its own: it only tunes in if the user is already looking at
   // that page. Talking about the news elsewhere in the app won't summon it.
   // Speech still only maps to the three presets (news / space / music).
+  // Speech only counts as a channel request if it's either just the bare
+  // topic word itself ("space", "mars") or it contains an explicit
+  // watch/tune-in verb ("put on the news", "show me space", "tune to
+  // music"). Just mentioning the word in conversation ("what if we moved
+  // to mars??") no longer procs the TV.
+  var TV_INTENT_RE = /\b(put on|turn on|show me|switch to|change to|change the channel|tune( in)? to|pull up|play me|watch)\b/i;
   function maybeTuneControlCentreTV(text){
     try{
       var panel = document.getElementById('bnavCCPanel');
@@ -12439,6 +12445,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       var q = _ccTvCleanQuery(text) || text;
       var t = String(q).toLowerCase();
       var bare = _ccTvIsBarePreset(q, key);
+      if(!bare && !TV_INTENT_RE.test(text)) return null;
       var musicPreset = key === 'music' && /\b(lofi|lo-fi|chill)\b/.test(t) && t.split(/\s+/).length <= 4;
       if((key === 'news' || key === 'space') && !bare){
         _ccTvSearch(q);
