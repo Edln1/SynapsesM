@@ -746,8 +746,8 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-gauge-label{font-size:10px;color:rgba(255,255,255,0.45);}
 .bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:flex-start;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;padding:12px;}
 .bnav-cc-center>.bnav-cc-card{width:190px;flex:0 0 190px;min-width:0;max-width:190px;box-sizing:border-box;overflow:hidden;}
-.bnav-cc-balance-card{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(124,106,247,0.10),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(0,217,168,0.08),transparent 55%),rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;min-width:0;cursor:pointer;width:190px;height:190px;flex-shrink:0;z-index:2;transition:box-shadow .15s ease;}
-.bnav-cc-balance-card.cc-nest-target{box-shadow:0 0 0 2px rgba(124,106,247,0.6),0 0 10px rgba(124,106,247,0.35);}
+.bnav-cc-balance-card{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(124,106,247,0.10),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(0,217,168,0.08),transparent 55%),rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;min-width:0;cursor:pointer;width:190px;height:190px;flex-shrink:0;z-index:2;transition:box-shadow .15s ease,outline-color .15s ease;}
+.bnav-cc-balance-card.cc-nest-target{outline:2px solid rgba(124,106,247,0.85);outline-offset:-2px;box-shadow:inset 0 0 0 1px rgba(124,106,247,0.35),0 0 16px rgba(124,106,247,0.28);z-index:6;}
 /* Fuse: a docked widget lives INSIDE the balance card's own frame — same
    border/background, no separate box — as a section stacked below its
    existing content, divided by a hairline. The card grows to fit. */
@@ -940,6 +940,26 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-widget-stat-label{font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px;}
 .bnav-cc-widget-stat-link{font-size:11px;color:#00d9a8;display:flex;align-items:center;gap:3px;}
 .bnav-cc-widget:hover .bnav-cc-widget-stat-link{color:#2fd0ff;}
+.bnav-cc-pulse-tag{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(0,217,168,0.75);flex-shrink:0;min-width:52px;}
+.bnav-cc-pulse-card{position:relative;height:var(--pulse-h, 220px);min-height:140px;display:flex;flex-direction:column;box-sizing:border-box;}
+.bnav-cc-center>.bnav-cc-pulse-card{width:var(--pulse-w, 190px);flex:0 0 var(--pulse-w, 190px);max-width:100%;}
+.bnav-cc-left>.bnav-cc-pulse-card,.bnav-cc-right>.bnav-cc-pulse-card{width:100%;max-width:none;}
+.bnav-cc-pulse-card.pulse-resizing{transition:none;}
+.bnav-cc-pulse-body{flex:1;min-height:0;display:flex;gap:2px;align-items:stretch;}
+#bnavCCPulseList{flex:1;min-height:0;max-height:none;overflow:hidden;}
+.bnav-cc-pulse-nav{display:flex;flex-direction:column;justify-content:center;gap:4px;flex-shrink:0;padding:0 1px;}
+.bnav-cc-pulse-nav button{width:18px;height:18px;padding:0;border:0;border-radius:6px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.bnav-cc-pulse-nav button:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.bnav-cc-pulse-nav button:disabled{opacity:0.28;cursor:default;background:transparent;}
+.bnav-cc-pulse-nav button svg{width:10px;height:10px;display:block;}
+.bnav-cc-pulse-resize{display:block;position:absolute;right:5px;bottom:5px;width:16px;height:16px;z-index:8;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 48%,rgba(255,255,255,0.25) 48% 52%,transparent 52% 70%,rgba(255,255,255,0.35) 70% 74%,transparent 74%);}
+@media(max-width:900px){.bnav-cc-pulse-resize{display:none;}}
+.bnav-cc-call-card{display:flex;flex-direction:column;}
+.bnav-cc-call-led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.18);box-shadow:none;flex-shrink:0;}
+.bnav-cc-call-body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 8px 6px;text-align:center;cursor:default;user-select:none;}
+.bnav-cc-call-dial{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.28);}
+.bnav-cc-call-status{font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);letter-spacing:.04em;}
+.bnav-cc-call-sub{font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.35;}
 .bnav-cc-mail-row{align-items:center;}
 .bnav-cc-mail-main{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .bnav-cc-mail-from{font-size:12px;color:rgba(255,255,255,0.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -8228,6 +8248,12 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
 html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
+/* Mobile sun aurora: lock to the dark indigo still (212107) — no cyan/magenta sweep */
+@media (max-width:900px){
+  #globalBeamsCanvas{opacity:0.48;filter:blur(46px);}
+  html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.48;}
+  #chatBeamsWrap,#chatBeamsCanvas{opacity:0.48;}
+}
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
    already is for Dark Mode / True Black above. Now applies on mobile too (was PC-only, which is
@@ -10438,6 +10464,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
           var card = byId[id];
           if(card) entry.el.appendChild(card);
         });
+        Array.prototype.filter.call(entry.el.children, function(c){
+          var id = c.getAttribute('data-cc-id');
+          return id && order.indexOf(id) === -1;
+        }).forEach(function(c){ entry.el.appendChild(c); });
       }catch(err){}
     });
     _ccSyncBalanceSize();
@@ -10446,11 +10476,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(_ccFinishWidgetDragInit._done) return;
     _ccFinishWidgetDragInit._done = true;
     _ccRestoreAllColOrders();
+    var allCards = [];
     _ccDragCols.forEach(function(entry){
-      var cardsToWire = Array.prototype.slice.call(entry.el.children);
-      if(entry.key === 'synapses_cc_order_center') _ccRestoreNestedStack(entry.el);
-      cardsToWire.forEach(function(card){ _ccWireDragCard(card, entry.el); });
+      Array.prototype.forEach.call(entry.el.children, function(c){ allCards.push({ card: c, col: entry.el }); });
     });
+    _ccRestoreNestedStack();
+    allCards.forEach(function(item){ _ccWireDragCard(item.card, item.col); });
   }
 
   // The health/balance tile is pinned at a fixed 190x190 square by default so
@@ -10545,14 +10576,15 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // Restores fused widgets after the page reloads (called once the center
   // column's DOM order has already been restored/rebuilt, and BEFORE drag
   // wiring runs — callers must wire drag on the pre-restore child list).
-  function _ccRestoreNestedStack(centerCol){
-    var balanceCard = centerCol.querySelector('#bnavCCBalance');
-    if(!balanceCard) return;
+  function _ccRestoreNestedStack(){
+    var balanceCard = document.getElementById('bnavCCBalance');
+    var panel = document.getElementById('bnavCCPanel');
+    if(!balanceCard || !panel) return;
     var order = _ccNestedOrder();
     if(!order.length) return;
     var body = null, kept = [];
     order.forEach(function(id){
-      var el = centerCol.querySelector('[data-cc-id="'+id+'"]');
+      var el = panel.querySelector('[data-cc-id="'+id+'"]');
       if(!el || el === balanceCard) return;
       if(!body) body = _ccNestBody(balanceCard, true);
       el.classList.add('cc-nested-fused');
@@ -10561,6 +10593,24 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     });
     if(body) balanceCard.classList.add('cc-has-nest');
     _ccSaveNestedOrder(kept);
+  }
+  function _ccBalanceAtPoint(x, y, skipCard){
+    var el = document.getElementById('bnavCCBalance');
+    if(!el || el === skipCard) return null;
+    var br = el.getBoundingClientRect();
+    if(x >= br.left && x <= br.right && y >= br.top && y <= br.bottom) return el;
+    var stack = (document.elementsFromPoint && document.elementsFromPoint(x, y)) || [];
+    for(var i = 0; i < stack.length; i++){
+      var n = stack[i];
+      if(!n || !n.closest) continue;
+      var host = n.closest('#bnavCCBalance');
+      if(host && host !== skipCard) return host;
+    }
+    return null;
+  }
+  function _ccColOf(el){
+    if(!el || !el.closest) return null;
+    return el.closest('.bnav-cc-left, .bnav-cc-center, .bnav-cc-right');
   }
 
   function _ccWireDragCard(card, homeCol){
@@ -10674,8 +10724,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // after the balance tile instead.
       var nestBody = card.parentNode && card.parentNode.classList && card.parentNode.classList.contains('cc-nest-body') ? card.parentNode : null;
       var balanceHost = nestBody ? nestBody.closest('.bnav-cc-balance-card') : null;
+      var insertCol = (balanceHost && _ccColOf(balanceHost)) || homeCol;
       var insertRef = balanceHost ? balanceHost.nextSibling : card.nextSibling;
-      homeCol.insertBefore(placeholder, insertRef);
+      insertCol.insertBefore(placeholder, insertRef);
+      curCol = insertCol;
 
       card.style.position = 'fixed';
       card.style.left = rect.left + 'px';
@@ -10705,18 +10757,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // exclusive drop targets, so only one of them may ever run per frame.
       // (Previously both could fire in the same hover, fighting each other.)
       var probeCol = _ccColAtPoint(x, y) || curCol;
-      var centerColEl = (probeCol.classList && probeCol.classList.contains('bnav-cc-center')) ? probeCol
-                       : (curCol.classList && curCol.classList.contains('bnav-cc-center')) ? curCol : null;
-      var balanceCard = null;
-      if(centerColEl){
-        var bc = centerColEl.querySelector('#bnavCCBalance');
-        if(bc && bc !== card) balanceCard = bc;
-      }
-      overBalance = false;
-      if(balanceCard){
-        var br = balanceCard.getBoundingClientRect();
-        if(x >= br.left && x <= br.right && y >= br.top && y <= br.bottom) overBalance = true;
-      }
+      var balanceCard = _ccBalanceAtPoint(x, y, card);
+      overBalance = !!balanceCard;
 
       if(nestTargetEl && (!overBalance || nestTargetEl !== balanceCard)){
         nestTargetEl.classList.remove('cc-nest-target');
@@ -10756,7 +10798,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       var wasNested = card.classList.contains('cc-nested-fused');
 
       if(overBalance){
-        var balanceCard = nestBalanceCard || curCol.querySelector('#bnavCCBalance');
+        var balanceCard = nestBalanceCard || document.getElementById('bnavCCBalance');
         if(placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
         placeholder = null;
 
@@ -10768,10 +10810,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         card.style.pointerEvents = '';
         card.classList.remove('bnav-cc-dragging');
 
-        _ccNestCard(balanceCard, card);
-        [homeCol, curCol].forEach(_ccSaveColOrder);
-        [homeCol, curCol].forEach(_ccSyncBalanceSize);
-        homeCol = curCol;
+        if(balanceCard && balanceCard !== card) _ccNestCard(balanceCard, card);
+        _ccDragCols.forEach(function(entry){ _ccSaveColOrder(entry.el); });
+        _ccSyncBalanceSize();
+        homeCol = _ccColOf(balanceCard) || curCol;
         overBalance = false;
         return;
       }
@@ -10832,7 +10874,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // that's now packed with its own clickable day pills, event rows,
       // +Event/+Bill buttons, and week-nav arrows; without this exclusion
       // every click in there was being swallowed as a drag-start on the card.
-      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,#bnavCCTVComing,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,iframe')){
+      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,#bnavCCTVComing,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,#bnavCCPulseList,#bnavCCPulseRefresh,#bnavCCPulseResize,#bnavCCPulseUp,#bnavCCPulseDown,iframe')){
         return;
       }
       // Arm the pending-drag state only — nothing about the card changes
@@ -10938,6 +10980,25 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       '<div class="bnav-cc-card bnav-cc-widget cc-placeholder" data-cc-id="jobs" data-open-jobs="1" style="--cc-delay:180ms">'+
         '<div class="bnav-cc-card-title">Job Board</div>'+
         '<div class="bnav-cc-widget-stat"><div><div class="bnav-cc-widget-stat-num">'+_jobCount+'</div><div class="bnav-cc-widget-stat-label">open role'+(_jobCount===1?'':'s')+'</div></div><div class="bnav-cc-widget-stat-link">View →</div></div>'+
+      '</div>'+
+      '<div class="bnav-cc-card bnav-cc-widget bnav-cc-pulse-card cc-placeholder" id="bnavCCPulse" data-cc-id="pulse" style="--cc-delay:200ms">'+
+        '<div class="bnav-cc-widget-head"><div class="bnav-cc-card-title" style="margin-bottom:0;">Pulse</div><div class="bnav-cc-widget-add" id="bnavCCPulseRefresh" title="Refresh">⟳</div></div>'+
+        '<div class="bnav-cc-pulse-body">'+
+          '<div class="bnav-cc-widget-list" id="bnavCCPulseList"><div class="bnav-cc-widget-empty">Loading…</div></div>'+
+          '<div class="bnav-cc-pulse-nav" id="bnavCCPulseNav">'+
+            '<button type="button" id="bnavCCPulseUp" title="Previous events"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.4 7.6L6 3.6l3.6 4" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+            '<button type="button" id="bnavCCPulseDown" title="More events"><svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.4 4.4L6 8.4l3.6-4" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="bnav-cc-pulse-resize" id="bnavCCPulseResize" title="Drag to resize"></div>'+
+      '</div>'+
+      '<div class="bnav-cc-card bnav-cc-widget bnav-cc-call-card cc-placeholder" data-cc-id="call" style="--cc-delay:220ms" title="Call isn\'t live yet">'+
+        '<div class="bnav-cc-widget-head"><div class="bnav-cc-card-title" style="margin-bottom:0;">Call</div><span class="bnav-cc-call-led" title="Offline"></span></div>'+
+        '<div class="bnav-cc-call-body" id="bnavCCCallBody">'+
+          '<div class="bnav-cc-call-dial"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>'+
+          '<div class="bnav-cc-call-status">LINE OFFLINE</div>'+
+          '<div class="bnav-cc-call-sub">Not live yet</div>'+
+        '</div>'+
       '</div>';
 
     panel.innerHTML =
@@ -11082,6 +11143,31 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     _ccRenderMailWidget();
     var mailRefreshBtn = panel.querySelector('#bnavCCMailRefresh');
     if(mailRefreshBtn) mailRefreshBtn.addEventListener('click', function(e){ e.stopPropagation(); _ccRenderMailWidget(true); });
+    var pulseCard = panel.querySelector('#bnavCCPulse');
+    if(pulseCard){
+      _ccPulseApplySavedSize(pulseCard);
+      _ccPulseBindResize(pulseCard);
+    }
+    _ccRenderPulseWidget();
+    requestAnimationFrame(function(){ _ccRenderPulseWidget(); });
+    var pulseRefresh = panel.querySelector('#bnavCCPulseRefresh');
+    if(pulseRefresh) pulseRefresh.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(typeof window.refreshSynPulse==='function') window.refreshSynPulse(true);
+      _ccRenderPulseWidget();
+    });
+    var pulseUp = panel.querySelector('#bnavCCPulseUp');
+    var pulseDown = panel.querySelector('#bnavCCPulseDown');
+    if(pulseUp && !pulseUp._wired){
+      pulseUp._wired = true;
+      pulseUp.addEventListener('click', function(e){ e.stopPropagation(); _ccPulseOff = Math.max(0, _ccPulseOff - _ccPulseVisibleCount()); _ccRenderPulseWidget(); });
+    }
+    if(pulseDown && !pulseDown._wired){
+      pulseDown._wired = true;
+      pulseDown.addEventListener('click', function(e){ e.stopPropagation(); _ccPulseOff += _ccPulseVisibleCount(); _ccRenderPulseWidget(); });
+    }
+    var callCard = panel.querySelector('[data-cc-id="call"]');
+    if(callCard) callCard.addEventListener('click', function(e){ e.stopPropagation(); });
     // Balance hologram — explicit Health AI check-in wins; otherwise AI infers a read from recent chat topics; click opens Health AI
     (function(){
       if(_ccTestMode){ _ccShowTestState(_ccTestIdx); }
@@ -11384,6 +11470,125 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       if(el && el.isConnected) _ccPaintMailList(el, _ccMailCache.out);
     });
   }
+  var _ccPulseOff = 0;
+  function _ccPulseVisibleCount(){
+    var list = document.getElementById('bnavCCPulseList');
+    if(!list) return 4;
+    var h = list.clientHeight || 0;
+    return Math.max(2, Math.floor(h / 46) || 4);
+  }
+  function _ccPulseClampSize(w, h, card){
+    var maxW = Math.min(960, (window.innerWidth || 800) * 0.92);
+    var maxH = Math.min(680, (window.innerHeight || 600) * 0.72);
+    var parent = card && card.parentElement;
+    if(parent && parent.classList && parent.classList.contains('bnav-cc-center')){
+      var avail = parent.clientWidth - 24;
+      maxW = Math.min(maxW, Math.max(190, avail));
+    } else if(parent){
+      maxW = parent.clientWidth || maxW;
+    }
+    return { w: Math.max(190, Math.min(maxW, w)), h: Math.max(140, Math.min(maxH, h)) };
+  }
+  function _ccPulseSaveSize(card){
+    if(!card) return;
+    try{ localStorage.setItem('syn_cc_pulse_size', JSON.stringify({ w: card.offsetWidth, h: card.offsetHeight })); }catch(e){}
+  }
+  function _ccPulseApplySavedSize(card){
+    if(!card) return;
+    try{
+      var raw = localStorage.getItem('syn_cc_pulse_size');
+      if(!raw) return;
+      var s = JSON.parse(raw);
+      if(!s || !s.h) return;
+      var c = _ccPulseClampSize(s.w || card.offsetWidth, s.h, card);
+      card.style.setProperty('--pulse-h', c.h+'px');
+      if(card.parentElement && card.parentElement.classList.contains('bnav-cc-center')){
+        card.style.setProperty('--pulse-w', c.w+'px');
+      }
+    }catch(e){}
+  }
+  function _ccPulseBindResize(card){
+    var handle = card && card.querySelector('#bnavCCPulseResize');
+    if(!handle || handle._pulseResize) return;
+    handle._pulseResize = true;
+    handle.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var startX = e.clientX, startY = e.clientY;
+      var startW = card.offsetWidth, startH = card.offsetHeight;
+      card.classList.add('pulse-resizing');
+      function move(ev){
+        var c = _ccPulseClampSize(startW + (ev.clientX - startX), startH + (ev.clientY - startY), card);
+        card.style.setProperty('--pulse-h', c.h+'px');
+        if(card.parentElement && card.parentElement.classList.contains('bnav-cc-center')){
+          card.style.setProperty('--pulse-w', c.w+'px');
+        }
+      }
+      function up(ev){
+        try{ handle.releasePointerCapture(ev.pointerId); }catch(err){}
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        card.classList.remove('pulse-resizing');
+        _ccPulseSaveSize(card);
+        _ccRenderPulseWidget();
+      }
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+  }
+  function _ccRenderPulseWidget(){
+    var list = document.getElementById('bnavCCPulseList');
+    var nav = document.getElementById('bnavCCPulseNav');
+    var up = document.getElementById('bnavCCPulseUp');
+    var down = document.getElementById('bnavCCPulseDown');
+    if(!list) return;
+    var events = (typeof window.getSynPulseEvents === 'function') ? window.getSynPulseEvents() : [];
+    var setup = (typeof window.hasSynPulseSetup === 'function') ? window.hasSynPulseSetup() : false;
+    if(!setup){
+      list.innerHTML = '<div class="bnav-cc-connect-row"><div class="bnav-cc-connect-txt">Set a city in Pulse to light this screen.</div></div>';
+      if(nav) nav.style.visibility = 'hidden';
+      return;
+    }
+    events = events || [];
+    if(!events.length){
+      list.innerHTML = '<div class="bnav-cc-widget-empty">Nothing on the wire</div>';
+      if(nav) nav.style.visibility = 'hidden';
+      return;
+    }
+    var vis = _ccPulseVisibleCount();
+    var maxOff = Math.max(0, events.length - vis);
+    if(_ccPulseOff > maxOff) _ccPulseOff = maxOff;
+    if(_ccPulseOff < 0) _ccPulseOff = 0;
+    var slice = events.slice(_ccPulseOff, _ccPulseOff + vis);
+    if(nav) nav.style.visibility = events.length > vis ? 'visible' : 'hidden';
+    if(up) up.disabled = _ccPulseOff <= 0;
+    if(down) down.disabled = _ccPulseOff >= maxOff;
+    list.innerHTML = slice.map(function(it){
+      var topic = String(it.topic || it.tag || 'meetups');
+      var tag = /job/i.test(topic) ? 'Jobs' : /news/i.test(topic) ? 'News' : 'Meetups';
+      var title = esc(it.title || 'Untitled');
+      var meta = esc(String(it.meta || '').replace(/\s*·\s*Tap to open/i,'').trim());
+      var url = String(it.url || '');
+      return '<div class="bnav-cc-widget-row bnav-cc-mail-row" data-pulse-url="'+esc(url)+'">'+
+        '<div class="bnav-cc-mail-main"><span class="bnav-cc-mail-from">'+title+'</span><span class="bnav-cc-mail-subject">'+(meta ? (tag+' · '+meta) : tag)+'</span></div>'+
+        '<span class="bnav-cc-widget-row-chev">›</span></div>';
+    }).join('');
+    list.querySelectorAll('[data-pulse-url]').forEach(function(row){
+      row.addEventListener('click', function(e){
+        e.stopPropagation();
+        var url = row.getAttribute('data-pulse-url') || '';
+        closeControlCentre();
+        if(url && /^https?:/i.test(url)){
+          try{ window.open(url, '_blank', 'noopener'); }catch(err){}
+        } else if(typeof window.openSynPulse === 'function'){
+          window.openSynPulse();
+        }
+      });
+    });
+  }
+  window._ccRenderPulseWidget = _ccRenderPulseWidget;
   async function _ccRenderMailWidget(force){
     var list = document.getElementById('bnavCCMailList');
     await _ccRenderMailInto(list, force);
@@ -27624,9 +27829,17 @@ function groqStripThink(raw){
       return null;
     }
   }
+  function _cxLooksLikeWorldNews(text){
+    var t = String(text || '').toLowerCase();
+    if (/\b(mail|email|inbox|gmail|calendar|schedule|meeting|maps?|directions?)\b/i.test(t)) return false;
+    return /\b((what'?s|whats|what is)\s+(the\s+)?news|show me (the )?news|tell me (the )?news|give me (the )?news|latest news|breaking news|world news|headlines|top stories|current events|news briefing)\b/i.test(t);
+  }
   async function cxDetectAsync(text){
     var hit = cxDetect(text);
     if(hit) return hit;
+    // Groq connector classify maps "latest news" / "what's the news" to
+    // gmail.unread (inbox/newsletters). World news is live search, not Gmail.
+    if (_cxLooksLikeWorldNews(text)) return null;
     return await cxIntentFallback(text);
   }
   // Holds the last thing we asked the person to confirm (e.g. "did you
@@ -43533,17 +43746,32 @@ async function confirmWorldApproach(){
   }
 }
 
+function _sunAuroraMobile(){
+  try{
+    return !!(window.matchMedia && (window.matchMedia('(max-width:900px)').matches || window.matchMedia('(pointer:coarse)').matches));
+  }catch(e){ return false; }
+}
+function _sunAuroraHue(i, n){
+  if(_sunAuroraMobile()) return 252 + ((i % 6) * 0.7);
+  return 190 + (i * 70) / Math.max(1, n);
+}
+function _sunAuroraPaint(hue, a){
+  if(_sunAuroraMobile()) return 'hsla('+hue+',50%,17%,'+a+')';
+  return 'hsla('+hue+',85%,65%,'+a+')';
+}
+
 // ── Global Beams Background (all sections) ──
 (function(){
   var canvas=document.getElementById('globalBeamsCanvas');
   if(!canvas)return;
   var ctx=canvas.getContext('2d');
   var beams=[];
-  var BEAM_COUNT=32;
+  var BEAM_COUNT=_sunAuroraMobile()?16:32;
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
+    var mob=_sunAuroraMobile();
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:(mob?0.06:0.10)+Math.random()*(mob?0.06:0.13),hue:mob?(252+Math.random()*4):(190+Math.random()*70),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
 
   function resize(){
     var dpr=window.devicePixelRatio||1;
@@ -43561,8 +43789,8 @@ async function confirmWorldApproach(){
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.6;
     beam.width=70+Math.random()*90;
     beam.speed=0.45+Math.random()*0.4;
-    beam.hue=190+(i*70)/total;
-    beam.opacity=0.14+Math.random()*0.1;
+    beam.hue=_sunAuroraHue(i,total);
+    beam.opacity=_sunAuroraMobile()?(0.07+Math.random()*0.05):(0.14+Math.random()*0.1);
   }
 
   function drawBeam(beam){
@@ -43572,14 +43800,13 @@ async function confirmWorldApproach(){
     var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var _isDeepSea=document.documentElement.getAttribute('data-theme')==='deepsea';
     var hue=_isDeepSea ? (beam.hue+30)%360 : beam.hue;
-    var sat=_isDeepSea ? '70%' : '85%';
     var g=ctx.createLinearGradient(0,0,0,beam.length);
-    g.addColorStop(0,'hsla('+hue+','+sat+',65%,0)');
-    g.addColorStop(0.1,'hsla('+hue+','+sat+',65%,'+(op*0.5)+')');
-    g.addColorStop(0.4,'hsla('+hue+','+sat+',65%,'+op+')');
-    g.addColorStop(0.6,'hsla('+hue+','+sat+',65%,'+op+')');
-    g.addColorStop(0.9,'hsla('+hue+','+sat+',65%,'+(op*0.5)+')');
-    g.addColorStop(1,'hsla('+hue+','+sat+',65%,0)');
+    g.addColorStop(0,_sunAuroraPaint(hue,0));
+    g.addColorStop(0.1,_sunAuroraPaint(hue,op*0.5));
+    g.addColorStop(0.4,_sunAuroraPaint(hue,op));
+    g.addColorStop(0.6,_sunAuroraPaint(hue,op));
+    g.addColorStop(0.9,_sunAuroraPaint(hue,op*0.5));
+    g.addColorStop(1,_sunAuroraPaint(hue,0));
     ctx.fillStyle=g;
     ctx.fillRect(-beam.width/2,0,beam.width,beam.length);
     ctx.restore();
@@ -43627,7 +43854,8 @@ async function confirmWorldApproach(){
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:190+Math.random()*70,pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
+    var mob=_sunAuroraMobile();
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:(mob?0.07:0.12)+Math.random()*(mob?0.07:0.16),hue:mob?(252+Math.random()*4):(190+Math.random()*70),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
 
   function resize(){
     var sec=document.getElementById('sec-chat');
@@ -43647,8 +43875,8 @@ async function confirmWorldApproach(){
     beam.x=col*spacing+spacing/2+(Math.random()-.5)*spacing*0.5;
     beam.width=80+Math.random()*80;
     beam.speed=0.5+Math.random()*0.4;
-    beam.hue=190+(i*70)/total;
-    beam.opacity=0.18+Math.random()*0.1;
+    beam.hue=_sunAuroraHue(i,total);
+    beam.opacity=_sunAuroraMobile()?(0.08+Math.random()*0.05):(0.18+Math.random()*0.1);
     return beam;
   }
 
@@ -43658,12 +43886,12 @@ async function confirmWorldApproach(){
     ctx.rotate(beam.angle*Math.PI/180);
     var op=beam.opacity*(0.8+Math.sin(beam.pulse)*0.2);
     var g=ctx.createLinearGradient(0,0,0,beam.length);
-    g.addColorStop(0,'hsla('+beam.hue+',85%,65%,0)');
-    g.addColorStop(0.1,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');
-    g.addColorStop(0.4,'hsla('+beam.hue+',85%,65%,'+op+')');
-    g.addColorStop(0.6,'hsla('+beam.hue+',85%,65%,'+op+')');
-    g.addColorStop(0.9,'hsla('+beam.hue+',85%,65%,'+(op*0.5)+')');
-    g.addColorStop(1,'hsla('+beam.hue+',85%,65%,0)');
+    g.addColorStop(0,_sunAuroraPaint(beam.hue,0));
+    g.addColorStop(0.1,_sunAuroraPaint(beam.hue,op*0.5));
+    g.addColorStop(0.4,_sunAuroraPaint(beam.hue,op));
+    g.addColorStop(0.6,_sunAuroraPaint(beam.hue,op));
+    g.addColorStop(0.9,_sunAuroraPaint(beam.hue,op*0.5));
+    g.addColorStop(1,_sunAuroraPaint(beam.hue,0));
     ctx.fillStyle=g;
     ctx.fillRect(-beam.width/2,0,beam.width,beam.length);
     ctx.restore();
@@ -46262,6 +46490,7 @@ function goNotes() {
       if(_open) _buildStack();
       var emptyMsg = { meetups:'No meetups right now', news:'No news cards', jobs:'No job cards', all:'No events' };
       _setSub(emptyMsg[_filter] || 'No events');
+      _notifyPulseCc();
       return;
     }
     FEED = filtered;
@@ -46275,6 +46504,7 @@ function goNotes() {
     else if(_filter === 'news') _setSub('News · ' + FEED.length);
     else if(_filter === 'jobs') _setSub('Jobs · ' + FEED.length);
     else _setSub('');
+    _notifyPulseCc();
   }
   function _applyFeed(items, source){
     if(!items || !items.length) return false;
@@ -46294,6 +46524,7 @@ function goNotes() {
       }
     } catch(e){}
     _setFilter(_filter);
+    _notifyPulseCc();
     return true;
   }
   function _loadCachedMeetups(){
@@ -47030,6 +47261,18 @@ function goNotes() {
   window.toggleSynPulse = togglePulse;
   window.closeSynPulse = closePulse;
   window.openSynPulse = openPulse;
+  window.hasSynPulseSetup = _hasPulseSetup;
+  window.getSynPulseEvents = function(){
+    var src = (_allEvents && _allEvents.length) ? _allEvents : (FEED || []);
+    return src.filter(function(it){
+      var id = String((it && it.id) || '');
+      return !!(it && it.title && id && id !== 'empty1' && id !== 'seed1');
+    });
+  };
+  window.refreshSynPulse = function(force){ _fetchMeetups(!!force); };
+  function _notifyPulseCc(){
+    try{ if(typeof window._ccRenderPulseWidget === 'function') window._ccRenderPulseWidget(); }catch(e){}
+  }
 
   function boot(){
     try { _filter = localStorage.getItem(FILTER_KEY) || 'all'; } catch(e){ _filter = 'all'; }
