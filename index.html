@@ -62443,15 +62443,18 @@ function speakVoiceReply(text) {
     if (!_vcHandled && window._voiceTvTuned) {
       var _tvKey = window._voiceTvTuned;
       window._voiceTvTuned = null;
-      _vcHandled = true;
-      var _tvAck = _tvKey === 'music' ? 'Putting some music on.'
-        : _tvKey === 'news' ? "Here's the news."
-        : _tvKey === 'space' ? "Here's the space feed."
-        : _tvKey === 'search' ? "Here's that."
-        : "It's on.";
-      try { speak(_tvAck); } catch(_skTv) {}
-      _busy = false; _busySince = 0;
-      if (_on) setTimeout(record, 800);
+      if (_tvKey === 'news') {
+        window._voiceNewsBrief = true;
+      } else {
+        _vcHandled = true;
+        var _tvAck = _tvKey === 'music' ? 'Putting some music on.'
+          : _tvKey === 'space' ? "Here's the space feed."
+          : _tvKey === 'search' ? "Here's that."
+          : "It's on.";
+        try { speak(_tvAck); } catch(_skTv) {}
+        _busy = false; _busySince = 0;
+        if (_on) setTimeout(record, 800);
+      }
     }
 
     var _navCmds = [
@@ -63161,13 +63164,30 @@ function speakVoiceReply(text) {
      * cap cannot drop it. */
     var _voiceSearchMandate =
       'You have live web search (search_web and search_google). ' +
-      'For current/factual/real-world questions — news, scores, prices, weather, who won, what\'s happening, latest, today, right now, elections, stocks, crypto — you MUST call a search tool before answering. ' +
+      'For current/factual/real-world questions — news, headlines, scores, prices, weather, who won, what\'s happening, latest, today, right now, currently, elections, stocks, crypto — you MUST call a search tool before answering. ' +
+      'If they say show me the news, the news, what\'s the news, headlines, or breaking — that IS a live news briefing. Search first. Do not treat it as a UI command. ' +
       'Do not answer those from memory. Never say you lack real-time data, a knowledge cutoff, or that you cannot access current info. ' +
       'LENGTH: casual chat / feelings / questions about you = usually 1-2 short spoken sentences. ' +
       'If this turn used live search, or they asked for an explanation, a list, a story, or anything that needs more than a beat — IGNORE the 1-2 sentence cap. Give a complete spoken answer (several sentences is fine). Still no markdown, no bullets, no essay.\n\n';
     var _agentSysVoice = String(sys || '');
     if (_agentSysVoice.indexOf('You have live web search') === -1) {
       _agentSysVoice = _voiceSearchMandate + _agentSysVoice;
+    }
+    if (window._voiceNewsBrief) {
+      window._voiceNewsBrief = false;
+      _agentSysVoice =
+        'THIS TURN IS A LIVE NEWS BRIEFING. You MUST call search_web now with a query like "top world news headlines today" BEFORE you speak. ' +
+        'SYN-TV is already showing the live news picture. Do not say you are putting the news on, showing the news, or that you cannot play news. ' +
+        'Speak a natural 4-6 sentence briefing of the actual current headlines from the search — names, places, what happened. No markdown.\n\n' +
+        _agentSysVoice;
+      _agentVoiceMsgs = _agentVoiceMsgs.slice();
+      if (_agentVoiceMsgs.length) {
+        _agentVoiceMsgs[_agentVoiceMsgs.length - 1] = {
+          role: 'user',
+          content: 'What is the current news right now? Brief me on the latest headlines today.'
+        };
+      }
+      _maxTok = Math.max(_maxTok || 0, 720);
     }
     if (_agentSysVoice.length > 2000) _agentSysVoice = _agentSysVoice.slice(0, 2000);
     if (_bargeDirectNudge && _agentSysVoice.indexOf('interrupted your previous reply') === -1) {
