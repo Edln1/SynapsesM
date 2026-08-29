@@ -808,13 +808,31 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
 .bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded){
   flex-direction:column;
   flex-wrap:nowrap;
+  overflow-y:auto;
+}
+@media(max-width:900px){
+.bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded){
   overflow-y:hidden;
+}
 }
 .bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded)>.bnav-cc-tv-card.tv-expanded{
   order:1;
+  /* Center column flips to flex-direction:column above (main axis becomes
+     vertical), which makes flex-basis — not the `height` property — the
+     thing that actually sizes this item on that axis. The generic
+     `.bnav-cc-center>.bnav-cc-card{flex:0 0 190px}` rule was still setting
+     a fixed 190px flex-basis, so height:var(--tv-h) up in .tv-expanded was
+     being computed correctly but silently ignored/clipped by flexbox. This
+     re-points flex-basis at the same --tv-h var so drag-resize actually
+     changes the rendered height. */
+  flex-basis:var(--tv-h, 190px);
+}
+@media(max-width:900px){
+.bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded)>.bnav-cc-tv-card.tv-expanded{
   flex:0 0 220px;
   width:100%;
   height:220px;
+}
 }
 /* Balance is the first tile in the template (before TV), so without this it
    would stay pinned above the now full-width TV row. Reorder it below TV,
@@ -826,11 +844,46 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
   width:100%;
   height:110px;
 }
+/* Duplicate of the three :has() rules above, keyed off .bnav-cc-tv-active
+   (toggled in JS by _ccTvSyncCenterClass) instead of :has(). Some in-app
+   WebViews don't support :has() at all, which is what caused the "weird
+   space" — TV would visually expand but the parent never reflowed, so it
+   sat in a box still sized for the old small tile. Identical rules, just a
+   selector engines without :has() can still match. Harmless overlap where
+   :has() *is* supported, since both apply the same values. */
+.bnav-cc-center.bnav-cc-tv-active{
+  flex-direction:column;
+  flex-wrap:nowrap;
+  overflow-y:auto;
+}
+@media(max-width:900px){
+.bnav-cc-center.bnav-cc-tv-active{
+  overflow-y:hidden;
+}
+}
+.bnav-cc-center.bnav-cc-tv-active>.bnav-cc-tv-card.tv-expanded{
+  order:1;
+  /* Same flex-basis fix as the :has() rule above, for engines without :has() support. */
+  flex-basis:var(--tv-h, 190px);
+}
+@media(max-width:900px){
+.bnav-cc-center.bnav-cc-tv-active>.bnav-cc-tv-card.tv-expanded{
+  flex:0 0 220px;
+  width:100%;
+  height:220px;
+}
+}
+.bnav-cc-center.bnav-cc-tv-active>.bnav-cc-balance-card{
+  order:2;
+  flex:0 0 110px;
+  width:100%;
+  height:110px;
+}
 /* The drag-to-resize handle set a fixed --tv-h that fought this fit-to-box
    sizing (that's the fixed 360px that caused the overflow in the first
    place) — it no longer makes sense once height is flex-grown, so hide it
    here instead of leaving a control that silently does nothing useful. */
-.bnav-cc-center>.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-resize{display:none;}
+@media(max-width:900px){.bnav-cc-center>.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-resize{display:none;}}
 .bnav-cc-left>.bnav-cc-tv-card,.bnav-cc-right>.bnav-cc-tv-card{width:100%;max-width:none;height:auto;aspect-ratio:1/1;}
 .bnav-cc-left>.bnav-cc-tv-card.tv-expanded,.bnav-cc-right>.bnav-cc-tv-card.tv-expanded{aspect-ratio:auto;height:var(--tv-h, 220px);}
 .bnav-cc-tv-card.tv-resizing{transition:none;}
@@ -1090,7 +1143,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   .bnav-cc-panel{
     grid-template-columns:1fr;
     grid-template-rows:auto auto auto auto;
-    grid-template-areas:"center" "left" "right" "tray";
+    grid-template-areas:"right" "center" "left" "tray";
     width:auto;
     height:auto;
     top:var(--cc-top,0px);
@@ -1117,10 +1170,20 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   .bnav-cc-center>.bnav-cc-card,
   .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded),
   .bnav-cc-center>.bnav-cc-pulse-card{width:calc(50% - 5px);flex:0 0 calc(50% - 5px);}
-  .bnav-cc-center>.bnav-cc-balance-card{width:calc(50% - 5px);height:auto;aspect-ratio:1/1;}
+  /* Balance + SYN-TV idle tiles were still a full square (~165px tall) by
+     default on mobile, eating the top of the screen before you ever reach
+     Calendar/Pulse/Gmail below. Shrink their default (non-expanded) height
+     down to a short strip instead of a square — still side by side, just
+     much shorter — so there's real room left for the widgets that matter.
+     Only applies when SYN-TV is OFF; the moment it's turned on the existing
+     :has(.tv-expanded) rule above takes over and gives it the full row. */
+  .bnav-cc-center>.bnav-cc-balance-card{width:calc(50% - 5px);height:100px;aspect-ratio:auto;}
+  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){height:100px;aspect-ratio:auto;}
+  .bnav-cc-balance-card .bnav-cc-wave-svg{max-height:34%;}
+  /* Docked/relocated Balance still needs to size to its own content, not the
+     100px strip above — same exception that existed before this change. */
   .bnav-cc-center>.bnav-cc-balance-card.cc-has-nest,
-  .bnav-cc-center>.bnav-cc-balance-card.cc-relocated{aspect-ratio:auto;}
-  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){height:auto;aspect-ratio:1/1;}
+  .bnav-cc-center>.bnav-cc-balance-card.cc-relocated{height:auto;}
   /* Safety net: whatever tile type ends up in the left/right column (card,
      TV, Pulse, or a relocated Balance tile), never let its own fixed width
      push past the column and off the right edge of the screen. */
@@ -1148,6 +1211,25 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
      every flex/grid descendant in the panel so nothing can hide behind that
      default again. */
   .bnav-cc-panel *{min-width:0;}
+  /* Mobile-only: surface the widgets that actually matter — Pulse, Gmail
+     (Inbox), Calendar — at the very top of the right column, ahead of
+     Recent Chats/Notes/Jobs/Call, and put the right column first in the
+     stack (see grid-template-areas above) so they're visible the instant
+     the panel opens, with no scrolling needed. Desktop keeps the original
+     left/center/right grid and original card order untouched. */
+  .bnav-cc-right>[data-cc-id="calendar"]{order:-999;}
+  .bnav-cc-right>[data-cc-id="inbox"]{order:-2;}
+  .bnav-cc-right>[data-cc-id="pulse"]{order:-1;}
+  /* Pulse defaults to a fixed 220px tall body — on mobile it's now the very
+     first widget in the stack, so that alone could push Calendar (right
+     behind it) off screen. Cap it shorter here; it still scrolls its own
+     internal list if there's more than fits. */
+  .bnav-cc-right>.bnav-cc-pulse-card{height:150px;min-height:120px;}
+  /* Session card takes up vertical space that isn't earning its keep on a
+     phone screen — hide it on mobile only so Calendar/Pulse/Gmail have more
+     room to land above the fold. Greeting + Activity stay, desktop is
+     untouched (this selector only exists inside this media query). */
+  .bnav-cc-left>[data-cc-id="session"]{display:none;}
 }
 #bottomNavBar.bnav-portal-in>*:not(.bnav-orb-wrap){will-change:transform,opacity,filter;}
 .bnav-orb{width:100%;height:100%;border-radius:50%;border:1px solid rgba(255,255,255,0.28);background:
@@ -10493,6 +10575,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(hint) hint.textContent = 'TEST MODE — tap to cycle ('+(idx%_ccTestStates.length+1)+'/'+_ccTestStates.length+') — '+(st.mood||'default');
     _ccSetWaveMuted(_ccMutedStates[st.mood]);
     _ccSetWaveBalance(st.mood);
+    if(typeof _ccMobileSyncTvHeight === 'function') requestAnimationFrame(_ccMobileSyncTvHeight);
   }
   // Builds the same repeating sine-cubic path the wave hologram uses, with tunable amplitude AND
   // period so each mood gets a genuinely distinct shape, not just a taller/shorter version of the same curve.
@@ -10571,6 +10654,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       if(t && s){ t.textContent = res.label; s.textContent = res.sub || 'Based on what you\'ve been asking about lately.'; }
       _ccSetWaveMuted(_ccMutedStates[res.mood]);
       _ccSetWaveBalance(res.mood);
+      requestAnimationFrame(_ccMobileSyncTvHeight);
     });
   }
   // ── Widget drag-to-reorder (grid-locked) ──────────────────────────────
@@ -10651,7 +10735,38 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var inCenter = parent.classList && parent.classList.contains('bnav-cc-center');
     var isHome = inCenter && parent.firstElementChild === bc;
     bc.classList.toggle('cc-relocated', !isHome);
+    _ccMobileSyncTvHeight();
   }
+
+  // On mobile, Balance and idle SYN-TV sit side-by-side at a fixed 100px
+  // strip each — but Balance can grow taller than that on its own (a longer
+  // check-in status line, the fused "cc-has-nest" state, etc.), and since
+  // they're flex-wrap siblings that share one row, TV was left pinned at its
+  // short 100px while the row itself grew to Balance's height, leaving a big
+  // empty black rectangle underneath TV. CSS align-items:stretch can't fix
+  // this cleanly here because TV's own *unstretched* content (ask input +
+  // "no signal" placeholder) is naturally taller than 100px too — stretch
+  // would just always inflate the idle strip back to its old default-square
+  // size, even when Balance is short. So instead: measure Balance's actual
+  // rendered height and directly set TV to match it, only when Balance is
+  // taller than the default 100px strip; otherwise let the normal CSS 100px
+  // rule apply. Desktop and the expanded (docked/fullscreen) TV state are
+  // untouched — this only ever runs for the compact mobile idle tile.
+  function _ccMobileSyncTvHeight(){
+    if(window.innerWidth > 860) return;
+    var tv = document.getElementById('bnavCCTV');
+    var bc = document.getElementById('bnavCCBalance');
+    if(!tv || !bc || tv.classList.contains('tv-expanded')) { if(tv) tv.style.height = ''; return; }
+    var parent = tv.parentElement;
+    if(!parent || !parent.classList || !parent.classList.contains('bnav-cc-center')){ tv.style.height = ''; return; }
+    var balH = bc.offsetHeight;
+    tv.style.height = balH > 100 ? balH + 'px' : '';
+  }
+  window._ccMobileSyncTvHeight = _ccMobileSyncTvHeight;
+  window.addEventListener('resize', function(){
+    var panel = document.getElementById('bnavCCPanel');
+    if(panel && panel.classList.contains('bnav-cc-open')) requestAnimationFrame(_ccMobileSyncTvHeight);
+  });
 
   function _ccSaveColOrder(col){
     var entry = _ccDragCols.filter(function(c){ return c.el === col; })[0];
@@ -12076,6 +12191,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     else { _ccApplyBalanceText(document.getElementById('bnavCCBalanceTitle'), document.getElementById('bnavCCBalanceSub')); }
     backdrop.classList.add('bnav-cc-open');
     panel.classList.add('bnav-cc-open');
+    // The panel is only ever built once and reused — its scroll position was
+    // carrying over from whatever spot it was left at last time it was
+    // closed, which is why Calendar (and everything else near the top)
+    // could still be scrolled out of view on reopen no matter how the
+    // widgets were ordered. Force it back to the top on every open.
+    panel.scrollTop = 0;
 
     // refresh Activity bars + Session gauges — these reflect live app state, not just first-open values
     var _actCats2 = [
@@ -12134,6 +12255,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       if(calEl && !_ccCalMounted(calEl)) _ccRenderCalendarWidget(false);
       if(mailEl && !mailEl.querySelector('.bnav-cc-rich-row, .bnav-cc-connect-row')) _ccRenderMailWidget(false);
     })();
+    // Balance's text/state just got (re)set above (test-state or inferred
+    // mood), which can change its rendered height on mobile — resync TV
+    // once that's settled on screen.
+    requestAnimationFrame(_ccMobileSyncTvHeight);
   }
   function closeControlCentre(){
     var backdrop = document.getElementById('bnavCCBackdrop'), panel = document.getElementById('bnavCCPanel');
@@ -12317,8 +12442,21 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var parent = card && card.parentElement;
     if(parent && parent.classList && parent.classList.contains('bnav-cc-center')){
       var avail = parent.clientWidth - 24;
-      if(avail > 400) maxW = Math.min(maxW, avail - 200);
-      else maxW = Math.min(maxW, avail);
+      // Once expanded, the TV is order:1 and flex-direction:column, so it's
+      // the sole item on its row — nothing else shares horizontal space with
+      // it. The old "-200" reservation was left over from when a sibling
+      // tile sat next to it in the same row; that's no longer how the
+      // layout works, so it was just carving out a big unusable gap on the
+      // right.
+      // The generic 960px/92vw cap above is meant for narrower sidebar
+      // columns and has nothing to do with the center column's real width —
+      // on a wide screen the center column can be 1200px+ but that cap was
+      // still winning, which is the big empty gap between the TV and the
+      // right column. For the center column, drop that cap entirely and use
+      // the real available width as the limit.
+      maxW = avail;
+      var availH = parent.clientHeight - 24;
+      if(availH > 150) maxH = Math.min(maxH, availH - 20);
     }
     return { w: Math.max(190, Math.min(maxW, w)), h: Math.max(190, Math.min(maxH, h)) };
   }
@@ -12492,12 +12630,25 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   function _ccTvClientSearch(q){
     return _ccTvPipedSearch(q).catch(function(){ return _ccTvTavilySearch(q); });
   }
+  // Fallback for WebViews that don't support the CSS :has() selector (this is
+  // why the "weird space" showed up — the .bnav-cc-center:has(>.tv-expanded)
+  // reflow rules were silently no-ops there). Mirrors :has() by toggling a
+  // plain class on the parent every time tv-expanded is added/removed, so the
+  // duplicate class-based CSS rules below can take over on those WebViews.
+  function _ccTvSyncCenterClass(card){
+    card = card || document.getElementById('bnavCCTV');
+    if(!card) return;
+    var center = card.closest('.bnav-cc-center');
+    if(!center) return;
+    center.classList.toggle('bnav-cc-tv-active', card.classList.contains('tv-expanded'));
+  }
   function _ccTvExpand(card){
     if(!card) return;
     card.classList.add('tv-on','tv-expanded');
     card.classList.remove('tv-offair');
     _ccTvApplySavedSize(card);
     _ccTV.on = true;
+    _ccTvSyncCenterClass(card);
   }
   function _ccTvSetList(list, idx, key, query, keepFrame){
     var prevId = (_ccTV.list && _ccTV.list[_ccTV.idx] && _ccTV.list[_ccTV.idx].videoId) || '';
@@ -12648,7 +12799,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     _ccTV.mute = !!(opts && opts.fromSpeech && key === 'news');
     var frame = document.getElementById('bnavCCTVFrame');
     var already = _ccTV.on && _ccTV.key===key && frame && /youtube\.com\/embed\//.test(frame.src||'');
-    if(already){ card.classList.add('tv-on','tv-expanded'); _ccTvApplySavedSize(card); return; }
+    if(already){ card.classList.add('tv-on','tv-expanded'); _ccTvApplySavedSize(card); _ccTvSyncCenterClass(card); return; }
     _ccTvHideComing();
     _ccTvExpand(card);
     card.classList.remove('tv-offair');
@@ -12661,6 +12812,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!card) return;
     card.classList.remove('tv-on','tv-expanded','tv-offair','tv-tuning','tv-ready','tv-coming','tv-hud');
     _ccTV.on = false; _ccTV.key = null; _ccTV.list = []; _ccTV.idx = 0;
+    _ccTvSyncCenterClass(card);
     _ccTvStopRefresh();
     setTimeout(function(){ if(frame && !_ccTV.on) frame.src='about:blank'; }, 400);
   }
