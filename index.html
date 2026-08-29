@@ -733,7 +733,7 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .syn-welcome-greeting{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text,#f2f2f5);line-height:1.25;}
 .syn-welcome-sub{font-size:11.5px;color:rgba(255,255,255,0.4);margin-top:2px;}
 @media (max-width:640px){.syn-welcome-pop{left:12px!important;right:12px;width:auto;top:56px!important;}}
-.bnav-cc-left{grid-area:left;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;}
+.bnav-cc-left{grid-area:left;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;min-width:0;}
 .bnav-cc-card{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px;flex-shrink:0;}
 .bnav-cc-card-title{font-size:11px;letter-spacing:.06em;color:rgba(255,255,255,0.55);text-transform:uppercase;margin-bottom:10px;font-weight:600;}
 .bnav-cc-bars{display:flex;align-items:flex-end;gap:5px;height:64px;}
@@ -748,7 +748,7 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-panel.bnav-cc-open .bnav-cc-gauge{background:conic-gradient(var(--gc,#00d9a8) 0% var(--gp,60%), rgba(255,255,255,0.08) var(--gp,60%) 100%);}
 .bnav-cc-gauge span{width:42px;height:42px;border-radius:50%;background:#161022;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;}
 .bnav-cc-gauge-label{font-size:10px;color:rgba(255,255,255,0.45);}
-.bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:flex-start;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;padding:12px;}
+.bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:stretch;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;padding:12px;}
 .bnav-cc-center>.bnav-cc-card{width:190px;flex:0 0 190px;min-width:0;max-width:190px;box-sizing:border-box;overflow:hidden;}
 .bnav-cc-balance-card{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(124,106,247,0.10),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(0,217,168,0.08),transparent 55%),rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;min-width:0;cursor:pointer;width:190px;height:190px;flex-shrink:0;z-index:2;transition:box-shadow .15s ease,outline-color .15s ease;}
 .bnav-cc-balance-card.cc-nest-target{outline:2px solid rgba(124,106,247,0.85);outline-offset:-2px;box-shadow:inset 0 0 0 1px rgba(124,106,247,0.35),0 0 16px rgba(124,106,247,0.28);z-index:6;}
@@ -800,7 +800,37 @@ body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!import
 .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 18px rgba(255,255,255,0.08);cursor:default;}
 html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0,0,0,0.45),0 0 16px rgba(255,255,255,0.1);}
 .bnav-cc-tv-card.tv-expanded{width:var(--tv-w, 190px);height:var(--tv-h, 190px);min-width:0;min-height:0;max-width:100%;max-height:min(72vh, 680px);}
-.bnav-cc-center>.bnav-cc-tv-card.tv-expanded{flex:0 0 var(--tv-w, 190px);width:var(--tv-w, 190px);max-width:min(100%, var(--tv-w, 190px));}
+/* In the center tray specifically, "expanded" means take the whole row at a
+   fixed, deliberately modest height — not flex-grow filling whatever space
+   happens to be around it, which still wasn't reliably fitting on screen.
+   A flat, short height is guaranteed to fit without a scroll no matter what
+   else is on the page above it. */
+.bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded){
+  flex-direction:column;
+  flex-wrap:nowrap;
+  overflow-y:hidden;
+}
+.bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded)>.bnav-cc-tv-card.tv-expanded{
+  order:1;
+  flex:0 0 220px;
+  width:100%;
+  height:220px;
+}
+/* Balance is the first tile in the template (before TV), so without this it
+   would stay pinned above the now full-width TV row. Reorder it below TV,
+   also at a short fixed height — untouched if either has been dragged
+   elsewhere. */
+.bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded)>.bnav-cc-balance-card{
+  order:2;
+  flex:0 0 110px;
+  width:100%;
+  height:110px;
+}
+/* The drag-to-resize handle set a fixed --tv-h that fought this fit-to-box
+   sizing (that's the fixed 360px that caused the overflow in the first
+   place) — it no longer makes sense once height is flex-grown, so hide it
+   here instead of leaving a control that silently does nothing useful. */
+.bnav-cc-center>.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-resize{display:none;}
 .bnav-cc-left>.bnav-cc-tv-card,.bnav-cc-right>.bnav-cc-tv-card{width:100%;max-width:none;height:auto;aspect-ratio:1/1;}
 .bnav-cc-left>.bnav-cc-tv-card.tv-expanded,.bnav-cc-right>.bnav-cc-tv-card.tv-expanded{aspect-ratio:auto;height:var(--tv-h, 220px);}
 .bnav-cc-tv-card.tv-resizing{transition:none;}
@@ -941,7 +971,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-widget-list{display:flex;flex-direction:column;gap:2px;}
 .bnav-cc-widget-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 8px;border-radius:9px;cursor:pointer;transition:background .15s ease;}
 .bnav-cc-widget-row:hover{background:rgba(124,106,247,0.1);}
-.bnav-cc-widget-row-label{font-size:12px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bnav-cc-widget-row-label{font-size:12px;color:rgba(255,255,255,0.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
 .bnav-cc-widget-row-chev{color:rgba(255,255,255,0.25);font-size:11px;flex-shrink:0;}
 .bnav-cc-widget-empty{font-size:11.5px;color:rgba(255,255,255,0.32);font-style:italic;padding:6px 8px;}
 .bnav-cc-widget-stat{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 2px 0;}
@@ -1085,12 +1115,39 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
      covered, so TV/Pulse stayed stuck at a fixed 190px and threw the grid
      out of alignment next to the resized neighbours. */
   .bnav-cc-center>.bnav-cc-card,
-  .bnav-cc-center>.bnav-cc-tv-card,
+  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded),
   .bnav-cc-center>.bnav-cc-pulse-card{width:calc(50% - 5px);flex:0 0 calc(50% - 5px);}
   .bnav-cc-center>.bnav-cc-balance-card{width:calc(50% - 5px);height:auto;aspect-ratio:1/1;}
   .bnav-cc-center>.bnav-cc-balance-card.cc-has-nest,
   .bnav-cc-center>.bnav-cc-balance-card.cc-relocated{aspect-ratio:auto;}
   .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){height:auto;aspect-ratio:1/1;}
+  /* Safety net: whatever tile type ends up in the left/right column (card,
+     TV, Pulse, or a relocated Balance tile), never let its own fixed width
+     push past the column and off the right edge of the screen. */
+  .bnav-cc-left,.bnav-cc-right{max-width:100%;box-sizing:border-box;}
+  .bnav-cc-left>*,.bnav-cc-right>*{max-width:100%;box-sizing:border-box;}
+  /* Previous safety net only reached direct children (the cards) — the actual
+     clipped content (calendar rows, mail rows, etc.) is nested 2-3 levels
+     deeper inside those cards and was still able to blow past the panel's
+     right edge. Force every descendant everywhere in the panel to respect
+     its parent's width, at every nesting depth, so nothing can ever push the
+     panel wider than the screen. */
+  .bnav-cc-panel,.bnav-cc-panel *{max-width:100%;box-sizing:border-box;}
+  .bnav-cc-panel{overflow-x:hidden;}
+  .bnav-cc-left,.bnav-cc-right,.bnav-cc-center,.bnav-cc-tray{overflow-x:hidden;}
+  /* Long single-line rows (calendar/mail/event text) need to actually
+     truncate instead of just being width-capped, or the capped box still
+     shows the tail of the line clipped mid-word. */
+  .bnav-cc-ev-time,.bnav-cc-widget-row-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* THE ACTUAL LEAK: max-width alone never worked on these rows. A flex item
+     (the row label span) refuses to shrink below its own text's natural
+     width unless min-width:0 is set explicitly — max-width and ellipsis are
+     silently ignored on a flex child until that min-width trap is lifted.
+     That's why Recent Chats / Notes / Calendar rows kept pushing past the
+     edge even after every earlier truncation attempt. Force min-width:0 on
+     every flex/grid descendant in the panel so nothing can hide behind that
+     default again. */
+  .bnav-cc-panel *{min-width:0;}
 }
 #bottomNavBar.bnav-portal-in>*:not(.bnav-orb-wrap){will-change:transform,opacity,filter;}
 .bnav-orb{width:100%;height:100%;border-radius:50%;border:1px solid rgba(255,255,255,0.28);background:
@@ -1944,6 +2001,27 @@ body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
   #bnavControlCenterBtn:hover svg{stroke:rgba(200,203,230,0.55);}
 }
 #bnavControlCenterBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;fill:none;}
+/* Settings + Control Centre are the last 2 icons on the bottom-left icon row —
+   mobile-only entry points (Settings has no other mobile entry point, Control
+   Centre's panel had none either). On PC both are already reachable elsewhere
+   (sidebar gear menu, long-press orb), so hide just these two above the mobile
+   breakpoint instead of the whole row.
+   NOTE: html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavSettingsBtn /
+   #bnavControlCenterBtn (below, ~line 2570) forces display:flex!important with
+   higher specificity (1 id + 3 classes + 2 types) than a plain
+   "body.bottom-nav #id" rule, so it silently won on PC in apps-board layout.
+   The :not(#_never_) bump below matches that same specificity so this rule
+   wins regardless of source order or which sidebar layout is active. */
+@media (min-width:769px){
+  body.bottom-nav #bnavSettingsBtn,
+  body.bottom-nav #bnavControlCenterBtn,
+  html.chp-sidebar-mode body.bottom-nav #bnavSettingsBtn,
+  html.chp-sidebar-mode body.bottom-nav #bnavControlCenterBtn,
+  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavSettingsBtn:not(#_never_),
+  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavControlCenterBtn:not(#_never_){
+    display:none!important;
+  }
+}
 body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #bnavCallBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
 #bnavCallBtn .call-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#7c6af7;box-shadow:0 0 6px rgba(124,106,247,0.6);opacity:0;transition:opacity .2s ease;}
@@ -10516,6 +10594,13 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   function _ccRestoreAllColOrders(){
     var panel = document.getElementById('bnavCCPanel');
     if(!panel) return;
+    // Drag is disabled below the mobile breakpoint (see _ccWireDragCard), so
+    // a custom order can only have been saved from a wider (desktop) session.
+    // Applying that saved left/right column placement on mobile is what left
+    // widgets "stuck" off their default spot and overflowing — mobile always
+    // renders the natural template order instead, regardless of what a
+    // desktop session saved.
+    if(window.innerWidth <= 860){ _ccSyncBalanceSize(); return; }
     var byId = {};
     Array.prototype.forEach.call(panel.querySelectorAll('.bnav-cc-left > [data-cc-id], .bnav-cc-center > [data-cc-id], .bnav-cc-right > [data-cc-id]'), function(c){
       var id = c.getAttribute('data-cc-id');
@@ -38880,9 +38965,20 @@ function _chpSyncAppsBoard(){
   for(var i=0;i<btns.length;i++) btns[i].setAttribute('aria-pressed', on?'true':'false');
   var ids=['bnavNotesBtn','bnavPulseBtn','bnavCallBtn','bnavAskBtn','bnavImageGenBtn','bnavStemBtn','bnavSettingsBtn','bnavControlCenterBtn'];
   var sidebarOn=document.documentElement.classList.contains('chp-sidebar-mode');
+  // Settings + Control Centre are mobile-only entry points on the bottom-left
+  // icon row. This loop otherwise force-shows the whole row with an inline
+  // display:flex!important whenever sidebar+apps-board are both on — and an
+  // inline !important always wins over any stylesheet rule, no matter how
+  // specific, so those two kept reappearing on PC no matter what CSS said.
+  // Force them hidden here too, before the normal sidebarOn/on branching.
+  var isMobileWidth = window.innerWidth <= 768;
   for(var j=0;j<ids.length;j++){
     var el=document.getElementById(ids[j]);
     if(!el) continue;
+    if(!isMobileWidth && (ids[j]==='bnavSettingsBtn' || ids[j]==='bnavControlCenterBtn')){
+      el.style.setProperty('display','none','important');
+      continue;
+    }
     if(sidebarOn && !on) el.style.setProperty('display','none','important');
     else if(sidebarOn && on) el.style.setProperty('display','flex','important');
     else el.style.removeProperty('display');
@@ -38898,6 +38994,24 @@ function _chpSyncAppsBoard(){
     }
   }
 }
+// The inline display:none!important that hides Settings/Control Centre on PC
+// (set inside _chpSyncAppsBoard above) was only ever recalculated when the
+// user actively changed the sidebar/apps-board setting — never on a plain
+// window resize. So loading at desktop width, then resizing/rotating down to
+// mobile (or using devtools' device toolbar after the fact), left that stale
+// inline style in place and the icons stayed hidden on mobile too. Re-run the
+// sync whenever the viewport crosses the 768px mobile/PC line so the icons
+// correctly reappear on mobile and stay hidden on PC either way.
+(function(){
+  var _wasMobileWidth = window.innerWidth <= 768;
+  window.addEventListener('resize', function(){
+    var nowMobile = window.innerWidth <= 768;
+    if(nowMobile !== _wasMobileWidth){
+      _wasMobileWidth = nowMobile;
+      if(typeof _chpSyncAppsBoard === 'function') _chpSyncAppsBoard();
+    }
+  }, {passive:true});
+})();
 function _chpCloseRailPop(){
   var p=document.getElementById('chpRailPop');
   if(p) p.classList.remove('open');
@@ -52339,6 +52453,15 @@ function _tnvSendAway(){
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn) return;
   _tnvClearGlideTimer();
+  /* Mobile: keep the mic parked at top-middle instead of fading it back into
+     .top-actions — that container collapses/fades with the rest of the top
+     bar on mobile, so docking it there on deactivation is what made the mic
+     "vanish". Leave it centered (still tappable to start speech-to-speech
+     again); only its on/speak glow classes change, handled elsewhere. Skip
+     this for the escape/Studio-parked paths below — those need the real dock. */
+  if(window.innerWidth <= 768 && _tnvCentered && !_tnvEscaped && !_tnvReturnInProgress && btn.getAttribute('data-tnv-studio-parked') !== '1'){
+    return;
+  }
   /* Studio-parked or mid return-glide: fade out in place, then dock */
   if(_tnvEscaped || _tnvReturnInProgress || btn.getAttribute('data-tnv-studio-parked') === '1'){
     _tnvEscaped = false;
