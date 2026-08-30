@@ -13191,6 +13191,12 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     card.addEventListener('click', function(){
       if(card._ccJustDragged) return;
       if(!_ccTV.on) tuneControlCentreTV(SYN_TV_CHANNELS[0].key);
+      // mousemove/mouseenter (above) are how the channel switcher normally
+      // reappears, but neither ever fires from a tap — so on touch devices,
+      // once the initial post-tune reveal times out, there was no way back
+      // to it. A tap on the card (chips/buttons already stopPropagation, so
+      // this only fires on taps elsewhere on the card) now re-shows it too.
+      else showTvHud();
     });
     _ccTvBindResize(card);
     _ccTvApplySavedSize(card);
