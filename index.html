@@ -505,23 +505,6 @@ html[data-theme="easyview"] .sidebar.collapsed{background:rgba(19,18,34,0.28);}
   }
 }
 @media(max-width:768px){.bnav-mobile-only{display:flex!important;}}
-/* Hide Stem Studio (music) icon on mobile only — desktop bottom-nav keeps it.
-   Also close the 40px gap it leaves by shifting the two icons after it left,
-   since these bottom-nav buttons use fixed left offsets, not flex flow.
-   Must match/exceed the specificity of the chp-sidebar-mode/chp-apps-board
-   rules further down the sheet that force display:flex on this button. */
-@media(max-width:768px){
-  #bnavStemBtn,
-  body.bottom-nav #bnavStemBtn,
-  body.nav-fullwidth #bnavStemBtn,
-  html.chp-sidebar-mode #bnavStemBtn,
-  html.chp-sidebar-mode:not(.chp-apps-board) #bnavStemBtn,
-  html.chp-sidebar-mode:not(.chp-apps-board) body.bottom-nav #bnavStemBtn,
-  html.chp-sidebar-mode.chp-apps-board #bnavStemBtn,
-  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{display:none!important;}
-  #bnavSettingsBtn{left:208px!important;}
-  #bnavControlCenterBtn{left:248px!important;}
-}
 html[data-theme="trueblack"] #bnavNotesBtn svg,
 html[data-theme="trueblack"] #bnavPulseBtn svg,
 html[data-theme="trueblack"] #bnavCallBtn svg,
@@ -1194,9 +1177,9 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
      much shorter — so there's real room left for the widgets that matter.
      Only applies when SYN-TV is OFF; the moment it's turned on the existing
      :has(.tv-expanded) rule above takes over and gives it the full row. */
-  .bnav-cc-center>.bnav-cc-balance-card{width:calc(50% - 5px);height:100px;aspect-ratio:auto;}
-  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){height:100px;aspect-ratio:auto;}
-  .bnav-cc-balance-card .bnav-cc-wave-svg{max-height:34%;}
+  .bnav-cc-center>.bnav-cc-balance-card{width:calc(50% - 5px);height:auto;min-height:150px;aspect-ratio:auto;}
+  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){height:auto;min-height:150px;aspect-ratio:auto;}
+  .bnav-cc-balance-card .bnav-cc-wave-svg{max-height:38%;}
   /* Docked/relocated Balance still needs to size to its own content, not the
      100px strip above — same exception that existed before this change. */
   /* Belt-and-suspenders: even if a fuse/nest state ever slips through on
@@ -3365,6 +3348,41 @@ html:not(.chp-sidebar-mode) .chp-section-label{gap:0;padding-left:16px;}
 .chp-user-opt.on{background:rgba(255,255,255,0.08);}
 .chp-user-opt .cx-sub{font-size:10.5px;color:rgba(170,170,178,0.55);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .chp-user-hint{font-size:11px;color:rgba(170,170,178,0.55);padding:4px 10px 8px;line-height:1.4;}
+/* ── Mobile Settings page — the gear icon on mobile opens #chpUserDock as a
+   true full-screen page instead of the sidebar's small floating dropdown.
+   The header row below is only shown while that mode is active; the dock
+   itself is reused as-is (same menu, same click handlers, same panes) so
+   Connectors / Appearance / Voice / Plan & credits / Sign out all keep
+   working exactly like they already did inside the sidebar. */
+.chp-user-mobile-head{display:none;}
+body.chp-mobile-settings-open #chpUserDock{
+  position:fixed!important;inset:0;left:0;right:0;top:0;bottom:0;
+  width:100vw;height:100vh;max-width:none;max-height:none;
+  z-index:9999;background:var(--bg);
+  padding:0!important;margin:0;
+  display:flex;flex-direction:column;
+  border-radius:0;border:none;
+}
+body.chp-mobile-settings-open #chpUserMobileHead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+body.chp-mobile-settings-open #chpUserMobileHead .chp-user-mobile-title{
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;color:var(--text);
+}
+body.chp-mobile-settings-open #chpUserMobileHead .chp-user-mobile-close{
+  width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.06);
+  color:var(--text);font-size:16px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+body.chp-mobile-settings-open #chpUserMenu{
+  flex:1 1 auto;overflow-y:auto;max-height:none;
+  padding:8px 10px calc(16px + env(safe-area-inset-bottom,0px));
+}
+body.chp-mobile-settings-open .chp-user-card{padding:14px 8px 16px;}
+body.chp-mobile-settings-open .chp-user-menu button{font-size:14px;padding:12px 12px;}
 .chp-cx-row{display:flex;align-items:center;gap:10px;padding:8px 8px 9px;}
 .chp-cx-ico{width:32px;height:32px;border-radius:9px;flex:0 0 32px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
 .chp-cx-ico[data-cx="google"]{background:#fff;}
@@ -14069,6 +14087,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       <div id="chpSidebarInner">
         <div class="chp-header" id="chpHeader"><span class="chp-header-label chp-header-label-chats">Past Chats</span><span class="chp-header-label chp-header-label-set">Settings</span><div class="chp-header-hit"><button type="button" id="chpUserBtn" class="chp-gear-dock" hidden aria-label="Account menu" aria-haspopup="menu" aria-expanded="false"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0 1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div><div class="chp-header-tools"><button type="button" class="chp-panel-x" onclick="closeChatHistoryPanel()" aria-label="Close past chats"><svg class="chp-x-glyph" width="28" height="28" viewBox="0 0 80 80" fill="none" aria-hidden="true"><rect x="20" y="17" width="40" height="46" rx="11" fill="none" stroke="currentColor" stroke-width="1.35" opacity=".72"/><line x1="31" y1="20" x2="31" y2="60" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity=".72"/><circle cx="31" cy="26" r="1.7" fill="currentColor"/><circle cx="31" cy="40" r="1.7" fill="currentColor"/><circle cx="31" cy="54" r="1.7" fill="currentColor"/><circle cx="50" cy="30" r="1.55" fill="currentColor"/><circle cx="50" cy="50" r="1.55" fill="currentColor"/></svg><span class="chp-x-mark">✕</span></button><button onclick="newChat({forceAsk:true})" title="New Chat" style="background:none;border:none;color:rgba(200,195,225,0.35);font-size:14px;cursor:pointer;padding:0;line-height:1;transition:color .2s;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='rgba(200,195,225,0.85)'" onmouseout="this.style.color='rgba(200,195,225,0.35)'">+</button></div></div>
         <div id="chpUserDock" class="chp-user-dock" hidden>
+          <div class="chp-user-mobile-head" id="chpUserMobileHead">
+            <span class="chp-user-mobile-title">Settings</span>
+            <button type="button" class="chp-user-mobile-close" id="chpUserMobileClose" aria-label="Close settings">✕</button>
+          </div>
           <div id="chpUserMenu" class="chp-user-menu" role="menu">
             <div id="chpUserHome">
               <div class="chp-user-card">
@@ -39533,6 +39555,14 @@ function _chpSyncAppsBoard(){
       el.style.setProperty('display','none','important');
       continue;
     }
+    // Stem Studio (music) is mobile-only hidden — same inline-important
+    // trick as above, just flipped: force it OFF whenever we're actually
+    // on a mobile-width screen, before the sidebarOn/on branching below
+    // can set it back to flex!important.
+    if(isMobileWidth && ids[j]==='bnavStemBtn'){
+      el.style.setProperty('display','none','important');
+      continue;
+    }
     if(sidebarOn && !on) el.style.setProperty('display','none','important');
     else if(sidebarOn && on) el.style.setProperty('display','flex','important');
     else el.style.removeProperty('display');
@@ -39730,6 +39760,9 @@ window._syncChpUserDock = _syncChpUserDock;
    gear button to flip it into account view. */
 function _bnavOpenAccountSettings(){
   try{
+    // On mobile, open the Settings menu as its own full-screen page instead
+    // of behind the (much smaller) sidebar — see _bnavOpenMobileSettingsPage.
+    if(window.innerWidth <= 768){ _bnavOpenMobileSettingsPage(); return; }
     var sidebar = document.getElementById('chpSidebar');
     var gbtn = document.getElementById('chpUserBtn');
     var dock = document.getElementById('chpUserDock');
@@ -39743,6 +39776,65 @@ function _bnavOpenAccountSettings(){
   }catch(e){ if(typeof goProfile==='function') goProfile(); }
 }
 window._bnavOpenAccountSettings = _bnavOpenAccountSettings;
+// Mobile Settings page: reuses #chpUserDock (same menu items, same click
+// handlers, same Connectors/Appearance/Voice/Plan panes) but shown as a
+// real full-screen page via the .chp-mobile-settings-open body class,
+// instead of sliding the sidebar open behind a small dropdown.
+function _bnavOpenMobileSettingsPage(){
+  try{
+    var gbtn = document.getElementById('chpUserBtn');
+    var dock = document.getElementById('chpUserDock');
+    if(!gbtn || !dock || gbtn.hidden){ if(typeof goProfile==='function') goProfile(); return; }
+    // #chpUserDock normally lives inside #chpSidebar, which has
+    // backdrop-filter set on it. backdrop-filter (like transform/filter)
+    // creates a new containing block for position:fixed descendants — so
+    // our "fullscreen fixed" dock was being sized relative to the sidebar's
+    // box (width:0 when the sidebar itself isn't open) instead of the
+    // actual viewport, collapsing it to nothing. Move the dock out to
+    // <body> while this mode is active so it escapes that containing
+    // block entirely, then restore it to its original spot on close.
+    if(!dock._mobileHome){
+      dock._mobileHome = { parent: dock.parentNode, next: dock.nextSibling };
+    }
+    if(dock.parentNode !== document.body) document.body.appendChild(dock);
+    document.body.classList.add('chp-mobile-settings-open');
+    var dockOpen = dock.classList.contains('open');
+    if(!dockOpen){
+      requestAnimationFrame(function(){ if(!gbtn.hidden) gbtn.click(); });
+    }
+    function restoreDockHome(){
+      var home = dock._mobileHome;
+      if(home && home.parent){
+        if(home.next && home.next.parentNode === home.parent) home.parent.insertBefore(dock, home.next);
+        else home.parent.appendChild(dock);
+      }
+    }
+    var closeBtn = document.getElementById('chpUserMobileClose');
+    if(closeBtn && !closeBtn._wired){
+      closeBtn._wired = true;
+      closeBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        if(dock.classList.contains('open')) gbtn.click();
+        document.body.classList.remove('chp-mobile-settings-open');
+        restoreDockHome();
+      });
+    }
+    // Safety net: whichever path closes the dock (Settings item, Sign out,
+    // the outside-click listener, or our own close button above), also
+    // drop the full-screen mode so an empty overlay never gets stuck on
+    // screen — without needing to duplicate that cleanup at every call site.
+    if(!dock._mobileSettingsObserver){
+      dock._mobileSettingsObserver = new MutationObserver(function(){
+        if(!dock.classList.contains('open')){
+          document.body.classList.remove('chp-mobile-settings-open');
+          restoreDockHome();
+        }
+      });
+      dock._mobileSettingsObserver.observe(dock, { attributes:true, attributeFilter:['class'] });
+    }
+  }catch(e){ if(typeof goProfile==='function') goProfile(); }
+}
+window._bnavOpenMobileSettingsPage = _bnavOpenMobileSettingsPage;
 (function(){
   var bound = false;
   function bind(){
@@ -82319,5 +82411,29 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
 
 
 </script>
+
+<!-- Hide Stem Studio (music) icon on mobile only — desktop bottom-nav keeps it.
+     Placed at the very end of the document (after every other rule that
+     targets #bnavStemBtn) on purpose: several earlier rules show it with
+     display:flex!important at the SAME specificity as any single override,
+     so on a specificity tie the LATER rule in the cascade wins regardless
+     of how specific the selector is. Being last guarantees this one wins.
+     Also closes the 40px gap it leaves by shifting the two icons after it
+     left, since these bottom-nav buttons use fixed left offsets, not flex
+     flow. -->
+<style>
+@media(max-width:768px){
+  #bnavStemBtn,
+  body.bottom-nav #bnavStemBtn,
+  body.nav-fullwidth #bnavStemBtn,
+  html.chp-sidebar-mode #bnavStemBtn,
+  html.chp-sidebar-mode:not(.chp-apps-board) #bnavStemBtn,
+  html.chp-sidebar-mode:not(.chp-apps-board) body.bottom-nav #bnavStemBtn,
+  html.chp-sidebar-mode.chp-apps-board #bnavStemBtn,
+  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{display:none!important;}
+  #bnavSettingsBtn{left:208px!important;}
+  #bnavControlCenterBtn{left:248px!important;}
+}
+</style>
 
 </body>
