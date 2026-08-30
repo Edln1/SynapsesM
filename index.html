@@ -505,6 +505,23 @@ html[data-theme="easyview"] .sidebar.collapsed{background:rgba(19,18,34,0.28);}
   }
 }
 @media(max-width:768px){.bnav-mobile-only{display:flex!important;}}
+/* Hide Stem Studio (music) icon on mobile only — desktop bottom-nav keeps it.
+   Also close the 40px gap it leaves by shifting the two icons after it left,
+   since these bottom-nav buttons use fixed left offsets, not flex flow.
+   Must match/exceed the specificity of the chp-sidebar-mode/chp-apps-board
+   rules further down the sheet that force display:flex on this button. */
+@media(max-width:768px){
+  #bnavStemBtn,
+  body.bottom-nav #bnavStemBtn,
+  body.nav-fullwidth #bnavStemBtn,
+  html.chp-sidebar-mode #bnavStemBtn,
+  html.chp-sidebar-mode:not(.chp-apps-board) #bnavStemBtn,
+  html.chp-sidebar-mode:not(.chp-apps-board) body.bottom-nav #bnavStemBtn,
+  html.chp-sidebar-mode.chp-apps-board #bnavStemBtn,
+  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{display:none!important;}
+  #bnavSettingsBtn{left:208px!important;}
+  #bnavControlCenterBtn{left:248px!important;}
+}
 html[data-theme="trueblack"] #bnavNotesBtn svg,
 html[data-theme="trueblack"] #bnavPulseBtn svg,
 html[data-theme="trueblack"] #bnavCallBtn svg,
@@ -1182,8 +1199,12 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   .bnav-cc-balance-card .bnav-cc-wave-svg{max-height:34%;}
   /* Docked/relocated Balance still needs to size to its own content, not the
      100px strip above — same exception that existed before this change. */
+  /* Belt-and-suspenders: even if a fuse/nest state ever slips through on
+     mobile, never let Balance (or the TV tile mirroring its height) grow
+     past a normal, scroll-free size again. */
   .bnav-cc-center>.bnav-cc-balance-card.cc-has-nest,
-  .bnav-cc-center>.bnav-cc-balance-card.cc-relocated{height:auto;}
+  .bnav-cc-center>.bnav-cc-balance-card.cc-relocated{height:auto;max-height:220px;overflow-y:auto;}
+  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded){max-height:220px!important;}
   /* Safety net: whatever tile type ends up in the left/right column (card,
      TV, Pulse, or a relocated Balance tile), never let its own fixed width
      push past the column and off the right edge of the screen. */
@@ -1699,16 +1720,6 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
      phone width — make it a proper solid drawer instead */
   #chpSidebar.open,#chpSidebar.fade-open{width:82vw!important;max-width:300px!important;box-shadow:4px 0 24px rgba(0,0,0,0.5)!important;}
   #chpSidebarInner{width:100%!important;}
-  /* Settings gear (bottom-left, mobile): the account/settings menu takes over
-     the FULL screen as its own page instead of the narrow Past Chats drawer
-     above. chp-fullpage is added the instant the gear is tapped (before the
-     sidebar even opens) so it animates straight to 100vw — it never widens
-     out of the 82vw drawer first. */
-  #chpSidebar.chp-fullpage,
-  #chpSidebar.chp-fullpage.open,
-  #chpSidebar.chp-fullpage.fade-open{width:100vw!important;max-width:none!important;box-shadow:none!important;background:var(--bg)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
-  #chpSidebar.chp-fullpage #chpUserDock{flex:1;overflow-y:auto;}
-  #chpSidebar.chp-fullpage .chp-user-menu{max-height:none!important;}
   /* Sidebar-mode rail is desktop-only. Force classic hide on phones even if
      the saved preference is "sidebar". */
   .chp-rail{display:none!important;}
@@ -10967,7 +10978,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(!tv || !bc || tv.classList.contains('tv-expanded')) { if(tv) tv.style.height = ''; return; }
     var parent = tv.parentElement;
     if(!parent || !parent.classList || !parent.classList.contains('bnav-cc-center')){ tv.style.height = ''; return; }
-    var balH = bc.offsetHeight;
+    var balH = Math.min(bc.offsetHeight, 220);
     tv.style.height = balH > 100 ? balH + 'px' : '';
   }
   window._ccMobileSyncTvHeight = _ccMobileSyncTvHeight;
@@ -11053,6 +11064,15 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     var balanceCard = document.getElementById('bnavCCBalance');
     var panel = document.getElementById('bnavCCPanel');
     if(!balanceCard || !panel) return;
+    // Fusing another widget into Balance is a drag action, and drag is
+    // disabled below the mobile breakpoint (same reasoning as
+    // _ccRestoreAllColOrders above). Restoring a fuse saved from a wider
+    // desktop session onto mobile is what made Balance grow to an
+    // uncapped height:auto — and dragged SYN-TV along with it via
+    // _ccMobileSyncTvHeight — leaving both stretched into a tall, mostly
+    // empty pair of tiles. Mobile always renders the plain, unfused
+    // default tile instead, regardless of what a desktop session saved.
+    if(window.innerWidth <= 860) return;
     var order = _ccNestedOrder();
     if(!order.length) return;
     var body = null, kept = [];
@@ -39175,7 +39195,7 @@ function closeChatHistoryPanel(){
   if(typeof _chpParkHeaderTools === 'function') _chpParkHeaderTools(false, true);
   if(typeof _chpClearLogoFlyer === 'function') _chpClearLogoFlyer();
   if(typeof _chpRestoreCloseGlyph === 'function') _chpRestoreCloseGlyph();
-  if(sidebar) sidebar.classList.remove('open','fade-open','chp-fullpage');
+  if(sidebar) sidebar.classList.remove('open','fade-open');
   setTimeout(function(){ if(typeof _chpSyncThinAppsIcon==='function') _chpSyncThinAppsIcon(false); }, 320);
   if(typeof _chpThinSyncWord==='function') _chpThinSyncWord();
   if(typeof _bnavLogoSyncOpenable === 'function') _bnavLogoSyncOpenable();
@@ -39715,9 +39735,6 @@ function _bnavOpenAccountSettings(){
     var dock = document.getElementById('chpUserDock');
     if(!sidebar || !gbtn){ if(typeof goProfile==='function') goProfile(); return; }
     var sidebarOpen = sidebar.classList.contains('open') || sidebar.classList.contains('fade-open');
-    /* Mark full-page BEFORE the sidebar opens so it animates straight to
-       100vw — never passes through the 82vw Past Chats drawer width first. */
-    sidebar.classList.add('chp-fullpage');
     if(!sidebarOpen && typeof toggleChatHistoryPanel==='function') toggleChatHistoryPanel('user');
     var dockOpen = dock && dock.classList.contains('open');
     if(!dockOpen){
