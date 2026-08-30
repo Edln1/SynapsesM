@@ -1301,7 +1301,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .modal h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;text-align:center;margin-bottom:6px;}
 .modal .sub{font-size:13px;color:#6b6b8a;text-align:center;margin-bottom:24px;line-height:1.6;}
 .modal-tabs{display:flex;margin-bottom:22px;border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;}
-.modal-tab{flex:1;padding:10px;background:transparent;border:none;color:#6b6b8a;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.modal-tab{flex:1;padding:10px;background:transparent;border:none;color:#6f6f6f;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
 .modal-tab.active{background:#161616;color:#e8e8f0;font-weight:600;}
 .form-row{margin-bottom:14px;}
 .form-row label{display:block;font-size:11px;font-weight:600;color:#6b6b8a;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
@@ -1315,12 +1315,111 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .modal-cancel{width:100%;padding:11px;background:#161616;border:1px solid rgba(255,255,255,0.07);border-radius:10px;color:#6b6b8a;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;margin-top:8px;transition:all .15s;}
 .modal-cancel:hover{color:#e8e8f0;}
-.role-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
-.role-card{padding:16px;background:#000000;border:2px solid rgba(255,255,255,0.07);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s;}
-.role-card:hover,.role-card.selected{border-color:#7c6af7;background:rgba(124,106,247,0.1);}
-.role-card .ri{font-size:26px;margin-bottom:6px;}
-.role-card .rl{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
-.role-card .rd{font-size:11px;color:#6b6b8a;margin-top:3px;}
+.role-picker{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+.role-card{display:flex;align-items:center;gap:9px;padding:11px 18px;background:transparent;border:1px solid rgba(255,255,255,0.14);border-radius:100px;cursor:pointer;transition:all .2s;}
+.role-card:hover{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.05);}
+.role-card.selected{border-color:#34d399;background:rgba(52,211,153,0.12);}
+.role-card .rc-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);flex-shrink:0;position:relative;transition:all .2s;}
+.role-card.selected .rc-dot{border-color:#34d399;}
+.role-card.selected .rc-dot::after{content:'';position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:50%;background:#34d399;transform:translate(-50%,-50%);}
+.role-card .rl{font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;color:#c8c8c8;transition:color .2s;}
+.role-card.selected .rl{color:#f5f5f5;}
+
+/* ── Onboarding wizard (Get started screen + multi-step register) ── */
+.auth-step{animation:authStepIn .35s cubic-bezier(.2,.8,.2,1);width:100%;max-width:400px;flex-shrink:0;}
+@keyframes authStepIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.auth-start-logo{width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+.auth-start-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:#e9e9ee;margin-bottom:10px;line-height:1.15;letter-spacing:-.01em;}
+.auth-start-sub{font-size:13.5px;color:#6f6f6f;line-height:1.6;margin-bottom:30px;max-width:340px;}
+.auth-cta-btn{width:100%;padding:15px 18px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:12px;text-align:left;margin-bottom:12px;transition:all .2s;}
+.auth-cta-btn.primary{background:#f2f2f5;border:1px solid #f2f2f5;color:#0a0a0e;justify-content:center;}
+.auth-cta-btn.primary:hover{background:#ffffff;}
+.auth-cta-btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.14);color:#e8e8f0;}
+.auth-cta-btn.secondary:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.22);}
+.auth-cta-btn .aci{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:18px;height:18px;}
+.auth-cta-sub{font-size:11px;font-weight:400;opacity:.55;margin-top:2px;}
+.auth-legal{font-size:11.5px;color:#585858;line-height:1.6;margin-top:22px;}
+.auth-legal a{color:#d8d6e6;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.25);font-weight:600;}
+.auth-switch-row{font-size:13px;color:#6f6f6f;margin-top:24px;padding-top:0;}
+.auth-switch-row a{color:#e8e8f0;font-weight:700;cursor:pointer;text-decoration:none;}
+.auth-switch-row a:hover{text-decoration:underline;}
+.auth-cta-provider{justify-content:center;text-align:center;gap:10px;}
+.auth-cta-btn.auth-cta-last{border-color:rgba(245,158,11,0.5);box-shadow:0 0 0 1px rgba(245,158,11,0.16);}
+#authLastMethod{display:none;align-items:center;justify-content:flex-start;gap:7px;font-size:12.5px;color:#8c8c8c;text-align:left;margin-top:6px;margin-bottom:4px;}
+#authLastMethod .auth-last-dot{width:7px;height:7px;border-radius:50%;background:rgba(245,158,11,0.85);flex-shrink:0;box-shadow:0 0 4px 1px rgba(245,158,11,0.5);}
+.auth-guest-link{display:block;font-size:12.5px;color:#585858;text-align:left;margin-top:8px;cursor:pointer;text-decoration:none;}
+.auth-guest-link:hover{color:#8c8c8c;text-decoration:underline;}
+.auth-legal-choices{margin-top:4px;}
+.auth-legal-choices a{color:#8c8c8c;text-decoration:underline;text-decoration-color:rgba(255,255,255,0.2);font-weight:400;}
+#authStepStart{display:flex;flex-direction:column;align-items:center;}
+
+/* Segmented pill progress bar, like a step-tracker across the top of a form step */
+.auth-progress{display:flex;gap:6px;margin-bottom:26px;}
+.auth-progress span{height:4px;flex-grow:1;flex-basis:0;border-radius:4px;background:rgba(255,255,255,0.09);overflow:hidden;position:relative;transition:background .25s,flex-grow .4s cubic-bezier(.34,1.56,.64,1),opacity .3s ease .12s,margin .4s cubic-bezier(.34,1.56,.64,1);}
+.auth-progress span.done,.auth-progress span.current{background:#34d399;box-shadow:0 0 10px rgba(52,211,153,0.4);}
+.auth-progress span.dot-hidden{flex-grow:0;opacity:0;margin:0 -3px;transition:background .2s,flex-grow .3s cubic-bezier(.4,0,.2,1) .08s,opacity .18s ease,margin .3s cubic-bezier(.4,0,.2,1) .08s;}
+
+.reg-step{display:none;}
+.reg-step.active{display:flex;flex-direction:column;animation:authStepIn .3s ease;}
+.auth-step-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:#f5f5f5;margin-bottom:8px;line-height:1.2;letter-spacing:-.01em;}
+.auth-step-sub{font-size:13px;color:#6f6f6f;margin-bottom:26px;line-height:1.55;}
+
+/* Bottom nav row on each wizard step: circular back + pill continue, side by side */
+.auth-step-nav{display:flex;align-items:center;gap:12px;margin-top:26px;}
+.auth-step-nav .modal-btn{margin-top:0;width:auto;flex:1;border-radius:100px;padding:14px 20px;background:#f2f2f5;border:1px solid #f2f2f5;color:#0a0a0e;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;}
+.auth-step-nav .modal-btn:hover{background:#ffffff;border-color:#ffffff;box-shadow:0 6px 20px rgba(255,255,255,0.12);}
+.auth-nav-back{width:44px;height:44px;min-width:44px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);color:#c8c8c8;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.auth-nav-back:hover{background:rgba(255,255,255,0.1);}
+
+/* Live-updating "preview card" on the visual panel, mirrors Payper's floating profile card */
+#authLeftBrand,#authLeftPreview{position:relative;z-index:2;}
+#authLeftPreview{display:none;flex-direction:column;align-items:center;width:100%;max-width:230px;}
+.auth-preview-card{width:100%;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:22px 18px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);margin-bottom:22px;}
+.auth-preview-avatar{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:#6f6f6f;}
+.auth-preview-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#f0f0f0;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;min-height:18px;}
+.auth-preview-name .ap-empty{color:#4a4a5c;font-weight:500;}
+.auth-preview-badge{width:13px;height:13px;flex-shrink:0;}
+.auth-preview-skel{height:6px;border-radius:4px;background:rgba(255,255,255,0.08);margin:14px auto 0;}
+.auth-preview-skel:nth-child(3){width:80%;}
+.auth-preview-skel:nth-child(4){width:55%;margin-top:8px;}
+.auth-preview-meta{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:10.5px;color:#6f6f6f;}
+.auth-left-copy-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f0;text-align:center;margin-bottom:6px;}
+.auth-left-copy-sub{font-size:12px;color:#6f6f6f;text-align:center;line-height:1.55;max-width:220px;}
+.auth-feature-list{display:flex;flex-direction:column;gap:16px;margin-top:30px;width:100%;max-width:230px;}
+.auth-feature-row{display:flex;align-items:center;gap:11px;}
+.auth-feature-icon{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#34d399;}
+.auth-feature-text{font-size:12px;color:#9d9db2;line-height:1.4;text-align:left;}
+#authLeftDots{position:absolute;left:0;right:0;bottom:22px;display:flex;align-items:center;justify-content:center;gap:5px;z-index:3;}
+#authLeftDots span{height:5px;width:5px;border-radius:5px;background:rgba(255,255,255,0.18);transition:all .25s;}
+#authLeftDots span.on{width:16px;background:rgba(255,255,255,0.85);}
+
+#authRightPanel .auth-cta-btn{width:100%;}
+#authRightPanel .form-row label{color:#6f6f6f;}
+#authRightPanel .form-row input:focus,#authRightPanel .form-row select:focus{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,0.14);}
+#authModalInner{min-height:600px;}
+.modal-overlay#authModal{
+  align-items:stretch!important;
+  justify-content:stretch!important;
+  padding:0!important;
+  background:#000!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+@media(min-width:769px){
+  #authModalInner{
+    width:100vw!important;
+    max-width:100vw!important;
+    height:100vh!important;
+    max-height:100vh!important;
+    min-height:100vh!important;
+    border-radius:0!important;
+    border:none!important;
+    box-shadow:none!important;
+  }
+  #authRightPanel{padding:48px 72px!important;max-height:none!important;}
+  #authLeftPanel{min-height:100vh!important;}
+}
+
 @media(max-width:768px){
   #imageGenResults{grid-template-columns:1fr 1fr!important;}
   /* ── Auth modal — immersive glass + aurora (Studio-inspired) ── */
@@ -1456,41 +1555,43 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
     width:34px!important;
     height:34px!important;
     display:block!important;
-    filter:drop-shadow(0 0 10px rgba(124,106,247,0.35));
+    filter:drop-shadow(0 0 10px rgba(255,255,255,0.18));
   }
   #authRightPanel .auth-welcome-title{
     font-size:20px!important;
-    color:#f0eef8!important;
+    color:#f0f0f0!important;
     margin-bottom:0!important;
     flex:1!important;
     min-width:0!important;
   }
   #authRightPanel .auth-welcome-sub{
-    color:rgba(180,176,210,0.65)!important;
+    color:rgba(181,181,181,0.65)!important;
     margin-bottom:18px!important;
     font-size:12.5px!important;
     line-height:1.45!important;
   }
   #authRightPanel .modal-btn{
-    background:rgba(255,255,255,0.06)!important;
-    border:1px solid rgba(255,255,255,0.12)!important;
-    backdrop-filter:blur(12px)!important;
-    -webkit-backdrop-filter:blur(12px)!important;
-    border-radius:14px!important;
-    color:rgba(255,255,255,0.9)!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.06)!important;
+    background:#f2f2f5!important;
+    border:1px solid #f2f2f5!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    border-radius:100px!important;
+    color:#0a0a0e!important;
+    box-shadow:none!important;
+    font-weight:700!important;
   }
   #authRightPanel .modal-btn:active{
-    background:rgba(255,255,255,0.1)!important;
+    background:#ffffff!important;
   }
   #authRightPanel #loginForm .modal-btn,
-  #authRightPanel #registerForm > .modal-btn{
-    background:rgba(124,106,247,0.22)!important;
-    border-color:rgba(124,106,247,0.4)!important;
-    font-weight:600!important;
+  #authRightPanel #registerForm .modal-btn{
+    background:#f2f2f5!important;
+    border-color:#f2f2f5!important;
+    color:#0a0a0e!important;
+    font-weight:700!important;
   }
   #authRightPanel .form-row label{
-    color:rgba(190,186,220,0.55)!important;
+    color:rgba(191,191,191,0.55)!important;
     font-size:11px!important;
     letter-spacing:.04em!important;
     text-transform:uppercase!important;
@@ -1505,9 +1606,9 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
     -webkit-backdrop-filter:blur(8px)!important;
   }
   #authRightPanel .form-row input:focus{
-    border-color:rgba(124,106,247,0.45)!important;
+    border-color:rgba(52,211,153,0.45)!important;
     outline:none!important;
-    box-shadow:0 0 0 3px rgba(124,106,247,0.12)!important;
+    box-shadow:0 0 0 3px rgba(52,211,153,0.12)!important;
   }
   #authRightPanel .modal-tabs{
     background:rgba(0,0,0,0.28)!important;
@@ -1524,7 +1625,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
     border-radius:10px!important;
     border:none!important;
     background:transparent!important;
-    color:rgba(190,186,220,0.55)!important;
+    color:rgba(191,191,191,0.55)!important;
     flex:1 1 0!important;
     min-width:0!important;
     min-height:36px!important;
@@ -1536,7 +1637,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   }
   #authRightPanel .modal-tab.active{
     background:rgba(255,255,255,0.08)!important;
-    color:#efeaff!important;
+    color:#f5f5f7!important;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06)!important;
     /* same size as inactive — don't shrink the tab bar when Create Account is selected */
     font-weight:600!important;
@@ -1546,21 +1647,40 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   #authRightPanel .role-card{
     background:rgba(0,0,0,0.25)!important;
     border:1px solid rgba(255,255,255,0.1)!important;
-    border-radius:12px!important;
+    border-radius:100px!important;
   }
   #authRightPanel .role-card.selected{
-    border-color:rgba(124,106,247,0.45)!important;
-    background:rgba(124,106,247,0.12)!important;
+    border-color:rgba(52,211,153,0.45)!important;
+    background:rgba(52,211,153,0.12)!important;
   }
   #authRightPanel .auth-or-line{
-    color:rgba(160,156,190,0.5)!important;
+    color:rgba(161,161,161,0.5)!important;
   }
   #authRightPanel .auth-or-line::before,
   #authRightPanel .auth-or-line span,
   #authRightPanel .auth-divider-line{
     background:rgba(255,255,255,0.08)!important;
   }
-  .role-picker{grid-template-columns:1fr 1fr!important;}
+  .role-picker{flex-wrap:wrap!important;}
+  .auth-cta-btn.secondary{
+    background:rgba(255,255,255,0.06)!important;
+    border:1px solid rgba(255,255,255,0.12)!important;
+    backdrop-filter:blur(12px)!important;
+    -webkit-backdrop-filter:blur(12px)!important;
+    color:rgba(255,255,255,0.9)!important;
+  }
+  .auth-cta-btn.primary{background:#f2f2f5!important;color:#0a0a0e!important;}
+  .auth-nav-back{background:rgba(255,255,255,0.06)!important;border-color:rgba(255,255,255,0.12)!important;}
+  .auth-step-nav .modal-btn{border-radius:100px!important;}
+  .auth-preview-card{background:rgba(255,255,255,0.05)!important;}
+  #authLeftDots span.on{background:rgba(255,255,255,0.9)!important;}
+  .auth-back-btn{background:rgba(255,255,255,0.06)!important;border-color:rgba(255,255,255,0.12)!important;}
+  .auth-progress span{background:rgba(255,255,255,0.1)!important;}
+  .auth-progress span.done,.auth-progress span.current{background:#34d399!important;}
+  .auth-step-title{color:#f0f0f0!important;}
+  .auth-step-sub{color:rgba(181,181,181,0.65)!important;}
+  .auth-legal{color:rgba(161,161,161,0.45)!important;}
+  .auth-switch-row{color:rgba(181,181,181,0.6)!important;}
 
   /* ── Global ── */
   *{-webkit-tap-highlight-color:transparent;}
@@ -1579,6 +1699,16 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
      phone width — make it a proper solid drawer instead */
   #chpSidebar.open,#chpSidebar.fade-open{width:82vw!important;max-width:300px!important;box-shadow:4px 0 24px rgba(0,0,0,0.5)!important;}
   #chpSidebarInner{width:100%!important;}
+  /* Settings gear (bottom-left, mobile): the account/settings menu takes over
+     the FULL screen as its own page instead of the narrow Past Chats drawer
+     above. chp-fullpage is added the instant the gear is tapped (before the
+     sidebar even opens) so it animates straight to 100vw — it never widens
+     out of the 82vw drawer first. */
+  #chpSidebar.chp-fullpage,
+  #chpSidebar.chp-fullpage.open,
+  #chpSidebar.chp-fullpage.fade-open{width:100vw!important;max-width:none!important;box-shadow:none!important;background:var(--bg)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+  #chpSidebar.chp-fullpage #chpUserDock{flex:1;overflow-y:auto;}
+  #chpSidebar.chp-fullpage .chp-user-menu{max-height:none!important;}
   /* Sidebar-mode rail is desktop-only. Force classic hide on phones even if
      the saved preference is "sidebar". */
   .chp-rail{display:none!important;}
@@ -5440,11 +5570,13 @@ html[data-theme="light"] .ava-src-dot{color:rgba(60,60,67,0.4)!important;}
 /* ── Onboarding ── */
 #onboardingModal.show{display:flex!important;}
 .ob-step{display:none;}.ob-step.active{display:block;}
-.ob-opt{padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.012);cursor:pointer;margin-bottom:8px;font-size:13.5px;color:rgba(255,255,255,0.7);transition:all .2s;user-select:none;}
-.ob-opt:hover,.ob-opt.sel{background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.4);color:rgba(255,255,255,0.95);}
-.ob-opt.sel{background:rgba(99,102,241,0.18);border-color:rgba(99,102,241,0.55);}
-.ob-next{width:100%;padding:12px;margin-top:16px;background:rgba(99,102,241,0.14);border:1px solid rgba(99,102,241,0.32);border-radius:10px;color:rgba(255,255,255,0.9);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
-.ob-next:hover{background:rgba(99,102,241,0.25);border-color:rgba(99,102,241,0.6);}
+.ob-opt{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.012);cursor:pointer;margin-bottom:8px;font-size:13.5px;color:rgba(255,255,255,0.7);transition:all .2s;user-select:none;}
+.ob-opt::before{content:'';width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.22);flex-shrink:0;transition:all .2s;}
+.ob-opt:hover{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.95);}
+.ob-opt.sel{background:rgba(52,211,153,0.12);border-color:#34d399;color:#f5f5f5;}
+.ob-opt.sel::before{border-color:#34d399;background:radial-gradient(circle,#34d399 40%,transparent 41%);}
+.ob-next{width:100%;padding:14px 20px;margin-top:16px;background:#f2f2f5;border:1px solid #f2f2f5;border-radius:100px;color:#0a0a0e;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.ob-next:hover{background:#ffffff;border-color:#ffffff;box-shadow:0 6px 20px rgba(255,255,255,0.12);}
 
 
 /* ══ WHITEBOARD ══ */
@@ -9804,140 +9936,216 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 
 <!-- Auth Modal -->
 <div class="modal-overlay" id="authModal" style="display:none;">
-  <div style="width:100%;max-width:820px;border-radius:20px;overflow:hidden;display:flex;background:#090b13;box-shadow:0 32px 80px rgba(0,0,0,0.6);border:1px solid #1f2130;animation:fadeUp .4s ease;" id="authModalInner">
-    <div style="width:45%;position:relative;overflow:hidden;border-right:1px solid #1f2130;min-height:520px;background:linear-gradient(135deg,#0d0f1e,#111420);" id="authLeftPanel">
+  <div style="width:100%;overflow:hidden;display:flex;background:#0a0a0a;animation:fadeUp .3s ease;" id="authModalInner">
+    <div style="width:46%;position:relative;overflow:hidden;border-right:1px solid #1c1c1c;min-height:520px;background:linear-gradient(160deg,#050505,#0d0d0d);" id="authLeftPanel">
       <!-- Beams under, particles on top (same stack order as Studio community) -->
       <div id="authBeamsWrap" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;">
         <canvas id="authBeamsCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
       </div>
       <canvas id="authFlowCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;"></canvas>
       <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;z-index:2;">
-        <div id="authLogoDesktop" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 0 32px rgba(99,102,241,0.4);">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </div>
-        <!-- Mobile-only: matches the synapse-node mark used top-left on mobile nav -->
-        <div id="authLogoMobile" style="display:none;align-items:center;justify-content:center;margin-bottom:10px;">
-          <svg width="40" height="40" viewBox="0 0 80 80" fill="none">
-            <defs>
-              <radialGradient id="authLG2" cx="38%" cy="35%" r="65%"><stop offset="0%" stop-color="#c7d2fe"/><stop offset="40%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/></radialGradient>
-              <filter id="authLogoGlow"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            </defs>
-            <line x1="40" y1="34" x2="40" y2="8" stroke="#a5b4fc" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
-            <line x1="40" y1="46" x2="40" y2="72" stroke="#a5b4fc" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
-            <line x1="35" y1="37" x2="10" y2="28" stroke="#818cf8" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
-            <line x1="45" y1="37" x2="70" y2="28" stroke="#818cf8" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
-            <line x1="35" y1="45" x2="16" y2="62" stroke="#a5b4fc" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
-            <line x1="45" y1="45" x2="64" y2="62" stroke="#a5b4fc" stroke-width="1.6" stroke-linecap="round"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
-            <circle cx="40" cy="8" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
-            <circle cx="40" cy="72" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
-            <circle cx="10" cy="28" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-            <circle cx="70" cy="28" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
-            <circle cx="16" cy="62" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
-            <circle cx="64" cy="62" r="3" filter="url(#authLogoGlow)"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
-            <circle cx="40" cy="40" r="11" fill="url(#authLG2)"><animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/></circle>
-            <circle cx="40" cy="40" r="4.5" fill="#c7d2fe" opacity="0.9"><animate attributeName="r" values="4.5;5;4.5;5.2;4.5" dur="6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/></circle>
-          </svg>
-        </div>
-        <div class="auth-brand-title" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;text-align:center;background:linear-gradient(90deg,#818cf8,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;">Synapses</div>
+        <div id="authLeftBrand" style="display:flex;flex-direction:column;align-items:center;">
+        <svg class="syn-logo-mark" width="56" height="56" viewBox="0 0 80 80" fill="none" aria-hidden="true" style="margin-bottom:16px;">
+          <defs>
+            <radialGradient id="synCoreAuth" cx="36%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#f5f3ff"/>
+              <stop offset="28%" stop-color="#c4b5fd"/>
+              <stop offset="62%" stop-color="#7c6af7"/>
+              <stop offset="100%" stop-color="#312e81"/>
+            </radialGradient>
+            <radialGradient id="synHaloAuth" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
+              <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="synSpokeAuth" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
+            </linearGradient>
+            <filter id="synNodeGlowAuth" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
+              <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/>
+              <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="synCoreGlowAuth" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <circle cx="40" cy="40" r="18" fill="url(#synHaloAuth)"/>
+          <g stroke="url(#synSpokeAuth)" stroke-width="1.35" stroke-linecap="round">
+            <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
+          </g>
+          <g filter="url(#synNodeGlowAuth)">
+            <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+            <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+            <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+            <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+            <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+            <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          </g>
+          <circle cx="40" cy="40" r="3.2" fill="url(#synCoreAuth)" filter="url(#synCoreGlowAuth)">
+            <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
+            <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
+        </svg>
+        <div class="auth-brand-title" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;text-align:center;color:#ffffff;margin-bottom:10px;">Synapses</div>
         <div class="auth-brand-sub" style="font-size:13px;color:#6b7280;text-align:center;line-height:1.6;max-width:200px;">Your personal AI OS — voice, live avatar &amp; neural chat.</div>
+
+        <div class="auth-feature-list">
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></div>
+            <div class="auth-feature-text">Talk naturally with a live voice companion</div>
+          </div>
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5v1a4 4 0 0 0 8 0v-1a3 3 0 0 0 2-5 3 3 0 0 0-2-5V6a4 4 0 0 0-4-4z"/></svg></div>
+            <div class="auth-feature-text">Memory that gets sharper the more you talk</div>
+          </div>
+          <div class="auth-feature-row">
+            <div class="auth-feature-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <div class="auth-feature-text">Calendar, inbox &amp; jobs, all in one place</div>
+          </div>
+        </div>
+        </div>
+
+        <!-- Live preview card — mirrors what the person is filling in, shown during the register wizard -->
+        <div id="authLeftPreview">
+          <div class="auth-preview-card">
+            <div class="auth-preview-avatar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="10" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="auth-preview-name">
+              <span id="apName"><span class="ap-empty">Your Name</span></span>
+              <svg class="auth-preview-badge" id="apBadge" viewBox="0 0 24 24" fill="#4f8ef7" style="display:none;"><path d="M12 2l2.4 2.2 3.2-.6.9 3.1 3 1.3-1 3.1L22 14l-2.5 2 .3 3.2-3.2.3-1.6 2.8L12 21l-2.9 1.3-1.6-2.8-3.2-.3.3-3.2L2 14l1.5-2.9-1-3.1 3-1.3.9-3.1 3.2.6z"/><path d="M8.5 12.2l2.3 2.3 4.2-4.7" stroke="#0a0a0a" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="auth-preview-skel"></div>
+            <div class="auth-preview-skel"></div>
+            <div class="auth-preview-meta" id="apMeta"></div>
+          </div>
+          <div class="auth-left-copy-title" id="authLeftCopyTitle">Behind every brand there is a person</div>
+          <div class="auth-left-copy-sub" id="authLeftCopySub">A few quick steps and Synapses will feel tailored to you.</div>
+        </div>
+
+        <div id="authLeftDots"><span class="on"></span><span></span><span></span></div>
       </div>
     </div>
-    <div style="flex:1;padding:36px 32px;display:flex;flex-direction:column;justify-content:center;overflow-y:auto;max-height:90vh;" id="authRightPanel">
+    <div style="flex:1;padding:36px 32px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;max-height:90vh;" id="authRightPanel">
       <!-- Mobile compare: Clear vs Dark field (particles stay; dark adds a veil, no blur) -->
       <button type="button" id="authFieldToggle" class="auth-field-toggle" onclick="toggleAuthFieldDepth()" title="Compare field darkness" style="display:none;">
         <span class="auth-field-dot" aria-hidden="true"></span>
         <span id="authFieldToggleLabel">Field: Dark</span>
       </button>
-      <div class="auth-welcome-row" style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
-        <!-- Exact same glowing synapse mark as mobile top-left (bnavLogoMark / top bar) -->
-        <div class="auth-welcome-logo" aria-hidden="true" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:0;">
-          <svg class="syn-logo-mark" width="32" height="32" viewBox="0 0 80 80" fill="none">
-            <defs>
-              <radialGradient id="synCoreAuth" cx="36%" cy="30%" r="70%">
-                <stop offset="0%" stop-color="#f5f3ff"/>
-                <stop offset="28%" stop-color="#c4b5fd"/>
-                <stop offset="62%" stop-color="#7c6af7"/>
-                <stop offset="100%" stop-color="#312e81"/>
-              </radialGradient>
-              <radialGradient id="synHaloAuth" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/>
-                <stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/>
-                <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="synSpokeAuth" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/>
-              </linearGradient>
-              <filter id="synNodeGlowAuth" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
-                <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/>
-                <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <filter id="synCoreGlowAuth" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-            <circle cx="40" cy="40" r="18" fill="url(#synHaloAuth)"/>
-            <g stroke="url(#synSpokeAuth)" stroke-width="1.35" stroke-linecap="round">
-              <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
-              <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
-              <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
-              <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
-              <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
-              <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
-            </g>
-            <g filter="url(#synNodeGlowAuth)">
-              <circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
-              <circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
-              <circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
-              <circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
-              <circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
-              <circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
-            </g>
-            <circle cx="40" cy="40" r="3.2" fill="url(#synCoreAuth)" filter="url(#synCoreGlowAuth)">
-              <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9">
-              <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
-          </svg>
-        </div>
-        <div class="auth-welcome-title" style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:0;line-height:1.15;">Welcome to Synapses</div>
+
+      <!-- ══ STEP 0: Get started (landing) ══ -->
+      <div id="authStepStart" class="auth-step">
+        <div class="auth-start-title">Get started with Synapses</div>
+        <div class="auth-start-sub">Your personal AI OS — voice, live avatar &amp; neural chat. Join to unlock the full experience.</div>
+
+        <button class="auth-cta-btn secondary auth-cta-provider" data-provider="google" onclick="authOAuth('google')">
+          <span class="aci"><svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.5 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5 44.5 35.3 44.5 24c0-1.2-.1-2.4-.9-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.5 29.6 3.5 24 3.5c-8.1 0-15 4.6-18.7 11.2z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4c-2 1.4-4.6 2.2-7.6 2.2-5.3 0-9.7-3.1-11.3-7.6l-6.7 5.1C9 39.9 15.9 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6.6 5.4C41.4 36.3 44.5 30.6 44.5 24c0-1.2-.1-2.4-.9-3.5z"/></svg></span>
+          <span class="auth-cta-label">Continue with Google</span>
+        </button>
+        <button class="auth-cta-btn secondary auth-cta-provider" data-provider="twitter" onclick="authOAuth('twitter')">
+          <span class="aci"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
+          <span class="auth-cta-label">Continue with X</span>
+        </button>
+        <button class="auth-cta-btn secondary auth-cta-provider" data-provider="apple" onclick="authOAuth('apple')">
+          <span class="aci"><svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)"><path d="M16.365 1.43c0 1.14-.393 2.28-1.121 3.116-.83.94-2.18 1.664-3.29 1.664-.1 0-.194-.02-.24-.03-.02-.062-.045-.207-.045-.35 0-1.1.51-2.28 1.29-3.05.87-.86 2.35-1.53 3.35-1.55.02.06.04.15.056.2zm2.68 15.14c-.15.34-.32.66-.53.98-.7 1.07-1.44 2.15-2.6 2.17-1.13.02-1.5-.66-2.79-.66-1.29 0-1.7.64-2.77.68-1.12.04-1.97-1.15-2.68-2.21-1.44-2.16-2.55-6.1-1.06-8.75.74-1.32 2.05-2.15 3.48-2.17 1.1-.02 2.13.72 2.79.72.66 0 1.9-.9 3.21-.77.54.02 2.06.22 3.04 1.65-.08.05-1.82 1.06-1.8 3.16.02 2.5 2.2 3.34 2.22 3.35-.02.06-.35 1.2-1.17 2.35z"/></svg></span>
+          <span class="auth-cta-label">Continue with Apple</span>
+        </button>
+        <button class="auth-cta-btn secondary auth-cta-provider" data-provider="email" onclick="try{localStorage.setItem('synapses_last_auth','email');}catch(_e){} authShowForms('register')">
+          <span class="aci"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg></span>
+          <span class="auth-cta-label">Continue with email</span>
+        </button>
+
+        <div id="authLastMethod"><span class="auth-last-dot"></span><span id="authLastMethodText"></span></div>
+
+        <div class="auth-switch-row">Don't have an account? <a onclick="authShowForms('register')">Sign up</a></div>
+        <a class="auth-guest-link" onclick="doGuest()">Continue as guest</a>
+
+        <div class="auth-legal">By continuing, you agree to Synapses' <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+        <div class="auth-legal auth-legal-choices"><a href="#">Your privacy choices</a></div>
       </div>
-      <div class="auth-welcome-sub" style="font-size:13px;color:#6b7280;margin-bottom:24px;">Talk free — live avatar &amp; speech-to-speech. Sign in or continue as guest.</div>
-      <button onclick="doGuest()" class="modal-btn" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;text-align:left;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <div style="flex:1;">
-          <div>Continue as Guest</div>
-          <div style="font-size:11px;font-weight:400;opacity:.6;margin-top:2px;">Talk free — no account needed</div>
+
+      <!-- ══ STEP 1+: Sign in / Create account (wizard) ══ -->
+      <div id="authStepForms" class="auth-step" style="display:none;flex-direction:column;">
+        <div class="auth-progress" id="authProgress" style="display:none;"><span id="apDot1"></span><span id="apDot2"></span><span id="apDot3"></span></div>
+
+        <div class="modal-tabs" id="authTabsBar" style="margin-bottom:18px;">
+          <button class="modal-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+          <button class="modal-tab" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
         </div>
-        <span style="opacity:0.45;">→</span>
-      </button>
-      <div class="auth-or-wrap" style="display:flex;align-items:center;gap:12px;margin-bottom:18px;"><div class="auth-divider-line" style="flex:1;height:1px;background:#1f2130;"></div><span class="auth-or-line" style="font-size:11px;color:#6b7280;white-space:nowrap;">or sign in with email</span><div class="auth-divider-line" style="flex:1;height:1px;background:#1f2130;"></div></div>
-      <div class="modal-tabs" style="margin-bottom:18px;">
-        <button class="modal-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
-        <button class="modal-tab" id="tabRegister" onclick="switchAuthTab('register')">Create Account</button>
-      </div>
-      <div id="loginForm">
-        <div class="form-row"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com"></div>
-        <div class="form-row"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••"></div>
-        <button class="modal-btn" onclick="doLogin()">Sign In →</button>
-        <div class="modal-err" id="loginErr"></div>
-      </div>
-      <div id="registerForm" style="display:none">
-        <div class="form-row"><label>Your Name</label><input id="regName" placeholder="Alex Chen"></div>
-        <div class="form-row"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>
-        <div class="form-row"><label>Password</label><input id="regPass" type="password" placeholder="Min. 6 characters"></div>
-        <div class="form-row"><label>I am a…</label></div>
-        <div class="role-picker">
-          <div class="role-card selected" id="roleSeeker" onclick="toggleRole('seeker')"><div class="ri">🔍</div><div class="rl">Job Seeker</div><div class="rd">Browse &amp; apply to AI jobs</div></div>
-          <div class="role-card" id="roleRecruiter" onclick="toggleRole('recruiter')"><div class="ri">🏢</div><div class="rl">Recruiter</div><div class="rd">Post jobs &amp; find talent</div></div>
+
+        <div id="loginForm" style="display:flex;flex-direction:column;">
+          <div class="auth-step-title">Welcome back</div>
+          <div class="auth-step-sub">Sign in to pick up right where you left off.</div>
+          <div class="form-row"><label>Email</label><input id="loginEmail" type="email" placeholder="you@example.com"></div>
+          <div class="form-row"><label>Password</label><input id="loginPass" type="password" placeholder="••••••••"></div>
+          <div class="modal-err" id="loginErr"></div>
+          <div class="auth-step-nav">
+            <button type="button" class="auth-nav-back" onclick="authBackToStart()" title="Back" aria-label="Back">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="modal-btn" onclick="doLogin()">Sign In →</button>
+          </div>
         </div>
-        <button class="modal-btn" onclick="doRegister()">Create Account →</button>
-        <div class="modal-err" id="registerErr"></div>
+
+        <div id="registerForm" style="display:none;">
+          <!-- Reg step 1: the essentials -->
+          <div id="regStep1" class="reg-step active">
+            <div class="auth-step-title">Create your account</div>
+            <div class="auth-step-sub">Let's get the basics down first.</div>
+            <div class="form-row"><label>Your Name</label><input id="regName" placeholder="Alex Chen" oninput="authPreviewSync()"></div>
+            <div class="form-row"><label>Email</label><input id="regEmail" type="email" placeholder="you@example.com"></div>
+            <div class="form-row"><label>Password</label><input id="regPass" type="password" placeholder="Min. 6 characters"></div>
+            <div class="auth-step-nav">
+              <button type="button" class="auth-nav-back" onclick="authBackToStart()" title="Back" aria-label="Back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button class="modal-btn" onclick="authRegNext(1)">Continue →</button>
+            </div>
+          </div>
+
+          <!-- Reg step 2: role -->
+          <div id="regStep2" class="reg-step">
+            <div class="auth-step-title">How will you use Synapses?</div>
+            <div class="auth-step-sub">We'll tailor your Synapses experience around it.</div>
+            <div class="role-picker">
+              <div class="role-card selected" id="rolePersonal" onclick="toggleRole('personal')"><span class="rc-dot"></span><span class="rl">Personal</span></div>
+              <div class="role-card" id="roleTeam" onclick="toggleRole('team')"><span class="rc-dot"></span><span class="rl">Team / Business</span></div>
+            </div>
+            <div class="auth-step-nav">
+              <button type="button" class="auth-nav-back" onclick="authRegGoStep(1)" title="Back" aria-label="Back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button class="modal-btn" onclick="authRegNext(2)">Continue →</button>
+            </div>
+          </div>
+
+          <!-- Reg step 3: business details (recruiters only) -->
+          <div id="regStep3" class="reg-step">
+            <div class="auth-step-title">Business details</div>
+            <div class="auth-step-sub">Tell us about your company so we can set up your team workspace.</div>
+            <div class="form-row"><label>Company Name</label><input id="regCompany" placeholder="Acme Inc" oninput="authPreviewSync()"></div>
+            <div class="auth-step-nav">
+              <button type="button" class="auth-nav-back" onclick="authRegGoStep(2)" title="Back" aria-label="Back">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button class="modal-btn" onclick="doRegister()">Create account →</button>
+            </div>
+          </div>
+
+          <div class="modal-err" id="registerErr"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -18868,6 +19076,8 @@ var allJobs=[],currentUser=null,jobFilter='all';
       try{
         var le = localStorage.getItem('synapses_last_email') || '';
         var em = document.getElementById('loginEmail');
+        if(typeof authReset==='function') authReset();
+        if(le && typeof authShowForms==='function') authShowForms('login'); // returning user — skip straight to sign in
         if(em && le && !em.value) em.value = le;
         // Median native storage may still have email after some updates (not after full uninstall)
         if(typeof median !== 'undefined' && median.storage && median.storage.app && typeof median.storage.app.get === 'function'){
@@ -19107,7 +19317,7 @@ var allJobs=[],currentUser=null,jobFilter='all';
               var user = {
                 id: u.id, email: u.email,
                 name: p.name || (u.email.split('@')[0] || 'User'),
-                roles: p.role ? [p.role] : ['seeker'],
+                roles: p.role ? [p.role] : ['personal'],
                 color: p.color || '#6366f1',
                 initial: ((p.name || u.email)[0] || 'U').toUpperCase(),
                 avatar: p.avatar_url || null,
@@ -19132,7 +19342,7 @@ var allJobs=[],currentUser=null,jobFilter='all';
           var user = {
             id: u.id, email: u.email,
             name: p.name || (u.email.split('@')[0] || 'User'),
-            roles: p.role ? [p.role] : ['seeker'],
+            roles: p.role ? [p.role] : ['personal'],
             color: p.color || '#6366f1',
             initial: ((p.name || u.email)[0] || 'U').toUpperCase(),
             avatar: p.avatar_url || null,
@@ -19148,7 +19358,7 @@ var allJobs=[],currentUser=null,jobFilter='all';
           var user = {
             id: u.id, email: u.email,
             name: (u.email.split('@')[0] || 'User'),
-            roles: ['seeker'], color: '#6366f1',
+            roles: ['personal'], color: '#6366f1',
             initial: (u.email[0] || 'U').toUpperCase(), isGuest: false
           };
           _finishAuthBoot(function(){
@@ -20252,8 +20462,8 @@ function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrol
 function closeModal(id){document.getElementById(id).style.display='none';}
 function showErr(el,msg){el.textContent=msg;el.style.display='block';setTimeout(function(){el.style.display='none';},4000);}
 
-var selectedRoles=new Set(['seeker']);
-function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;selectedRoles.has(r)?selectedRoles.delete(r):selectedRoles.add(r);document.getElementById('roleSeeker').classList.toggle('selected',selectedRoles.has('seeker'));document.getElementById('roleRecruiter').classList.toggle('selected',selectedRoles.has('recruiter'));}
+var selectedRoles=new Set(['personal']);
+function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;selectedRoles.has(r)?selectedRoles.delete(r):selectedRoles.add(r);document.getElementById('rolePersonal').classList.toggle('selected',selectedRoles.has('personal'));document.getElementById('roleTeam').classList.toggle('selected',selectedRoles.has('team'));var apd3=document.getElementById('apDot3');if(apd3)apd3.classList.toggle('dot-hidden',!selectedRoles.has('team'));}
 
 /* ── Growth analytics (continue/P13) — local + optional POST /track ── */
 (function(){
@@ -20312,12 +20522,184 @@ function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;se
   }catch(e){}
 })();
 
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}/* Never mark tour done on guest enter — only clear stuck overlay if tour not intentionally running */try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){/* soft dismiss without markDone */var _r=document.getElementById('synTourRoot');if(_r&&_r.classList.contains('on')&&!window.__synTourIntentionalStart){window.dismissSynapsesTour();}}}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['seeker'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){var _r2=document.getElementById('synTourRoot');if(_r2&&_r2.classList.contains('on'))window.dismissSynapsesTour();}}catch(_t){}}
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}/* Never mark tour done on guest enter — only clear stuck overlay if tour not intentionally running */try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){/* soft dismiss without markDone */var _r=document.getElementById('synTourRoot');if(_r&&_r.classList.contains('on')&&!window.__synTourIntentionalStart){window.dismissSynapsesTour();}}}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['personal'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){var _r2=document.getElementById('synTourRoot');if(_r2&&_r2.classList.contains('on'))window.dismissSynapsesTour();}}catch(_t){}}
+/* ── Onboarding wizard controls ── */
+var AUTH_LEFT_COPY = {
+  start:   {title:null, sub:null}, // uses brand block instead
+  login:   {title:null, sub:null},
+  step1:   {title:"Behind every brand there is a person", sub:"A few quick steps and Synapses will feel tailored to you."},
+  step2:   {title:"Tell us who you are", sub:"Seekers and recruiters get a different Synapses experience."},
+  step3:   {title:"Every business starts with a person", sub:"This is how your brand shows up on job posts and in chat."}
+};
+function authSetLeftView(mode){
+  // mode: 'brand' (logo + tagline) or 'preview' (live card + copy)
+  try{
+    var brand=document.getElementById('authLeftBrand'), prev=document.getElementById('authLeftPreview');
+    if(brand) brand.style.display = mode==='preview' ? 'none':'flex';
+    if(prev) prev.style.display = mode==='preview' ? 'flex':'none';
+  }catch(_e){}
+}
+function authSetLeftCopy(key){
+  try{
+    var c=AUTH_LEFT_COPY[key]||AUTH_LEFT_COPY.step1;
+    var t=document.getElementById('authLeftCopyTitle'), s=document.getElementById('authLeftCopySub');
+    if(t) t.textContent=c.title;
+    if(s) s.textContent=c.sub;
+  }catch(_e){}
+}
+function authSetLeftDots(idx,total){
+  try{
+    var dots=document.querySelectorAll('#authLeftDots span');
+    dots.forEach(function(d,i){ d.classList.toggle('on', i===idx); d.style.display = i<total ? 'flex':'none'; });
+  }catch(_e){}
+}
+function authPreviewSync(){
+  try{
+    var nameEl=document.getElementById('regName'), companyEl=document.getElementById('regCompany');
+    var apName=document.getElementById('apName'), apBadge=document.getElementById('apBadge'), apMeta=document.getElementById('apMeta');
+    var onStep3 = document.getElementById('regStep3') && document.getElementById('regStep3').classList.contains('active');
+    var val = onStep3 ? (companyEl?companyEl.value.trim():'') : (nameEl?nameEl.value.trim():'');
+    if(apName) apName.innerHTML = val ? val.replace(/</g,'&lt;') : '<span class="ap-empty">'+(onStep3?'Company Name':'Your Name')+'</span>';
+    if(apBadge) apBadge.style.display = val ? 'inline-block':'none';
+    if(apMeta) apMeta.textContent = onStep3 ? 'Verified business on Synapses' : ((typeof selectedRoles!=='undefined'&&selectedRoles.has('team'))?'Team / Business':'Personal');
+  }catch(_e){}
+}
+function authReset(){
+  try{
+    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
+    if(start) start.style.display='flex';
+    if(forms) forms.style.display='none';
+    var e1=document.getElementById('loginErr'), e2=document.getElementById('registerErr');
+    if(e1){e1.style.display='none';e1.textContent='';}
+    if(e2){e2.style.display='none';e2.textContent='';}
+    authSetLeftView('brand');
+    authSetLeftDots(0,3);
+    authRegGoStep(1);
+    switchAuthTab('login');
+    authRenderLastMethod();
+  }catch(_e){}
+}
+function authShowForms(mode){
+  try{
+    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
+    if(start) start.style.display='none';
+    if(forms) forms.style.display='flex';
+    switchAuthTab(mode==='register'?'register':'login');
+    var panel=document.getElementById('authRightPanel');
+    if(panel) panel.scrollTop=0;
+  }catch(_e){}
+}
+function authBackToStart(){
+  try{
+    // If mid-registration wizard, step back one instead of leaving entirely
+    var forms=document.getElementById('authStepForms');
+    var regVisible = forms && forms.style.display!=='none' && document.getElementById('registerForm').style.display!=='none';
+    if(regVisible){
+      var s2=document.getElementById('regStep2'), s3=document.getElementById('regStep3');
+      if(s3 && s3.classList.contains('active')){ authRegGoStep(2); return; }
+      if(s2 && s2.classList.contains('active')){ authRegGoStep(1); return; }
+    }
+  }catch(_e){}
+  authReset();
+}
+function authRegGoStep(n){
+  ['regStep1','regStep2','regStep3'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    if(el) el.classList.toggle('active', (i+1)===n);
+  });
+  var prog=document.getElementById('authProgress');
+  var wantsBusiness = (typeof selectedRoles!=='undefined') && selectedRoles.has('team');
+  var total = wantsBusiness ? 3 : 2;
+  var onRegister = document.getElementById('tabRegister') && document.getElementById('tabRegister').classList.contains('active');
+  if(prog){
+    prog.style.display = onRegister ? 'flex':'none';
+    ['apDot1','apDot2','apDot3'].forEach(function(id,i){
+      var d=document.getElementById(id);
+      if(!d) return;
+      d.classList.toggle('dot-hidden', i >= total);
+      d.classList.toggle('done', (i+1) < n);
+      d.classList.toggle('current', (i+1) === n);
+    });
+  }
+  if(onRegister){
+    authSetLeftView('preview');
+    authSetLeftCopy('step'+n);
+    authSetLeftDots(n-1, total);
+    authPreviewSync();
+  }
+}
+function authRegNext(fromStep){
+  var err=document.getElementById('registerErr');
+  if(err){err.style.display='none';err.textContent='';}
+  if(fromStep===1){
+    var name=document.getElementById('regName').value.trim(),
+        email=document.getElementById('regEmail').value.trim().toLowerCase(),
+        pass=document.getElementById('regPass').value;
+    if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}
+    if(pass.length<6){showErr(err,'Min 6 characters.');return;}
+    if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}
+    authRegGoStep(2);
+    return;
+  }
+  if(fromStep===2){
+    var wantsBusiness=(typeof selectedRoles!=='undefined')&&selectedRoles.has('team');
+    if(wantsBusiness){ authRegGoStep(3); return; }
+    doRegister();
+    return;
+  }
+}
+function authOAuth(provider){
+  try{ localStorage.setItem('synapses_last_auth', provider); }catch(_le){}
+  try{
+    if(window._supabase && _supabase.auth && typeof _supabase.auth.signInWithOAuth==='function'){
+      _supabase.auth.signInWithOAuth({provider:provider}).catch(function(){
+        if(typeof showToast==='function') showToast((provider.charAt(0).toUpperCase()+provider.slice(1))+' sign-in is not available right now — try email instead.');
+      });
+      return;
+    }
+  }catch(_e){}
+  if(typeof showToast==='function') showToast((provider.charAt(0).toUpperCase()+provider.slice(1))+' sign-in is not available right now — try email instead.');
+  else authShowForms('register');
+}
+function authGoogleAuth(){ authOAuth('google'); }
+var AUTH_METHOD_LABEL={google:'Google',apple:'Apple',twitter:'X',email:'email'};
+function authRenderLastMethod(){
+  try{
+    var last=localStorage.getItem('synapses_last_auth');
+    var row=document.getElementById('authLastMethod');
+    if(!row) return;
+    if(last && AUTH_METHOD_LABEL[last]){
+      var txt=document.getElementById('authLastMethodText');
+      if(txt) txt.textContent='You last continued with '+AUTH_METHOD_LABEL[last];
+      row.style.display='flex';
+      document.querySelectorAll('.auth-cta-btn[data-provider]').forEach(function(b){
+        b.classList.toggle('auth-cta-last', b.getAttribute('data-provider')===last);
+      });
+    } else {
+      row.style.display='none';
+    }
+  }catch(_e){}
+}
 function switchAuthTab(t){
   document.getElementById('tabLogin').classList.toggle('active',t==='login');
   document.getElementById('tabRegister').classList.toggle('active',t==='register');
-  document.getElementById('loginForm').style.display=t==='login'?'block':'none';
+  document.getElementById('loginForm').style.display=t==='login'?'flex':'none';
   document.getElementById('registerForm').style.display=t==='register'?'block':'none';
+  if(t==='login'){ authSetLeftView('brand'); }
+  authRegGoStep(1);
+  if(t==='login'){
+    var prog=document.getElementById('authProgress');
+    if(prog){
+      prog.style.display='flex';
+      ['apDot1','apDot2','apDot3'].forEach(function(id,i){
+        var d=document.getElementById(id);
+        if(!d) return;
+        d.classList.toggle('dot-hidden', i!==0);
+        d.classList.remove('done');
+        d.classList.toggle('current', i===0);
+      });
+    }
+  }
   /* Mobile only: Create Account can scroll; Sign In stays centered (no layout change) */
   try{
     var panel=document.getElementById('authRightPanel');
@@ -20328,19 +20710,19 @@ function switchAuthTab(t){
     }
   }catch(_e){}
 }
-function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['seeker'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
-function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'seeker',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
+function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['personal'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
+function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');var _companyEl=document.getElementById('regCompany'),_company=_companyEl?_companyEl.value.trim():'';_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'personal',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};if(_company){try{localStorage.setItem('synapses_company_'+email,_company);}catch(_ce){}currentUser.company=_company;}try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}try{localStorage.removeItem('synapses_tour_v1');localStorage.removeItem('synapses_tour_btn_docked');document.cookie='synapses_tour_v1=;path=/;max-age=0';document.cookie='synapses_tour_v1=;path=/;max-age=0;SameSite=Lax';window.__synTourDone=false;}catch(_tf){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
 function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;try{window.currentUser=null;}catch(_w){}try{document.body.classList.remove('syn-authed');}catch(_b){}try{if(typeof window._syncChpUserDock==='function')window._syncChpUserDock();}catch(_cx){}try{if(typeof window._applyDockedTourBtn==='function')window._applyDockedTourBtn();}catch(_t){}chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
 // Clear video banner and avatar so old account's media doesn't show for next user
 var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.style.display='none';}
 var fav=document.getElementById('feedProfileAv');if(fav){fav.style.backgroundImage='';fav.style.background='linear-gradient(135deg,#6366f1,#4f46e5)';fav.textContent='?';}
 var sbAv=document.getElementById('sbAvatar');if(sbAv){sbAv.style.backgroundImage='';sbAv.style.display='none';}
 var preload=document.getElementById('avatarPreload');if(preload)preload.textContent='';
-document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
-function getRoles(u){return u?u.roles||['seeker']:[];}
+document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';if(typeof authReset==='function')authReset();_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
+function getRoles(u){return u?u.roles||['personal']:[];}
 function canSeek(u){return getRoles(u).includes('seeker');}
 function canRecruit(u){return getRoles(u).includes('recruiter');}
-function getRoleLabel(u){var r=getRoles(u);return r.includes('seeker')&&r.includes('recruiter')?'🔍 Seeker & 🏢 Recruiter':r.includes('recruiter')?'🏢 Recruiter':'🔍 Job Seeker';}
+function getRoleLabel(u){var r=getRoles(u);return r.includes('personal')&&r.includes('team')?'🙋 Personal & 🏢 Team':r.includes('team')?'🏢 Team / Business':'🙋 Personal';}
 // ── Auto morning/afternoon brief after a stretch of inactivity ─────────────
 // Tracks the last time the user actually touched the app (not just had a tab
 // open). If they come back after >=5h away and local time falls in the
@@ -38793,7 +39175,7 @@ function closeChatHistoryPanel(){
   if(typeof _chpParkHeaderTools === 'function') _chpParkHeaderTools(false, true);
   if(typeof _chpClearLogoFlyer === 'function') _chpClearLogoFlyer();
   if(typeof _chpRestoreCloseGlyph === 'function') _chpRestoreCloseGlyph();
-  if(sidebar) sidebar.classList.remove('open','fade-open');
+  if(sidebar) sidebar.classList.remove('open','fade-open','chp-fullpage');
   setTimeout(function(){ if(typeof _chpSyncThinAppsIcon==='function') _chpSyncThinAppsIcon(false); }, 320);
   if(typeof _chpThinSyncWord==='function') _chpThinSyncWord();
   if(typeof _bnavLogoSyncOpenable === 'function') _bnavLogoSyncOpenable();
@@ -39333,6 +39715,9 @@ function _bnavOpenAccountSettings(){
     var dock = document.getElementById('chpUserDock');
     if(!sidebar || !gbtn){ if(typeof goProfile==='function') goProfile(); return; }
     var sidebarOpen = sidebar.classList.contains('open') || sidebar.classList.contains('fade-open');
+    /* Mark full-page BEFORE the sidebar opens so it animates straight to
+       100vw — never passes through the 82vw Past Chats drawer width first. */
+    sidebar.classList.add('chp-fullpage');
     if(!sidebarOpen && typeof toggleChatHistoryPanel==='function') toggleChatHistoryPanel('user');
     var dockOpen = dock && dock.classList.contains('open');
     if(!dockOpen){
@@ -46879,6 +47264,8 @@ function clearRoomDot(){
 var _ob = {role:'', interests:[], focus:''};
 
 function checkOnboarding(){
+  /* Onboarding modal deactivated for now — remove this line to re-enable */
+  return;
   if(!currentUser) return;
   /* Guests can still open once — skip stores synapses_onboarded_guest */
   if(currentUser.isGuest && localStorage.getItem('synapses_onboarded_guest')) return;
@@ -46912,8 +47299,12 @@ function toggleOb(el, val){
 function nextOb(step){
   document.querySelectorAll('.ob-step').forEach(function(s){s.classList.remove('active');});
   var n=document.getElementById('obstep'+step); if(n) n.classList.add('active');
-  for(var i=1;i<step;i++){var p=document.getElementById('obpip'+i);if(p)p.classList.add('done');}
-  var cp=document.getElementById('obpip'+step); if(cp) cp.classList.add('done');
+  ['obDot1','obDot2','obDot3'].forEach(function(id,i){
+    var d=document.getElementById(id);
+    if(!d) return;
+    d.classList.toggle('done', (i+1) < step);
+    d.classList.toggle('current', (i+1) === step);
+  });
 }
 function finishOb(){
   try {
@@ -46924,7 +47315,9 @@ function finishOb(){
     if(currentUser && currentUser.id) _supabase.from('profiles').update({onboarded:true}).eq('id',currentUser.id);
   } catch(e2){}
   var m=document.getElementById('onboardingModal'); if(m) m.classList.remove('show');
-  showToast('👋 Welcome');
+  var _obRoleLabels={builder:'Builder',creator:'Creator',seeker:'Job Seeker',founder:'Founder',explorer:'Explorer'};
+  var _obToastMsg='👋 Welcome' + (_obRoleLabels[_ob.role] ? ', '+_obRoleLabels[_ob.role]+'!' : '');
+  showToast(_obToastMsg);
   try{ if(typeof setView==='function') setView('sec-chat'); }catch(e){}
   /* Mark film/product tour done so demo won’t force itself again this install */
   try {
@@ -55301,28 +55694,24 @@ function _openNeutralinoWindow(url){ _openInternalBrowser(url); }
 
 <!-- Onboarding Modal -->
 <div id="onboardingModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
-  <div style="background:#0d0f1a;border:1px solid rgba(99,102,241,0.25);border-radius:20px;padding:36px;width:100%;max-width:460px;margin:20px;animation:fadeUp .4s ease;">
-    <div style="display:flex;gap:6px;margin-bottom:24px;" id="obpips">
-      <div style="height:3px;flex:1;border-radius:2px;background:#6366f1;" id="obpip1"></div>
-      <div style="height:3px;flex:1;border-radius:2px;background:rgba(255,255,255,0.1);transition:background .3s;" id="obpip2"></div>
-      <div style="height:3px;flex:1;border-radius:2px;background:rgba(255,255,255,0.1);transition:background .3s;" id="obpip3"></div>
-    </div>
-    <!-- Step 1 -->
-    <div class="ob-step active" id="obstep1">
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px;">Welcome to Synapses 👋</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;">Tell us who you are so we can personalise your experience.</div>
+  <div style="background:#0a0a0a;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px;width:100%;max-width:460px;margin:20px;animation:fadeUp .4s ease;">
+    <div class="auth-progress" id="obProgress"><span id="obDot1" style="display:none;"></span><span id="obDot2" class="current"></span><span id="obDot3"></span></div>
+    <!-- Step 1: deactivated for now (was "Welcome to Synapses / tell us who you are") — leave markup intact so it's easy to re-enable, just don't mark it active and it's unreachable since nothing calls nextOb(1) -->
+    <div class="ob-step" id="obstep1">
+      <div class="auth-step-title">Welcome to Synapses 👋</div>
+      <div class="auth-step-sub">Tell us who you are so we can personalise your experience.</div>
       <div class="ob-opt" onclick="selectOb(this,'role','builder')">🛠 Builder / Developer</div>
       <div class="ob-opt" onclick="selectOb(this,'role','creator')">🎵 Creator / Artist</div>
       <div class="ob-opt" onclick="selectOb(this,'role','seeker')">🔗 Job Seeker</div>
       <div class="ob-opt" onclick="selectOb(this,'role','founder')">🚀 Founder / Entrepreneur</div>
       <div class="ob-opt" onclick="selectOb(this,'role','explorer')">🌍 Explorer / Curious</div>
       <button class="ob-next" onclick="nextOb(2)">Continue →</button>
-      <button type="button" onclick="finishOb()" style="margin-top:12px;width:100%;padding:10px;background:transparent;border:none;color:rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-decoration:underline;">Skip entire demo</button>
+      <button type="button" class="auth-guest-link" style="text-align:center;" onclick="finishOb()">Skip entire demo</button>
     </div>
     <!-- Step 2 -->
-    <div class="ob-step" id="obstep2">
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;">What are you into?</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;">Pick everything that applies.</div>
+    <div class="ob-step active" id="obstep2">
+      <div class="auth-step-title">What are you into?</div>
+      <div class="auth-step-sub">Pick everything that applies.</div>
       <div class="ob-opt" onclick="toggleOb(this,'ai-tools')">🤖 AI Tools &amp; Automation</div>
       <div class="ob-opt" onclick="toggleOb(this,'music')">🎵 Music &amp; Audio</div>
       <div class="ob-opt" onclick="toggleOb(this,'film')">🎬 Film &amp; Video</div>
@@ -55330,18 +55719,19 @@ function _openNeutralinoWindow(url){ _openInternalBrowser(url); }
       <div class="ob-opt" onclick="toggleOb(this,'career')">📈 Career Growth</div>
       <div class="ob-opt" onclick="toggleOb(this,'wellbeing')">🌿 Wellbeing</div>
       <button class="ob-next" onclick="nextOb(3)">Continue →</button>
+      <button type="button" class="auth-guest-link" style="text-align:center;" onclick="finishOb()">Skip entire demo</button>
     </div>
     <!-- Step 3 -->
     <div class="ob-step" id="obstep3">
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;">What's your main focus right now?</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:20px;">We'll surface the right tools and content for you.</div>
+      <div class="auth-step-title">What's your main focus right now?</div>
+      <div class="auth-step-sub">We'll surface the right tools and content for you.</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','ship')">⚡ Ship something fast</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','learn')">📚 Learn and level up</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','job')">💼 Land a job or client</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','collab')">🤝 Find collaborators</div>
       <div class="ob-opt" onclick="selectOb(this,'focus','impact')">🌍 Make an impact</div>
       <button class="ob-next" onclick="finishOb()">Let's go →</button>
-      <button type="button" onclick="finishOb()" style="margin-top:12px;width:100%;padding:10px;background:transparent;border:none;color:rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;text-decoration:underline;">Skip entire demo</button>
+      <button type="button" class="auth-guest-link" style="text-align:center;" onclick="finishOb()">Skip entire demo</button>
     </div>
   </div>
 </div>
@@ -69834,7 +70224,7 @@ async function srcAgentContact(supplier) {
 /* First launch: bottom-left tour entry (user must press — never auto-start) */
 /* Hidden until login/guest is chosen (body.syn-authed) */
 #synTourFloatBtn{
-  position:fixed;left:14px;bottom:18px;z-index:100200;
+  position:fixed;left:14px;bottom:63px;z-index:100200;
   width:38px;height:38px;border-radius:12px;padding:0;cursor:pointer;
   display:none;
   align-items:center;justify-content:center;
@@ -69854,7 +70244,7 @@ body.syn-authed #synTourFloatBtn:not(.docked){
 /* Sit in bottom-left row next to Notes (not on top of it) */
 body.bottom-nav #synTourFloatBtn{
   left:52px;
-  bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  bottom:calc(59px + env(safe-area-inset-bottom,0px));
 }
 #synTourFloatBtn:hover{
   opacity:1;
@@ -69878,6 +70268,29 @@ body.bottom-nav #synTourFloatBtn{
 body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:none!important;animation:none!important;}
 /* Rail / bnav tour chip — match other icons */
 .icon-rail-btn#rail-tour svg,.bnav-btn#bnav-tour svg{display:block;}
+
+/* ══ True Black — restrained redesign of the floating tour play button ══
+   Matches the sidebar's own background color, not a flat black, so it reads
+   as part of the same surface instead of a separate darker chip. */
+html[data-theme="trueblack"] #synTourFloatBtn{
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(15,15,26,0.85);
+  backdrop-filter:blur(20px) saturate(1.1);
+  -webkit-backdrop-filter:blur(20px) saturate(1.1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 2px 14px rgba(0,0,0,0.5);
+}
+html[data-theme="trueblack"] #synTourFloatBtn:hover{
+  background:rgba(22,22,36,0.92);
+  border-color:rgba(255,255,255,0.2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),0 4px 18px rgba(0,0,0,0.55);
+}
+html[data-theme="trueblack"] #synTourFloatBtn svg circle{stroke:rgba(255,255,255,0.55)!important;}
+html[data-theme="trueblack"] #synTourFloatBtn svg polygon{fill:#f2f2f2!important;}
+@keyframes synTourFloatPulseTrueBlack{
+  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 2px 14px rgba(0,0,0,0.5),0 0 0 rgba(255,255,255,0);}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),0 2px 16px rgba(0,0,0,0.55),0 0 16px rgba(255,255,255,0.14);}
+}
+html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloatPulseTrueBlack 2.4s ease-in-out infinite;}
 </style>
 <button id="synTourFloatBtn" type="button" title="Start product tour" aria-label="Start product tour"
   onclick="(function(){try{window.__synTourIntentionalStart=true;if(typeof window.dockSynapsesTourBtn==='function')window.dockSynapsesTourBtn();if(typeof startSynapsesTour==='function')startSynapsesTour(true);}catch(e){console.error(e);}})()">
@@ -69896,7 +70309,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
    * this is the HTML-side fix for that.
    */
   /* Bump this on each tour UX change so Chrome localStorage re-unlocks the first tour */
-  var SYNAPSES_APP_BUILD = '2026-07-24-tourfloat-restore-v4';
+  var SYNAPSES_APP_BUILD = '2026-08-30-tourfloat-retest-v5';
   var BUILD_KEY = 'synapses_app_build';
   var TOUR_BTN_KEY = 'synapses_tour_btn_docked';
   var TOUR_DONE_KEY = 'synapses_tour_v1';
@@ -70824,6 +71237,71 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       '#synTourReplayHub .btn-close{background:none;border:none;color:rgba(242,242,245,0.4);font-size:12px;margin-top:6px;cursor:pointer;}',
       '#synTourReplayHub .btn-close:hover{color:rgba(196,181,253,0.95);}',
 
+      /* ══ True Black — restrained, premium redesign of "You\\'re in" + "Welcome back" ══
+         Same translucent-black glass used on the post-Ava "LIVE INTRO" video card
+         (rgba(8,8,14,0.55) + blur), not a flat grey fill. Single hairline border,
+         no conic glow ring, no gradient text-clip. Title uses the same Syne
+         weight/tracking as the auth step titles instead of the wide 800-weight type. */
+      'html[data-theme="trueblack"] #synTourCenter .panel,',
+      'html[data-theme="trueblack"] #synTourReplayHub .panel{',
+      'background:rgba(8,8,14,0.55);',
+      'backdrop-filter:blur(30px) saturate(1.3);-webkit-backdrop-filter:blur(30px) saturate(1.3);',
+      'border:1px solid rgba(255,255,255,0.14);border-radius:16px;',
+      'box-shadow:0 24px 64px rgba(0,0,0,0.55),0 4px 16px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.12);}',
+      'html[data-theme="trueblack"] #synTourCenter .panel::before{display:none;}',
+      'html[data-theme="trueblack"] #synTourCenter .st-orb{',
+      'background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.92),rgba(255,255,255,0.22) 42%,rgba(255,255,255,0.04) 76%);',
+      'box-shadow:0 0 26px rgba(255,255,255,0.1),inset 0 0 14px rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.14);}',
+      'html[data-theme="trueblack"] #synTourCenter .st-orb::after{border-color:rgba(255,255,255,0.16);}',
+      'html[data-theme="trueblack"] #synTourCenter h2,',
+      'html[data-theme="trueblack"] #synTourReplayHub h2{',
+      'font-weight:700;font-size:24px;letter-spacing:-0.01em;background:none;',
+      '-webkit-background-clip:unset;background-clip:unset;color:#f5f5f5;}',
+      'html[data-theme="trueblack"] #synTourCenter p,',
+      'html[data-theme="trueblack"] #synTourReplayHub p{color:rgba(255,255,255,0.5);text-shadow:none;}',
+      'html[data-theme="trueblack"] #synTourCenter .btn-primary,',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-primary{',
+      'background:#f2f2f2;color:#0a0a0a;border:1px solid #f2f2f2;backdrop-filter:none;-webkit-backdrop-filter:none;',
+      'box-shadow:0 4px 20px rgba(255,255,255,0.07);}',
+      'html[data-theme="trueblack"] #synTourCenter .btn-primary:hover,',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-primary:hover{',
+      'background:#ffffff;box-shadow:0 6px 26px rgba(255,255,255,0.12);transform:translateY(-1px);}',
+      'html[data-theme="trueblack"] #synTourCenter .btn-ghost,',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-ghost{',
+      'background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.12);}',
+      'html[data-theme="trueblack"] #synTourCenter .btn-ghost:hover,',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-ghost:hover{',
+      'background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.22);}',
+      'html[data-theme="trueblack"] #synTourCenter .skip:hover{color:rgba(255,255,255,0.85);}',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-close{color:rgba(255,255,255,0.35);}',
+      'html[data-theme="trueblack"] #synTourReplayHub .btn-close:hover{color:rgba(255,255,255,0.75);}',
+
+      /* True Black — planet-dock choice pair ("Continue story" / "Do the tour").
+         Previously unstyled for this theme, so it fell back to the generic
+         violet-outlined default. Continue story gets a frosted near-white
+         glass pill so it reads as the inviting/primary pick, while Do the
+         tour stays a quieter dark glass — both monochrome, no violet/green,
+         to match the restrained true-black language used elsewhere. */
+      'html[data-theme="trueblack"] #synTourChoice .btn-primary{',
+      'background:rgba(255,255,255,0.06);color:#f2f2f2;border:1px solid rgba(255,255,255,0.18);',
+      'box-shadow:none;}',
+      'html[data-theme="trueblack"] #synTourChoice .btn-primary:hover{',
+      'background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.26);',
+      'box-shadow:none;transform:translateY(-1px);}',
+      'html[data-theme="trueblack"] #synTourChoice .btn-ghost{',
+      'background:rgba(255,255,255,0.045);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.14);}',
+      'html[data-theme="trueblack"] #synTourChoice .btn-ghost:hover{',
+      'background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.24);}',
+      'html[data-theme="trueblack"] #synTourSkipMyth:hover{',
+      'background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.28);}',
+
+      /* Story film is playing: force-hide the home greeting / subtitle / fingerprint
+         pad with !important so the greeting-rotation timer (which keeps resetting
+         its own inline opacity) can never bring them back while the film is up. */
+      'body.syn-story-playing #synHomeGreeting,',
+      'body.syn-story-playing #chatEmptyState .syn-sub,',
+      'body.syn-story-playing #synFpPad{opacity:0!important;pointer-events:none!important;transition:opacity .3s ease!important;animation:none!important;}',
+
       '@media (prefers-reduced-motion:reduce){',
       '#synTourHole.pulse,#synTourCenter .st-orb,#synTourCenter .panel::before,#synTourCenter .panel.myth-climax{animation:none!important;}',
       '#synTourHole,#synTourCard,#synTourCenter .panel,#synTourVideoWrap video{transition-duration:.01ms!important;}}',
@@ -71010,8 +71488,6 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
   function showTourSkipMyth(on) {
     var b = $('synTourSkipMyth');
     if (!b) return;
-    /* Keep “Skip entire demo” visible for the whole tour session (not only the film) */
-    if (state && state.open) on = true;
     if (on) b.classList.add('show');
     else b.classList.remove('show');
   }
@@ -71077,7 +71553,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
         m.ufo.landed = true;
         m.ufo.hatch = 1;
         m.ufo.scale = Math.max(m.ufo.scale || 0, 0.95);
-        m.ufo.a = 1;
+        m.ufo.a = 0;
         m.ufo.x = m.moon.x - 8;
         m.ufo.y = m.moon.y - m.moon.r * 0.35;
         m.ufo.face = 0;
@@ -71398,6 +71874,20 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     hideStoryTourBtn();
     state.myth = null;
     try { updateNarrationDom(null); } catch (e) {}
+    try { restoreHomeIntroForStory(); } catch (eR) {}
+  }
+
+  /** Hide the home greeting / "Synapses · Neural Interface" / fingerprint pad
+   *  behind the story film so they don't show through the transparent canvas.
+   *  Uses a body class + !important CSS rule (not inline opacity) because the
+   *  greeting rotation timer keeps resetting its own inline opacity back to 1. */
+  function hideHomeIntroForStory() {
+    try { document.body.classList.add('syn-story-playing'); } catch (e) {}
+  }
+
+  /** Restore the home greeting / subtitle / fingerprint pad once the story ends. */
+  function restoreHomeIntroForStory() {
+    try { document.body.classList.remove('syn-story-playing'); } catch (e) {}
   }
 
   /**
@@ -71485,6 +71975,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
   function initMyth() {
     stopMyth();
+    /* stopMyth() just called restoreHomeIntroForStory() as part of its
+       generic reset — re-hide now that we're actually starting a new
+       story, or the greeting/sub/fingerprint pad never stays hidden. */
+    hideHomeIntroForStory();
     var W = window.innerWidth;
     var H = window.innerHeight;
     var cx = W * 0.5;
@@ -72450,7 +72944,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
 
       hideMythChoice();
       hideStoryTourBtn();
-      showTourSkipMyth(false);
+      showTourSkipMyth(true);
       try { hideReplayHub(); } catch (eH) {}
       try { clearMythTimers(); } catch (eTm) {}
       if (state.mythTimer) {
@@ -72549,6 +73043,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
       state.guideReleased = true;
       hideMythChoice();
       hideMeetAvaPanel();
+      showTourSkipMyth(true);
       renderStep();
     } catch (e2) {
       console.error('[Tour] skipMythToTour fallback failed', e2);
@@ -74847,8 +75342,11 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     /* Always park choice dock off-screen on every Next — kills top-left glass glitch */
     hideMythChoice();
     ensureSkipMythDom();
-    /* ONE Skip only: first-run / story film. Never on video, spotlights, or Meet Ava */
-    showTourSkipMyth(!!(step && step.myth && step.mode === 'center'));
+    /* Skip shows for: the first-run film (myth+center), AND every step of the
+       "Do the tour" path (entryMode === 'tour') so it stays reachable the whole
+       way through — not just on Meet Ava. Continued story (entryMode 'story')
+       keeps its original no-skip behavior. */
+    showTourSkipMyth(!!((step && step.myth && step.mode === 'center') || state.entryMode === 'tour'));
     /* Keep card / center skip buttons hidden (legacy DOM may still exist) */
     try {
       var cardSkip = $('synTourSkip');
@@ -74926,6 +75424,7 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
           }
           hideGuideBot();
           showTourSkipMyth(true);
+          hideHomeIntroForStory();
           initMyth();
           /* Film-only: subtle skip icon top-right; planet dock later for continue/tour */
         } else if (step.myth && prefersReducedMotion()) {
@@ -75528,7 +76027,10 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     } catch (e) {}
   };
 
-  /* AUTO tour OFF forever */
+  /* Never auto-play the film — the bottom-left play button is the entry
+     point and must be pressed. applyDockedState() already ensures that
+     button is visible for any authed user who hasn't docked/finished it,
+     so nothing further is needed here. */
   function maybeAuto() { return; }
   window.__synTourAutoDisabled = true;
 
@@ -81170,6 +81672,635 @@ body:has(#synTourRoot.on) #synTourFloatBtn{opacity:0!important;pointer-events:no
     });
   })();
 })();
+</script>
+
+<script>
+/* ── Hazard risk layer — hooks into the existing maps connector ──
+   Draws on window._synMapObj (whichever engine is live: 'leaflet' or 'google').
+   Adds a toggle button to the map orb; click cycles through:
+     Off -> Floods -> Earthquakes -> Volcanoes -> Landslides -> All -> Off
+   Four real, global data sources, no API keys needed:
+     - GLOF:      HMAGLOFDB, 773 documented glacial lake outburst floods,
+                  High Mountain Asia, CC BY 4.0.
+     - QUAKE:     USGS real-time feed, magnitude 4.5+, past 30 days, whole
+                  planet. Popups now also show if USGS flagged the quake as
+                  tsunami-generating (their "tsunami" field), since that's a
+                  real, already-available signal we weren't surfacing before.
+     - VOLCANO:   USGS Volcano API's worldwide list (Smithsonian Global
+                  Volcanism Program), filtered to volcanoes with elevation
+                  >= 1500m. The full list is ~1,500 points including small
+                  vents, seamounts, and volcanic fields, which was both
+                  visually overwhelming and the main source of lag when the
+                  layer was turned on. The 1500m cutoff keeps the
+                  prominent, recognizable volcanoes (Fuji, Etna, Merapi,
+                  Rainier, etc.) and drops minor/undersea features. This is a
+                  visibility/performance filter, not a danger filter — it
+                  still doesn't tell you which of these are erupting.
+     - LANDSLIDE: NASA's COOLR (Cooperative Open Online Landslide
+                  Repository), filtered server-side to events with a
+                  recorded fatality count > 0. The full catalog has 12,000+
+                  entries since 2000; the fatality filter both keeps the
+                  dataset a sane size AND keeps it meaningful for a "risk"
+                  layer, the same way GLOF is filtered to documented events
+                  rather than every candidate lake.
+   These are unrelated physical hazards. GLOF, earthquakes, and landslides
+   share a red/orange/blue risk scale for triage convenience — that scale
+   does not imply they're comparably dangerous or scored by the same model.
+   Volcano points use a separate, neutral color precisely because we don't
+   have per-volcano risk data to justify putting them on that scale.
+   PERFORMANCE: markers no longer get an individual bindPopup() each — with
+   several thousand points combined in "All" mode that added up. Instead all
+   engines share ONE popup/info-window object whose content is set on click,
+   same trick already used for the Google engine.
+   VIEWPORT CULLING: on top of that, the layer no longer draws every loaded
+   point onto the map at once. Full datasets are still fetched once and
+   cached in memory (cheap, just JSON/CSV), but only the points that fall
+   inside the CURRENT visible map bounds are ever turned into markers, and
+   only once the user is zoomed in past MIN_ZOOM_TO_SHOW. Zoomed all the way
+   out, "All" mode could otherwise mean drawing several thousand markers at
+   once — that's the actual source of lag, not the fetch. Panning/zooming
+   (moveend/zoomend on Leaflet, idle on Google) re-filters the same cached
+   points against the new bounds and redraws just that subset, debounced so
+   a drag doesn't fire a redraw on every intermediate frame. */
+(function(){
+  var hazardMarkers = [];
+  var MODES = ['off', 'glof', 'quake', 'volcano', 'landslide', 'all'];
+  var mode = 'off';
+  var currentModePoints = []; // full cached dataset for the active mode
+
+  var RISK_COLOR = { danger: '#C1442E', watch: '#D9A441', stable: '#4B6A50' };
+  var RISK_LABEL = { danger: 'High risk', watch: 'Watch', stable: 'Lower risk' };
+  var VOLCANO_COLOR = '#8B6FD9'; // deliberately distinct from the risk scale
+  var VOLCANO_MIN_ELEVATION_M = 1500; // cuts ~1,500 points down to the prominent ones
+  // Below this zoom level nothing is drawn at all — a world/continent view
+  // is exactly the case that used to mean "every point renders at once."
+  var MIN_ZOOM_TO_SHOW = 4;
+  // Fraction the visible bounds are padded by before filtering, so a marker
+  // just outside the viewport is already there when a small pan reveals it.
+  var BOUNDS_PAD_FACTOR = 0.25;
+  // This app's map defaults to a CITY-level view (zoom ~12-16) for routing,
+  // not a world explorer. The hazard datasets are globally sparse (a few
+  // hundred quakes worldwide, ~773 GLOF events total, fatal-only
+  // landslides) — a literal few-km-wide box almost never contains one,
+  // which reads as "the layer is broken" rather than "correctly filtered."
+  // This floor guarantees at least a ~regional (city + surrounding area)
+  // catchment regardless of how tight the current zoom is.
+  var MIN_SPAN_DEG = 3;
+
+  function debounce(fn, wait){
+    var t;
+    return function(){
+      var args = arguments, ctx = this;
+      clearTimeout(t);
+      t = setTimeout(function(){ fn.apply(ctx, args); }, wait);
+    };
+  }
+
+  /* ---------- GLOF (glacial lake outburst floods) ---------- */
+
+  var GLOF_FALLBACK = [
+    { name: "Langtang Lirung glacier zone", lat: 28.213, lng: 85.605, risk: "danger",
+      type: "glof", note: "Site of the Aug 2026 collapse. History of failure (also 2015)." }
+  ];
+  var glofPoints = null;
+  var glofLoaded = false;
+
+  function loadGlofPoints(){
+    if(glofLoaded) return Promise.resolve(glofPoints);
+    return fetch('https://raw.githubusercontent.com/fidelsteiner/HMAGLOFDB/main/Database/GLOFs/HMAGLOFDB.csv')
+      .then(function(res){
+        if(!res.ok) throw new Error('fetch failed: ' + res.status);
+        return res.text();
+      })
+      .then(function(csvText){
+        glofPoints = parseGlofCsv(csvText);
+        glofLoaded = true;
+        console.log('[hazardLayer] loaded ' + glofPoints.length + ' real GLOF events from HMAGLOFDB');
+        return glofPoints;
+      })
+      .catch(function(err){
+        console.warn('[hazardLayer] could not load GLOF dataset, using fallback:', err);
+        glofPoints = GLOF_FALLBACK;
+        glofLoaded = true;
+        return glofPoints;
+      });
+  }
+
+  function parseGlofCsv(text){
+    var lines = text.split(/\r?\n/).filter(Boolean);
+    if(!lines.length) return GLOF_FALLBACK;
+    var headers = splitCsvLine(lines[0]);
+    var idx = {};
+    headers.forEach(function(h, i){ idx[h] = i; });
+    var currentYear = new Date().getFullYear();
+    var points = [];
+
+    for(var i = 1; i < lines.length; i++){
+      var cols = splitCsvLine(lines[i]);
+      if(cols.length < headers.length - 5) continue; // skip malformed rows
+
+      var lat = parseFloat(cols[idx['Lat_lake']]);
+      var lon = parseFloat(cols[idx['Lon_lake']]);
+      if(isNaN(lat) || isNaN(lon)) continue;
+
+      var yearExact = parseFloat(cols[idx['Year_exact']]);
+      var yearApprox = parseFloat(cols[idx['Year_approx']]);
+      var year = !isNaN(yearExact) ? yearExact : (!isNaN(yearApprox) ? yearApprox : null);
+      var repeat = (cols[idx['Repeat']] || '').trim().toUpperCase() === 'Y';
+      var lives = parseFloat(cols[idx['Lives_total']]) || 0;
+      var country = (cols[idx['Country']] || '').trim();
+      var basin = (cols[idx['River_Basin']] || '').trim();
+      var lake = (cols[idx['Lake_name']] || '').trim();
+
+      var risk = 'stable';
+      if(repeat || (year && currentYear - year <= 15) || lives > 0) risk = 'watch';
+      if((year && currentYear - year <= 5) || lives >= 10 || (repeat && year && currentYear - year <= 20)) risk = 'danger';
+
+      var noteBits = [];
+      if(year) noteBits.push(String(Math.round(year)));
+      if(repeat) noteBits.push('recurring event');
+      if(lives > 0) noteBits.push(Math.round(lives) + ' lives lost');
+
+      points.push({
+        name: (lake && lake !== 'Unnamed' ? lake : ('Unnamed lake, ' + (basin || country))) + (country ? ' (' + country + ')' : ''),
+        lat: lat, lng: lon, risk: risk, type: 'glof',
+        note: (noteBits.length ? noteBits.join(', ') : 'Documented GLOF event') + ' — HMAGLOFDB'
+      });
+    }
+    return points;
+  }
+
+  /* Minimal CSV line splitter that handles quoted fields with commas inside. */
+  function splitCsvLine(line){
+    var out = [], cur = '', inQuotes = false;
+    for(var i = 0; i < line.length; i++){
+      var c = line[i];
+      if(c === '"'){ inQuotes = !inQuotes; }
+      else if(c === ',' && !inQuotes){ out.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  /* ---------- Earthquakes (USGS, global, real-time) ---------- */
+
+  var quakePoints = null;
+  var quakeLoaded = false;
+
+  function loadQuakePoints(){
+    if(quakeLoaded) return Promise.resolve(quakePoints);
+    return fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson')
+      .then(function(res){
+        if(!res.ok) throw new Error('fetch failed: ' + res.status);
+        return res.json();
+      })
+      .then(function(geo){
+        quakePoints = (geo.features || []).map(function(f){
+          var coords = f.geometry.coordinates; // [lng, lat, depth]
+          var mag = f.properties.mag;
+          var risk = mag >= 6 ? 'danger' : (mag >= 5 ? 'watch' : 'stable');
+          var dateStr = new Date(f.properties.time).toISOString().slice(0, 10);
+          var tsunamiFlag = f.properties.tsunami === 1 ? ' · tsunami alert issued (USGS)' : '';
+          return {
+            name: f.properties.place || 'Unnamed location',
+            lat: coords[1], lng: coords[0], risk: risk, type: 'quake', mag: mag,
+            note: 'M' + mag + ' · depth ' + Math.round(coords[2]) + 'km · ' + dateStr + tsunamiFlag + ' — USGS'
+          };
+        });
+        quakeLoaded = true;
+        console.log('[hazardLayer] loaded ' + quakePoints.length + ' earthquakes (M4.5+, past 30 days) from USGS');
+        return quakePoints;
+      })
+      .catch(function(err){
+        console.warn('[hazardLayer] could not load USGS earthquake feed:', err);
+        quakePoints = [];
+        quakeLoaded = true;
+        return quakePoints;
+      });
+  }
+
+  /* ---------- Volcanoes (USGS Volcano API / Smithsonian GVP, global) ---------- */
+
+  var volcanoPoints = null;
+  var volcanoLoaded = false;
+
+  function loadVolcanoPoints(){
+    if(volcanoLoaded) return Promise.resolve(volcanoPoints);
+    return fetch('https://volcanoes.usgs.gov/vsc/api/volcanoApi/volcanoesGVP')
+      .then(function(res){
+        if(!res.ok) throw new Error('fetch failed: ' + res.status);
+        return res.json();
+      })
+      .then(function(list){
+        var raw = (list || []).filter(function(v){
+          return typeof v.latitude === 'number' && typeof v.longitude === 'number';
+        });
+        var filtered = raw.filter(function(v){
+          return typeof v.elevation_m === 'number' && v.elevation_m >= VOLCANO_MIN_ELEVATION_M;
+        });
+        volcanoPoints = filtered.map(function(v){
+          return {
+            name: v.vName || 'Unnamed volcano',
+            lat: v.latitude, lng: v.longitude, risk: 'watch', type: 'volcano',
+            note: 'Holocene volcano, ' + Math.round(v.elevation_m) + 'm' + (v.country ? ' — ' + v.country : '') + ' — USGS/Smithsonian GVP'
+          };
+        });
+        volcanoLoaded = true;
+        console.log('[hazardLayer] volcanoes: ' + raw.length + ' worldwide, showing ' + filtered.length + ' at/above ' + VOLCANO_MIN_ELEVATION_M + 'm elevation');
+        return volcanoPoints;
+      })
+      .catch(function(err){
+        console.warn('[hazardLayer] could not load USGS volcano list:', err);
+        volcanoPoints = [];
+        volcanoLoaded = true;
+        return volcanoPoints;
+      });
+  }
+
+  /* ---------- Landslides (NASA COOLR, global, filtered to fatal events) ---------- */
+
+  var LANDSLIDE_URL = 'https://gis.earthdata.nasa.gov/gis05/rest/services/Landslides/COOLR_Events_Points/FeatureServer/0/query' +
+    '?where=fatality_count%20%3E%200&outFields=title,event_date,fatality_count,landslide_category,location_description,source_name' +
+    '&f=geojson&resultRecordCount=2000';
+
+  var landslidePoints = null;
+  var landslideLoaded = false;
+
+  function loadLandslidePoints(){
+    if(landslideLoaded) return Promise.resolve(landslidePoints);
+    return fetch(LANDSLIDE_URL)
+      .then(function(res){
+        if(!res.ok) throw new Error('fetch failed: ' + res.status);
+        return res.json();
+      })
+      .then(function(geo){
+        landslidePoints = (geo.features || [])
+          .filter(function(f){ return f.geometry && f.geometry.coordinates; })
+          .map(function(f){
+            var p = f.properties || {};
+            var coords = f.geometry.coordinates; // [lng, lat]
+            var deaths = parseInt(p.fatality_count, 10) || 0;
+            var risk = deaths >= 20 ? 'danger' : 'watch';
+            var dateStr = p.event_date ? String(p.event_date).slice(0, 10) : 'date unknown';
+            var noteBits = [];
+            if(p.landslide_category) noteBits.push(p.landslide_category);
+            noteBits.push(dateStr);
+            noteBits.push(deaths + (deaths === 1 ? ' death' : ' deaths'));
+            return {
+              name: p.title || p.location_description || 'Unnamed landslide event',
+              lat: coords[1], lng: coords[0], risk: risk, type: 'landslide',
+              note: noteBits.join(', ') + ' — NASA COOLR'
+            };
+          });
+        landslideLoaded = true;
+        console.log('[hazardLayer] loaded ' + landslidePoints.length + ' fatal landslide events from NASA COOLR');
+        return landslidePoints;
+      })
+      .catch(function(err){
+        console.warn('[hazardLayer] could not load NASA COOLR landslide data:', err);
+        landslidePoints = [];
+        landslideLoaded = true;
+        return landslidePoints;
+      });
+  }
+
+  /* ---------- shared drawing / toggle logic ---------- */
+
+  /* Leaflet ships its popup positioning/spacing rules in leaflet.css. If this
+     app only loaded leaflet.js (no stylesheet), popups fall back to raw
+     browser block layout — which reads as "huge gap above the text" — and
+     our text can end up invisible if it inherits the page's dark-on-dark
+     colors. This injects a small, self-contained style block once so the
+     popup looks right regardless of what CSS the host page has loaded. */
+  var leafletLayerGroup = null;
+  function ensurePopupStyles(){
+    if(document.getElementById('synHazardPopupStyle')) return;
+    var style = document.createElement('style');
+    style.id = 'synHazardPopupStyle';
+    style.textContent =
+      '.leaflet-popup{margin-bottom:0;}' +
+      '.leaflet-popup-content-wrapper{background:#17171c;border-radius:8px;box-shadow:0 4px 18px rgba(0,0,0,0.45);}' +
+      '.leaflet-popup-content{margin:10px 14px;line-height:1.45;color:#f2f2f5;font-family:"DM Sans",sans-serif;font-size:13px;min-width:180px;}' +
+      '.leaflet-popup-content b{color:#fff;font-size:13.5px;}' +
+      '.leaflet-popup-tip{background:#17171c;}' +
+      '.leaflet-popup-close-button{color:#aaa !important;}' +
+      '.synHazardGooglePopup{background:#17171c;color:#f2f2f5;font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.45;padding:8px 10px;border-radius:6px;min-width:180px;}' +
+      '.synHazardGooglePopup b{color:#fff;font-size:13.5px;}';
+    document.head.appendChild(style);
+  }
+
+  function popupHtml(p){
+    if(p.type === 'volcano'){
+      return '<b>' + p.name + '</b><br>' + p.note;
+    }
+    return '<b>' + p.name + '</b><br>' + RISK_LABEL[p.risk] + ' &middot; ' + p.note;
+  }
+
+  function clearHazardLayer(){
+    if(leafletLayerGroup){
+      try{ leafletLayerGroup.clearLayers(); leafletLayerGroup.remove(); }catch(e){}
+      leafletLayerGroup = null;
+    }
+    hazardMarkers.forEach(function(m){
+      try{
+        if(window._synMapKind === 'google' && m.setMap) m.setMap(null);
+      }catch(e){}
+    });
+    hazardMarkers = [];
+  }
+
+  function pointsForMode(){
+    var jobs = [];
+    if(mode === 'glof' || mode === 'all') jobs.push(loadGlofPoints());
+    if(mode === 'quake' || mode === 'all') jobs.push(loadQuakePoints());
+    if(mode === 'volcano' || mode === 'all') jobs.push(loadVolcanoPoints());
+    if(mode === 'landslide' || mode === 'all') jobs.push(loadLandslidePoints());
+    return Promise.all(jobs).then(function(lists){
+      return lists.reduce(function(acc, l){ return acc.concat(l); }, []);
+    });
+  }
+
+  function getCurrentZoom(){
+    if(!window._synMapObj) return -1;
+    try{ return window._synMapObj.getZoom(); }catch(e){ return -1; }
+  }
+
+  /* Returns the current visible area as a plain {south,north,west,east}
+     degree box — same shape regardless of engine, so filtering logic below
+     doesn't need to know if it's talking to Leaflet or Google. Pads
+     outward, then enforces MIN_SPAN_DEG so a tight routing-map zoom still
+     queries a sane regional radius instead of a literal few-km box. */
+  function getViewBox(){
+    if(!window._synMapObj) return null;
+    var south, north, west, east;
+    if(window._synMapKind === 'leaflet' && window.L){
+      try{
+        var b = window._synMapObj.getBounds();
+        south = b.getSouth(); north = b.getNorth(); west = b.getWest(); east = b.getEast();
+      }catch(e){ return null; }
+    } else if(window._synMapKind === 'google' && window.google && google.maps){
+      try{
+        var gb = window._synMapObj.getBounds();
+        if(!gb) return null;
+        var ne = gb.getNorthEast(), sw = gb.getSouthWest();
+        south = sw.lat(); north = ne.lat(); west = sw.lng(); east = ne.lng();
+      }catch(e){ return null; }
+    } else {
+      return null;
+    }
+
+    var latPad = (north - south) * BOUNDS_PAD_FACTOR;
+    var lngPad = (east - west) * BOUNDS_PAD_FACTOR;
+    south -= latPad; north += latPad; west -= lngPad; east += lngPad;
+
+    if((north - south) < MIN_SPAN_DEG){
+      var cLat = (north + south) / 2;
+      south = cLat - MIN_SPAN_DEG / 2;
+      north = cLat + MIN_SPAN_DEG / 2;
+    }
+    if((east - west) < MIN_SPAN_DEG){
+      var cLng = (east + west) / 2;
+      west = cLng - MIN_SPAN_DEG / 2;
+      east = cLng + MIN_SPAN_DEG / 2;
+    }
+    return { south: south, north: north, west: west, east: east };
+  }
+
+  function pointInBox(p, box){
+    if(p.lat < box.south || p.lat > box.north) return false;
+    // handles the antimeridian-crossing case (west > east)
+    return box.west <= box.east
+      ? (p.lng >= box.west && p.lng <= box.east)
+      : (p.lng >= box.west || p.lng <= box.east);
+  }
+
+  /* Actually creates markers for the given (already-filtered) subset of
+     points. Called on every viewport redraw, so this stays purely about
+     rendering — no fetching, no bounds math. */
+  function drawPointsOnMap(points){
+    clearHazardLayer();
+    if(!window._synMapObj) return;
+
+    if(window._synMapKind === 'leaflet' && window.L){
+      // A dedicated canvas renderer draws every circle into ONE <canvas>
+      // instead of one <svg> element per marker — this is the single
+      // biggest fix for lag once you're past a few hundred points, since
+      // the DOM never has to hold 700-1000+ individual nodes.
+      var renderer = L.canvas({ padding: 0.5 });
+      var layerGroup = L.layerGroup();
+      // One shared popup for the whole layer instead of binding a new
+      // popup object to every marker — with a few thousand points in
+      // "All" mode, that per-marker overhead was a real source of the
+      // reported lag. Content is set right before it opens.
+      var sharedPopup = L.popup();
+      points.forEach(function(p){
+        var radius = p.type === 'quake' ? 5 : (p.type === 'volcano' ? 6 : 7);
+        var fillColor = p.type === 'volcano' ? VOLCANO_COLOR : RISK_COLOR[p.risk];
+        var marker = L.circleMarker([p.lat, p.lng], {
+          renderer: renderer,
+          radius: radius, color: '#fff', weight: 1.5,
+          fillColor: fillColor, fillOpacity: 0.85
+        });
+        marker.on('click', function(e){
+          sharedPopup.setLatLng(e.latlng).setContent(popupHtml(p)).openOn(window._synMapObj);
+        });
+        layerGroup.addLayer(marker);
+      });
+      // One addTo() call for the whole group, instead of one per marker —
+      // avoids hundreds of separate map redraw/reflow events.
+      layerGroup.addTo(window._synMapObj);
+      leafletLayerGroup = layerGroup;
+    } else if(window._synMapKind === 'google' && window.google && google.maps){
+      // Google's Marker API creates a real DOM element + listeners per
+      // marker with no built-in canvas batching, so it gets slow much
+      // faster than Leaflet's canvas renderer does. Viewport culling above
+      // already keeps the per-redraw count small (a regional box, not the
+      // whole planet), so there's no need for the old blanket "hide
+      // volcanoes in All mode" / "quakes must be mag 5+" caps — those just
+      // deleted real nearby hazards without actually being needed anymore.
+      var infoWindow = new google.maps.InfoWindow();
+      points.forEach(function(p){
+        var radius = p.type === 'quake' ? 5 : (p.type === 'volcano' ? 6 : 7);
+        var fillColor = p.type === 'volcano' ? VOLCANO_COLOR : RISK_COLOR[p.risk];
+        var marker = new google.maps.Marker({
+          position: { lat: p.lat, lng: p.lng },
+          map: window._synMapObj,
+          title: p.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: radius,
+            fillColor: fillColor,
+            fillOpacity: 0.85,
+            strokeColor: '#fff',
+            strokeWeight: 1.5
+          }
+        });
+        // Re-use a single InfoWindow instead of one per marker — cheaper
+        // and matches normal Google Maps UX (only one bubble open at a time).
+        marker.addListener('click', function(){
+          infoWindow.setContent('<div class="synHazardGooglePopup">' + popupHtml(p) + '</div>');
+          infoWindow.open(window._synMapObj, marker);
+        });
+        hazardMarkers.push(marker);
+      });
+    }
+  }
+
+  /* Filters the already-cached dataset down to what's actually on screen
+     right now and (re)draws just that. This is what runs on every pan/zoom
+     — no network calls, just array filtering + marker creation for a much
+     smaller set. */
+  function renderVisibleHazardPoints(){
+    if(!window._synMapObj || mode === 'off'){ clearHazardLayer(); return; }
+    attachViewportListeners(); // defensive: re-attaches if the map object was recreated
+    var zoom = getCurrentZoom();
+    if(zoom < MIN_ZOOM_TO_SHOW){
+      clearHazardLayer();
+      updateToggleBtnState(true);
+      return;
+    }
+    var box = getViewBox();
+    if(!box){ clearHazardLayer(); return; }
+    var visible = currentModePoints.filter(function(p){ return pointInBox(p, box); });
+    drawPointsOnMap(visible);
+    updateToggleBtnState(false);
+  }
+
+  /* Wires moveend/zoomend (Leaflet) or idle (Google) to re-filter + redraw
+     on pan/zoom, debounced so a drag doesn't trigger a redraw per frame.
+     Flagged on the map object itself so re-mounting (embed <-> live) or
+     toggling modes doesn't stack up duplicate listeners. */
+  function attachViewportListeners(){
+    var map = window._synMapObj;
+    if(!map || map._synHazardListenerAttached) return;
+    var onChange = debounce(function(){
+      if(window._synMapObj !== map) return; // this map was swapped out, ignore
+      renderVisibleHazardPoints();
+    }, 200);
+    if(window._synMapKind === 'leaflet' && map.on){
+      map.on('moveend', onChange);
+      map.on('zoomend', onChange);
+    } else if(window._synMapKind === 'google' && window.google && google.maps && map.addListener){
+      google.maps.event.addListener(map, 'idle', onChange);
+    }
+    map._synHazardListenerAttached = true;
+  }
+
+  function drawHazardLayer(){
+    if(!window._synMapObj || mode === 'off'){ clearHazardLayer(); return; }
+    ensurePopupStyles();
+    pointsForMode().then(function(points){
+      currentModePoints = points;
+      if(!window._synMapObj) return; // map may have unmounted while fetch was in flight
+      attachViewportListeners();
+      renderVisibleHazardPoints();
+    });
+  }
+
+  var MODE_BTN_LABEL = {
+    off: 'Hazard layer',
+    glof: 'Hazard layer: Floods',
+    quake: 'Hazard layer: Quakes',
+    volcano: 'Hazard layer: Volcanoes',
+    landslide: 'Hazard layer: Landslides',
+    all: 'Hazard layer: All'
+  };
+
+  /* Lives inside #synMapMenu now (the same top-right dropdown as Map /
+     Satellite / Traffic / Transit layer), so it just toggles the shared
+     'on' class those buttons already use rather than carrying its own
+     background/color styling. */
+  function updateToggleBtnState(needsZoom){
+    var btn = document.getElementById('synHazardToggleBtn');
+    if(btn){
+      btn.classList.toggle('on', mode !== 'off');
+      btn.textContent = MODE_BTN_LABEL[mode] + (needsZoom && mode !== 'off' ? ' · zoom in' : '');
+    }
+  }
+
+  function toggleHazardLayer(){
+    var idx = (MODES.indexOf(mode) + 1) % MODES.length;
+    mode = MODES[idx];
+
+    if(mode === 'off'){
+      clearHazardLayer();
+      updateToggleBtnState();
+      return mode;
+    }
+
+    // The map can be in 'embed' mode (a plain iframe) with no JS object to
+    // draw on. If so, switch to the live map (Leaflet/Google JS) first,
+    // then draw once it's ready.
+    if(window._synMapKind === 'embed' || !window._synMapObj){
+      console.log('[hazardLayer] map is in embed mode or not yet mounted — switching to live map');
+      if(typeof window._cxMapToggleLive === 'function'){
+        window._cxMapToggleLive();
+      } else if(typeof _cxMapToggleLive === 'function'){
+        _cxMapToggleLive();
+      } else {
+        console.warn('[hazardLayer] no map mounted yet and _cxMapToggleLive not found — open a map in chat first');
+        mode = 'off';
+        updateToggleBtnState();
+        return mode;
+      }
+      var tries = 0;
+      var poll = setInterval(function(){
+        tries++;
+        if(window._synMapObj && window._synMapKind !== 'embed'){
+          clearInterval(poll);
+          drawHazardLayer();
+          updateToggleBtnState();
+        } else if(tries > 40){ // ~4s timeout
+          clearInterval(poll);
+          console.warn('[hazardLayer] timed out waiting for live map to mount');
+        }
+      }, 100);
+      updateToggleBtnState();
+      return mode;
+    }
+
+    drawHazardLayer();
+    updateToggleBtnState();
+    return mode;
+  }
+  window.synToggleHazardLayer = toggleHazardLayer;
+
+  /* Nests the hazard toggle as a fifth row inside #synMapMenu, the same
+     top-right settings dropdown that holds Map / Satellite / Traffic /
+     Transit layer, instead of floating its own separate button on the map.
+     Matches those buttons' markup exactly (plain <button data-layer="...">)
+     so it inherits the same CSS (#synMapMenu button, button:hover,
+     button.on) with no bespoke styling of its own. */
+  function ensureHazardMenuItem(){
+    var menu = document.getElementById('synMapMenu');
+    if(!menu || document.getElementById('synHazardToggleBtn')) return;
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'synHazardToggleBtn';
+    btn.setAttribute('data-layer', 'hazard');
+    btn.title = 'Cycle hazard risk layer: off / floods / earthquakes / volcanoes / landslides / all';
+    btn.textContent = MODE_BTN_LABEL[mode];
+    btn.classList.toggle('on', mode !== 'off');
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      toggleHazardLayer();
+    });
+    menu.appendChild(btn);
+    console.log('[hazardLayer] menu item nested into synMapMenu (with Map/Satellite/Traffic/Transit)');
+  }
+
+  /* The map orb (and its #synMapMenu dropdown) mounts/unmounts as the user
+     opens map results in chat, so watch for it rather than assuming it
+     exists at load time. */
+  var hazardObserver = new MutationObserver(function(){ ensureHazardMenuItem(); });
+  hazardObserver.observe(document.body, { childList: true, subtree: true });
+  ensureHazardMenuItem();
+  console.log('[hazardLayer] script loaded (GLOF + USGS earthquakes), watching for map mount');
+})();
+
+
 </script>
 
 </body>
