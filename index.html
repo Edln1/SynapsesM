@@ -691,7 +691,7 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 .bnav-orb-wrap.bnav-charging .bnav-orb{animation-name:bnavPuddleSwirl,none,bnavOrbMorph,none;transition:filter var(--bnav-hold-ms,1800ms) ease,box-shadow var(--bnav-hold-ms,1800ms) ease;filter:brightness(1.5) saturate(1.4);box-shadow:0 0 10px 2px rgba(124,106,247,0.55),0 0 26px 8px rgba(124,106,247,0.4),0 0 12px 3px rgba(0,217,168,0.16),inset 0 0 18px rgba(255,255,255,0.7);}
 .bnav-cc-backdrop{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;background:transparent;z-index:9998;opacity:0;pointer-events:none;transition:opacity .35s ease,top .2s ease,left .2s ease;}
 .bnav-cc-backdrop.bnav-cc-open{opacity:1;pointer-events:auto;}
-.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;transform:none;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr 96px;grid-template-areas:"left center right" "tray tray tray";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
+.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;transform:none;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr;grid-template-areas:"left center right";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
 .bnav-cc-panel.bnav-cc-open{opacity:1;filter:blur(0);pointer-events:auto;}
 /* CC panel background is transparent (aurora shows through) — but the
    chat empty-state's whole greeting header (orb, time-based greeting,
@@ -834,23 +834,19 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
   height:220px;
 }
 }
-/* Balance is the first tile in the template (before TV), so without this it
-   would stay pinned above the now full-width TV row. Reorder it below TV,
-   also at a short fixed height — untouched if either has been dragged
-   elsewhere. */
+/* When TV is expanded it takes over the whole row — Balance used to get
+   squeezed into a leftover 110px strip underneath, but at that height its
+   own content (wave graphic, title) has nowhere to go, so it rendered as a
+   near-empty pill that didn't even reach the full width. Simplest fix:
+   don't show it there at all while TV is on — it's one tap away by
+   turning TV off. */
 .bnav-cc-center:has(>.bnav-cc-tv-card.tv-expanded)>.bnav-cc-balance-card{
-  order:2;
-  flex:0 0 110px;
-  width:100%;
-  height:110px;
+  display:none;
 }
-/* Duplicate of the three :has() rules above, keyed off .bnav-cc-tv-active
-   (toggled in JS by _ccTvSyncCenterClass) instead of :has(). Some in-app
-   WebViews don't support :has() at all, which is what caused the "weird
-   space" — TV would visually expand but the parent never reflowed, so it
-   sat in a box still sized for the old small tile. Identical rules, just a
-   selector engines without :has() can still match. Harmless overlap where
-   :has() *is* supported, since both apply the same values. */
+/* Duplicate of the :has() rule above, keyed off .bnav-cc-tv-active (toggled
+   in JS by _ccTvSyncCenterClass) instead of :has(), for WebViews that don't
+   support :has() at all. Identical result, just via a selector those
+   engines can match. Harmless overlap where :has() *is* supported. */
 .bnav-cc-center.bnav-cc-tv-active{
   flex-direction:column;
   flex-wrap:nowrap;
@@ -874,10 +870,7 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
 }
 }
 .bnav-cc-center.bnav-cc-tv-active>.bnav-cc-balance-card{
-  order:2;
-  flex:0 0 110px;
-  width:100%;
-  height:110px;
+  display:none;
 }
 /* The drag-to-resize handle set a fixed --tv-h that fought this fit-to-box
    sizing (that's the fixed 360px that caused the overflow in the first
@@ -933,8 +926,15 @@ html[data-theme="trueblack"] .bnav-cc-tv-ask::-moz-selection{background:rgba(255
 .bnav-cc-tv-open{position:absolute;right:6px;top:6px;font-size:9px;font-weight:600;letter-spacing:0.02em;color:rgba(255,255,255,0.55);background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.16);border-radius:20px;padding:3px 8px;text-decoration:none;opacity:0;pointer-events:none;transition:opacity .25s ease,color .15s ease,background .15s ease;backdrop-filter:blur(4px);z-index:8;}
 .bnav-cc-tv-open:hover{color:#fff;background:rgba(0,0,0,0.7);}
 .bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-open{opacity:1;pointer-events:auto;}
-.bnav-cc-tv-chans{position:absolute;left:50%;right:auto;top:auto;bottom:8px;display:flex;gap:1px;align-items:center;padding:3px;border-radius:999px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
-.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chans{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+/* Was a content-width pill centered with left:50%/transform — fine at the
+   small 190px idle-tile size, but once TV is expanded (which is most of the
+   time it's actually visible, since it only shows via tv-hud while on) the
+   screen is much wider and the pill just floats in the middle with dead
+   background on both sides — the "margin that doesn't fill full width" look.
+   Anchoring it to both edges (left/right:8px) instead of centering by
+   content-width makes it read as an intentional toolbar at any screen size. */
+.bnav-cc-tv-chans{position:absolute;left:8px;right:8px;top:auto;bottom:8px;display:flex;gap:1px;align-items:center;justify-content:center;padding:3px;border-radius:14px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chans{opacity:1;pointer-events:auto;transform:translateY(0);}
 .bnav-cc-tv-coming{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px;background:radial-gradient(ellipse at 50% 42%,rgba(90,16,32,0.5),rgba(0,0,0,0.92) 70%);opacity:0;pointer-events:none;cursor:pointer;transition:opacity .35s ease;}
 .bnav-cc-tv-card.tv-coming .bnav-cc-tv-coming{opacity:1;pointer-events:auto;}
 .bnav-cc-tv-card.tv-coming .bnav-cc-tv-static{opacity:0.16;}
@@ -959,10 +959,10 @@ html[data-theme="trueblack"] .bnav-cc-tv-chip.active{background:rgba(255,255,255
 .bnav-cc-tv-swap:disabled{opacity:0.28;cursor:default;background:transparent;}
 .bnav-cc-tv-chgroup.is-off .bnav-cc-tv-chlabel{opacity:0.38;}
 .bnav-cc-tv-chan-sep{width:1px;height:11px;margin:0 4px 0 5px;background:rgba(255,255,255,0.14);flex-shrink:0;border-radius:1px;}
-.bnav-cc-tv-genres{position:absolute;left:50%;right:auto;top:auto;bottom:34px;display:flex;gap:1px;align-items:center;padding:3px 6px;border-radius:999px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateX(-50%) translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
+.bnav-cc-tv-genres{position:absolute;left:8px;right:8px;top:auto;bottom:34px;display:flex;gap:1px;align-items:center;justify-content:center;padding:3px 6px;border-radius:14px;background:rgba(10,10,14,0.38);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 22px rgba(0,0,0,0.28),inset 0 1px 0 rgba(255,255,255,0.08);backdrop-filter:blur(18px) saturate(1.45);-webkit-backdrop-filter:blur(18px) saturate(1.45);opacity:0;pointer-events:none;transform:translateY(5px);transition:opacity .28s ease,transform .28s ease;z-index:8;}
 .bnav-cc-tv-genres.gn-visible{display:flex;}
 .bnav-cc-tv-genres:not(.gn-visible){display:none;}
-.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-genres.gn-visible{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-genres.gn-visible{opacity:1;pointer-events:auto;transform:translateY(0);}
 .bnav-cc-tv-genre-label{font-size:8.5px;font-weight:700;letter-spacing:0.1em;color:rgba(255,255,255,0.85);padding:0 6px;line-height:1;pointer-events:none;user-select:none;min-width:64px;text-align:center;}
 .bnav-cc-right{grid-area:right;display:flex;flex-direction:column;gap:8px;overflow-x:hidden;overflow-y:auto;min-height:0;min-width:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.12) transparent;}
 .bnav-cc-right::-webkit-scrollbar{width:3px!important;height:0!important;}
@@ -1077,7 +1077,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-ev-main{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;}
 .bnav-cc-ev-title{font-size:12px;color:rgba(255,255,255,0.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bnav-cc-ev-time{font-size:10.5px;color:rgba(255,255,255,0.42);}
-.bnav-cc-tray-wrap{grid-area:tray;position:relative;display:flex;flex-direction:column;min-height:0;}
+.bnav-cc-tray-wrap{display:none!important;}
 .bnav-cc-tray-toggle{position:absolute;top:-15px;left:50%;transform:translateX(-50%);width:52px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.32);border-radius:8px 8px 0 0;background:rgba(255,255,255,0.02);transition:color .15s ease,background .15s ease;z-index:2;}
 .bnav-cc-tray-toggle:hover{color:rgba(255,255,255,0.75);background:rgba(124,106,247,0.14);}
 .bnav-cc-tray-toggle svg{width:11px;height:11px;transition:transform .3s cubic-bezier(.4,0,.2,1);}
@@ -1142,8 +1142,8 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 @media (max-width:860px){
   .bnav-cc-panel{
     grid-template-columns:1fr;
-    grid-template-rows:auto auto auto auto;
-    grid-template-areas:"right" "center" "left" "tray";
+    grid-template-rows:auto auto auto;
+    grid-template-areas:"right" "center" "left";
     width:auto;
     height:auto;
     top:var(--cc-top,0px);
@@ -1155,9 +1155,16 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
     padding:12px 10px calc(12px + env(safe-area-inset-bottom));
   }
   .bnav-cc-rail{display:none;}
-  .bnav-cc-tray{overflow-x:auto;}
-  .bnav-cc-center{overflow-x:hidden;}
-  .bnav-cc-left{overflow-x:hidden;}
+  /* Kill the nested per-column scrollbars on mobile. Left/center/right used
+     to each carry their own overflow-y:auto (a desktop leftover, for the
+     3-column layout where each column really is its own scroll region).
+     On mobile they stack into one long page instead, so having every
+     column ALSO independently scrollable just means several scrollbars
+     stacked inside the one the panel itself already has. Let them size to
+     their real content and leave scrolling to the outer panel only. */
+  .bnav-cc-center{overflow-x:hidden;overflow-y:visible;height:auto;}
+  .bnav-cc-left{overflow-x:hidden;overflow-y:visible;height:auto;}
+  .bnav-cc-right{overflow-y:visible;height:auto;}
   /* At 190px fixed width, most phone screens only have room for ONE card
      per row inside the center tray (94vw panel minus its padding minus the
      tray's own padding leaves ~300-340px, not 390px+gap needed for two
@@ -1170,6 +1177,14 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   .bnav-cc-center>.bnav-cc-card,
   .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded),
   .bnav-cc-center>.bnav-cc-pulse-card{width:calc(50% - 5px);flex:0 0 calc(50% - 5px);}
+  /* Balance and TV are meant to sit side-by-side, each taking half the row —
+     but either one can end up alone there (dragged to another column, or
+     just not rendered), and the 50% rule above doesn't know that. Left
+     alone, the lone tile still only fills half its row, leaving the other
+     half as plain black background. When either is the only child of the
+     center column, let it take the full row instead of leaving that gap. */
+  .bnav-cc-center>.bnav-cc-balance-card:only-child,
+  .bnav-cc-center>.bnav-cc-tv-card:not(.tv-expanded):only-child{width:100%!important;flex:0 0 100%!important;}
   /* Balance + SYN-TV idle tiles were still a full square (~165px tall) by
      default on mobile, eating the top of the screen before you ever reach
      Calendar/Pulse/Gmail below. Shrink their default (non-expanded) height
@@ -11517,7 +11532,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
           '<div class="bnav-cc-call-status">LINE OFFLINE</div>'+
           '<div class="bnav-cc-call-sub">Not live yet</div>'+
         '</div>'+
-      '</div>';
+      '</div>'+
+      '<div class="bnav-cc-card cc-placeholder" data-cc-id="activity" style="--cc-delay:240ms"><div class="bnav-cc-card-title">Activity</div><div class="bnav-cc-bars">'+barsHtml+'</div><div class="bnav-cc-bars-labels">'+barsLabelsHtml+'</div></div>';
 
     panel.innerHTML =
       '<div class="bnav-cc-left">'+
@@ -11525,7 +11541,6 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
           '<div class="syn-welcome-greeting" id="bnavCCGreeting">'+esc(_welcomeGreeting())+'</div>'+
           '<div class="syn-welcome-sub">Here\u2019s what\u2019s new</div>'+
         '</div>'+
-        '<div class="bnav-cc-card cc-placeholder" data-cc-id="activity"><div class="bnav-cc-card-title">Activity</div><div class="bnav-cc-bars">'+barsHtml+'</div><div class="bnav-cc-bars-labels">'+barsLabelsHtml+'</div></div>'+
         '<div class="bnav-cc-card cc-placeholder" data-cc-id="session"><div class="bnav-cc-card-title">Session</div><div class="bnav-cc-gauges">'+
           '<div class="bnav-cc-gauge-wrap"><div class="bnav-cc-gauge" style="--gp:'+_msgPct+'%;--gc:#00d9a8"><span>'+_msgCount+'</span></div><div class="bnav-cc-gauge-label">Messages</div></div>'+
           '<div class="bnav-cc-gauge-wrap"><div class="bnav-cc-gauge" style="--gp:'+_checkInPct+'%;--gc:'+_checkInColor+'"><span>'+(_checkedIn?'✓':'—')+'</span></div><div class="bnav-cc-gauge-label">Check-in</div></div>'+
@@ -11607,6 +11622,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     // cleanly into a slot instead of ending up scattered.
     _ccInitWidgetDrag(panel.querySelector('.bnav-cc-left'), 'synapses_cc_order_left');
     _ccInitWidgetDrag(panel.querySelector('.bnav-cc-right'), 'synapses_cc_order_right');
+
+    // Activity — moved into the right column, below Call, so it lives in
+    // that same already-scrollable widget list instead of the left column
+    // (which was its own separate scroll region).
 
     function runNav(i){ var it = navItems[i]; if(!it) return; if(it.label!=='SYN-TV') closeControlCentre(); it.fn(); }
     panel.querySelectorAll('[data-nav]').forEach(function(el){
