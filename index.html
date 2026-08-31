@@ -64335,10 +64335,11 @@ function speakVoiceReply(text) {
     inner.appendChild(span);
     _toast.appendChild(inner);
     var closeBtn = document.createElement('button');
-    closeBtn.textContent = '×';
-    closeBtn.style.cssText = 'position:absolute;top:-10px;right:-10px;background:rgba(10,11,22,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.45);font-size:13px;line-height:1;cursor:pointer;padding:0;transition:color 0.2s;z-index:10;';
-    closeBtn.onmouseover = function(){ closeBtn.style.color = 'rgba(255,255,255,0.7)'; };
-    closeBtn.onmouseout = function(){ closeBtn.style.color = 'rgba(255,255,255,0.35)'; };
+    closeBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    closeBtn.title = 'Dismiss';
+    closeBtn.style.cssText = 'position:absolute;top:5px;right:7px;background:transparent;border:none;color:rgba(255,255,255,0.16);cursor:pointer;padding:2px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;z-index:10;';
+    closeBtn.onmouseover = function(){ closeBtn.style.color = 'rgba(255,255,255,0.55)'; };
+    closeBtn.onmouseout = function(){ closeBtn.style.color = 'rgba(255,255,255,0.16)'; };
     closeBtn.onclick = function(e) { e.stopPropagation(); toastHide(true, true); };
     _toast.appendChild(closeBtn);
     var hint = document.createElement('span');
@@ -68528,7 +68529,7 @@ async function srcAgentContact(supplier) {
   ctxMenu.innerHTML =
     '<div id="avaCx4" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
     '<div id="avaCxVoice" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🎙</span><span style="flex:1;">Choose voice</span><span id="avaCxVoiceName" style="font-size:12px;opacity:0.5;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>' +
-    '<div id="avaCxHistory" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🗂</span><span style="flex:1;">Chat history</span></div>' +
+    '<div id="avaCxHistory" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="rgba(255,255,255,0.75)" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span style="flex:1;">Chat history</span></div>' +
     '<div id="avaCxToastToggle" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">💬</span><span style="flex:1;">Reply captions</span><span id="avaCxToastToggleChk" style="font-size:12px;color:#00d9a8;opacity:1;">✓</span></div>' +
     '<div id="avaCxLife" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🧬</span><span>Ava Life State</span></div>' +
     '<div id="avaCxLifeTick" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span class="ava-cx-ico">⟳</span><span>Run solitude tick</span></div>' +
