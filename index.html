@@ -5952,27 +5952,10 @@ to{opacity:0;transform:translateX(-40px);}}
   width:28px!important;
   height:28px!important;
 }
-/* Per-page position/visibility overrides for the STS mic (mobile only for
-   position; hide rules apply on any width). Requested behavior: centered on
-   the chat page and the mobile full-screen Settings page, fully hidden
-   inside Studio / Stem Studio. Targeted via body class/attribute rather than
-   a DOM-position check, so this still applies even when the idle-glide
-   feature (_tnvGlideToCenter) has reparented the button straight onto
-   <body> — a plain ".top-actions button" or ".top-bar-hidden" selector
-   would miss it once that reparent happens. */
-@media (max-width:768px){
-  body[data-syn-view="sec-chat"] #topNavVoiceBtn:not(.tnv-centered),
-  body.chp-mobile-settings-open #topNavVoiceBtn:not(.tnv-centered){
-    position:fixed!important;
-    left:50%!important;
-    top:calc(14px + env(safe-area-inset-top,0px) + 16px)!important;
-    right:auto!important;
-    bottom:auto!important;
-    margin:0!important;
-    transform:translate(-50%,-50%)!important;
-    z-index:100050;
-  }
-}
+/* Per-page centering for the STS mic (chat page + mobile full-screen
+   Settings page) is driven by JS — see _tnvPageCenterIn/_tnvPageCenterOut
+   near _tnvGlideToCenter — so it slides in with the same glide used
+   everywhere else, instead of snapping via a CSS position:fixed rule. */
 /* Studio (image gen) and Stem Studio both fully replace the page chrome with
    their own overlay — the mic has no business floating over either one.
    !important + targeting by id (not ".top-bar button") so this wins even
@@ -22312,6 +22295,12 @@ function setView(id){
   // touch the button's style/class directly — see the #topNavVoiceBtn
   // per-page overrides near .top-actions in the stylesheet.
   try{ document.body.setAttribute('data-syn-view', id); }catch(_dv){}
+  // Slide the STS mic to mid-header on the chat page (mobile), same glide
+  // used by the idle/live centering — see _tnvPageCenterIn/_tnvPageCenterOut.
+  try{
+    if(id === 'sec-chat'){ if(typeof window._tnvPageCenterIn === 'function') window._tnvPageCenterIn(); }
+    else if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut();
+  }catch(_tpc){}
   if(typeof window._ttsUpdateFloatingPill === 'function') window._ttsUpdateFloatingPill(id);
   // Deep-space aurora is saved per-scope (ask-me-anything vs active chat vs
   // other pages) — re-sync the canvas now that we've switched views.
@@ -40437,6 +40426,7 @@ function _bnavOpenMobileSettingsPage(){
     }
     if(dock.parentNode !== document.body) document.body.appendChild(dock);
     document.body.classList.add('chp-mobile-settings-open');
+    try{ if(typeof window._tnvPageCenterIn === 'function') window._tnvPageCenterIn(); }catch(_tpc){}
     var dockOpen = dock.classList.contains('open');
     if(!dockOpen){
       requestAnimationFrame(function(){ if(!gbtn.hidden) gbtn.click(); });
@@ -40455,6 +40445,7 @@ function _bnavOpenMobileSettingsPage(){
         e.stopPropagation();
         if(dock.classList.contains('open')) gbtn.click();
         document.body.classList.remove('chp-mobile-settings-open');
+        try{ if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut(); }catch(_tpc){}
         restoreDockHome();
       });
     }
@@ -40466,6 +40457,7 @@ function _bnavOpenMobileSettingsPage(){
       dock._mobileSettingsObserver = new MutationObserver(function(){
         if(!dock.classList.contains('open')){
           document.body.classList.remove('chp-mobile-settings-open');
+          try{ if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut(); }catch(_tpc){}
           restoreDockHome();
         }
       });
@@ -53864,6 +53856,84 @@ function _tnvSendAway(){
 window._tnvSendAway = _tnvSendAway;
 window._tnvGlideHome = _tnvGlideHome;
 window._tnvGlideToCenter = _tnvGlideToCenter;
+
+/** Page-driven mic centering (mobile chat page / mobile Settings page).
+ *  Same FLIP glide as _tnvGlideToCenter, but decoupled from that function's
+ *  _tnvCentered/TOP_BAR_HIDDEN bookkeeping so it never fights the idle/live
+ *  speech-to-speech centering system — if the idle-glide has already parked
+ *  the mic center (_tnvCentered true), this is a no-op and that system stays
+ *  in charge. Marked with data-tnv-page-parked so the matching *Out call
+ *  only ever undoes centering it itself caused. */
+function _tnvPageCenterIn(){
+  if(window.innerWidth > 768) return;
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || _tnvCentered || btn.classList.contains('tnv-centered')) return;
+  var first = btn.getBoundingClientRect();
+  var rowCy = (typeof _tnvComputeCenterRowCy === 'function')
+    ? _tnvComputeCenterRowCy()
+    : (first.top + first.height / 2);
+  btn.setAttribute('data-tnv-page-parked', '1');
+  document.body.appendChild(btn);
+  btn.classList.add('tnv-centered');
+  btn.style.transition = 'none';
+  btn.style.setProperty('position', 'fixed', 'important');
+  btn.style.setProperty('left', '50%', 'important');
+  btn.style.setProperty('top', rowCy + 'px', 'important');
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.zIndex = '100050';
+  btn.style.transform = 'translate(-50%,-50%)';
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.opacity = '0';
+  btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
+  void btn.offsetWidth;
+  btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
+  btn.style.opacity = '1';
+  btn.style.transform = 'translate(-50%,-50%) scale(1)';
+  _tnvTrackToastDuring(500);
+  btn.addEventListener('transitionend', function _pciSettle(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    if(btn.getAttribute('data-tnv-page-parked') !== '1') return;
+    btn.style.transition = '';
+    btn.style.transform = 'translate(-50%,-50%)';
+  }, {once:true});
+}
+function _tnvPageCenterOut(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  if(!btn || btn.getAttribute('data-tnv-page-parked') !== '1') return;
+  btn.removeAttribute('data-tnv-page-parked');
+  if(_tnvCentered) return; // idle/live system independently owns the button now — leave it be
+  var first = btn.getBoundingClientRect();
+  btn.classList.remove('tnv-centered');
+  btn.style.transition = 'none';
+  btn.style.transform = 'none';
+  _tnvClearCenteredInline();
+  var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
+  if(home){
+    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
+    else home.insertBefore(btn, home.firstChild);
+  }
+  var last = btn.getBoundingClientRect();
+  var dx = first.left - last.left;
+  var dy = first.top - last.top;
+  btn.style.transform = 'translate('+dx+'px,'+dy+'px)';
+  btn.style.opacity = '1';
+  void btn.offsetWidth;
+  btn.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1)';
+  btn.style.transform = 'translate(0,0)';
+  _tnvTrackToastDuring(450);
+  btn.addEventListener('transitionend', function _pcoSettle(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    btn.style.transition = '';
+    btn.style.transform = '';
+    btn.style.opacity = '';
+  }, {once:true});
+}
+window._tnvPageCenterIn = _tnvPageCenterIn;
+window._tnvPageCenterOut = _tnvPageCenterOut;
 
 // ── Idle-state centered logo (mobile) ──────────────────────────────────
 // When the top bar is collapsed AND speech-to-speech is NOT running, the
