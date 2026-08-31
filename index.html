@@ -10578,7 +10578,13 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
    the later ones (left:288/328px) land off the right edge. Anchor the whole
    row from one fixed wrapper at left:0 instead, buttons just flow in flex order. */
 #bnavBLRow{position:fixed;bottom:0;left:0;display:flex;align-items:center;z-index:301;}
-#bnavBLRow>button{position:static!important;bottom:auto!important;left:auto!important;}
+/* relative (not static!) — each button must stay its own positioning context
+   so its .pulse-dot/.call-dot (position:absolute) anchors to itself instead
+   of escaping up to this row and landing on top of the ••• button. left is
+   still killed since ordering is done via CSS `order` now (see
+   applyBLIconLayout), not px offsets — a static left here would otherwise
+   physically shift a relative-positioned element off its flex slot. */
+#bnavBLRow>button{position:relative!important;bottom:auto!important;left:auto!important;top:auto!important;right:auto!important;}
 </style>
 <div id="bnavBLRow">
 <button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
@@ -15823,8 +15829,15 @@ function _blIconAllowedNow(id){
   return true;
 }
 function applyBLIconLayout(){
-  var x = 0;
-  blShownIds.forEach(function(id){
+  // NOTE: #bnavBLRow is a real flex row now (see wrapper CSS above), so
+  // packing/order belongs to CSS `order`, not manually computed `left` px
+  // offsets. The old x-accumulator here was left over from before the row
+  // wrapper existed, and left `left` written on relative-positioned buttons
+  // — which physically shifts them off their flex slot on top of whatever's
+  // next to them, i.e. exactly the "icons doubling" glitch. `order` is
+  // idempotent and race-free: no accumulator, no dependency on forEach
+  // execution order, safe to call anytime.
+  blShownIds.forEach(function(id, idx){
     var it = _blFindItem(id);
     var el = document.getElementById(id);
     if(!it || !el) return;
@@ -15836,8 +15849,8 @@ function applyBLIconLayout(){
     }
     el.removeAttribute('data-bl-user-hidden');
     el.style.removeProperty('display'); // let existing bottom-nav/conditional CSS decide visibility
-    el.style.setProperty('left', x + 'px', 'important');
-    x += it.width;
+    el.style.removeProperty('left'); // clear any stale px offset from before this fix
+    el.style.order = idx;
   });
   blHiddenIds.forEach(function(id){
     var el = document.getElementById(id);
@@ -15846,7 +15859,7 @@ function applyBLIconLayout(){
     el.style.setProperty('display', 'none', 'important');
   });
   var moreBtn = document.getElementById('bnavBLMoreBtn');
-  if(moreBtn) moreBtn.style.setProperty('left', x + 'px', 'important');
+  if(moreBtn){ moreBtn.style.removeProperty('left'); moreBtn.style.order = blShownIds.length + 1; }
   // First real layout pass is done. Reveal the whole row (icons + •••) here,
   // synchronously, in the same pass as the display/left writes above —
   // NOT via a CSS class that some other selector has to notice and react
