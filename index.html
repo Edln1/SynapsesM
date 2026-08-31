@@ -64285,7 +64285,19 @@ function speakVoiceReply(text) {
     }, typeof ms === 'number' ? ms : 4200);
   }
   var _toastShownAt = 0;
-  var _toastUserDismissed = false; // set by the X button; cleared by hovering the mic icon again
+  // Set by the X button (session-only) or by the persisted menu toggle below.
+  // On desktop, hovering the mic also re-arms it (see the hover IIFE further
+  // down) — but touch has no hover, which is exactly why a tap-X on mobile
+  // used to have no way back short of a reload. The long-press context menu
+  // ("Reply captions" toggle) now gives mobile an explicit way to re-arm it.
+  var _toastUserDismissed = (function(){
+    try { return localStorage.getItem('synapses_sts_toast_enabled') === '0'; } catch(e) { return false; }
+  })();
+  window._tnvToastEnabled = function(){ return !_toastUserDismissed; };
+  window._tnvSetToastEnabled = function(on){
+    _toastUserDismissed = !on;
+    try { localStorage.setItem('synapses_sts_toast_enabled', on ? '1' : '0'); } catch(e){}
+  };
   function toast(msg) {
     if (!_on) return;
     if (_toastUserDismissed) { try { if (window._toastDebug) console.log('[toast] suppressed — _toastUserDismissed still true, staying hidden for:', msg.slice(0,40)); } catch(_dbgU){} _toastFull = msg; return; } // stay hidden until user re-hovers the mic icon
@@ -68517,6 +68529,7 @@ async function srcAgentContact(supplier) {
     '<div id="avaCx4" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
     '<div id="avaCxVoice" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🎙</span><span style="flex:1;">Choose voice</span><span id="avaCxVoiceName" style="font-size:12px;opacity:0.5;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>' +
     '<div id="avaCxHistory" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🗂</span><span style="flex:1;">Chat history</span></div>' +
+    '<div id="avaCxToastToggle" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">💬</span><span style="flex:1;">Reply captions</span><span id="avaCxToastToggleChk" style="font-size:12px;color:#00d9a8;opacity:1;">✓</span></div>' +
     '<div id="avaCxLife" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🧬</span><span>Ava Life State</span></div>' +
     '<div id="avaCxLifeTick" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span class="ava-cx-ico">⟳</span><span>Run solitude tick</span></div>' +
     '<div class="ava-cx-div" style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
@@ -68552,6 +68565,7 @@ async function srcAgentContact(supplier) {
   _cxHov(ctxMenu.querySelector('#avaCx4'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCxVoice'),'rgba(124,106,247,0.16)');
   _cxHov(ctxMenu.querySelector('#avaCxHistory'),'rgba(124,106,247,0.14)');
+  _cxHov(ctxMenu.querySelector('#avaCxToastToggle'),'rgba(0,217,168,0.12)');
   _cxHov(ctxMenu.querySelector('#avaCxLife'),'rgba(0,217,168,0.14)');
   _cxHov(ctxMenu.querySelector('#avaCxLifeTick'),'rgba(0,217,168,0.10)');
   _cxHov(ctxMenu.querySelector('#avaCxModeSelf'),'rgba(124,106,247,0.16)');
@@ -68582,6 +68596,20 @@ async function srcAgentContact(supplier) {
     closePopup();
     if(typeof window._openTranscript==='function') window._openTranscript();
   };
+  ctxMenu.querySelector('#avaCxToastToggle').onclick = function(e){
+    e.stopPropagation();
+    var wasOn = (typeof window._tnvToastEnabled === 'function') ? window._tnvToastEnabled() : true;
+    var nowOn = !wasOn;
+    if(typeof window._tnvSetToastEnabled === 'function') window._tnvSetToastEnabled(nowOn);
+    _cxSyncToastCheck();
+    if(typeof showToast === 'function') showToast(nowOn ? 'Reply captions on' : 'Reply captions off');
+  };
+  function _cxSyncToastCheck(){
+    var el = ctxMenu.querySelector('#avaCxToastToggleChk');
+    if(!el) return;
+    var on = (typeof window._tnvToastEnabled === 'function') ? window._tnvToastEnabled() : true;
+    el.style.opacity = on ? '1' : '0';
+  }
   ctxMenu.querySelector('#avaCxLife').onclick = function(e){
     e.stopPropagation();
     ctxMenu.style.display='none';
@@ -68607,6 +68635,7 @@ async function srcAgentContact(supplier) {
     if(tick) tick.style.display = host ? 'flex' : 'none';
     if(typeof window._updateToggleLabel==='function') window._updateToggleLabel();
     _cxSyncModeChecks();
+    _cxSyncToastCheck();
     ctxMenu.style.display = 'block';
     ctxMenu.style.left = Math.min(clientX, window.innerWidth - 240) + 'px';
     ctxMenu.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
