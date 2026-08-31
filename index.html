@@ -7,7 +7,7 @@
     /* Base app chrome is pure black (sun + moon). Do NOT paint easyview as #0d0c15 —
        that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
        particles/beams only; moon fades beams out over 1.4s to stay true black. */
-    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;overflow-x:hidden!important;max-width:100vw!important;}
+    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
     html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
@@ -1599,25 +1599,16 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* COPY FIX: keep panel centered (Create Account's natural spot).
-     Equal min-height on both forms so Sign In rises to match Create Account's
-     green line — without pinning either to the top of the screen. */
+  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
+     Sign In / Guest stays centered — unchanged. */
   #authRightPanel.auth-register-mode{
-    /* no flex-start — stay centered like Sign In */
+    justify-content:flex-start!important;
     overscroll-behavior:contain!important;
+    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authStepForms #loginForm,
-  #authStepForms #registerForm{
-    min-height:420px!important;
-    box-sizing:border-box!important;
-  }
-  /* Extra lift on Sign In only — still slightly low vs Create Account */
-  #authStepForms #loginForm{
-    padding-bottom:28px!important;
-  }
-  #authStepForms #authProgress,
-  #authStepForms #authTabsBar{
+  #authRightPanel.auth-register-mode #registerForm{
     flex-shrink:0!important;
+    padding-bottom:12px!important;
   }
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
@@ -1815,17 +1806,6 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
   .bnav-desktop-only{display:none!important;}
   .bnav-mobile-more{display:flex!important;color:white!important;font-size:16px!important;font-weight:700!important;}
   #bottomNavBar.fullwidth{padding-bottom:env(safe-area-inset-bottom,0px)!important;height:auto!important;min-height:52px!important;}
-  /* Pill (non-fullwidth) nav bar is centered with left:50%/translateX(-50%)
-     and has no width cap, so on mobile its full row of icons (498px+) pushes
-     past both screen edges — the right-side icons (Stem/•••/orb) end up
-     off-screen. Cap it to the viewport and let it scroll instead. */
-  #bottomNavBar:not(.fullwidth){
-    max-width:calc(100vw - 24px)!important;
-    overflow-x:auto!important;
-    -webkit-overflow-scrolling:touch!important;
-    scrollbar-width:none!important;
-  }
-  #bottomNavBar:not(.fullwidth)::-webkit-scrollbar{display:none!important;}
   body.bottom-nav:not(.nav-fullwidth) .main{height:100vh!important;max-height:100vh!important;}
   body.bottom-nav.nav-fullwidth .main{height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;}
   body.nav-fullwidth .main{height:calc(100vh - 60px - env(safe-area-inset-bottom,0px))!important;}
@@ -5951,21 +5931,6 @@ to{opacity:0;transform:translateX(-40px);}}
   /* same circle even when floating mid-header */
   width:28px!important;
   height:28px!important;
-}
-/* Per-page centering for the STS mic (chat page + mobile full-screen
-   Settings page) is driven by JS — see _tnvPageCenterIn/_tnvPageCenterOut
-   near _tnvGlideToCenter — so it slides in with the same glide used
-   everywhere else, instead of snapping via a CSS position:fixed rule. */
-/* Studio (image gen) and Stem Studio both fully replace the page chrome with
-   their own overlay — the mic has no business floating over either one.
-   !important + targeting by id (not ".top-bar button") so this wins even
-   over the fixed/reparented tnv-centered state. */
-body.studio-open #topNavVoiceBtn,
-body.stem-studio-open #topNavVoiceBtn{
-  display:none!important;
-  opacity:0!important;
-  visibility:hidden!important;
-  pointer-events:none!important;
 }
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
@@ -10587,22 +10552,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </aside>
 
 <!-- Bottom Nav Bar -->
-<style>
-/* Fix: these were 8 separately position:fixed;left:Npx buttons — if the WebView's
-   CSS viewport is ever wider than the physical screen (packaged Android app),
-   the later ones (left:288/328px) land off the right edge. Anchor the whole
-   row from one fixed wrapper at left:0 instead, buttons just flow in flex order. */
-#bnavBLRow{position:fixed;bottom:0;left:0;display:flex;align-items:center;z-index:301;}
-/* relative (not static!) — each button must stay its own positioning context
-   so its .pulse-dot/.call-dot (position:absolute) anchors to itself instead
-   of escaping up to this row and landing on top of the ••• button. left is
-   still killed since ordering is done via CSS `order` now (see
-   applyBLIconLayout), not px offsets — a static left here would otherwise
-   physically shift a relative-positioned element off its flex slot. */
-#bnavBLRow>button{position:relative!important;bottom:auto!important;left:auto!important;top:auto!important;right:auto!important;}
-</style>
-<div id="bnavBLRow">
-<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
 <!-- Pulse feed -->
 <button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" aria-label="Pulse" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -10645,7 +10595,6 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </button>
 <!-- Customize which icons show in the bottom-left row — opens blIconsDrawerModal -->
 <button type="button" id="bnavBLMoreBtn" onclick="openBLIconsDrawer()" title="Customize icons" aria-label="Customize bottom-left icons" style="display:none;opacity:0;pointer-events:none;">•••</button>
-</div>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
     <div class="pp-top">
@@ -15801,12 +15750,8 @@ var BL_ICONS = [
 // BL_ICONS (it's not a customizable icon, it's the trigger for customizing
 // the rest), so it needs to be added on separately here.
 var BL_ROW_ALL_IDS = BL_ICONS.map(function(it){ return it.id; }).concat(['bnavBLMoreBtn']);
-// Default for first-time users (no saved localStorage config yet): only
-// Notes / Ask / Control Centre / Settings pinned, in that order, before the
-// ••• button. Pulse, Call, Create Image, and Stem Studio start hidden —
-// still available via the customizer drawer, just not pinned out of the box.
-var blShownIds = ['bnavNotesBtn','bnavAskBtn','bnavControlCenterBtn','bnavSettingsBtn'];
-var blHiddenIds = ['bnavPulseBtn','bnavCallBtn','bnavImageGenBtn','bnavStemBtn'];
+var blShownIds = BL_ICONS.map(function(it){ return it.id; }); // default: all shown, original order
+var blHiddenIds = [];
 var _blCustDragId = null, _blCustDragZone = null;
 var _blMoreBtnFirstReveal = true; // gates the one-time .5s page-load delay on the ••• button, see _revealBLRow()
 
@@ -15848,15 +15793,8 @@ function _blIconAllowedNow(id){
   return true;
 }
 function applyBLIconLayout(){
-  // NOTE: #bnavBLRow is a real flex row now (see wrapper CSS above), so
-  // packing/order belongs to CSS `order`, not manually computed `left` px
-  // offsets. The old x-accumulator here was left over from before the row
-  // wrapper existed, and left `left` written on relative-positioned buttons
-  // — which physically shifts them off their flex slot on top of whatever's
-  // next to them, i.e. exactly the "icons doubling" glitch. `order` is
-  // idempotent and race-free: no accumulator, no dependency on forEach
-  // execution order, safe to call anytime.
-  blShownIds.forEach(function(id, idx){
+  var x = 0;
+  blShownIds.forEach(function(id){
     var it = _blFindItem(id);
     var el = document.getElementById(id);
     if(!it || !el) return;
@@ -15868,8 +15806,8 @@ function applyBLIconLayout(){
     }
     el.removeAttribute('data-bl-user-hidden');
     el.style.removeProperty('display'); // let existing bottom-nav/conditional CSS decide visibility
-    el.style.removeProperty('left'); // clear any stale px offset from before this fix
-    el.style.order = idx;
+    el.style.setProperty('left', x + 'px', 'important');
+    x += it.width;
   });
   blHiddenIds.forEach(function(id){
     var el = document.getElementById(id);
@@ -15878,7 +15816,7 @@ function applyBLIconLayout(){
     el.style.setProperty('display', 'none', 'important');
   });
   var moreBtn = document.getElementById('bnavBLMoreBtn');
-  if(moreBtn){ moreBtn.style.removeProperty('left'); moreBtn.style.order = blShownIds.length + 1; }
+  if(moreBtn) moreBtn.style.setProperty('left', x + 'px', 'important');
   // First real layout pass is done. Reveal the whole row (icons + •••) here,
   // synchronously, in the same pass as the display/left writes above —
   // NOT via a CSS class that some other selector has to notice and react
@@ -21207,7 +21145,6 @@ function authReset(){
     authRenderLastMethod();
   }catch(_e){}
 }
-
 function authShowForms(mode){
   try{
     var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
@@ -21335,7 +21272,6 @@ function switchAuthTab(t){
     if(panel){
       if(t==='register') panel.classList.add('auth-register-mode');
       else panel.classList.remove('auth-register-mode');
-      panel.classList.remove('auth-forms-mode');
       panel.scrollTop=0;
     }
   }catch(_e){}
@@ -22290,17 +22226,6 @@ function setView(id){
   if(sbX) sbX.style.display=(id==='sec-whiteboard'?'block':'none');
   // Set current view ID first, then update floating mic button visibility
   _currentViewId = id;
-  // Mirror the view id onto <body> so pure-CSS per-page rules (STS mic
-  // centering on the chat page, etc.) can target it without JS having to
-  // touch the button's style/class directly — see the #topNavVoiceBtn
-  // per-page overrides near .top-actions in the stylesheet.
-  try{ document.body.setAttribute('data-syn-view', id); }catch(_dv){}
-  // Slide the STS mic to mid-header on the chat page (mobile), same glide
-  // used by the idle/live centering — see _tnvPageCenterIn/_tnvPageCenterOut.
-  try{
-    if(id === 'sec-chat'){ if(typeof window._tnvPageCenterIn === 'function') window._tnvPageCenterIn(); }
-    else if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut();
-  }catch(_tpc){}
   if(typeof window._ttsUpdateFloatingPill === 'function') window._ttsUpdateFloatingPill(id);
   // Deep-space aurora is saved per-scope (ask-me-anything vs active chat vs
   // other pages) — re-sync the canvas now that we've switched views.
@@ -40426,7 +40351,6 @@ function _bnavOpenMobileSettingsPage(){
     }
     if(dock.parentNode !== document.body) document.body.appendChild(dock);
     document.body.classList.add('chp-mobile-settings-open');
-    try{ if(typeof window._tnvPageCenterIn === 'function') window._tnvPageCenterIn(); }catch(_tpc){}
     var dockOpen = dock.classList.contains('open');
     if(!dockOpen){
       requestAnimationFrame(function(){ if(!gbtn.hidden) gbtn.click(); });
@@ -40445,7 +40369,6 @@ function _bnavOpenMobileSettingsPage(){
         e.stopPropagation();
         if(dock.classList.contains('open')) gbtn.click();
         document.body.classList.remove('chp-mobile-settings-open');
-        try{ if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut(); }catch(_tpc){}
         restoreDockHome();
       });
     }
@@ -40457,7 +40380,6 @@ function _bnavOpenMobileSettingsPage(){
       dock._mobileSettingsObserver = new MutationObserver(function(){
         if(!dock.classList.contains('open')){
           document.body.classList.remove('chp-mobile-settings-open');
-          try{ if(typeof window._tnvPageCenterOut === 'function') window._tnvPageCenterOut(); }catch(_tpc){}
           restoreDockHome();
         }
       });
@@ -53857,84 +53779,6 @@ window._tnvSendAway = _tnvSendAway;
 window._tnvGlideHome = _tnvGlideHome;
 window._tnvGlideToCenter = _tnvGlideToCenter;
 
-/** Page-driven mic centering (mobile chat page / mobile Settings page).
- *  Same FLIP glide as _tnvGlideToCenter, but decoupled from that function's
- *  _tnvCentered/TOP_BAR_HIDDEN bookkeeping so it never fights the idle/live
- *  speech-to-speech centering system — if the idle-glide has already parked
- *  the mic center (_tnvCentered true), this is a no-op and that system stays
- *  in charge. Marked with data-tnv-page-parked so the matching *Out call
- *  only ever undoes centering it itself caused. */
-function _tnvPageCenterIn(){
-  if(window.innerWidth > 768) return;
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn || _tnvCentered || btn.classList.contains('tnv-centered')) return;
-  var first = btn.getBoundingClientRect();
-  var rowCy = (typeof _tnvComputeCenterRowCy === 'function')
-    ? _tnvComputeCenterRowCy()
-    : (first.top + first.height / 2);
-  btn.setAttribute('data-tnv-page-parked', '1');
-  document.body.appendChild(btn);
-  btn.classList.add('tnv-centered');
-  btn.style.transition = 'none';
-  btn.style.setProperty('position', 'fixed', 'important');
-  btn.style.setProperty('left', '50%', 'important');
-  btn.style.setProperty('top', rowCy + 'px', 'important');
-  btn.style.right = 'auto';
-  btn.style.bottom = 'auto';
-  btn.style.margin = '0';
-  btn.style.zIndex = '100050';
-  btn.style.transform = 'translate(-50%,-50%)';
-  var last = btn.getBoundingClientRect();
-  var dx = first.left - last.left;
-  var dy = first.top - last.top;
-  btn.style.opacity = '0';
-  btn.style.transform = 'translate(-50%,-50%) translate('+dx+'px,'+dy+'px) scale(0.55)';
-  void btn.offsetWidth;
-  btn.style.transition = 'transform .45s cubic-bezier(0.22,1,0.36,1), opacity .4s ease';
-  btn.style.opacity = '1';
-  btn.style.transform = 'translate(-50%,-50%) scale(1)';
-  _tnvTrackToastDuring(500);
-  btn.addEventListener('transitionend', function _pciSettle(e){
-    if(e.target !== btn || e.propertyName !== 'transform') return;
-    if(btn.getAttribute('data-tnv-page-parked') !== '1') return;
-    btn.style.transition = '';
-    btn.style.transform = 'translate(-50%,-50%)';
-  }, {once:true});
-}
-function _tnvPageCenterOut(){
-  var btn = document.getElementById('topNavVoiceBtn');
-  if(!btn || btn.getAttribute('data-tnv-page-parked') !== '1') return;
-  btn.removeAttribute('data-tnv-page-parked');
-  if(_tnvCentered) return; // idle/live system independently owns the button now — leave it be
-  var first = btn.getBoundingClientRect();
-  btn.classList.remove('tnv-centered');
-  btn.style.transition = 'none';
-  btn.style.transform = 'none';
-  _tnvClearCenteredInline();
-  var home = document.querySelector('.top-bar .top-actions') || _tnvHomeParent;
-  if(home){
-    if(_tnvHomeNextSibling && _tnvHomeNextSibling.parentNode === home) home.insertBefore(btn, _tnvHomeNextSibling);
-    else home.insertBefore(btn, home.firstChild);
-  }
-  var last = btn.getBoundingClientRect();
-  var dx = first.left - last.left;
-  var dy = first.top - last.top;
-  btn.style.transform = 'translate('+dx+'px,'+dy+'px)';
-  btn.style.opacity = '1';
-  void btn.offsetWidth;
-  btn.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1)';
-  btn.style.transform = 'translate(0,0)';
-  _tnvTrackToastDuring(450);
-  btn.addEventListener('transitionend', function _pcoSettle(e){
-    if(e.target !== btn || e.propertyName !== 'transform') return;
-    btn.style.transition = '';
-    btn.style.transform = '';
-    btn.style.opacity = '';
-  }, {once:true});
-}
-window._tnvPageCenterIn = _tnvPageCenterIn;
-window._tnvPageCenterOut = _tnvPageCenterOut;
-
 // ── Idle-state centered logo (mobile) ──────────────────────────────────
 // When the top bar is collapsed AND speech-to-speech is NOT running, the
 // centered "tap to talk" slot shows the Synapses logo mark instead of the
@@ -53987,24 +53831,68 @@ function _synLogoCenterClick(){
 }
 /** Shows the centered idle logo. Pass immediate=true to skip the fade/scale-in
  *  (used on page-load restore, where an animated entrance would look wrong). */
+/**
+ * Where the idle "tap to talk" icon should sit given what's on screen right
+ * now. Left (16px) is the default home for it, but that spot is exactly
+ * where the Settings page's own back/close chrome and the LLM chat page's
+ * header controls live, so it gets bumped to top-center on those pages
+ * instead of overlapping them. On the Studio pages (image/video gen and
+ * Stem Studio) it's hidden entirely — those are full-screen tools of their
+ * own and don't need the voice affordance floating over them.
+ */
+function _synLogoIdlePlacement(){
+  try{
+    if(document.body.classList.contains('studio-open') || document.body.classList.contains('stem-studio-open')) return 'hide';
+    if(document.body.classList.contains('chp-mobile-settings-open')) return 'center';
+    if(typeof _chpInLlmChat === 'function' && _chpInLlmChat()) return 'center';
+  }catch(e){}
+  return 'left';
+}
+function _synLogoIdleBaseTransform(placement){
+  return placement === 'center' ? 'translate(-50%,-50%)' : 'translateY(-50%)';
+}
+/** Re-syncs the idle icon's left/center placement (and hides it on Studio
+ *  pages) without touching the live speech-to-speech mic. Safe to call any
+ *  time — no-ops if the idle icon isn't currently showing. Wired to a
+ *  body-class MutationObserver below so it stays correct as the user
+ *  navigates, without needing a hook at every single nav call site. */
+function _synLogoIdleReposition(){
+  var el = document.getElementById('tnvLogoCenterBtn');
+  if(!el) return;
+  var placement = _synLogoIdlePlacement();
+  if(placement === 'hide'){ _synLogoCenterHide(true); return; }
+  if(el.dataset.placement === placement) return;
+  el.dataset.placement = placement;
+  el.style.transition = 'left .28s cubic-bezier(0.22,1,0.36,1), transform .28s cubic-bezier(0.22,1,0.36,1)';
+  el.style.left = (placement === 'center') ? '50%' : '16px';
+  el.style.transform = _synLogoIdleBaseTransform(placement) + ' scale(1)';
+}
 function _synLogoCenterShow(immediate){
-  // This idle "tap to talk" logo lives at a fixed left:16px spot meant for
-  // the mobile layout only. `body.bottom-nav` is NOT a reliable mobile
-  // signal — it's the nav-position preference and defaults to true even on
-  // desktop — so check actual viewport width instead (same check used
-  // elsewhere in the app, e.g. isMobileRail/isMobileDrawer above).
+  // This idle "tap to talk" logo is meant for the mobile layout only.
+  // `body.bottom-nav` is NOT a reliable mobile signal — it's the nav-position
+  // preference and defaults to true even on desktop — so check actual
+  // viewport width instead (same check used elsewhere in the app, e.g.
+  // isMobileRail/isMobileDrawer above).
   var isMobileViewport = false;
   try{ isMobileViewport = window.matchMedia('(max-width:768px)').matches; }catch(e){}
   if(!isMobileViewport) return;
+  // Settings / LLM chat pages: shift to top-center so it doesn't sit on top
+  // of their own left-side header chrome. Studio pages: don't show it at all.
+  var placement = _synLogoIdlePlacement();
+  if(placement === 'hide') return;
   var rowCy = (typeof _tnvComputeCenterRowCy === 'function') ? _tnvComputeCenterRowCy() : 30;
+  var leftPos = (placement === 'center') ? '50%' : '16px';
+  var baseTransform = _synLogoIdleBaseTransform(placement);
   var el = document.getElementById('tnvLogoCenterBtn');
   if(el){
     // Already showing — just re-assert visibility + position (safe-area/
     // rowCy can settle late on load, see the repeated restore passes below).
+    el.dataset.placement = placement;
+    el.style.left = leftPos;
     el.style.top = rowCy + 'px';
     el.style.display = '';
     el.style.opacity = '1';
-    el.style.transform = 'translateY(-50%) scale(1)';
+    el.style.transform = baseTransform + ' scale(1)';
     return;
   }
   el = document.createElement('div');
@@ -54012,8 +53900,9 @@ function _synLogoCenterShow(immediate){
   el.title = 'Start voice';
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
-  el.style.cssText = 'position:fixed;left:16px;top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
-  el.style.transform = immediate ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.55)';
+  el.dataset.placement = placement;
+  el.style.cssText = 'position:fixed;left:'+leftPos+';top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
+  el.style.transform = immediate ? (baseTransform + ' scale(1)') : (baseTransform + ' scale(0.55)');
   el.style.opacity = immediate ? '1' : '0';
   el.innerHTML = _SYN_LOGO_CENTER_SVG;
   el.addEventListener('click', _synLogoCenterClick);
@@ -54023,7 +53912,7 @@ function _synLogoCenterShow(immediate){
     void el.offsetWidth;
     el.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1), opacity .35s ease';
     el.style.opacity = '1';
-    el.style.transform = 'translateY(-50%) scale(1)';
+    el.style.transform = baseTransform + ' scale(1)';
   }
 }
 /** Hides/removes the centered idle logo. Pass immediate=true to skip the fade-out
@@ -54032,13 +53921,29 @@ function _synLogoCenterHide(immediate){
   var el = document.getElementById('tnvLogoCenterBtn');
   if(!el) return;
   if(immediate){ el.remove(); return; }
+  var baseTransform = _synLogoIdleBaseTransform(el.dataset.placement);
   el.style.transition = 'transform .22s ease, opacity .22s ease';
   el.style.opacity = '0';
-  el.style.transform = 'translateY(-50%) scale(0.6)';
+  el.style.transform = baseTransform + ' scale(0.6)';
   setTimeout(function(){ if(el && el.parentNode) el.parentNode.removeChild(el); }, 240);
 }
 window._synLogoCenterShow = _synLogoCenterShow;
 window._synLogoCenterHide = _synLogoCenterHide;
+window._synLogoIdleReposition = _synLogoIdleReposition;
+// Keep the idle icon's placement in sync as the user navigates. Settings
+// (chp-mobile-settings-open), the LLM chat page (llm-thread), and both
+// Studio overlays (studio-open / stem-studio-open) are all signaled via a
+// class on <body>, so one observer here covers every page-switch path
+// instead of needing a hook at each individual nav function.
+(function(){
+  function bootIdlePlacementObserver(){
+    if(!window.MutationObserver) return;
+    var mo = new MutationObserver(function(){ _synLogoIdleReposition(); });
+    mo.observe(document.body, { attributes:true, attributeFilter:['class'] });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootIdlePlacementObserver);
+  else bootIdlePlacementObserver();
+})();
 
 // ── Keep the active mic visible over full-screen overlays (Studio / Community) ──
 // Live STS: lift above Studio modal and fly to the Studio header icon cluster.
