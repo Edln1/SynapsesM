@@ -64285,11 +64285,13 @@ function speakVoiceReply(text) {
     }, typeof ms === 'number' ? ms : 4200);
   }
   var _toastShownAt = 0;
-  // Set by the X button (session-only) or by the persisted menu toggle below.
-  // On desktop, hovering the mic also re-arms it (see the hover IIFE further
-  // down) — but touch has no hover, which is exactly why a tap-X on mobile
-  // used to have no way back short of a reload. The long-press context menu
-  // ("Reply captions" toggle) now gives mobile an explicit way to re-arm it.
+  var _toastManualClose = false; // set on any X-close so the self-heal observer below doesn't fight it back open mid-response; cleared on the next fresh toast() call
+  // Purely the persisted "Reply captions" menu toggle now. The X button on an
+  // expanded toast just closes it (keepArmed=true in that toastHide call) and
+  // no longer touches this flag, and hovering the mic no longer force-clears
+  // it either — both used to override this setting, which is what caused the
+  // toast to silently come back on even after the user explicitly turned it
+  // off from the long-press menu.
   var _toastUserDismissed = (function(){
     try { return localStorage.getItem('synapses_sts_toast_enabled') === '0'; } catch(e) { return false; }
   })();
@@ -64298,9 +64300,10 @@ function speakVoiceReply(text) {
     _toastUserDismissed = !on;
     try { localStorage.setItem('synapses_sts_toast_enabled', on ? '1' : '0'); } catch(e){}
   };
-  function toast(msg) {
+  function toast(msg, peek) {
     if (!_on) return;
-    if (_toastUserDismissed) { try { if (window._toastDebug) console.log('[toast] suppressed — _toastUserDismissed still true, staying hidden for:', msg.slice(0,40)); } catch(_dbgU){} _toastFull = msg; return; } // stay hidden until user re-hovers the mic icon
+    if (_toastUserDismissed && !peek) { try { if (window._toastDebug) console.log('[toast] suppressed — reply captions turned off in menu, staying hidden for:', msg.slice(0,40)); } catch(_dbgU){} _toastFull = msg; return; } // stay hidden until user re-enables via the long-press menu toggle, or peeks via hover
+    _toastManualClose = false; // fresh display — any earlier X-close no longer applies
     _toastShownAt = Date.now();
     try { if (window._toastDebug) console.log('[toast] show:', msg); } catch(_dbg3){}
     if (!_toast) {
@@ -64314,7 +64317,7 @@ function speakVoiceReply(text) {
       // speaking. User's own X-dismiss and the 30s hard cap are respected.
       try {
         var _toastClassObserver = new MutationObserver(function() {
-          if (_toastUserDismissed) return;
+          if (_toastUserDismissed || _toastManualClose) return;
           if (!_on || !_ttsBusy) return;
           if (Date.now() - _toastShownAt >= 30000) return;
           if (_toast && !_toast.classList.contains('show')) {
@@ -64337,10 +64340,10 @@ function speakVoiceReply(text) {
     var closeBtn = document.createElement('button');
     closeBtn.innerHTML = '&times;';
     closeBtn.title = 'Dismiss';
-    closeBtn.style.cssText = 'position:absolute;top:-10px;right:-10px;background:rgba(10,11,22,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.45);font-size:13px;line-height:1;cursor:pointer;padding:0;transition:color 0.2s;z-index:10;';
+    closeBtn.style.cssText = 'position:absolute;top:-10px;right:-10px;background:rgba(10,11,22,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:18px;height:18px;display:none;align-items:center;justify-content:center;color:rgba(255,255,255,0.45);font-size:13px;line-height:1;cursor:pointer;padding:0;transition:color 0.2s;z-index:10;';
     closeBtn.onmouseover = function(){ closeBtn.style.color = 'rgba(255,255,255,0.7)'; };
     closeBtn.onmouseout = function(){ closeBtn.style.color = 'rgba(255,255,255,0.35)'; };
-    closeBtn.onclick = function(e) { e.stopPropagation(); toastHide(true, true); };
+    closeBtn.onclick = function(e) { e.stopPropagation(); toastHide(true, true, true); };
     _toast.appendChild(closeBtn);
     var hint = document.createElement('span');
     hint.className = 'toast-expand-hint';
@@ -64438,7 +64441,7 @@ function speakVoiceReply(text) {
   var _bargeHoldTimer = null;
   var TOAST_MIN_VISIBLE_MS = 350; // floor so a hide racing right behind a show can't flash it off in <1 frame
   var _toastHidePending = null;
-  function toastHide(force, userDismiss) {
+  function toastHide(force, userDismiss, keepArmed) {
     if (_bargeHoldToast && !force) return;
     // A hide landing a moment after the toast just appeared (e.g. flush/
     // drain signal racing the show call) used to blank it almost instantly —
@@ -64475,7 +64478,10 @@ function speakVoiceReply(text) {
       return;
     }
     if (_toastHidePending) { clearTimeout(_toastHidePending); _toastHidePending = null; }
-    if (userDismiss) _toastUserDismissed = true;
+    if (userDismiss) {
+      _toastManualClose = true; // stops the self-heal observer from reopening this instance
+      if (!keepArmed) _toastUserDismissed = true;
+    }
     // TEMP DEBUG — remove once the flash bug is confirmed fixed. Logs who
     // actually hid the toast and how long it had been visible, so a repro
     // can be diagnosed from the console instead of guessing blind.
@@ -64514,8 +64520,8 @@ function speakVoiceReply(text) {
     var _hoverOpened = false; // true only when toast was reopened via hover, not during normal display
 
     function _maybeShow() {
-      if (_toastFull && _toast && !_toast.classList.contains('show')) {
-        toast(_toastFull);
+      if (_toastFull && (!_toast || !_toast.classList.contains('show'))) {
+        toast(_toastFull, true); // peek=true: bypass the disabled-menu-setting check just for this hover-triggered look
         _hoverOpened = true; // mark that this was a hover-reopened toast
       }
     }
@@ -64523,13 +64529,13 @@ function speakVoiceReply(text) {
       if (!_hoverOpened) return; // don't hide if toast is showing normally (she's still talking)
       clearTimeout(_hideTimer);
       _hideTimer = setTimeout(function() {
-        if (!_overBtn && !_overToast) { try { if (window._toastDebug) console.log('[toast][site:hover-mouseleave-grace]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(); _hoverOpened = false; }
+        if (!_overBtn && !_overToast) { try { if (window._toastDebug) console.log('[toast][site:hover-mouseleave-grace]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true, true, true); _hoverOpened = false; }
       }, 120); // 120ms grace — enough time to slide mouse from button to toast
     }
 
     // Reset _hoverOpened whenever toast is shown normally (via speak())
     var _origToastHide = toastHide;
-    toastHide = function(force, userDismiss) { _hoverOpened = false; _origToastHide(force, userDismiss); };
+    toastHide = function(force, userDismiss, keepArmed) { _hoverOpened = false; _origToastHide(force, userDismiss, keepArmed); };
 
     function _attachHover(btnId) {
       var b = document.getElementById(btnId);
@@ -64539,8 +64545,7 @@ function speakVoiceReply(text) {
         _overBtn = true;
         clearTimeout(_hideTimer);
         clearTimeout(_hoverTimer);
-        try { if (window._toastDebug) console.log('[toast][hover] mouseenter on #' + btnId + ' | _toastUserDismissed was:', _toastUserDismissed, '-> false | _toastFull set:', !!_toastFull); } catch(_dbgH){}
-        _toastUserDismissed = false; // re-arm perma-on mode — X'd toast comes back to life on this hover
+        try { if (window._toastDebug) console.log('[toast][hover] mouseenter on #' + btnId + ' | _toastUserDismissed:', _toastUserDismissed, '(menu-off setting — hover no longer overrides it) | _toastFull set:', !!_toastFull); } catch(_dbgH){}
         _hoverTimer = setTimeout(_maybeShow, 1000); // 1s hold to reveal
       });
       b.addEventListener('mouseleave', function(e) {
@@ -64554,7 +64559,7 @@ function speakVoiceReply(text) {
           _maybeHide(); // 120ms grace to reach toast
         } else {
           clearTimeout(_hideTimer);
-          try { if (window._toastDebug) console.log('[toast][site:hover-mouseleave-instant]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(); // instant hide for any other direction
+          try { if (window._toastDebug) console.log('[toast][site:hover-mouseleave-instant]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true, true, true); // instant hide for any other direction
           _hoverOpened = false;
         }
       });
@@ -64783,8 +64788,9 @@ function speakVoiceReply(text) {
     window._voiceUsedResearch = false;
     var _toastShown = false;
     function _showToastWithSpeech() {
-      if (!_wantToast || _toastShown) return;
+      if (_toastShown) return;
       _toastShown = true;
+      if (!_wantToast) { _toastFull = text; return; } // avatar already shows this reply live — still remember it so hover-peek can pull it up later
       toast(text);
       if (_usedResearch && _toast) {
         try {
