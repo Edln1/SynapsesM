@@ -53073,6 +53073,18 @@ var _tnvCentered = false;
 var _tnvHomeParent = null;
 var _tnvHomeNextSibling = null;
 var TNV_GLIDE_DELAY = 700; // ms — pause before the mic starts gliding to center (spec: .5–1s)
+// Cached center-row Y for the current "top bar hidden" session. Whichever
+// trigger fires first (idle logo show or live mic glide) measures the row
+// once and locks it in; every later call this same hide-cycle (e.g. voice
+// actually turning on) reuses that exact px instead of re-measuring, so the
+// logo and the live mic never land a few px apart even if starting voice
+// causes a transient layout shift (permission prompt, title change, etc).
+// Cleared when the top bar is reopened so the next hide gets a fresh read.
+var _tnvCachedRowCy = null;
+// Set right before toggleTopNavVoice() when the click originated from the
+// centered idle logo — tells _setTopNavVoiceActive to swap the mic in right
+// where the logo was instead of flying it in from its top-bar home slot.
+var _tnvActivateInPlace = false;
 
 function _tnvClearGlideTimer(){
   if(_tnvGlideTimer){ clearTimeout(_tnvGlideTimer); _tnvGlideTimer = null; }
@@ -53182,6 +53194,44 @@ function _tnvGlideToCenter(){
     btn.style.transform = 'translate(-50%,-50%)';
   }, {once:true});
 }
+
+/** Swaps the real mic into the centered slot in place, with a plain fade+scale-in
+ *  (same entrance as the idle logo it's replacing) — no fly-in from the mic's
+ *  top-bar home slot. Used when voice is started by tapping the centered logo
+ *  itself, since the user is already looking at that exact spot. */
+function _tnvActivateMicInPlace(){
+  var btn = document.getElementById('topNavVoiceBtn');
+  var bar = document.querySelector('.top-bar');
+  if(!btn || !bar) return;
+  var rowCy = (typeof _tnvComputeCenterRowCy === 'function') ? _tnvComputeCenterRowCy() : 30;
+  _tnvHomeParent = btn.parentNode;
+  _tnvHomeNextSibling = btn.nextSibling;
+  document.body.appendChild(btn);
+  btn.classList.add('tnv-centered');
+  _tnvCentered = true;
+  try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
+  btn.style.transition = 'none';
+  btn.style.setProperty('position', 'fixed', 'important');
+  btn.style.setProperty('left', '50%', 'important');
+  btn.style.setProperty('top', rowCy + 'px', 'important');
+  btn.style.right = 'auto';
+  btn.style.bottom = 'auto';
+  btn.style.margin = '0';
+  btn.style.zIndex = '100050';
+  btn.style.opacity = '0';
+  btn.style.transform = 'translate(-50%,-50%) scale(0.55)';
+  void btn.offsetWidth;
+  btn.style.transition = 'transform .35s cubic-bezier(0.22,1,0.36,1), opacity .3s ease';
+  btn.style.opacity = '1';
+  btn.style.transform = 'translate(-50%,-50%) scale(1)';
+  btn.addEventListener('transitionend', function _inPlaceSettle(e){
+    if(e.target !== btn || e.propertyName !== 'transform') return;
+    if(!_tnvCentered) return;
+    btn.style.transition = '';
+    btn.style.transform = 'translate(-50%,-50%)';
+  }, {once:true});
+}
+window._tnvActivateMicInPlace = _tnvActivateMicInPlace;
 
 function _tnvClearCenteredInline(){
   var btn = document.getElementById('topNavVoiceBtn');
@@ -53365,6 +53415,7 @@ var _SYN_LOGO_CENTER_SVG = '<svg class="syn-logo-mark" width="28" height="28" vi
 
 function _synLogoCenterClick(){
   if(typeof _currentViewId !== 'undefined' && _currentViewId === 'sec-chat'){
+    _tnvActivateInPlace = true;
     if(typeof toggleTopNavVoice === 'function') toggleTopNavVoice();
   } else if(typeof setView === 'function'){
     setView('sec-chat');
@@ -53450,6 +53501,7 @@ function _tnvClearEscapeInline(btn){
  * so the mic doesn't sit higher after app reopen.
  */
 function _tnvComputeCenterRowCy(){
+  if(_tnvCachedRowCy !== null) return _tnvCachedRowCy;
   var rowCy = 0;
   try{
     /* Prefer title label mid (stable even when top-actions are faded/hidden) */
@@ -53489,7 +53541,8 @@ function _tnvComputeCenterRowCy(){
     rowCy = 30;
   }
   /* Same optical nudge as the original live glide */
-  return rowCy - 2;
+  _tnvCachedRowCy = rowCy - 2;
+  return _tnvCachedRowCy;
 }
 
 function _tnvApplyCenteredAtRow(btn, rowCy){
@@ -53816,6 +53869,7 @@ function toggleTopBar(){
     _tnvTrackToastDuring(300);
     if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
     if(_tnvCentered) _tnvGlideHome();
+    _tnvCachedRowCy = null;
   }
   if(typeof _chpSyncStripScroll === 'function') _chpSyncStripScroll();
   // If Control Centre is open, let it reclaim (or give back) the strip of
@@ -63429,7 +63483,12 @@ function speakVoiceReply(text) {
       if(v){
         if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
         if(typeof _tnvClearGlideTimer === 'function') _tnvClearGlideTimer();
-        _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+        if(_tnvActivateInPlace){
+          _tnvActivateInPlace = false;
+          if(typeof _tnvActivateMicInPlace === 'function') _tnvActivateMicInPlace();
+        } else {
+          _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+        }
       } else {
         if(_tnvCentered && typeof _tnvEnsureHomeMic === 'function'){
           _tnvEnsureHomeMic();
