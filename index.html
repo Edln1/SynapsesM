@@ -2306,9 +2306,8 @@ body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
 }
 /* Settings + Control Centre used to be force-hidden above the mobile
    breakpoint (mobile-only entry points). Removed per product decision —
-   all icons in this row are visible on both mobile and desktop now; only
-   icons that specifically shouldn't appear on mobile (e.g. Stem Studio,
-   handled in _chpSyncAppsBoard) get hidden there instead. */
+   all icons in this row are visible on both mobile and desktop now,
+   including Stem Studio. */
 body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #bnavCallBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
 #bnavCallBtn .call-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#7c6af7;box-shadow:0 0 6px rgba(124,106,247,0.6);opacity:0;transition:opacity .2s ease;}
@@ -10579,7 +10578,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-6M9 18v-12M14 15v-6M19 18v-12"/></svg>
 </button>
 <button type="button" id="bnavImageGenBtn" onclick="openImageGenModal()" title="Create Image" aria-label="Create an image" style="display:none;opacity:0;pointer-events:none;">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <circle cx="8.5" cy="8.5" r="1.5"/>
     <path d="M21 15l-5-5L5 21"/>
@@ -37918,9 +37917,9 @@ window._avaBuildPrompt_companion = function(appContext, userText) {
  * data to inject (or a different vibe mode is active).
  */
 function _showVoiceLifeBadge(dbg) {
-  // Re-enabled for testing the inner-world/life-state branch logic.
-  // To turn back off later: uncomment the `return;` below.
-  // return;
+  // Deactivated — inner-world/life-state branch logic testing done.
+  // To turn back on later: comment out the `return;` below.
+  return;
   try {
     var m = window._avaVibeMode || 'blend';
     if (m === 'nodes') m = 'selfaware';
@@ -40076,18 +40075,10 @@ function _chpSyncAppsBoard(){
   // are gated by _blIconAllowedNow — same rule the drawer/row layout uses —
   // enforced last in the loop below so the apps-board force-show branch
   // just under this can't re-reveal them where they're not allowed.
-  var isMobileWidth = window.innerWidth <= 768;
   for(var j=0;j<ids.length;j++){
     var el=document.getElementById(ids[j]);
     if(!el) continue;
     if(typeof _blIconAllowedNow==='function' && !_blIconAllowedNow(ids[j])){
-      el.style.setProperty('display','none','important');
-      continue;
-    }
-    // Stem Studio (music) is mobile-only hidden — force it OFF whenever
-    // we're actually on a mobile-width screen, before the sidebarOn/on
-    // branching below can set it back to flex!important.
-    if(isMobileWidth && ids[j]==='bnavStemBtn'){
       el.style.setProperty('display','none','important');
       continue;
     }
@@ -83294,28 +83285,6 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
 
 </script>
 
-<!-- Hide Stem Studio (music) icon on mobile only — desktop bottom-nav keeps it.
-     Placed at the very end of the document (after every other rule that
-     targets #bnavStemBtn) on purpose: several earlier rules show it with
-     display:flex!important at the SAME specificity as any single override,
-     so on a specificity tie the LATER rule in the cascade wins regardless
-     of how specific the selector is. Being last guarantees this one wins.
-     Also closes the 40px gap it leaves by shifting the two icons after it
-     left, since these bottom-nav buttons use fixed left offsets, not flex
-     flow. -->
-<style>
-@media(max-width:768px){
-  #bnavStemBtn,
-  body.bottom-nav #bnavStemBtn,
-  body.nav-fullwidth #bnavStemBtn,
-  html.chp-sidebar-mode #bnavStemBtn,
-  html.chp-sidebar-mode:not(.chp-apps-board) #bnavStemBtn,
-  html.chp-sidebar-mode:not(.chp-apps-board) body.bottom-nav #bnavStemBtn,
-  html.chp-sidebar-mode.chp-apps-board #bnavStemBtn,
-  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{display:none!important;}
-  #bnavSettingsBtn{left:208px!important;}
-  #bnavControlCenterBtn{left:248px!important;}
-}
-</style>
+
 
 </body>
