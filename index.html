@@ -64299,6 +64299,9 @@ function speakVoiceReply(text) {
   window._tnvSetToastEnabled = function(on){
     _toastUserDismissed = !on;
     try { localStorage.setItem('synapses_sts_toast_enabled', on ? '1' : '0'); } catch(e){}
+    // Turned on mid-response (she's still talking or a reply just landed) —
+    // show it right now instead of waiting for the next turn.
+    if (on && _toastFull) toast(_toastFull);
   };
   function toast(msg, peek) {
     if (!_on) return;
@@ -66006,7 +66009,14 @@ function speakVoiceReply(text) {
       var _sysCap = _matrixBit ? (_dayVoice ? 9000 : 7600) : (_dayVoice ? 7500 : 6000);
       if (sys.length > _sysCap) sys = sys.slice(0, _sysCap) + '\n[context trimmed for speed]';
       var _matrixListAsk = _matrixBit && /\b(list|read out|report|tell me|what('s| is| are)|show me|go through)\b.{0,20}\b(matrix|attribute|trait|personality|setting)s?\b/i.test(text || '');
-      var _maxTok = _matrixListAsk ? 900 : (_voiceNeedsSearch && _voiceSearchCtx) ? 480 : (synCtx ? 480 : (_dayVoice ? 420 : 320));
+      /* Search/synCtx/day-schedule turns are explicitly told (in
+       * _voiceSearchMandate below) to ignore the 1-2 sentence cap and give
+       * a complete spoken answer — the token budget has to actually cover
+       * that or the stream just stops mid-sentence with no warning.
+       * Bumped up from 480/480/420 so "several sentences" has room to
+       * finish; _trimToCompleteSentence() above is still the real
+       * guarantee against a mid-word cutoff if a turn runs long anyway. */
+      var _maxTok = _matrixListAsk ? 900 : (_voiceNeedsSearch && _voiceSearchCtx) ? 700 : (synCtx ? 650 : (_dayVoice ? 550 : 320));
       /* ── Intelligent live-search for voice: same /agent-chat brain text
        * chat uses (Qwen + search_web tool, model decides on its own whether
        * this turn needs a search) instead of the old regex-keyword guess.
@@ -66143,6 +66153,34 @@ function speakVoiceReply(text) {
        * form a sentence". */
       var _agentToolCallFailed = false;
 
+      /* Safety net for hitting the max_tokens ceiling mid-sentence: the
+       * server just stops streaming wherever the token budget ran out
+       * (no finish_reason check anywhere in this file), so a long reply
+       * can end on a half-word. _tryEarlySpeakOnMeta already refuses to
+       * speak unless the text ends in ./!/? — this gives the normal
+       * stream-done path the same guarantee instead of speaking whatever
+       * raw fragment the stream happened to stop on.
+       *
+       * Walks backward from the end so it keeps the MAXIMUM amount of
+       * content up to the true last sentence boundary — not just the
+       * first punctuation mark it happens to find. Skips '.' that's a
+       * decimal point (digit on both sides, e.g. "98.6 degrees") so a
+       * number mid-sentence doesn't get mistaken for a sentence end. */
+      function _trimToCompleteSentence(s) {
+        if (!s) return s;
+        if (/[.!?]['"\u201d)]?\s*$/.test(s)) return s; // already ends cleanly
+        for (var i = s.length - 1; i >= 0; i--) {
+          var c = s.charAt(i);
+          if (c !== '.' && c !== '!' && c !== '?') continue;
+          if (c === '.' && /\d/.test(s.charAt(i - 1)) && /\d/.test(s.charAt(i + 1))) continue; // decimal point, not a sentence end
+          var end = i + 1;
+          if (/['"\u201d)]/.test(s.charAt(end))) end++; // keep a trailing close-quote/paren
+          return s.slice(0, end).trim();
+        }
+        return s; // no real sentence boundary found at all — better to say the
+                   // whole short fragment than say nothing
+      }
+
       function _findMetaOpen(s) {
         /* Search full buffer so <me + ta> split across SSE chunks still matches */
         var tagIdx = s.search(/<meta\b/i);
@@ -66208,6 +66246,14 @@ function speakVoiceReply(text) {
             var _metaOpenIdx = _findMetaOpen(_rawFull);
             var reply = (_metaOpenIdx !== -1 ? _rawFull.slice(0, _metaOpenIdx).trim() : _rawFull);
             if (_spokeEarly && _earlyReply && reply.length < _earlyReply.length) reply = _earlyReply;
+            // _earlyReply was already validated to end cleanly, so this is a
+            // no-op there; it only fires on the stream-done path, which had
+            // no such guard and could otherwise speak a token-limit cutoff.
+            var _preTrimLen = reply.length;
+            reply = _trimToCompleteSentence(reply);
+            if (reply.length !== _preTrimLen) {
+              console.warn('[Voice] reply hit max_tokens mid-sentence — trimmed ' + (_preTrimLen - reply.length) + ' trailing chars to end cleanly');
+            }
             var _meta = _parseMetaFrom(_rawFull);
             var _elapsed = Date.now() - _t0;
             console.log('[Voice] Full response: ' + _elapsed + 'ms (' + (_elapsed < 2000 ? 'fast' : 'slow') + ')' +
