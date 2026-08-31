@@ -10220,6 +10220,32 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         <div class="auth-legal auth-legal-choices"><a href="#">Your privacy choices</a></div>
       </div>
 
+      <!-- ══ STEP 0b: Waitlist gate (new users) — same look as authStepStart, ══
+           swapped in by showAuthModal() instead of the normal get-started
+           options when there's no recognized returning-user email. Blocks
+           access: no OAuth buttons, no "Continue as guest", no sign-up link —
+           only email capture, plus a "Sign in" escape hatch for anyone who
+           already has real credentials (invited users, admins, etc). -->
+      <div id="authStepWaitlist" class="auth-step" style="display:none;flex-direction:column;">
+        <div id="waitlistFormWrap">
+          <div class="auth-start-title">Synapses is invite-only right now</div>
+          <div class="auth-start-sub">We're onboarding people gradually to keep voice &amp; live avatar fast for everyone already in. Drop your email and we'll let you know the moment a spot opens up.</div>
+          <div class="form-row"><label>Email</label><input id="waitlistEmail" type="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();joinWaitlist();}"></div>
+          <div class="modal-err" id="waitlistErr"></div>
+          <button class="modal-btn" id="waitlistJoinBtn" onclick="joinWaitlist()">Join the waitlist →</button>
+          <div class="auth-switch-row">Already invited? <a onclick="authShowForms('login')">Sign in</a></div>
+          <div class="auth-legal">By joining, you agree to Synapses' <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+        </div>
+        <div id="waitlistDoneWrap" style="display:none;text-align:center;">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="auth-start-title" style="font-size:22px;">You're on the list</div>
+          <div class="auth-start-sub" id="waitlistDoneSub" style="max-width:none;">We'll email you the moment a spot opens up.</div>
+          <div class="auth-switch-row">Already invited? <a onclick="authShowForms('login')">Sign in</a></div>
+        </div>
+      </div>
+
       <!-- ══ STEP 1+: Sign in / Create account (wizard) ══ -->
       <div id="authStepForms" class="auth-step" style="display:none;flex-direction:column;">
         <div class="auth-progress" id="authProgress" style="display:none;"><span id="apDot1"></span><span id="apDot2"></span><span id="apDot3"></span></div>
@@ -19691,6 +19717,13 @@ sf.classList.add('sb-hidden');setTimeout(function(){sf.style.display='none';ir.s
 }
 (function(){var handle=document.getElementById('sidebarResize'),sb=document.getElementById('sidebar'),dragging=false,startX=0,startW=0;handle.addEventListener('mousedown',function(e){if(sb.classList.contains('collapsed'))return;dragging=true;startX=e.clientX;startW=sb.offsetWidth;document.body.style.cursor='col-resize';document.body.style.userSelect='none';e.preventDefault();});document.addEventListener('mousemove',function(e){if(!dragging)return;sb.style.width=Math.max(180,Math.min(420,startW+(e.clientX-startX)))+'px';wbRepositionDrawer&&wbRepositionDrawer();});document.addEventListener('mouseup',function(){if(dragging){dragging=false;document.body.style.cursor='';document.body.style.userSelect='';}});})();
 
+// Waitlist gate: when true, anyone showAuthModal() doesn't recognize as a
+// returning user (no saved last-login email) is shown the email-only
+// waitlist step instead of the normal get-started/OAuth/guest options —
+// see authShowWaitlist()/joinWaitlist() below. Flip to false to fully open
+// signups back up again.
+var WAITLIST_MODE = true;
+window._waitlistGateActive = false;
 var allJobs=[],currentUser=null,jobFilter='all';
 (function(){
   function showAuthModal(){
@@ -19705,7 +19738,12 @@ var allJobs=[],currentUser=null,jobFilter='all';
         var le = localStorage.getItem('synapses_last_email') || '';
         var em = document.getElementById('loginEmail');
         if(typeof authReset==='function') authReset();
-        if(le && typeof authShowForms==='function') authShowForms('login'); // returning user — skip straight to sign in
+        // Waitlist is the front door for EVERYONE while it's on, every time —
+        // no "recognize returning users and skip it" shortcut. The gate's own
+        // "Already invited? Sign in" link is the only way past it, and it's
+        // prefilled below with the last email if we have one.
+        if(WAITLIST_MODE && typeof authShowWaitlist==='function') authShowWaitlist();
+        else if(le && typeof authShowForms==='function') authShowForms('login'); // returning user — skip straight to sign in
         if(em && le && !em.value) em.value = le;
         // Median native storage may still have email after some updates (not after full uninstall)
         if(typeof median !== 'undefined' && median.storage && median.storage.app && typeof median.storage.app.get === 'function'){
@@ -21194,9 +21232,11 @@ function authPreviewSync(){
 }
 function authReset(){
   try{
-    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
+    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms'), wl=document.getElementById('authStepWaitlist');
     if(start) start.style.display='flex';
     if(forms) forms.style.display='none';
+    if(wl) wl.style.display='none';
+    window._waitlistGateActive = false;
     var e1=document.getElementById('loginErr'), e2=document.getElementById('registerErr');
     if(e1){e1.style.display='none';e1.textContent='';}
     if(e2){e2.style.display='none';e2.textContent='';}
@@ -21210,16 +21250,80 @@ function authReset(){
 
 function authShowForms(mode){
   try{
-    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
+    // 'register' is never reachable from the waitlist gate (no sign-up link
+    // there on purpose) — but guard it anyway so a stray call can't hand a
+    // gated new user the account-creation wizard.
+    if(window._waitlistGateActive && mode==='register') mode='login';
+    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms'), wl=document.getElementById('authStepWaitlist');
     if(start) start.style.display='none';
+    if(wl) wl.style.display='none';
     if(forms) forms.style.display='flex';
     switchAuthTab(mode==='register'?'register':'login');
     var panel=document.getElementById('authRightPanel');
     if(panel) panel.scrollTop=0;
   }catch(_e){}
 }
+/** Shows the waitlist gate step (blocks new users from the normal
+ *  OAuth/email/guest options) and swaps in the "already joined" confirmation
+ *  view instead of the empty form if this browser has already submitted an
+ *  email before. Called by showAuthModal() for anyone who isn't recognized
+ *  as a returning user. */
+function authShowWaitlist(){
+  try{
+    var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms'), wl=document.getElementById('authStepWaitlist');
+    if(start) start.style.display='none';
+    if(forms) forms.style.display='none';
+    if(wl) wl.style.display='flex';
+    window._waitlistGateActive = true;
+    var joined=null; try{ joined = localStorage.getItem('synapses_waitlist_email'); }catch(_e){}
+    var fw=document.getElementById('waitlistFormWrap'), dw=document.getElementById('waitlistDoneWrap'), sub=document.getElementById('waitlistDoneSub');
+    if(joined){
+      if(fw) fw.style.display='none';
+      if(dw) dw.style.display='block';
+      if(sub) sub.textContent = "We'll email "+joined+" the moment a spot opens up.";
+    } else {
+      if(fw) fw.style.display='block';
+      if(dw) dw.style.display='none';
+    }
+    var panel=document.getElementById('authRightPanel');
+    if(panel) panel.scrollTop=0;
+  }catch(_e){}
+}
+window.authShowWaitlist = authShowWaitlist;
+/** Submits the waitlist email. Tries a Supabase 'waitlist' table insert (id
+ *  auto, email unique) but always resolves to the success state locally even
+ *  if that fails/table doesn't exist yet — the gate itself doesn't depend on
+ *  the write succeeding, only on remembering locally that this browser
+ *  already joined so it doesn't re-show the empty form on next visit. */
+function joinWaitlist(){
+  var emEl=document.getElementById('waitlistEmail'), err=document.getElementById('waitlistErr'), btn=document.getElementById('waitlistJoinBtn');
+  var email = emEl ? emEl.value.trim().toLowerCase() : '';
+  if(!email || !/^\S+@\S+\.\S+$/.test(email)){ if(err) showErr(err,'Enter a valid email.'); return; }
+  if(err){ err.style.display='none'; }
+  if(btn){ btn.disabled=true; btn.textContent='Joining…'; }
+  function finish(){
+    try{ localStorage.setItem('synapses_waitlist_email', email); }catch(_e){}
+    if(btn){ btn.disabled=false; btn.textContent='Join the waitlist →'; }
+    var fw=document.getElementById('waitlistFormWrap'), dw=document.getElementById('waitlistDoneWrap'), sub=document.getElementById('waitlistDoneSub');
+    if(sub) sub.textContent = "We'll email "+email+" the moment a spot opens up.";
+    if(fw) fw.style.display='none';
+    if(dw) dw.style.display='block';
+    if(typeof synTrack==='function'){ try{ synTrack('waitlist_join',{email:email}); }catch(_t){} }
+  }
+  try{
+    if(window._supabase && typeof _supabase.from==='function'){
+      _supabase.from('waitlist').insert({email:email}).then(finish).catch(finish);
+    } else { finish(); }
+  }catch(_e){ finish(); }
+}
+window.joinWaitlist = joinWaitlist;
 function authBackToStart(){
   try{
+    // Gated new users never see the normal start screen — bounce the back
+    // arrow to the waitlist step instead of the options screen it would
+    // otherwise reveal (which has its own sign-up path and would defeat the
+    // gate).
+    if(window._waitlistGateActive){ authShowWaitlist(); return; }
     // If mid-registration wizard, step back one instead of leaving entirely
     var forms=document.getElementById('authStepForms');
     var regVisible = forms && forms.style.display!=='none' && document.getElementById('registerForm').style.display!=='none';
@@ -21348,7 +21452,11 @@ var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.
 var fav=document.getElementById('feedProfileAv');if(fav){fav.style.backgroundImage='';fav.style.background='linear-gradient(135deg,#6366f1,#4f46e5)';fav.textContent='?';}
 var sbAv=document.getElementById('sbAvatar');if(sbAv){sbAv.style.backgroundImage='';sbAv.style.display='none';}
 var preload=document.getElementById('avatarPreload');if(preload)preload.textContent='';
-document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';if(typeof authReset==='function')authReset();_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
+document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';if(typeof authReset==='function')authReset();
+// Waitlist gate is the front door for everyone, every time — see the
+// matching comment in showAuthModal() above.
+try{ if(typeof WAITLIST_MODE !== 'undefined' && WAITLIST_MODE && typeof authShowWaitlist === 'function') authShowWaitlist(); }catch(_lo){}
+_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
 function getRoles(u){return u?u.roles||['personal']:[];}
 function canSeek(u){return getRoles(u).includes('seeker');}
 function canRecruit(u){return getRoles(u).includes('recruiter');}
@@ -40344,14 +40452,21 @@ function _syncChpUserDock(){
   var header = document.getElementById('chpHeader');
   if(!dock) return;
   var u = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+  // The gear opens Appearance/Voice/Connectors/Plan too, not just account
+  // info — those are useful for guests as well, so gate visibility on ANY
+  // active session (hasUser) rather than a full signed-in account. Gating
+  // the whole button on signedIn meant it was completely inert (hidden,
+  // unclickable) for anyone browsing as a guest. `signedIn` is kept below
+  // for the bits that genuinely need a real account: email + plan display.
+  var hasUser = !!(u && u.email);
   var signedIn = !!(u && u.email && !u.isGuest);
-  dock.hidden = !signedIn;
-  if(sidebar) sidebar.classList.toggle('chp-account-ready', signedIn);
+  dock.hidden = !hasUser;
+  if(sidebar) sidebar.classList.toggle('chp-account-ready', hasUser);
   if(gbtn){
-    gbtn.hidden = !signedIn;
-    if(!signedIn) gbtn.setAttribute('aria-expanded','false');
+    gbtn.hidden = !hasUser;
+    if(!hasUser) gbtn.setAttribute('aria-expanded','false');
   }
-  if(!signedIn){
+  if(!hasUser){
     dock.classList.remove('open');
     if(header) header.classList.remove('chp-head-open');
     return;
@@ -40360,12 +40475,17 @@ function _syncChpUserDock(){
   var mailEl = document.getElementById('chpUserMail');
   var planEl = document.getElementById('chpUserPlan');
   var av = document.getElementById('chpUserAv');
-  if(nameEl) nameEl.textContent = u.name || (u.email.split('@')[0]);
-  if(mailEl) mailEl.textContent = u.email || '';
+  if(nameEl) nameEl.textContent = signedIn ? (u.name || u.email.split('@')[0]) : 'Guest';
+  if(mailEl) mailEl.textContent = signedIn ? (u.email || '') : 'Browsing as guest';
   if(planEl){
-    var pro = (typeof isPro === 'function') ? isPro() : (u.plan === 'pro');
-    planEl.textContent = pro ? 'Pro' : 'Free';
-    planEl.classList.toggle('pro', !!pro);
+    if(signedIn){
+      var pro = (typeof isPro === 'function') ? isPro() : (u.plan === 'pro');
+      planEl.textContent = pro ? 'Pro' : 'Free';
+      planEl.classList.toggle('pro', !!pro);
+    } else {
+      planEl.textContent = '';
+      planEl.classList.remove('pro');
+    }
   }
   if(av){
     if(u.avatar){
@@ -40622,6 +40742,19 @@ window._bnavOpenMobileSettingsPage = _bnavOpenMobileSettingsPage;
     btn.addEventListener('click', function(e){
       e.stopPropagation();
       if(dock.hidden) return;
+      // On mobile, #chpUserDock has to be moved out to <body> first (see
+      // _bnavOpenMobileSettingsPage) — its normal home inside #chpSidebar
+      // sits under a backdrop-filter, which creates a new containing block
+      // for position:fixed elements and collapses the dock to nothing. The
+      // bottom-nav gear already routes through that reparenting path; this
+      // header gear was going straight to the plain desktop toggle below
+      // and silently doing nothing visible when tapped on mobile.
+      var isMobile = false;
+      try{ isMobile = window.matchMedia('(max-width:768px)').matches; }catch(_m){ isMobile = window.innerWidth <= 768; }
+      if(isMobile && typeof window._bnavOpenMobileSettingsPage === 'function'){
+        window._bnavOpenMobileSettingsPage();
+        return;
+      }
       var on = dock.classList.toggle('open');
       btn.setAttribute('aria-expanded', on ? 'true' : 'false');
       var header = document.getElementById('chpHeader');
