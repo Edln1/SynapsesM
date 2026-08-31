@@ -1599,16 +1599,16 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
-     Sign In / Guest stays centered — unchanged. */
+  /* Create Account stays vertically centered like Sign In on mobile.
+     Panel already scrolls (overflow-y:auto) if content is taller than the screen. */
   #authRightPanel.auth-register-mode{
-    justify-content:flex-start!important;
+    justify-content:center!important;
     overscroll-behavior:contain!important;
-    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
   #authRightPanel.auth-register-mode #registerForm{
+    display:flex!important;
+    flex-direction:column!important;
     flex-shrink:0!important;
-    padding-bottom:12px!important;
   }
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
@@ -21250,7 +21250,8 @@ function switchAuthTab(t){
   document.getElementById('tabLogin').classList.toggle('active',t==='login');
   document.getElementById('tabRegister').classList.toggle('active',t==='register');
   document.getElementById('loginForm').style.display=t==='login'?'flex':'none';
-  document.getElementById('registerForm').style.display=t==='register'?'block':'none';
+  document.getElementById('registerForm').style.display=t==='register'?'flex':'none';
+  if(t==='register'){ var rf=document.getElementById('registerForm'); if(rf){ rf.style.flexDirection='column'; } }
   if(t==='login'){ authSetLeftView('brand'); }
   authRegGoStep(1);
   if(t==='login'){
@@ -21266,7 +21267,7 @@ function switchAuthTab(t){
       });
     }
   }
-  /* Mobile only: Create Account can scroll; Sign In stays centered (no layout change) */
+  /* Mobile: keep Create Account centered like Sign In (same screen position) */
   try{
     var panel=document.getElementById('authRightPanel');
     if(panel){
@@ -53831,68 +53832,24 @@ function _synLogoCenterClick(){
 }
 /** Shows the centered idle logo. Pass immediate=true to skip the fade/scale-in
  *  (used on page-load restore, where an animated entrance would look wrong). */
-/**
- * Where the idle "tap to talk" icon should sit given what's on screen right
- * now. Left (16px) is the default home for it, but that spot is exactly
- * where the Settings page's own back/close chrome and the LLM chat page's
- * header controls live, so it gets bumped to top-center on those pages
- * instead of overlapping them. On the Studio pages (image/video gen and
- * Stem Studio) it's hidden entirely — those are full-screen tools of their
- * own and don't need the voice affordance floating over them.
- */
-function _synLogoIdlePlacement(){
-  try{
-    if(document.body.classList.contains('studio-open') || document.body.classList.contains('stem-studio-open')) return 'hide';
-    if(document.body.classList.contains('chp-mobile-settings-open')) return 'center';
-    if(typeof _chpInLlmChat === 'function' && _chpInLlmChat()) return 'center';
-  }catch(e){}
-  return 'left';
-}
-function _synLogoIdleBaseTransform(placement){
-  return placement === 'center' ? 'translate(-50%,-50%)' : 'translateY(-50%)';
-}
-/** Re-syncs the idle icon's left/center placement (and hides it on Studio
- *  pages) without touching the live speech-to-speech mic. Safe to call any
- *  time — no-ops if the idle icon isn't currently showing. Wired to a
- *  body-class MutationObserver below so it stays correct as the user
- *  navigates, without needing a hook at every single nav call site. */
-function _synLogoIdleReposition(){
-  var el = document.getElementById('tnvLogoCenterBtn');
-  if(!el) return;
-  var placement = _synLogoIdlePlacement();
-  if(placement === 'hide'){ _synLogoCenterHide(true); return; }
-  if(el.dataset.placement === placement) return;
-  el.dataset.placement = placement;
-  el.style.transition = 'left .28s cubic-bezier(0.22,1,0.36,1), transform .28s cubic-bezier(0.22,1,0.36,1)';
-  el.style.left = (placement === 'center') ? '50%' : '16px';
-  el.style.transform = _synLogoIdleBaseTransform(placement) + ' scale(1)';
-}
 function _synLogoCenterShow(immediate){
-  // This idle "tap to talk" logo is meant for the mobile layout only.
-  // `body.bottom-nav` is NOT a reliable mobile signal — it's the nav-position
-  // preference and defaults to true even on desktop — so check actual
-  // viewport width instead (same check used elsewhere in the app, e.g.
-  // isMobileRail/isMobileDrawer above).
+  // This idle "tap to talk" logo lives at a fixed left:16px spot meant for
+  // the mobile layout only. `body.bottom-nav` is NOT a reliable mobile
+  // signal — it's the nav-position preference and defaults to true even on
+  // desktop — so check actual viewport width instead (same check used
+  // elsewhere in the app, e.g. isMobileRail/isMobileDrawer above).
   var isMobileViewport = false;
   try{ isMobileViewport = window.matchMedia('(max-width:768px)').matches; }catch(e){}
   if(!isMobileViewport) return;
-  // Settings / LLM chat pages: shift to top-center so it doesn't sit on top
-  // of their own left-side header chrome. Studio pages: don't show it at all.
-  var placement = _synLogoIdlePlacement();
-  if(placement === 'hide') return;
   var rowCy = (typeof _tnvComputeCenterRowCy === 'function') ? _tnvComputeCenterRowCy() : 30;
-  var leftPos = (placement === 'center') ? '50%' : '16px';
-  var baseTransform = _synLogoIdleBaseTransform(placement);
   var el = document.getElementById('tnvLogoCenterBtn');
   if(el){
     // Already showing — just re-assert visibility + position (safe-area/
     // rowCy can settle late on load, see the repeated restore passes below).
-    el.dataset.placement = placement;
-    el.style.left = leftPos;
     el.style.top = rowCy + 'px';
     el.style.display = '';
     el.style.opacity = '1';
-    el.style.transform = baseTransform + ' scale(1)';
+    el.style.transform = 'translateY(-50%) scale(1)';
     return;
   }
   el = document.createElement('div');
@@ -53900,9 +53857,8 @@ function _synLogoCenterShow(immediate){
   el.title = 'Start voice';
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
-  el.dataset.placement = placement;
-  el.style.cssText = 'position:fixed;left:'+leftPos+';top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
-  el.style.transform = immediate ? (baseTransform + ' scale(1)') : (baseTransform + ' scale(0.55)');
+  el.style.cssText = 'position:fixed;left:16px;top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
+  el.style.transform = immediate ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.55)';
   el.style.opacity = immediate ? '1' : '0';
   el.innerHTML = _SYN_LOGO_CENTER_SVG;
   el.addEventListener('click', _synLogoCenterClick);
@@ -53912,7 +53868,7 @@ function _synLogoCenterShow(immediate){
     void el.offsetWidth;
     el.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1), opacity .35s ease';
     el.style.opacity = '1';
-    el.style.transform = baseTransform + ' scale(1)';
+    el.style.transform = 'translateY(-50%) scale(1)';
   }
 }
 /** Hides/removes the centered idle logo. Pass immediate=true to skip the fade-out
@@ -53921,29 +53877,13 @@ function _synLogoCenterHide(immediate){
   var el = document.getElementById('tnvLogoCenterBtn');
   if(!el) return;
   if(immediate){ el.remove(); return; }
-  var baseTransform = _synLogoIdleBaseTransform(el.dataset.placement);
   el.style.transition = 'transform .22s ease, opacity .22s ease';
   el.style.opacity = '0';
-  el.style.transform = baseTransform + ' scale(0.6)';
+  el.style.transform = 'translateY(-50%) scale(0.6)';
   setTimeout(function(){ if(el && el.parentNode) el.parentNode.removeChild(el); }, 240);
 }
 window._synLogoCenterShow = _synLogoCenterShow;
 window._synLogoCenterHide = _synLogoCenterHide;
-window._synLogoIdleReposition = _synLogoIdleReposition;
-// Keep the idle icon's placement in sync as the user navigates. Settings
-// (chp-mobile-settings-open), the LLM chat page (llm-thread), and both
-// Studio overlays (studio-open / stem-studio-open) are all signaled via a
-// class on <body>, so one observer here covers every page-switch path
-// instead of needing a hook at each individual nav function.
-(function(){
-  function bootIdlePlacementObserver(){
-    if(!window.MutationObserver) return;
-    var mo = new MutationObserver(function(){ _synLogoIdleReposition(); });
-    mo.observe(document.body, { attributes:true, attributeFilter:['class'] });
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootIdlePlacementObserver);
-  else bootIdlePlacementObserver();
-})();
 
 // ── Keep the active mic visible over full-screen overlays (Studio / Community) ──
 // Live STS: lift above Studio modal and fly to the Studio header icon cluster.
