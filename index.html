@@ -53455,7 +53455,7 @@ function _synLogoCenterShow(immediate){
     el.style.top = rowCy + 'px';
     el.style.display = '';
     el.style.opacity = '1';
-    el.style.transform = 'translate(-50%,-50%) scale(1)';
+    el.style.transform = 'translateY(-50%) scale(1)';
     return;
   }
   el = document.createElement('div');
@@ -53463,8 +53463,8 @@ function _synLogoCenterShow(immediate){
   el.title = 'Start voice';
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
-  el.style.cssText = 'position:fixed;left:50%;top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
-  el.style.transform = immediate ? 'translate(-50%,-50%) scale(1)' : 'translate(-50%,-50%) scale(0.55)';
+  el.style.cssText = 'position:fixed;left:16px;top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
+  el.style.transform = immediate ? 'translateY(-50%) scale(1)' : 'translateY(-50%) scale(0.55)';
   el.style.opacity = immediate ? '1' : '0';
   el.innerHTML = _SYN_LOGO_CENTER_SVG;
   el.addEventListener('click', _synLogoCenterClick);
@@ -53474,7 +53474,7 @@ function _synLogoCenterShow(immediate){
     void el.offsetWidth;
     el.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1), opacity .35s ease';
     el.style.opacity = '1';
-    el.style.transform = 'translate(-50%,-50%) scale(1)';
+    el.style.transform = 'translateY(-50%) scale(1)';
   }
 }
 /** Hides/removes the centered idle logo. Pass immediate=true to skip the fade-out
@@ -53485,7 +53485,7 @@ function _synLogoCenterHide(immediate){
   if(immediate){ el.remove(); return; }
   el.style.transition = 'transform .22s ease, opacity .22s ease';
   el.style.opacity = '0';
-  el.style.transform = 'translate(-50%,-50%) scale(0.6)';
+  el.style.transform = 'translateY(-50%) scale(0.6)';
   setTimeout(function(){ if(el && el.parentNode) el.parentNode.removeChild(el); }, 240);
 }
 window._synLogoCenterShow = _synLogoCenterShow;
