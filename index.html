@@ -40751,7 +40751,15 @@ window._bnavOpenMobileSettingsPage = _bnavOpenMobileSettingsPage;
       // and silently doing nothing visible when tapped on mobile.
       var isMobile = false;
       try{ isMobile = window.matchMedia('(max-width:768px)').matches; }catch(_m){ isMobile = window.innerWidth <= 768; }
-      if(isMobile && typeof window._bnavOpenMobileSettingsPage === 'function'){
+      // Guard against re-entry: _bnavOpenMobileSettingsPage() itself fires a
+      // synthetic click on this same button to run the toggle logic below.
+      // Without the chp-mobile-settings-open check, that synthetic click got
+      // caught by this very redirect and bounced straight back into
+      // _bnavOpenMobileSettingsPage(), which scheduled another click — an
+      // infinite rAF loop that never reached dock.classList.toggle('open'),
+      // so the mobile settings page rendered as an empty shell (header only,
+      // no menu items) and never stopped spinning underneath.
+      if(isMobile && !document.body.classList.contains('chp-mobile-settings-open') && typeof window._bnavOpenMobileSettingsPage === 'function'){
         window._bnavOpenMobileSettingsPage();
         return;
       }
