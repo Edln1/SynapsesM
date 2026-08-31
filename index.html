@@ -5952,6 +5952,38 @@ to{opacity:0;transform:translateX(-40px);}}
   width:28px!important;
   height:28px!important;
 }
+/* Per-page position/visibility overrides for the STS mic (mobile only for
+   position; hide rules apply on any width). Requested behavior: centered on
+   the chat page and the mobile full-screen Settings page, fully hidden
+   inside Studio / Stem Studio. Targeted via body class/attribute rather than
+   a DOM-position check, so this still applies even when the idle-glide
+   feature (_tnvGlideToCenter) has reparented the button straight onto
+   <body> — a plain ".top-actions button" or ".top-bar-hidden" selector
+   would miss it once that reparent happens. */
+@media (max-width:768px){
+  body[data-syn-view="sec-chat"] #topNavVoiceBtn:not(.tnv-centered),
+  body.chp-mobile-settings-open #topNavVoiceBtn:not(.tnv-centered){
+    position:fixed!important;
+    left:50%!important;
+    top:calc(14px + env(safe-area-inset-top,0px) + 16px)!important;
+    right:auto!important;
+    bottom:auto!important;
+    margin:0!important;
+    transform:translate(-50%,-50%)!important;
+    z-index:100050;
+  }
+}
+/* Studio (image gen) and Stem Studio both fully replace the page chrome with
+   their own overlay — the mic has no business floating over either one.
+   !important + targeting by id (not ".top-bar button") so this wins even
+   over the fixed/reparented tnv-centered state. */
+body.studio-open #topNavVoiceBtn,
+body.stem-studio-open #topNavVoiceBtn{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
 body.topbar-hidden .hub-panel.active{padding-top:12px;}
 
 .bnav-btn svg { width:20px; height:20px; flex-shrink:0; }
@@ -15786,8 +15818,12 @@ var BL_ICONS = [
 // BL_ICONS (it's not a customizable icon, it's the trigger for customizing
 // the rest), so it needs to be added on separately here.
 var BL_ROW_ALL_IDS = BL_ICONS.map(function(it){ return it.id; }).concat(['bnavBLMoreBtn']);
-var blShownIds = BL_ICONS.map(function(it){ return it.id; }); // default: all shown, original order
-var blHiddenIds = [];
+// Default for first-time users (no saved localStorage config yet): only
+// Notes / Ask / Control Centre / Settings pinned, in that order, before the
+// ••• button. Pulse, Call, Create Image, and Stem Studio start hidden —
+// still available via the customizer drawer, just not pinned out of the box.
+var blShownIds = ['bnavNotesBtn','bnavAskBtn','bnavControlCenterBtn','bnavSettingsBtn'];
+var blHiddenIds = ['bnavPulseBtn','bnavCallBtn','bnavImageGenBtn','bnavStemBtn'];
 var _blCustDragId = null, _blCustDragZone = null;
 var _blMoreBtnFirstReveal = true; // gates the one-time .5s page-load delay on the ••• button, see _revealBLRow()
 
@@ -22271,6 +22307,11 @@ function setView(id){
   if(sbX) sbX.style.display=(id==='sec-whiteboard'?'block':'none');
   // Set current view ID first, then update floating mic button visibility
   _currentViewId = id;
+  // Mirror the view id onto <body> so pure-CSS per-page rules (STS mic
+  // centering on the chat page, etc.) can target it without JS having to
+  // touch the button's style/class directly — see the #topNavVoiceBtn
+  // per-page overrides near .top-actions in the stylesheet.
+  try{ document.body.setAttribute('data-syn-view', id); }catch(_dv){}
   if(typeof window._ttsUpdateFloatingPill === 'function') window._ttsUpdateFloatingPill(id);
   // Deep-space aurora is saved per-scope (ask-me-anything vs active chat vs
   // other pages) — re-sync the canvas now that we've switched views.
