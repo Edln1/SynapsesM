@@ -53137,9 +53137,10 @@ function _tnvGlideToCenter(){
   var btn = document.getElementById('topNavVoiceBtn');
   var bar = document.querySelector('.top-bar');
   if(!btn || !bar || _tnvCentered) return;
-  // Bail if state changed during the delay (bar reopened / voice went off).
+  // Bail if state changed during the delay (bar reopened). No longer gated
+  // on window._topNavVoiceActive — the mic re-centers whether or not speech-
+  // to-speech is actually running, so it stays reachable even when idle.
   if(typeof TOP_BAR_HIDDEN !== 'undefined' && !TOP_BAR_HIDDEN) return;
-  if(!window._topNavVoiceActive) return;
   var first = btn.getBoundingClientRect();
   /*
     Horizontal: true VIEWPORT center (under the front camera) — fixed + left:50%.
@@ -53319,6 +53320,102 @@ function _tnvSendAway(){
 window._tnvSendAway = _tnvSendAway;
 window._tnvGlideHome = _tnvGlideHome;
 window._tnvGlideToCenter = _tnvGlideToCenter;
+
+// ── Idle-state centered logo (mobile) ──────────────────────────────────
+// When the top bar is collapsed AND speech-to-speech is NOT running, the
+// centered "tap to talk" slot shows the Synapses logo mark instead of the
+// mic icon — same spot, same size, but it reads as "tap to open voice"
+// rather than a mic that looks like it should already be listening. The
+// moment voice actually turns on, this hides and the real mic (with its
+// live waveform/glow) takes over the exact same centered position via
+// _tnvGlideToCenter — see the call sites in toggleTopBar() and
+// _setTopNavVoiceActive(). This is a fresh, separate element (not the real
+// #bnavLogoMark, which stays put in the top bar and has its own unrelated
+// click behavior) — its own gradient/filter ids are suffixed "Ctr" so they
+// don't collide with the top bar logo's ids elsewhere on the page.
+var _SYN_LOGO_CENTER_SVG = '<svg class="syn-logo-mark" width="28" height="28" viewBox="0 0 80 80" fill="none" aria-hidden="true">'
+  + '<defs>'
+  + '<radialGradient id="synHaloTBCtr" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.45"/><stop offset="55%" stop-color="#6366f1" stop-opacity="0.12"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></radialGradient>'
+  + '<radialGradient id="synCoreTBCtr" cx="36%" cy="30%" r="70%"><stop offset="0%" stop-color="#f5f3ff"/><stop offset="28%" stop-color="#c4b5fd"/><stop offset="62%" stop-color="#7c6af7"/><stop offset="100%" stop-color="#312e81"/></radialGradient>'
+  + '<linearGradient id="synSpokeTBCtr" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c4b5fd" stop-opacity="0.95"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0.55"/></linearGradient>'
+  + '<filter id="synNodeGlowTBCtr" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/><feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+  + '<filter id="synCoreGlowTBCtr" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+  + '</defs>'
+  + '<circle cx="40" cy="40" r="18" fill="url(#synHaloTBCtr)"/>'
+  + '<g stroke="url(#synSpokeTBCtr)" stroke-width="1.35" stroke-linecap="round">'
+  + '<line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>'
+  + '<line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>'
+  + '<line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>'
+  + '<line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>'
+  + '<line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>'
+  + '<line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>'
+  + '</g>'
+  + '<g filter="url(#synNodeGlowTBCtr)">'
+  + '<circle cx="40" cy="10" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="40" cy="70" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#a5b4fc;#00d9ff;#a5b4fc" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="12" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#ffffff;#818cf8;#818cf8" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="68" cy="28" r="2.5" fill="#818cf8"><animate attributeName="fill" values="#818cf8;#818cf8;#818cf8;#00d9ff;#818cf8" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="16" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#a5b4fc;#ffffff;#a5b4fc;#a5b4fc" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="64" cy="62" r="2.5" fill="#a5b4fc"><animate attributeName="fill" values="#a5b4fc;#00d9ff;#a5b4fc;#a5b4fc;#a5b4fc" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>'
+  + '</g>'
+  + '<circle cx="40" cy="40" r="3.2" fill="url(#synCoreTBCtr)" filter="url(#synCoreGlowTBCtr)"><animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="40" cy="40" r="1.35" fill="#eef2ff" opacity="0.9"><animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/></circle>'
+  + '<circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>'
+  + '</svg>';
+
+function _synLogoCenterClick(){
+  if(typeof _currentViewId !== 'undefined' && _currentViewId === 'sec-chat'){
+    if(typeof toggleTopNavVoice === 'function') toggleTopNavVoice();
+  } else if(typeof setView === 'function'){
+    setView('sec-chat');
+  }
+}
+/** Shows the centered idle logo. Pass immediate=true to skip the fade/scale-in
+ *  (used on page-load restore, where an animated entrance would look wrong). */
+function _synLogoCenterShow(immediate){
+  var rowCy = (typeof _tnvComputeCenterRowCy === 'function') ? _tnvComputeCenterRowCy() : 30;
+  var el = document.getElementById('tnvLogoCenterBtn');
+  if(el){
+    // Already showing — just re-assert visibility + position (safe-area/
+    // rowCy can settle late on load, see the repeated restore passes below).
+    el.style.top = rowCy + 'px';
+    el.style.display = '';
+    el.style.opacity = '1';
+    el.style.transform = 'translate(-50%,-50%) scale(1)';
+    return;
+  }
+  el = document.createElement('div');
+  el.id = 'tnvLogoCenterBtn';
+  el.title = 'Start voice';
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.style.cssText = 'position:fixed;left:50%;top:'+rowCy+'px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100050;-webkit-tap-highlight-color:transparent;';
+  el.style.transform = immediate ? 'translate(-50%,-50%) scale(1)' : 'translate(-50%,-50%) scale(0.55)';
+  el.style.opacity = immediate ? '1' : '0';
+  el.innerHTML = _SYN_LOGO_CENTER_SVG;
+  el.addEventListener('click', _synLogoCenterClick);
+  el.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); _synLogoCenterClick(); } });
+  document.body.appendChild(el);
+  if(!immediate){
+    void el.offsetWidth;
+    el.style.transition = 'transform .4s cubic-bezier(0.22,1,0.36,1), opacity .35s ease';
+    el.style.opacity = '1';
+    el.style.transform = 'translate(-50%,-50%) scale(1)';
+  }
+}
+/** Hides/removes the centered idle logo. Pass immediate=true to skip the fade-out
+ *  (used when the mic is about to take its exact spot, to avoid a double-image). */
+function _synLogoCenterHide(immediate){
+  var el = document.getElementById('tnvLogoCenterBtn');
+  if(!el) return;
+  if(immediate){ el.remove(); return; }
+  el.style.transition = 'transform .22s ease, opacity .22s ease';
+  el.style.opacity = '0';
+  el.style.transform = 'translate(-50%,-50%) scale(0.6)';
+  setTimeout(function(){ if(el && el.parentNode) el.parentNode.removeChild(el); }, 240);
+}
+window._synLogoCenterShow = _synLogoCenterShow;
+window._synLogoCenterHide = _synLogoCenterHide;
 
 // ── Keep the active mic visible over full-screen overlays (Studio / Community) ──
 // Live STS: lift above Studio modal and fly to the Studio header icon cluster.
@@ -53693,13 +53790,21 @@ function toggleTopBar(){
     // Everything (mic included) fades out together right now, in sync, via
     // the plain .top-actions container rule — which shifts the mic by
     // ~16px if it's still an in-flow child, so keep the toast glued to it
-    // through that motion too. Only if speech-to-speech is live do we then,
-    // after a short pause, pull the mic out and glide it to center — a
-    // deliberate second beat, not part of the initial hide.
+    // through that motion too. After a short pause we then show the
+    // centered "tap to talk" affordance in the exact same spot — the real
+    // mic (with its live glow/waveform) if speech-to-speech is already
+    // running, otherwise the Synapses logo mark as an idle invite to start
+    // it. Whichever one is relevant is decided at fire time (not now),
+    // since voice could turn on/off during this delay.
     _tnvTrackToastDuring(300);
-    if(window._topNavVoiceActive){
-      _tnvGlideTimer = setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
-    }
+    _tnvGlideTimer = setTimeout(function(){
+      _tnvGlideTimer=null;
+      if(window._topNavVoiceActive){
+        _tnvGlideToCenter();
+      } else if(typeof _synLogoCenterShow === 'function'){
+        _synLogoCenterShow();
+      }
+    }, TNV_GLIDE_DELAY);
   } else {
     bar.classList.remove('hidden');
     document.body.classList.remove('topbar-hidden');
@@ -53709,6 +53814,7 @@ function toggleTopBar(){
     if(htb) htb.style.display=onHub?'flex':'none';
     var xb=document.getElementById('wbPanelCloseBtn'); if(xb) xb.style.display='';
     _tnvTrackToastDuring(300);
+    if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
     if(_tnvCentered) _tnvGlideHome();
   }
   if(typeof _chpSyncStripScroll === 'function') _chpSyncStripScroll();
@@ -53718,42 +53824,17 @@ function toggleTopBar(){
   // final box isn't there yet the instant classes flip — wait for that to
   // settle before re-measuring, otherwise --cc-top gets set mid-collapse and
   // the panel's own top .2s transition races the bar's, causing a jump/gap.
-  // A fixed setTimeout(260) was used here before, tuned against a headless
-  // desktop render — real phones can render slower/janky enough that .25s
-  // of *wall clock* CSS transition time doesn't reliably mean .25s of real
-  // elapsed time before the next paint is observable, so the timeout could
-  // fire while the bar was still mid-collapse and _ccApplyInsets would read
-  // a stale height, leaving a gap. Listen for the actual transitionend on
-  // the property that drives the box height (max-height) instead, with the
-  // old timeout kept only as a safety-net fallback in case the transition
-  // never fires (e.g. reduced-motion, or the property didn't actually
-  // change value so no transition runs at all).
+  // Both bnavCCPanel's `top` and .top-bar's collapse animate on their own
+  // timers, so this reads as two back-to-back smooth motions rather than
+  // a single combined one — good enough, and far better than the panel not
+  // moving at all.
   var ccPanelForInset = document.getElementById('bnavCCPanel');
   if(ccPanelForInset && ccPanelForInset.classList.contains('bnav-cc-open')){
-    if(_ccInsetFallbackTimer){ clearTimeout(_ccInsetFallbackTimer); _ccInsetFallbackTimer=null; }
-    if(bar && _ccInsetTransitionHandler){ bar.removeEventListener('transitionend', _ccInsetTransitionHandler); }
-    var settled = false;
-    var doApply = function(){
-      if(settled) return;
-      settled = true;
-      if(_ccInsetFallbackTimer){ clearTimeout(_ccInsetFallbackTimer); _ccInsetFallbackTimer=null; }
-      if(bar && _ccInsetTransitionHandler){ bar.removeEventListener('transitionend', _ccInsetTransitionHandler); _ccInsetTransitionHandler=null; }
+    setTimeout(function(){
       if(typeof _ccApplyInsets === 'function') _ccApplyInsets();
-    };
-    _ccInsetTransitionHandler = function(e){
-      if(e.target !== bar) return;
-      if(e.propertyName !== 'max-height') return;
-      doApply();
-    };
-    if(bar) bar.addEventListener('transitionend', _ccInsetTransitionHandler);
-    // Fallback: 450ms is comfortably past the .25s spec'd duration even
-    // with real-device slowdown, so if transitionend never arrives we still
-    // self-correct rather than leaving the gap permanently.
-    _ccInsetFallbackTimer = setTimeout(doApply, 450);
+    }, 260);
   }
 }
-var _ccInsetTransitionHandler = null;
-var _ccInsetFallbackTimer = null;
 
 // Restores the mic's centered position on reload/app-reopen if it was left
 // there last session (top bar collapsed + mic glided to center — see
@@ -53793,8 +53874,14 @@ function _restoreTnvCenteredState(){
   if(!wantCentered){
     /* Clear any leftover absolute/transform from a previous session */
     _tnvEnsureHomeMic();
+    // Top bar collapsed but no live-voice mic to restore — show the idle
+    // logo in the centered slot instead (skip animation on load restore).
+    if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && !window._topNavVoiceActive && typeof _synLogoCenterShow === 'function'){
+      _synLogoCenterShow(true);
+    }
     return;
   }
+  if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
   _tnvHomeParent = document.querySelector('.top-bar .top-actions') || btn.parentNode;
   _tnvHomeNextSibling = (_tnvHomeParent && btn.parentNode === _tnvHomeParent) ? btn.nextSibling : (_tnvHomeParent ? _tnvHomeParent.firstChild : null);
   /* Same body + top:rowCy as live glide (not bar-append with top:auto) */
@@ -63318,13 +63405,14 @@ function speakVoiceReply(text) {
 
   // Keeps document.body's 'voice-live' class in sync with _topNavVoiceActive,
   // and — if the top bar icons are already collapsed when this changes —
-  // kicks off the same delayed glide-to-center the mic button uses in
-  // toggleTopBar(). Note: turning speech-to-speech OFF while the mic is
-  // already centered does NOT send it away — it deliberately stays put in
-  // the middle of the header, visible and clickable, so there's still a way
-  // to get back into speech-to-speech even with every other icon collapsed.
-  // It only leaves that spot when the top bar itself is shown again (see the
-  // _tnvGlideHome() call in toggleTopBar's "show" branch).
+  // swaps the centered "tap to talk" affordance between the idle logo and
+  // the live mic. Turning voice ON while the logo is centered hides the
+  // logo and kicks off the same delayed glide-to-center the mic button
+  // uses in toggleTopBar(). Turning voice OFF while the mic is centered
+  // instantly un-centers it (invisible anyway, since it's parented back
+  // into the still-collapsed, opacity:0 top-actions row) and shows the
+  // idle logo in its place — so the centered slot always reflects whether
+  // speech-to-speech is actually running, whichever way it changes.
   function _setTopNavVoiceActive(v) {
     var was = !!window._topNavVoiceActive;
     window._topNavVoiceActive = v;
@@ -63337,9 +63425,18 @@ function speakVoiceReply(text) {
     if(v && !was && typeof synTrack==='function'){
       try{synTrack('voice_start',{entry:'top_nav'});}catch(e){}
     }
-    if(v && typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && typeof _tnvClearGlideTimer === 'function'){
-      _tnvClearGlideTimer();
-      _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+    if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN){
+      if(v){
+        if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
+        if(typeof _tnvClearGlideTimer === 'function') _tnvClearGlideTimer();
+        _tnvGlideTimer = window.setTimeout(function(){ _tnvGlideTimer=null; _tnvGlideToCenter(); }, TNV_GLIDE_DELAY);
+      } else {
+        if(_tnvCentered && typeof _tnvEnsureHomeMic === 'function'){
+          _tnvEnsureHomeMic();
+          try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e3){}
+        }
+        if(typeof _synLogoCenterShow === 'function') _synLogoCenterShow();
+      }
     }
     // If voice just turned on (or off) while the Studio modal is already open,
     // sync the mic's escape state immediately rather than waiting for the next
