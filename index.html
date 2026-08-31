@@ -53833,10 +53833,13 @@ function _synLogoCenterClick(){
  *  (used on page-load restore, where an animated entrance would look wrong). */
 function _synLogoCenterShow(immediate){
   // This idle "tap to talk" logo lives at a fixed left:16px spot meant for
-  // the mobile bottom-nav layout only. Desktop already has its own
-  // always-visible mic icon in .top-actions, so showing this too left a
-  // duplicate/afterimage icon in the top-left corner on desktop.
-  if(!document.body.classList.contains('bottom-nav')) return;
+  // the mobile layout only. `body.bottom-nav` is NOT a reliable mobile
+  // signal — it's the nav-position preference and defaults to true even on
+  // desktop — so check actual viewport width instead (same check used
+  // elsewhere in the app, e.g. isMobileRail/isMobileDrawer above).
+  var isMobileViewport = false;
+  try{ isMobileViewport = window.matchMedia('(max-width:768px)').matches; }catch(e){}
+  if(!isMobileViewport) return;
   var rowCy = (typeof _tnvComputeCenterRowCy === 'function') ? _tnvComputeCenterRowCy() : 30;
   var el = document.getElementById('tnvLogoCenterBtn');
   if(el){
