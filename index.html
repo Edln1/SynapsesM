@@ -64335,11 +64335,11 @@ function speakVoiceReply(text) {
     inner.appendChild(span);
     _toast.appendChild(inner);
     var closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><line x1="2" y1="5" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    closeBtn.innerHTML = '&times;';
     closeBtn.title = 'Dismiss';
-    closeBtn.style.cssText = 'position:absolute;top:5px;right:7px;background:transparent;border:none;color:rgba(255,255,255,0.16);cursor:pointer;padding:2px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;transition:color 0.2s;z-index:10;';
-    closeBtn.onmouseover = function(){ closeBtn.style.color = 'rgba(255,255,255,0.55)'; };
-    closeBtn.onmouseout = function(){ closeBtn.style.color = 'rgba(255,255,255,0.16)'; };
+    closeBtn.style.cssText = 'position:absolute;top:-10px;right:-10px;background:rgba(10,11,22,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.45);font-size:13px;line-height:1;cursor:pointer;padding:0;transition:color 0.2s;z-index:10;';
+    closeBtn.onmouseover = function(){ closeBtn.style.color = 'rgba(255,255,255,0.7)'; };
+    closeBtn.onmouseout = function(){ closeBtn.style.color = 'rgba(255,255,255,0.35)'; };
     closeBtn.onclick = function(e) { e.stopPropagation(); toastHide(true, true); };
     _toast.appendChild(closeBtn);
     var hint = document.createElement('span');
@@ -65233,6 +65233,31 @@ function speakVoiceReply(text) {
         if (_on) setTimeout(record, 800);
       });
       return;
+    }
+
+    // ── Voice → toggle the reply-captions toast on/off ──────────────────────
+    // Same local-regex-match pattern as the connectors detect() above, just
+    // for a plain in-app setting instead of an external app call. Matches
+    // things like "turn off the captions", "hide the reply toast", "turn the
+    // subtitles back on" — anything mentioning the toast/captions plus a
+    // clear on/off word. Falls through untouched if only one side matches
+    // (ambiguous), so it never hijacks an unrelated sentence that happens to
+    // contain "on" or "off".
+    if (!_vcHandled) {
+      var _toastCmdRe = /\b(captions?|subtitles?|(?:reply\s+)?(?:toast|bubble)|reply (?:text|pop[\s-]?up))\b/i;
+      if (_toastCmdRe.test(_t)) {
+        var _toastWantOn = /(?:\b(?:turn|switch)\b[\s\S]{0,30}\bon\b)|\b(?:enable|re-?enable|bring back|start showing|show)\b/i.test(_t);
+        var _toastWantOff = /(?:\b(?:turn|switch)\b[\s\S]{0,30}\boff\b)|\b(?:disable|hide|stop showing|don'?t show|do not show|get rid of)\b/i.test(_t);
+        if (_toastWantOn !== _toastWantOff) { // exactly one side matched — unambiguous
+          _vcHandled = true;
+          var _toastNewOn = _toastWantOn;
+          if (typeof window._tnvSetToastEnabled === 'function') window._tnvSetToastEnabled(_toastNewOn);
+          speak(_toastNewOn ? "Reply captions are back on." : "Got it — I'll stop showing the reply captions.");
+          _busy = false; _busySince = 0;
+          if (_on) setTimeout(record, 800);
+          return;
+        }
+      }
     }
 
     // Lean live-search is the streamed /agent-chat call in the main voice
