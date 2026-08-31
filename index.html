@@ -53866,6 +53866,13 @@ window._tnvGlideToCenter = _tnvGlideToCenter;
  *  only ever undoes centering it itself caused. */
 function _tnvPageCenterIn(){
   if(window.innerWidth > 768) return;
+  // When the top bar is collapsed, the idle/live centered system already
+  // owns the centered slot (idle Synapses logo, or the live mic via
+  // _tnvGlideToCenter) — bail out instead of also reparenting the real
+  // #topNavVoiceBtn to document.body, which would pull it out of
+  // .top-actions and escape that container's opacity:0 hidden state,
+  // producing a second visible icon on top of the idle one.
+  if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN) return;
   var btn = document.getElementById('topNavVoiceBtn');
   if(!btn || _tnvCentered || btn.classList.contains('tnv-centered')) return;
   var first = btn.getBoundingClientRect();
@@ -54012,9 +54019,21 @@ function _synLogoIdleBaseTransform(placement){
  *  navigates, without needing a hook at every single nav call site. */
 function _synLogoIdleReposition(){
   var el = document.getElementById('tnvLogoCenterBtn');
-  if(!el) return;
   var placement = _synLogoIdlePlacement();
-  if(placement === 'hide'){ _synLogoCenterHide(true); return; }
+  if(placement === 'hide'){ if(el) _synLogoCenterHide(true); return; }
+  if(!el){
+    // Nothing on screen right now — either it was never shown, or a Studio
+    // page just removed it (see 'hide' branch above/in _synLogoCenterShow).
+    // Only bring it back if the idle logo is actually supposed to be
+    // visible in this state (top bar collapsed, no live voice, mobile
+    // viewport); _synLogoCenterShow re-checks all of that itself and is a
+    // safe no-op otherwise. Without this, leaving a Studio page left the
+    // icon permanently gone since nothing else ever re-created it.
+    if(typeof TOP_BAR_HIDDEN !== 'undefined' && TOP_BAR_HIDDEN && !window._topNavVoiceActive && typeof _synLogoCenterShow === 'function'){
+      _synLogoCenterShow(true);
+    }
+    return;
+  }
   if(el.dataset.placement === placement) return;
   el.dataset.placement = placement;
   el.style.transition = 'left .28s cubic-bezier(0.22,1,0.36,1), transform .28s cubic-bezier(0.22,1,0.36,1)';
@@ -54467,6 +54486,13 @@ function toggleTopBar(){
   try{localStorage.setItem('synapses_topbar_hidden',TOP_BAR_HIDDEN?'1':'0');}catch(e){}
   _tnvClearGlideTimer();
   if(TOP_BAR_HIDDEN){
+    // If a page (Settings / LLM chat) had already page-parked the real mic
+    // button to center via _tnvPageCenterIn, release it back into
+    // .top-actions now, BEFORE that container fades out below — otherwise
+    // it's left floating outside .top-actions (immune to the container's
+    // opacity:0 hide) and can resurface unexpectedly later. The idle/live
+    // centered system takes over the centered slot from here.
+    if(typeof _tnvPageCenterOut === 'function') _tnvPageCenterOut();
     bar.classList.add('hidden');
     document.body.classList.add('topbar-hidden');
     btn.innerHTML = '▼';
@@ -54503,6 +54529,14 @@ function toggleTopBar(){
     if(typeof _synLogoCenterHide === 'function') _synLogoCenterHide(true);
     if(_tnvCentered) _tnvGlideHome();
     _tnvCachedRowCy = null;
+    // Top bar is back — if we're still on a page that wants the real mic
+    // button page-centered (Settings / LLM chat), re-establish that now.
+    // _tnvPageCenterIn no-ops safely everywhere else (desktop width, no
+    // matching page, already centered, etc).
+    if(document.body.classList.contains('chp-mobile-settings-open') ||
+       (typeof _chpInLlmChat === 'function' && _chpInLlmChat())){
+      if(typeof _tnvPageCenterIn === 'function') _tnvPageCenterIn();
+    }
   }
   if(typeof _chpSyncStripScroll === 'function') _chpSyncStripScroll();
   // If Control Centre is open, let it reclaim (or give back) the strip of
