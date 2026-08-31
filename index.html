@@ -644,6 +644,39 @@ body.bottom-nav #bnavImageGenBtn{display:flex!important;}
 body.bottom-nav #bnavStemBtn{display:flex!important;}
 body.bottom-nav #bnavSettingsBtn{display:flex!important;}
 body.bottom-nav #bnavControlCenterBtn{display:flex!important;}
+body.bottom-nav #bnavBLMoreBtn{display:flex!important;}
+/* All 9 bottom-left row elements (icons + the ••• button) stay hidden until
+   JS explicitly reveals them together — see _revealBLRow(), called at the
+   end of applyBLIconLayout(). That previous version of this fix tried to
+   gate the reveal with a CSS class (html.bl-icons-ready) plus a shared
+   opacity transition, on the theory the ••• button was winning a display
+   vs. opacity race. That didn't fix it, because the real gap wasn't the
+   CSS transition at all — it was WHEN each element's style actually gets
+   touched. The ••• button's "shown" state never changes (it's not part of
+   applyBLIconLayout's shown/hidden loop, so nothing ever writes to it
+   after the initial CSS resolves), while the icons each get individually
+   un-hidden or hidden by that loop, one .style write per icon, in a
+   forEach. If ANY code path reads layout/triggers a reflow between the
+   ••• button's style resolving and the icon loop finishing (fonts,
+   images, another script), the ••• button paints first regardless of any
+   CSS transition, because it never needed the loop to begin with.
+   Fix: don't rely on CSS to guess when everything's "ready" — bake the
+   hidden state directly into each element's own inline style (below,
+   opacity:0;pointer-events:none in the HTML itself, so there's no CSS
+   specificity/timing race to begin with), then have ONE JS function set
+   all 9 elements' opacity to 1, only once applyBLIconLayout has actually
+   finished computing final visibility/position for every one of them.
+   The ••• button no longer even tries to land in the same instant as the
+   icons — it's given its own slower transition below and a small JS
+   delay in _revealBLRow(), so it visibly settles in a beat after the rest
+   instead of racing to match them exactly. */
+#bnavNotesBtn,#bnavPulseBtn,#bnavCallBtn,#bnavAskBtn,#bnavImageGenBtn,
+#bnavStemBtn,#bnavSettingsBtn,#bnavControlCenterBtn{
+  transition:opacity .22s ease;
+}
+#bnavBLMoreBtn{
+  transition:opacity .4s ease;
+}
 /* pill: floats over content, main takes full height */
 body.bottom-nav .main{height:100vh;max-height:100vh;overflow:hidden;}
 /* fullwidth: flush to bottom, shrink main */
@@ -712,6 +745,15 @@ body:has(.bnav-cc-panel.bnav-cc-open) #chatEmptyState,
 body:has(.bnav-cc-panel.bnav-cc-open) #avaAvatarBox,
 body:has(.bnav-cc-panel.bnav-cc-open) #sec-chat .input-area,
 body:has(.bnav-cc-panel.bnav-cc-open) #sec-coach .input-area{display:none!important;}
+/* Classic mode: the past-chats drawer + its hamburger trigger are a lower
+   layer than the CC panel and used to just stack underneath it, bleeding
+   through and creating a mess. openControlCentre() now closes the drawer
+   in JS before opening CC, but this is a same-frame safety net for that
+   transition window (and for any path that opens CC without going through
+   that function). Scoped to Classic only — Sidebar mode's permanent rail
+   is a different surface and isn't touched. */
+html:not(.chp-sidebar-mode) body:has(.bnav-cc-panel.bnav-cc-open) #chpSidebar,
+html:not(.chp-sidebar-mode) body:has(.bnav-cc-panel.bnav-cc-open) #chatHistoryTrigger{display:none!important;}
 .bnav-cc-rail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;border-right:1px solid rgba(255,255,255,0.06);overflow-y:auto;}
 .bnav-cc-rail-btn{width:38px;height:38px;border-radius:11px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.025);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .18s ease;flex-shrink:0;}
 .bnav-cc-rail-btn:hover{background:rgba(124,106,247,0.14);border-color:rgba(124,106,247,0.4);transform:translateY(-1px);}
@@ -2254,27 +2296,19 @@ body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
   #bnavControlCenterBtn:hover svg{stroke:rgba(200,203,230,0.55);}
 }
 #bnavControlCenterBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;fill:none;}
-/* Settings + Control Centre are the last 2 icons on the bottom-left icon row —
-   mobile-only entry points (Settings has no other mobile entry point, Control
-   Centre's panel had none either). On PC both are already reachable elsewhere
-   (sidebar gear menu, long-press orb), so hide just these two above the mobile
-   breakpoint instead of the whole row.
-   NOTE: html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavSettingsBtn /
-   #bnavControlCenterBtn (below, ~line 2570) forces display:flex!important with
-   higher specificity (1 id + 3 classes + 2 types) than a plain
-   "body.bottom-nav #id" rule, so it silently won on PC in apps-board layout.
-   The :not(#_never_) bump below matches that same specificity so this rule
-   wins regardless of source order or which sidebar layout is active. */
-@media (min-width:769px){
-  body.bottom-nav #bnavSettingsBtn,
-  body.bottom-nav #bnavControlCenterBtn,
-  html.chp-sidebar-mode body.bottom-nav #bnavSettingsBtn,
-  html.chp-sidebar-mode body.bottom-nav #bnavControlCenterBtn,
-  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavSettingsBtn:not(#_never_),
-  html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavControlCenterBtn:not(#_never_){
-    display:none!important;
-  }
+/* Bottom-left icon row customizer trigger — always last (right after Control
+   Centre by default), opens blIconsDrawerModal to show/hide the row's icons.
+   Its own left offset is recomputed live by applyBLIconLayout() so it always
+   sits right after whichever icons are currently visible. */
+#bnavBLMoreBtn{display:none;position:fixed;bottom:0;left:328px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;color:rgba(160,163,220,0.4);font-size:16px;letter-spacing:1px;}
+@media (hover:hover) and (pointer:fine){
+  #bnavBLMoreBtn:hover{color:rgba(200,203,230,0.7);}
 }
+/* Settings + Control Centre used to be force-hidden above the mobile
+   breakpoint (mobile-only entry points). Removed per product decision —
+   all icons in this row are visible on both mobile and desktop now; only
+   icons that specifically shouldn't appear on mobile (e.g. Stem Studio,
+   handled in _chpSyncAppsBoard) get hidden there instead. */
 body.bottom-nav #bnavCallBtn.has-call{display:flex!important;}
 #bnavCallBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;}
 #bnavCallBtn .call-dot{position:absolute;top:12px;right:8px;width:7px;height:7px;border-radius:50%;background:#7c6af7;box-shadow:0 0 6px rgba(124,106,247,0.6);opacity:0;transition:opacity .2s ease;}
@@ -10519,32 +10553,32 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </aside>
 
 <!-- Bottom Nav Bar -->
-<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
 <!-- Pulse feed -->
-<button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" aria-label="Pulse" style="display:none;">
+<button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" aria-label="Pulse" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
   </svg>
   <span class="pulse-dot" aria-hidden="true"></span>
 </button>
-<button type="button" id="bnavCallBtn" aria-label="Call">
+<button type="button" id="bnavCallBtn" aria-label="Call" style="opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
   </svg>
   <span class="call-dot" aria-hidden="true"></span>
 </button>
 <!-- Ask — furthest right on this icon row; same send glyph as ask bar -->
-<button type="button" id="bnavAskBtn" onclick="window.activateAskMe&&window.activateAskMe()" aria-label="Ask" style="display:none;">
+<button type="button" id="bnavAskBtn" onclick="window.activateAskMe&&window.activateAskMe()" aria-label="Ask" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <line x1="22" y1="2" x2="11" y2="13"/>
     <polygon points="22 2 15 22 11 13 2 9 22 2"/>
   </svg>
 </button>
 <!-- Create Image — furthest right on this icon row -->
-<button type="button" id="bnavStemBtn" onclick="openStemStudio()" title="Stem Studio" aria-label="Stem Studio" style="display:none;">
+<button type="button" id="bnavStemBtn" onclick="openStemStudio()" title="Stem Studio" aria-label="Stem Studio" style="display:none;opacity:0;pointer-events:none;">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-6M9 18v-12M14 15v-6M19 18v-12"/></svg>
 </button>
-<button type="button" id="bnavImageGenBtn" onclick="openImageGenModal()" title="Create Image" aria-label="Create an image" style="display:none;">
+<button type="button" id="bnavImageGenBtn" onclick="openImageGenModal()" title="Create Image" aria-label="Create an image" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -10552,14 +10586,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   </svg>
 </button>
 <!-- Settings — mirrors the sidebar account-menu gear, no other mobile entry point -->
-<button type="button" id="bnavSettingsBtn" onclick="typeof _bnavOpenAccountSettings==='function' ? _bnavOpenAccountSettings() : goProfile()" title="Settings" aria-label="Settings" style="display:none;">
+<button type="button" id="bnavSettingsBtn" onclick="typeof _bnavOpenAccountSettings==='function' ? _bnavOpenAccountSettings() : goProfile()" title="Settings" aria-label="Settings" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 </button>
 <!-- Control Centre — panel already existed (calendar/inbox/chats/notes/jobs),
      only trigger was holding the orb; give it a real entry point on mobile -->
-<button type="button" id="bnavControlCenterBtn" onclick="typeof openControlCentre==='function' && openControlCentre()" title="Control Centre" aria-label="Open Control Centre" style="display:none;">
+<button type="button" id="bnavControlCenterBtn" onclick="typeof openControlCentre==='function' && openControlCentre()" title="Control Centre" aria-label="Open Control Centre" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
 </button>
+<!-- Customize which icons show in the bottom-left row — opens blIconsDrawerModal -->
+<button type="button" id="bnavBLMoreBtn" onclick="openBLIconsDrawer()" title="Customize icons" aria-label="Customize bottom-left icons" style="display:none;opacity:0;pointer-events:none;">•••</button>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
     <div class="pp-top">
@@ -12479,6 +12515,18 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     if(document.getElementById('bnavCCPanel') && document.getElementById('bnavCCPanel').classList.contains('bnav-cc-open')) _ccApplyInsets();
   });
   function openControlCentre(){
+    // Classic mode: the past-chats hamburger drawer (#chpSidebar.open) sits
+    // underneath the Control Centre panel, so opening CC on top of it used
+    // to just stack the two — drawer + hamburger left showing through under
+    // the panel. Close the drawer first so CC opens onto a clean slate.
+    // Sidebar-mode's permanent rail is left alone (the CC button is hidden
+    // there anyway outside the apps-board case).
+    (function(){
+      var _classic = !document.documentElement.classList.contains('chp-sidebar-mode');
+      var _sb = document.getElementById('chpSidebar');
+      var _sbOpen = !!(_sb && (_sb.classList.contains('open') || _sb.classList.contains('fade-open')));
+      if(_classic && _sbOpen && typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
+    })();
     ensureControlCentre();
     var backdrop = document.getElementById('bnavCCBackdrop'), panel = document.getElementById('bnavCCPanel');
     if(!backdrop || !panel) return;
@@ -13402,6 +13450,32 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </div>
 
 <!-- Nav Customizer Modal -->
+<!-- Bottom-left icon row customizer — drag chips between "Bottom-Left Row" and
+     "Hidden" to control which fixed bottom-left icons (Notes/Pulse/Call/Ask/
+     Create Image/Stem/Settings/Control Centre) show up, and in what order.
+     Same drag/tap-to-toggle chip UX as the existing navCustomizerModal
+     (see renderCustZone) — reused here via renderBLCustZone.
+     Glass look matches #chpSidebar's recipe (rgba(22,22,32,.18) + blur(60px))
+     instead of the flat var(--sidebar) fill, and the action button uses the
+     same neutral glass-chip style as studioCommunityGlassBtn/etc rather than
+     the purple accent, so it fits the True Black theme.
+     Opened by the ••• button that sits at the end of that row (#bnavBLMoreBtn). -->
+<div id="blIconsDrawerModal" style="display:none;position:fixed;inset:0;background:transparent;z-index:500;align-items:flex-end;justify-content:center;">
+  <div style="background:rgba(10,10,14,0.55);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.06);border-bottom:none;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 16px 32px;">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
+    <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px;">Customize Icons</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;">Drag to reorder · Tap a chip to show/hide it</div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>Bottom-Left Row</div>
+    <div id="blCustShown" style="display:flex;flex-wrap:wrap;gap:8px;min-height:52px;padding:8px;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:12px;margin-bottom:16px;"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;">Hidden</div>
+    <div id="blCustHidden" style="display:flex;flex-wrap:wrap;gap:8px;min-height:52px;padding:8px;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:12px;margin-bottom:20px;"></div>
+
+    <button onclick="closeBLIconsDrawer()" style="width:100%;padding:13px;background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .18s,border-color .18s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">Done</button>
+  </div>
+</div>
+
 <div id="navCustomizerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;">
   <div style="background:var(--sidebar);border:1px solid var(--border);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 16px 32px;">
     <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
@@ -15652,6 +15726,283 @@ function openNavCustomizer(){
 function closeNavCustomizer(){
   document.getElementById('navCustomizerModal').style.display='none';
 }
+
+// ── Bottom-left icon row customizer ─────────────────────────────────────────
+// The fixed bottom-left icon row (Notes/Pulse/Call/Ask/Create Image/Stem/
+// Settings/Control Centre) uses hard-coded `left` offsets per icon (see CSS).
+// Same drag-chip UX as the existing top-nav customizer (renderCustZone /
+// moveNavItem above): two zones — "Bottom-Left Row" (shown, in order) and
+// "Hidden" — chips are draggable between/within zones, or tap to toggle
+// zones. Every move applies live via applyBLIconLayout(), which re-packs
+// sequential left offsets for whatever's shown so there's never a gap, and
+// the trailing ••• button always lands right after the last visible icon.
+var BL_ICONS = [
+  { id:'bnavNotesBtn',         label:'Notes',          width:48, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
+  { id:'bnavPulseBtn',         label:'Pulse',          width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>' },
+  { id:'bnavCallBtn',          label:'Call',           width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
+  { id:'bnavAskBtn',           label:'Ask',            width:40, glyph:'✦' },
+  { id:'bnavImageGenBtn',      label:'Create Image',   width:40, glyph:'🖼' },
+  { id:'bnavStemBtn',          label:'Stem Studio',    width:40, glyph:'🎚' },
+  { id:'bnavSettingsBtn',      label:'Settings',       width:40, glyph:'⚙' },
+  { id:'bnavControlCenterBtn', label:'Control Centre', width:40, glyph:'▦' }
+];
+// The 8 customizable row icons plus the trailing ••• button itself — the
+// full set applyBLIconLayout() must reveal together. bnavBLMoreBtn isn't in
+// BL_ICONS (it's not a customizable icon, it's the trigger for customizing
+// the rest), so it needs to be added on separately here.
+var BL_ROW_ALL_IDS = BL_ICONS.map(function(it){ return it.id; }).concat(['bnavBLMoreBtn']);
+var blShownIds = BL_ICONS.map(function(it){ return it.id; }); // default: all shown, original order
+var blHiddenIds = [];
+var _blCustDragId = null, _blCustDragZone = null;
+var _blMoreBtnFirstReveal = true; // gates the one-time .5s page-load delay on the ••• button, see _revealBLRow()
+
+function _blFindItem(id){
+  return BL_ICONS.find(function(x){ return x.id === id; });
+}
+function loadBLIconConfig(){
+  try{
+    var saved = localStorage.getItem('synapses_bl_icons_config');
+    if(!saved) return;
+    var cfg = JSON.parse(saved);
+    var allIds = BL_ICONS.map(function(it){ return it.id; });
+    if(cfg.shown && cfg.shown.length) blShownIds = cfg.shown.filter(function(id){ return allIds.indexOf(id) !== -1; });
+    if(cfg.hidden) blHiddenIds = cfg.hidden.filter(function(id){ return allIds.indexOf(id) !== -1; });
+    // Any icon missing from both (e.g. newly added to BL_ICONS after this saved) defaults to shown
+    allIds.forEach(function(id){
+      if(blShownIds.indexOf(id) === -1 && blHiddenIds.indexOf(id) === -1) blShownIds.push(id);
+    });
+  }catch(e){}
+}
+function saveBLIconConfig(){
+  try{ localStorage.setItem('synapses_bl_icons_config', JSON.stringify({ shown:blShownIds, hidden:blHiddenIds })); }catch(e){}
+}
+/** Applies current shown/hidden + order to the real icons and re-packs left
+ *  offsets so there's never a gap. Safe to call anytime — idempotent. */
+// Settings is a mobile-only entry point on this row (no other mobile entry
+// point). Control Centre is mobile-only too, EXCEPT on PC in Classic layout
+// (not Sidebar mode) — Classic has no other way to reach it there, so it
+// stays available in that one PC case. Everything else in the row shows on
+// both mobile and desktop. Shared by applyBLIconLayout (actual on-screen
+// icons) and the Customize Icons drawer (so the chip isn't offered where
+// it can't ever actually appear).
+function _blIconAllowedNow(id){
+  var isMobileWidth = window.innerWidth <= 768;
+  if(isMobileWidth) return true;
+  var sidebarOn = document.documentElement.classList.contains('chp-sidebar-mode');
+  if(id === 'bnavSettingsBtn') return false;
+  if(id === 'bnavControlCenterBtn') return !sidebarOn;
+  return true;
+}
+function applyBLIconLayout(){
+  var x = 0;
+  blShownIds.forEach(function(id){
+    var it = _blFindItem(id);
+    var el = document.getElementById(id);
+    if(!it || !el) return;
+    if(!_blIconAllowedNow(id)){
+      // Not offered on this device/layout at all — literally not there,
+      // not just visually hidden, and doesn't take up a slot in the row.
+      el.style.setProperty('display','none','important');
+      return;
+    }
+    el.removeAttribute('data-bl-user-hidden');
+    el.style.removeProperty('display'); // let existing bottom-nav/conditional CSS decide visibility
+    el.style.setProperty('left', x + 'px', 'important');
+    x += it.width;
+  });
+  blHiddenIds.forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.setAttribute('data-bl-user-hidden', '1');
+    el.style.setProperty('display', 'none', 'important');
+  });
+  var moreBtn = document.getElementById('bnavBLMoreBtn');
+  if(moreBtn) moreBtn.style.setProperty('left', x + 'px', 'important');
+  // First real layout pass is done. Reveal the whole row (icons + •••) here,
+  // synchronously, in the same pass as the display/left writes above —
+  // NOT via a CSS class that some other selector has to notice and react
+  // to. A CSS-class-based reveal (the previous version of this fix) still
+  // left a gap: the ••• button never goes through the shown/hidden loop
+  // above (it's not a customizable row icon), so nothing here ever
+  // touches its style — meaning whatever revealed it did so on its own
+  // schedule, independent of whenever the icon loop's writes actually got
+  // painted. Setting every element's opacity directly, in this one
+  // function, in the same synchronous pass, is what actually guarantees
+  // they land in the same frame — it doesn't depend on any other code
+  // reacting to a class in time.
+  _revealBLRow();
+  document.documentElement.classList.add('bl-icons-ready');
+}
+function _revealBLRow(){
+  BL_ROW_ALL_IDS.forEach(function(id){
+    if(id === 'bnavBLMoreBtn') return; // revealed separately below, deliberately slower
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.style.removeProperty('pointer-events');
+    el.style.opacity = '1';
+  });
+  // ••• button: held back .5s on page load specifically — only on the
+  // very first reveal (_blMoreBtnFirstReveal), so later calls to this
+  // function (resize, customizer changes, apps-board toggle, etc.) show
+  // it immediately instead of re-triggering a half-second wait every time.
+  var moreBtn = document.getElementById('bnavBLMoreBtn');
+  if(moreBtn){
+    if(_blMoreBtnFirstReveal){
+      _blMoreBtnFirstReveal = false;
+      setTimeout(function(){
+        moreBtn.style.removeProperty('pointer-events');
+        moreBtn.style.opacity = '1';
+      }, 500);
+    } else {
+      moreBtn.style.removeProperty('pointer-events');
+      moreBtn.style.opacity = '1';
+    }
+  }
+}
+window.applyBLIconLayout = applyBLIconLayout;
+
+function renderBLCustomizerPanels(){
+  renderBLCustZone('blCustShown', blShownIds.filter(_blIconAllowedNow), 'shown');
+  renderBLCustZone('blCustHidden', blHiddenIds.filter(_blIconAllowedNow), 'hidden');
+}
+
+var _blCustInsertEl = null;
+function _clearBLCustInsert(){
+  if(_blCustInsertEl){ _blCustInsertEl.remove(); _blCustInsertEl = null; }
+}
+function _showBLCustInsert(wrap, chip, after){
+  _clearBLCustInsert();
+  var line = document.createElement('div');
+  line.style.cssText = 'width:2px;min-height:36px;border-radius:4px;background:rgba(124,106,247,0.35);box-shadow:0 0 8px 3px rgba(124,106,247,0.18);flex-shrink:0;pointer-events:none;align-self:stretch;margin:0 1px;';
+  _blCustInsertEl = line;
+  wrap.insertBefore(line, after ? chip.nextSibling : chip);
+}
+
+function renderBLCustZone(containerId, ids, zone){
+  var wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  ids.forEach(function(id){
+    var item = _blFindItem(id);
+    if(!item) return;
+    var chip = document.createElement('div');
+    chip.draggable = true;
+    chip.dataset.id = id;
+    chip.dataset.zone = zone;
+    chip.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.09);border-radius:10px;cursor:grab;font-family:DM Sans,sans-serif;font-size:13px;color:var(--text);user-select:none;touch-action:none;';
+    chip.innerHTML = '<span style="font-size:16px;line-height:0;display:inline-flex;align-items:center;">' + item.glyph + '</span><span>' + item.label + '</span>';
+
+    chip.addEventListener('dragstart', function(e){ _blCustDragId = id; _blCustDragZone = zone; e.dataTransfer.effectAllowed = 'move'; chip.style.opacity = '0.4'; });
+    chip.addEventListener('dragend', function(){ chip.style.opacity = '1'; _blCustDragId = null; _clearBLCustInsert(); });
+    chip.addEventListener('dragover', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if(_blCustDragId === id) return;
+      var rect = chip.getBoundingClientRect();
+      var after = e.clientX > rect.left + rect.width / 2;
+      chip._blCustAfter = after;
+      _showBLCustInsert(wrap, chip, after);
+    });
+    chip.addEventListener('dragleave', function(e){ if(!wrap.contains(e.relatedTarget)) _clearBLCustInsert(); });
+    chip.addEventListener('drop', function(e){
+      e.preventDefault(); e.stopPropagation();
+      _clearBLCustInsert();
+      if(!_blCustDragId || _blCustDragId === id) return;
+      var after = chip._blCustAfter || false;
+      if(_blCustDragZone === zone){
+        var arr = zone === 'shown' ? blShownIds : blHiddenIds;
+        var fromIdx = arr.indexOf(_blCustDragId);
+        var toIdx = arr.indexOf(id);
+        if(fromIdx === -1 || toIdx === -1) return;
+        var insertAt = after ? toIdx + 1 : toIdx;
+        if(fromIdx < insertAt) insertAt--;
+        arr.splice(fromIdx, 1);
+        arr.splice(insertAt, 0, _blCustDragId);
+        saveBLIconConfig(); applyBLIconLayout(); renderBLCustomizerPanels();
+      } else {
+        moveBLItem(_blCustDragId, _blCustDragZone, zone);
+      }
+    });
+
+    // Touch drag (mobile)
+    chip.addEventListener('touchstart', function(){ _blCustDragId = id; chip.style.opacity = '0.6'; }, { passive:true });
+    chip.addEventListener('touchend', function(e){
+      chip.style.opacity = '1';
+      var t = e.changedTouches[0];
+      var el = document.elementFromPoint(t.clientX, t.clientY);
+      var target = el ? el.closest('#blCustShown,#blCustHidden') : null;
+      if(target){
+        var toZone = target.id === 'blCustShown' ? 'shown' : 'hidden';
+        moveBLItem(id, zone, toZone);
+      }
+      _blCustDragId = null;
+    });
+
+    // Tap to toggle zones
+    chip.addEventListener('click', function(){ moveBLItem(id, zone, zone === 'shown' ? 'hidden' : 'shown'); });
+
+    wrap.appendChild(chip);
+  });
+
+  wrap.addEventListener('dragover', function(e){ e.preventDefault(); wrap.style.borderColor = 'var(--accent)'; });
+  wrap.addEventListener('dragleave', function(e){ wrap.style.borderColor = 'var(--border)'; if(!wrap.contains(e.relatedTarget)) _clearBLCustInsert(); });
+  wrap.addEventListener('drop', function(e){
+    e.preventDefault();
+    wrap.style.borderColor = 'var(--border)';
+    _clearBLCustInsert();
+    if(!_blCustDragId) return;
+    var fromZone = document.querySelector('[data-id="' + _blCustDragId + '"]')?.dataset.zone || 'hidden';
+    moveBLItem(_blCustDragId, fromZone, containerId === 'blCustShown' ? 'shown' : 'hidden');
+  });
+}
+
+function moveBLItem(id, fromZone, toZone){
+  if(fromZone === toZone) return;
+  if(fromZone === 'shown'){ blShownIds = blShownIds.filter(function(x){ return x !== id; }); }
+  else { blHiddenIds = blHiddenIds.filter(function(x){ return x !== id; }); }
+  if(toZone === 'shown'){ blShownIds.push(id); } else { blHiddenIds.push(id); }
+  saveBLIconConfig();
+  applyBLIconLayout();
+  renderBLCustomizerPanels();
+}
+
+function openBLIconsDrawer(){
+  renderBLCustomizerPanels();
+  var m = document.getElementById('blIconsDrawerModal');
+  if(m) m.style.display = 'flex';
+}
+function closeBLIconsDrawer(){
+  var m = document.getElementById('blIconsDrawerModal');
+  if(m) m.style.display = 'none';
+}
+window.openBLIconsDrawer = openBLIconsDrawer;
+window.closeBLIconsDrawer = closeBLIconsDrawer;
+document.addEventListener('click', function(e){
+  var m = document.getElementById('blIconsDrawerModal');
+  if(m && m.style.display === 'flex' && e.target === m) closeBLIconsDrawer();
+});
+
+loadBLIconConfig();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', applyBLIconLayout);
+} else {
+  applyBLIconLayout();
+}
+// Crossing the mobile/desktop breakpoint also changes which icons are
+// allowed (Settings/Control Centre), so re-pack the row so the ••• button
+// doesn't strand itself in a gap left by an icon that just got hidden/shown.
+(function(){
+  var _blLastMobile = window.innerWidth <= 768;
+  window.addEventListener('resize', function(){
+    clearTimeout(window._blResizeTimer);
+    window._blResizeTimer = setTimeout(function(){
+      var nowMobile = window.innerWidth <= 768;
+      if(nowMobile !== _blLastMobile){
+        _blLastMobile = nowMobile;
+        applyBLIconLayout();
+      }
+    }, 150);
+  });
+})();
 
 // ── Create Image (Studio) ───────────────────────────────────────────────────
 var imageGenRefDataUrl = null; // base64 data URL of attached reference photo, or null
@@ -18959,7 +19310,7 @@ function renderCustZone(containerId, ids, zone){
     chip.draggable=true;
     chip.dataset.id=id;
     chip.dataset.zone=zone;
-    chip.style.cssText='display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:grab;font-family:DM Sans,sans-serif;font-size:13px;color:var(--text);user-select:none;touch-action:none;';
+    chip.style.cssText='display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.09);border-radius:10px;cursor:grab;font-family:DM Sans,sans-serif;font-size:13px;color:var(--text);user-select:none;touch-action:none;';
     var dicon = item.icon;
     var iconSvg = dicon.indexOf('<svg')===0 ? dicon.replace(/id="rbg\d*"/g,'id="rbg_cust_'+id+'"').replace(/url\(#rbg\d*\)/g,'url(#rbg_cust_'+id+')') : null;
     var iconSpan = iconSvg ? '<span style="display:flex;align-items:center;width:20px;height:20px;">'+iconSvg+'</span>' : '<span style="font-size:18px;">'+dicon+'</span>';
@@ -39715,24 +40066,27 @@ function _chpSyncAppsBoard(){
   for(var i=0;i<btns.length;i++) btns[i].setAttribute('aria-pressed', on?'true':'false');
   var ids=['bnavNotesBtn','bnavPulseBtn','bnavCallBtn','bnavAskBtn','bnavImageGenBtn','bnavStemBtn','bnavSettingsBtn','bnavControlCenterBtn'];
   var sidebarOn=document.documentElement.classList.contains('chp-sidebar-mode');
-  // Settings + Control Centre are mobile-only entry points on the bottom-left
-  // icon row. This loop otherwise force-shows the whole row with an inline
+  // Settings is a mobile-only entry point on the bottom-left icon row. This
+  // loop otherwise force-shows the whole row with an inline
   // display:flex!important whenever sidebar+apps-board are both on — and an
   // inline !important always wins over any stylesheet rule, no matter how
-  // specific, so those two kept reappearing on PC no matter what CSS said.
-  // Force them hidden here too, before the normal sidebarOn/on branching.
+  // specific, so it kept reappearing on PC no matter what CSS said. Force it
+  // hidden here too, before the normal sidebarOn/on branching.
+  // Settings (mobile-only) and Control Centre (mobile, or PC Classic only)
+  // are gated by _blIconAllowedNow — same rule the drawer/row layout uses —
+  // enforced last in the loop below so the apps-board force-show branch
+  // just under this can't re-reveal them where they're not allowed.
   var isMobileWidth = window.innerWidth <= 768;
   for(var j=0;j<ids.length;j++){
     var el=document.getElementById(ids[j]);
     if(!el) continue;
-    if(!isMobileWidth && (ids[j]==='bnavSettingsBtn' || ids[j]==='bnavControlCenterBtn')){
+    if(typeof _blIconAllowedNow==='function' && !_blIconAllowedNow(ids[j])){
       el.style.setProperty('display','none','important');
       continue;
     }
-    // Stem Studio (music) is mobile-only hidden — same inline-important
-    // trick as above, just flipped: force it OFF whenever we're actually
-    // on a mobile-width screen, before the sidebarOn/on branching below
-    // can set it back to flex!important.
+    // Stem Studio (music) is mobile-only hidden — force it OFF whenever
+    // we're actually on a mobile-width screen, before the sidebarOn/on
+    // branching below can set it back to flex!important.
     if(isMobileWidth && ids[j]==='bnavStemBtn'){
       el.style.setProperty('display','none','important');
       continue;
@@ -39751,15 +40105,32 @@ function _chpSyncAppsBoard(){
       bar.style.removeProperty('visibility');
     }
   }
+  // The ••• button lives outside the ids loop above (it isn't one of the
+  // customizable row icons), so it never got the same sidebarOn/!on hide
+  // that just cleared the rest of the row — it kept floating there on its
+  // own even with nothing left beside it. Hide/show it in lockstep with
+  // the row it belongs to.
+  var moreBtnSync=document.getElementById('bnavBLMoreBtn');
+  if(moreBtnSync){
+    if(sidebarOn && !on) moreBtnSync.style.setProperty('display','none','important');
+    else if(sidebarOn && on) moreBtnSync.style.setProperty('display','flex','important');
+    else moreBtnSync.style.removeProperty('display');
+  }
+  // Toggling apps-board just showed/hid a chunk of the row above via direct
+  // display!important writes, which is exactly the kind of visibility change
+  // that leaves the ••• button's cached left offset stale — re-pack now so
+  // it lands right after whatever's actually visible instead of drifting
+  // off into the gap left by icons that just appeared/disappeared.
+  if(typeof applyBLIconLayout === 'function') applyBLIconLayout();
 }
-// The inline display:none!important that hides Settings/Control Centre on PC
+// The inline display:none!important that hides Stem Studio on mobile
 // (set inside _chpSyncAppsBoard above) was only ever recalculated when the
 // user actively changed the sidebar/apps-board setting — never on a plain
 // window resize. So loading at desktop width, then resizing/rotating down to
 // mobile (or using devtools' device toolbar after the fact), left that stale
-// inline style in place and the icons stayed hidden on mobile too. Re-run the
-// sync whenever the viewport crosses the 768px mobile/PC line so the icons
-// correctly reappear on mobile and stay hidden on PC either way.
+// inline style in place and the icon stayed shown on mobile too. Re-run the
+// sync whenever the viewport crosses the 768px mobile/PC line so it
+// correctly hides on mobile and reappears on PC either way.
 (function(){
   var _wasMobileWidth = window.innerWidth <= 768;
   window.addEventListener('resize', function(){
@@ -40370,6 +40741,12 @@ function _chpApplyLayout(mode){
   if(typeof _bnavLogoSyncOpenable === 'function') _bnavLogoSyncOpenable();
   if(typeof _chpSyncAppsBoard === 'function') _chpSyncAppsBoard();
   if(typeof _chpThinSyncWord === 'function') _chpThinSyncWord();
+  // Sidebar vs Classic changes which bottom-left icons are allowed (Control
+  // Centre in particular), which shifts where the row's visible icons end.
+  // Re-pack the row now so the ••• button lands right after the last
+  // actually-visible icon instead of keeping a stale offset from whichever
+  // mode was active on load.
+  if(typeof applyBLIconLayout === 'function') applyBLIconLayout();
 }
 _chpApplyLayout();
 var _chpOpenedFromLogo = false;
@@ -53944,10 +54321,14 @@ function _restoreTnvCenteredState(){
   var btn = document.getElementById('topNavVoiceBtn');
   var bar = document.querySelector('.top-bar');
   if(!btn || !bar) return;
+  /* Live STS never actually survives an app close/reopen (this is a pure
+     visual restore, see comment above) — so always come back to the idle
+     left-side icon on load, never re-center the mic. Previously this read
+     synapses_tnv_centered from localStorage and could re-apply a centered
+     position with no live session behind it, showing a stale/incorrect
+     "off" mic sitting in the middle instead of the idle icon on the left. */
   var wantCentered = false;
-  try{
-    wantCentered = !!(TOP_BAR_HIDDEN && localStorage.getItem('synapses_tnv_centered') === '1');
-  }catch(e){ wantCentered = false; }
+  try{ localStorage.setItem('synapses_tnv_centered','0'); }catch(e){}
   if(!wantCentered){
     /* Clear any leftover absolute/transform from a previous session */
     _tnvEnsureHomeMic();
