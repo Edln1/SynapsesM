@@ -12554,6 +12554,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   // though, which runs in global scope — without this it would throw
   // "openControlCentre is not defined" instead of opening the panel.
   window.openControlCentre = openControlCentre;
+  window._ccApplyInsets = _ccApplyInsets;
   window.closeControlCentre = closeControlCentre;
 
   // ── SYN-TV — retro "ask and it shows you" channel window ──────────────
@@ -12927,11 +12928,106 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
   }
   function _ccTvExpand(card){
     if(!card) return;
+    if(card.classList.contains('tv-expanded')){
+      // Already expanded — just make sure state/size are current, nothing to animate.
+      card.classList.add('tv-on');
+      card.classList.remove('tv-offair');
+      _ccTvApplySavedSize(card);
+      _ccTV.on = true;
+      _ccTvSyncCenterClass(card);
+      return;
+    }
+    // The center column flips flex-direction row->column the instant
+    // tv-expanded lands (see .bnav-cc-center:has(>.tv-expanded) above) so
+    // the card can take the full row — but flex-direction is a discrete
+    // layout switch, not something width/height transitions can smooth
+    // over, so it used to look like an instant teleport into Balance's
+    // spot. Fix: FLIP it — measure the box before, let the layout jump
+    // happen, measure the box after, then paint the *after* box wearing an
+    // inverted transform so nothing visibly moves yet, and finally
+    // transition that transform away so it visually stretches from the old
+    // box into the new one.
+    var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var balance = document.getElementById('bnavCCBalance');
+    var first = reduceMotion ? null : card.getBoundingClientRect();
+
+    // Balance would otherwise vanish instantly (display:none) the moment
+    // tv-expanded lands, since that's driven by the same :has()/class CSS
+    // that triggers the layout jump. Fade it out in place first so it
+    // reads as "making room" rather than snapping away.
+    if(balance && !reduceMotion && balance.offsetWidth > 0){
+      balance.style.transition = 'none';
+      balance.style.opacity = '1';
+      balance.style.transform = 'none';
+      void balance.offsetWidth;
+      balance.style.transition = 'opacity .22s ease, transform .22s ease';
+      balance.style.opacity = '0';
+      balance.style.transform = 'scale(.96)';
+    } else {
+      balance = null;
+    }
+
+    function clearBalanceInline(){
+      if(!balance) return;
+      balance.style.transition = '';
+      balance.style.opacity = '';
+      balance.style.transform = '';
+    }
+
+    if(reduceMotion || !first || !(first.width > 2) || !(first.height > 2)){
+      card.classList.add('tv-on','tv-expanded');
+      card.classList.remove('tv-offair');
+      _ccTvApplySavedSize(card);
+      _ccTV.on = true;
+      _ccTvSyncCenterClass(card);
+      clearBalanceInline();
+      return;
+    }
+
+    // Kill the card's own transitions (width/height/box-shadow) *before* the
+    // layout-changing class lands, so that jump is instant and the "Last"
+    // rect below reads the true final box — not a value still mid-flight on
+    // a native CSS transition racing our own transform-based one.
+    card.classList.add('tv-flip-anim');
+    card.style.transition = 'none';
     card.classList.add('tv-on','tv-expanded');
     card.classList.remove('tv-offair');
     _ccTvApplySavedSize(card);
     _ccTV.on = true;
     _ccTvSyncCenterClass(card);
+
+    void card.offsetWidth; // force layout so the rect below reflects the new (Last) box
+    var last = card.getBoundingClientRect();
+    if(!(last.width > 2) || !(last.height > 2)){ card.style.transition = ''; card.classList.remove('tv-flip-anim'); clearBalanceInline(); return; }
+    var dx = first.left - last.left;
+    var dy = first.top - last.top;
+    var sx = first.width / last.width;
+    var sy = first.height / last.height;
+    if(!isFinite(dx) || !isFinite(dy) || !isFinite(sx) || !isFinite(sy)){ card.style.transition = ''; card.classList.remove('tv-flip-anim'); clearBalanceInline(); return; }
+    if(Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01){ card.style.transition = ''; card.classList.remove('tv-flip-anim'); clearBalanceInline(); return; }
+
+    card.style.transformOrigin = '0 0';
+    card.style.transform = 'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')';
+    void card.offsetWidth; // paint the inverted (pre-jump-looking) frame before releasing it
+    card.style.transition = 'transform .5s cubic-bezier(.22,.9,.3,1)';
+    card.style.transform = 'none';
+
+    var cleaned = false;
+    function cleanup(e){
+      if(e && (e.target !== card || e.propertyName !== 'transform')) return;
+      if(cleaned) return;
+      cleaned = true;
+      card.removeEventListener('transitionend', cleanup);
+      card.style.transition = '';
+      card.style.transform = '';
+      card.style.transformOrigin = '';
+      card.classList.remove('tv-flip-anim');
+      clearBalanceInline();
+    }
+    card.addEventListener('transitionend', cleanup);
+    // Safety net in case transitionend never fires (e.g. interrupted by
+    // another class/size change mid-flight, or tab backgrounded).
+    setTimeout(cleanup, 650);
   }
   function _ccTvSetList(list, idx, key, query, keepFrame){
     var prevId = (_ccTV.list && _ccTV.list[_ccTV.idx] && _ccTV.list[_ccTV.idx].videoId) || '';
@@ -53616,6 +53712,22 @@ function toggleTopBar(){
     if(_tnvCentered) _tnvGlideHome();
   }
   if(typeof _chpSyncStripScroll === 'function') _chpSyncStripScroll();
+  // If Control Centre is open, let it reclaim (or give back) the strip of
+  // screen the top bar just freed/re-occupied. .top-bar's own collapse is a
+  // .25s max-height/padding transition (see its CSS), so the bar's true
+  // final box isn't there yet the instant classes flip — wait for that to
+  // settle before re-measuring, otherwise --cc-top gets set mid-collapse and
+  // the panel's own top .2s transition races the bar's, causing a jump/gap.
+  // Both bnavCCPanel's `top` and .top-bar's collapse animate on their own
+  // timers, so this reads as two back-to-back smooth motions rather than
+  // a single combined one — good enough, and far better than the panel not
+  // moving at all.
+  var ccPanelForInset = document.getElementById('bnavCCPanel');
+  if(ccPanelForInset && ccPanelForInset.classList.contains('bnav-cc-open')){
+    setTimeout(function(){
+      if(typeof _ccApplyInsets === 'function') _ccApplyInsets();
+    }, 260);
+  }
 }
 
 // Restores the mic's centered position on reload/app-reopen if it was left
