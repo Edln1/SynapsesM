@@ -889,8 +889,23 @@ html[data-theme="trueblack"] .bnav-cc-tv-card.tv-on{box-shadow:0 8px 30px rgba(0
 .bnav-cc-tv-led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.15);flex-shrink:0;transition:background .3s ease,box-shadow .3s ease;}
 .bnav-cc-tv-card.tv-on .bnav-cc-tv-led{background:#ff4d6d;box-shadow:0 0 6px rgba(255,77,109,0.8);animation:tvLedPulse 2s ease-in-out infinite;}
 @keyframes tvLedPulse{0%,100%{opacity:1;}50%{opacity:0.45;}}
-.bnav-cc-tv-power{background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:6px;transition:color .15s ease,background .15s ease;}
-.bnav-cc-tv-power:hover{color:#fff;background:rgba(255,255,255,0.08);}
+/* Right side of the topbar — channel-switcher toggle + power, grouped so
+   justify-content:space-between (2 children: brand, this group) still just
+   pins brand left / group right, instead of spacing 3 buttons out evenly. */
+.bnav-cc-tv-topbar-right{display:flex;align-items:center;gap:2px;}
+.bnav-cc-tv-chanstoggle,.bnav-cc-tv-power{background:transparent;border:none;color:rgba(255,255,255,0.3);cursor:pointer;line-height:1;padding:2px 4px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:color .15s ease,background .15s ease;}
+.bnav-cc-tv-chanstoggle svg,.bnav-cc-tv-power svg{width:13px;height:13px;display:block;}
+.bnav-cc-tv-chanstoggle:hover,.bnav-cc-tv-power:hover{color:#fff;background:rgba(255,255,255,0.08);}
+/* Only meaningful once the TV is actually on — dim/inert before then instead
+   of looking clickable with nothing to toggle. */
+.bnav-cc-tv-chanstoggle{opacity:0.3;pointer-events:none;}
+.bnav-cc-tv-card.tv-on .bnav-cc-tv-chanstoggle{opacity:1;pointer-events:auto;}
+.bnav-cc-tv-card.tv-on.tv-hud .bnav-cc-tv-chanstoggle{color:#fff;}
+/* Desktop already reveals the channel bar on mouse hover/move — the button
+   is only needed where there's no hover to rely on (touch). Hide it on any
+   device that actually has real hover, rather than by screen width, so a
+   touch-capable laptop with a mouse plugged in still gets the right one. */
+@media(hover:hover) and (pointer:fine){.bnav-cc-tv-chanstoggle{display:none;}}
 .bnav-cc-tv-ask-row{padding:0 1px 7px;flex-shrink:0;}
 .bnav-cc-tv-ask{width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 8px;font-size:10.5px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;caret-color:#f2f2f5;transition:border-color .15s ease,background .15s ease;}
 .bnav-cc-tv-ask::placeholder{color:rgba(255,255,255,0.32);}
@@ -11407,7 +11422,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // that's now packed with its own clickable day pills, event rows,
       // +Event/+Bill buttons, and week-nav arrows; without this exclusion
       // every click in there was being swallowed as a drag-start on the card.
-      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,#bnavCCTVComing,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,#bnavCCPulseList,#bnavCCPulseRefresh,#bnavCCPulseResize,#bnavCCPulseUp,#bnavCCPulseDown,iframe')){
+      if(e.target && e.target.closest && e.target.closest('[data-new-chat],[data-open-notes],[data-chat],#bnavCCCalRefresh,#bnavCCMailRefresh,#bnavCCCalList,#bnavCCTVAsk,#bnavCCTVPower,#bnavCCTVChansToggle,#bnavCCTVResize,#bnavCCTVPrev,#bnavCCTVNext,#bnavCCTVComing,.bnav-cc-tv-chip,.bnav-cc-tv-swap,.bnav-cc-tv-open,#bnavCCPulseList,#bnavCCPulseRefresh,#bnavCCPulseResize,#bnavCCPulseUp,#bnavCCPulseDown,iframe')){
         return;
       }
       // Arm the pending-drag state only — nothing about the card changes
@@ -11579,7 +11594,10 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         '<div class="bnav-cc-card bnav-cc-tv-card" id="bnavCCTV" data-cc-id="tv" title="Tap to tune in, or just ask">'+
           '<div class="bnav-cc-tv-topbar">'+
             '<div class="bnav-cc-tv-brand"><span class="bnav-cc-tv-led"></span>SYN-TV</div>'+
-            '<button class="bnav-cc-tv-power" id="bnavCCTVPower" title="Power off">⏻</button>'+
+            '<div class="bnav-cc-tv-topbar-right">'+
+              '<button class="bnav-cc-tv-chanstoggle" id="bnavCCTVChansToggle" title="Show channels"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>'+
+              '<button class="bnav-cc-tv-power" id="bnavCCTVPower" title="Power off"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+            '</div>'+
           '</div>'+
           '<div class="bnav-cc-tv-ask-row"><input id="bnavCCTVAsk" class="bnav-cc-tv-ask" placeholder="Ask any topic…" /></div>'+
           '<div class="bnav-cc-tv-screen">'+
@@ -13157,19 +13175,26 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       });
     }
     var hudT;
+    // True hover capability (real mouse), not just screen width — a touch
+    // laptop with a mouse plugged in should still get real hover behavior.
+    var hasRealHover = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
     function showTvHud(){
       if(!_ccTV.on) return;
       card.classList.add('tv-hud');
       clearTimeout(hudT);
       hudT = setTimeout(function(){ card.classList.remove('tv-hud'); }, 2400);
     }
-    card.addEventListener('mousemove', showTvHud);
-    card.addEventListener('mouseenter', showTvHud);
-    card.addEventListener('mouseleave', function(e){
-      if(e.relatedTarget && card.contains(e.relatedTarget)) return;
-      clearTimeout(hudT);
-      card.classList.remove('tv-hud');
-    });
+    if(hasRealHover){
+      // Desktop: reveal on hover, same as before. The dedicated toggle
+      // button is CSS-hidden on these devices, so it's not in play here.
+      card.addEventListener('mousemove', showTvHud);
+      card.addEventListener('mouseenter', showTvHud);
+      card.addEventListener('mouseleave', function(e){
+        if(e.relatedTarget && card.contains(e.relatedTarget)) return;
+        clearTimeout(hudT);
+        card.classList.remove('tv-hud');
+      });
+    }
     var askInput = card.querySelector('#bnavCCTVAsk');
     if(askInput){
       askInput.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -13188,6 +13213,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         askInput.value='';
       });
     }
+    var chansToggle = card.querySelector('#bnavCCTVChansToggle');
+    if(chansToggle) chansToggle.addEventListener('click', function(e){
+      e.stopPropagation();
+      // Only reachable on non-hover (touch) devices — CSS hides this button
+      // wherever hasRealHover is true — and on those devices we deliberately
+      // never attach the mousemove/mouseenter listeners above, so there's no
+      // hover-driven state to race against here. Safe to be a true toggle.
+      if(card.classList.contains('tv-hud')){ clearTimeout(hudT); card.classList.remove('tv-hud'); }
+      else showTvHud();
+    });
     card.addEventListener('click', function(){
       if(card._ccJustDragged) return;
       if(!_ccTV.on) tuneControlCentreTV(SYN_TV_CHANNELS[0].key);
@@ -13195,7 +13230,8 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       // reappears, but neither ever fires from a tap — so on touch devices,
       // once the initial post-tune reveal times out, there was no way back
       // to it. A tap on the card (chips/buttons already stopPropagation, so
-      // this only fires on taps elsewhere on the card) now re-shows it too.
+      // this only fires on taps elsewhere on the card) now re-shows it too,
+      // on top of the dedicated header toggle button above.
       else showTvHud();
     });
     _ccTvBindResize(card);
