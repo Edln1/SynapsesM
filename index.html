@@ -1431,6 +1431,23 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 #authRightPanel .form-row label{color:#6f6f6f;}
 #authRightPanel .form-row input:focus,#authRightPanel .form-row select:focus{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,0.14);}
 #authModalInner{min-height:600px;}
+/* Bottom-left icon rail (Notes/Pulse/Call/Ask/ImageGen/Stem/Settings/
+   ControlCenter) is position:fixed at z-index:301 — HIGHER than
+   .modal-overlay's z-index:200 — so it renders on top of and stays
+   clickable through the auth/onboarding login-register modal. Leaving
+   them visible behind the modal is fine; just kill interaction while
+   it's open. authModal is toggled via inline style display:flex/none
+   (see showAuthModal()), so key off that rather than a class. */
+body:has(#authModal[style*="flex"]) #bnavNotesBtn,
+body:has(#authModal[style*="flex"]) #bnavPulseBtn,
+body:has(#authModal[style*="flex"]) #bnavCallBtn,
+body:has(#authModal[style*="flex"]) #bnavAskBtn,
+body:has(#authModal[style*="flex"]) #bnavImageGenBtn,
+body:has(#authModal[style*="flex"]) #bnavStemBtn,
+body:has(#authModal[style*="flex"]) #bnavSettingsBtn,
+body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
+  pointer-events:none!important;
+}
 .modal-overlay#authModal{
   align-items:stretch!important;
   justify-content:stretch!important;
@@ -67551,6 +67568,22 @@ function speakVoiceReply(text) {
       try { _unlockVoiceAudio(); } catch (eUl) {}
       // Don't wipe _history here — preserve conversation across toggle off/on
       _busy = false; _busySince = 0;
+      // Force life state to warm up the moment voice turns on, instead of
+      // relying on the document-level 'click' fallback below — that
+      // listener is registered with capture:true, so on THIS exact click
+      // (the one that turns voice on) it fires and checks
+      // window._topNavVoiceActive BEFORE this onclick handler has actually
+      // set it true, so it always no-ops on click #1. Desktop rarely
+      // notices because people tend to click elsewhere before/while
+      // talking, which retroactively triggers the fallback in time for
+      // the first turn. Mobile's tap-once-then-speak flow generates no
+      // such follow-up click, so if the 1500ms page-load warmup hasn't
+      // finished yet (slow connection, tab was backgrounded/throttled),
+      // the whole session runs with empty life fragments — the
+      // "life state / inner world stuff not injecting" symptom.
+      if (!window._avaLifePromptFragment && typeof refreshAvaLife === 'function') {
+        try { refreshAvaLife(false); } catch (eRal) {}
+      }
       function _afterMicReady() {
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
         /* First open: Ava leads with a real intro — don't jump into random listen/reply */
