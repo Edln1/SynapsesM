@@ -1599,16 +1599,25 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
-     Sign In / Guest stays centered - unchanged. */
+  /* COPY FIX: keep panel centered (Create Account's natural spot).
+     Equal min-height on both forms so Sign In rises to match Create Account's
+     green line — without pinning either to the top of the screen. */
   #authRightPanel.auth-register-mode{
-    justify-content:flex-start!important;
+    /* no flex-start — stay centered like Sign In */
     overscroll-behavior:contain!important;
-    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authRightPanel.auth-register-mode #registerForm{
+  #authStepForms #loginForm,
+  #authStepForms #registerForm{
+    min-height:420px!important;
+    box-sizing:border-box!important;
+  }
+  /* Extra lift on Sign In only — still slightly low vs Create Account */
+  #authStepForms #loginForm{
+    padding-bottom:28px!important;
+  }
+  #authStepForms #authProgress,
+  #authStepForms #authTabsBar{
     flex-shrink:0!important;
-    padding-bottom:12px!important;
   }
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
@@ -1805,6 +1814,13 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
   /* ── Bottom nav ── */
   .bnav-desktop-only{display:none!important;}
   .bnav-mobile-more{display:flex!important;color:white!important;font-size:16px!important;font-weight:700!important;}
+  /* Hide mobile 3-dots during auth/onboarding only */
+  body.auth-onboarding .bnav-mobile-more,
+  body.auth-onboarding #bnavMoreBtn{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
   #bottomNavBar.fullwidth{padding-bottom:env(safe-area-inset-bottom,0px)!important;height:auto!important;min-height:52px!important;}
   body.bottom-nav:not(.nav-fullwidth) .main{height:100vh!important;max-height:100vh!important;}
   body.bottom-nav.nav-fullwidth .main{height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;}
@@ -21088,7 +21104,7 @@ function toggleRole(r){if(selectedRoles.has(r)&&selectedRoles.size===1)return;se
   }catch(e){}
 })();
 
-function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}/* Never mark tour done on guest enter — only clear stuck overlay if tour not intentionally running */try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){/* soft dismiss without markDone */var _r=document.getElementById('synTourRoot');if(_r&&_r.classList.contains('on')&&!window.__synTourIntentionalStart){window.dismissSynapsesTour();}}}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['personal'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){var _r2=document.getElementById('synTourRoot');if(_r2&&_r2.classList.contains('on'))window.dismissSynapsesTour();}}catch(_t){}}
+function doGuest(){try{var sv=localStorage.getItem('synapses_session');if(sv){var s=JSON.parse(sv);if(s&&s.isGuest){currentUser=s;document.getElementById('authModal').style.display='none';setAuthOnboardingUI(false);onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:true});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}/* Never mark tour done on guest enter — only clear stuck overlay if tour not intentionally running */try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){/* soft dismiss without markDone */var _r=document.getElementById('synTourRoot');if(_r&&_r.classList.contains('on')&&!window.__synTourIntentionalStart){window.dismissSynapsesTour();}}}catch(_t){}return;}}}catch(e){} currentUser={email:'guest_'+Date.now()+'@guest',name:'Guest',roles:['personal'],color:'#2d2060',initial:'G',isGuest:true};document.getElementById('authModal').style.display='none';setAuthOnboardingUI(false);onLogin();if(typeof synTrack==='function')synTrack('guest_enter',{returning:false});try{if(typeof setView==='function')setView('sec-chat');}catch(_e){}try{if(!window.__synTourActive&&!window.__synTourIntentionalStart&&typeof dismissSynapsesTour==='function'){var _r2=document.getElementById('synTourRoot');if(_r2&&_r2.classList.contains('on'))window.dismissSynapsesTour();}}catch(_t){}}
 /* ── Onboarding wizard controls ── */
 var AUTH_LEFT_COPY = {
   start:   {title:null, sub:null}, // uses brand block instead
@@ -21145,6 +21161,15 @@ function authReset(){
     authRenderLastMethod();
   }catch(_e){}
 }
+
+function setAuthOnboardingUI(on){
+  try{
+    document.body.classList.toggle('auth-onboarding', !!on);
+    var more=document.getElementById('bnavMoreBtn');
+    if(more){ more.style.display = on ? 'none' : ''; }
+  }catch(_e){}
+}
+document.addEventListener('DOMContentLoaded',function(){try{var _am=document.getElementById('authModal');if(_am){var d=_am.style.display||window.getComputedStyle(_am).display;if(d&&d!=='none')setAuthOnboardingUI(true);}}catch(_e){}});
 function authShowForms(mode){
   try{
     var start=document.getElementById('authStepStart'), forms=document.getElementById('authStepForms');
@@ -21277,15 +21302,15 @@ function switchAuthTab(t){
     }
   }catch(_e){}
 }
-function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['personal'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
-function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');var _companyEl=document.getElementById('regCompany'),_company=_companyEl?_companyEl.value.trim():'';_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'personal',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};if(_company){try{localStorage.setItem('synapses_company_'+email,_company);}catch(_ce){}currentUser.company=_company;}try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}try{localStorage.removeItem('synapses_tour_v1');localStorage.removeItem('synapses_tour_btn_docked');document.cookie='synapses_tour_v1=;path=/;max-age=0';document.cookie='synapses_tour_v1=;path=/;max-age=0;SameSite=Lax';window.__synTourDone=false;}catch(_tf){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
+function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['personal'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}document.getElementById('authModal').style.display='none';setAuthOnboardingUI(false);onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
+function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');var _companyEl=document.getElementById('regCompany'),_company=_companyEl?_companyEl.value.trim():'';_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'personal',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};if(_company){try{localStorage.setItem('synapses_company_'+email,_company);}catch(_ce){}currentUser.company=_company;}try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}try{localStorage.removeItem('synapses_tour_v1');localStorage.removeItem('synapses_tour_btn_docked');document.cookie='synapses_tour_v1=;path=/;max-age=0';document.cookie='synapses_tour_v1=;path=/;max-age=0;SameSite=Lax';window.__synTourDone=false;}catch(_tf){}document.getElementById('authModal').style.display='none';setAuthOnboardingUI(false);onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
 function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;try{window.currentUser=null;}catch(_w){}try{document.body.classList.remove('syn-authed');}catch(_b){}try{if(typeof window._syncChpUserDock==='function')window._syncChpUserDock();}catch(_cx){}try{if(typeof window._applyDockedTourBtn==='function')window._applyDockedTourBtn();}catch(_t){}chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
 // Clear video banner and avatar so old account's media doesn't show for next user
 var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.style.display='none';}
 var fav=document.getElementById('feedProfileAv');if(fav){fav.style.backgroundImage='';fav.style.background='linear-gradient(135deg,#6366f1,#4f46e5)';fav.textContent='?';}
 var sbAv=document.getElementById('sbAvatar');if(sbAv){sbAv.style.backgroundImage='';sbAv.style.display='none';}
 var preload=document.getElementById('avatarPreload');if(preload)preload.textContent='';
-document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';if(typeof authReset==='function')authReset();_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
+document.getElementById('postJobBtnMain').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';document.getElementById('authModal').style.display='flex';setAuthOnboardingUI(true);if(typeof authReset==='function')authReset();_loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function(){if(typeof initLoginAnim==='function')initLoginAnim();});});}
 function getRoles(u){return u?u.roles||['personal']:[];}
 function canSeek(u){return getRoles(u).includes('seeker');}
 function canRecruit(u){return getRoles(u).includes('recruiter');}
