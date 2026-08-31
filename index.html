@@ -1599,26 +1599,18 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* COPY FIX: keep panel centered (Create Account's natural spot).
-     Equal min-height on both forms so Sign In rises to match Create Account's
-     green line — without pinning either to the top of the screen. */
+  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
+     Sign In / Guest stays centered - unchanged. */
   #authRightPanel.auth-register-mode{
-    /* no flex-start — stay centered like Sign In */
+    justify-content:flex-start!important;
     overscroll-behavior:contain!important;
+    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authStepForms #loginForm,
-  #authStepForms #registerForm{
-    min-height:420px!important;
-    box-sizing:border-box!important;
-  }
-  /* Extra lift on Sign In only — still slightly low vs Create Account */
-  #authStepForms #loginForm{
-    padding-bottom:28px!important;
-  }
-  #authStepForms #authProgress,
-  #authStepForms #authTabsBar{
+  #authRightPanel.auth-register-mode #registerForm{
     flex-shrink:0!important;
+    padding-bottom:12px!important;
   }
+
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
     background:transparent!important;
@@ -1815,17 +1807,6 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
   .bnav-desktop-only{display:none!important;}
   .bnav-mobile-more{display:flex!important;color:white!important;font-size:16px!important;font-weight:700!important;}
   #bottomNavBar.fullwidth{padding-bottom:env(safe-area-inset-bottom,0px)!important;height:auto!important;min-height:52px!important;}
-  /* Pill (non-fullwidth) nav bar is centered with left:50%/translateX(-50%)
-     and has no width cap, so on mobile its full row of icons (498px+) pushes
-     past both screen edges — the right-side icons (Stem/•••/orb) end up
-     off-screen. Cap it to the viewport and let it scroll instead. */
-  #bottomNavBar:not(.fullwidth){
-    max-width:calc(100vw - 24px)!important;
-    overflow-x:auto!important;
-    -webkit-overflow-scrolling:touch!important;
-    scrollbar-width:none!important;
-  }
-  #bottomNavBar:not(.fullwidth)::-webkit-scrollbar{display:none!important;}
   body.bottom-nav:not(.nav-fullwidth) .main{height:100vh!important;max-height:100vh!important;}
   body.bottom-nav.nav-fullwidth .main{height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;}
   body.nav-fullwidth .main{height:calc(100vh - 60px - env(safe-area-inset-bottom,0px))!important;}
@@ -21293,7 +21274,6 @@ function switchAuthTab(t){
     if(panel){
       if(t==='register') panel.classList.add('auth-register-mode');
       else panel.classList.remove('auth-register-mode');
-      panel.classList.remove('auth-forms-mode');
       panel.scrollTop=0;
     }
   }catch(_e){}
