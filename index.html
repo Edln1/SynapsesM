@@ -53210,6 +53210,12 @@ function _tnvActivateMicInPlace(){
   btn.classList.add('tnv-centered');
   _tnvCentered = true;
   try{localStorage.setItem('synapses_tnv_centered','1');}catch(e){}
+  // Pre-set the green "listening" look (mic→wave swap + tnv-on) BEFORE the
+  // button is ever visible, so what fades in is already the live state —
+  // no flash of the old gray/off mic icon first. The real STS start-up
+  // calls the same state setter again once actually connected, which is a
+  // harmless no-op here since it's already showing that state.
+  if(typeof window._tnvBtnState === 'function') window._tnvBtnState('listen');
   btn.style.transition = 'none';
   btn.style.setProperty('position', 'fixed', 'important');
   btn.style.setProperty('left', '50%', 'important');
@@ -64600,6 +64606,7 @@ function speakVoiceReply(text) {
       else if (s === 'speak') b.classList.add('tnv-speak');
     }
   }
+  window._tnvBtnState = btnState;
 
   // Web Audio analyser for real-time bar animation during TTS
   var _audioCtx = null;
