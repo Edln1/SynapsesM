@@ -53718,17 +53718,42 @@ function toggleTopBar(){
   // final box isn't there yet the instant classes flip — wait for that to
   // settle before re-measuring, otherwise --cc-top gets set mid-collapse and
   // the panel's own top .2s transition races the bar's, causing a jump/gap.
-  // Both bnavCCPanel's `top` and .top-bar's collapse animate on their own
-  // timers, so this reads as two back-to-back smooth motions rather than
-  // a single combined one — good enough, and far better than the panel not
-  // moving at all.
+  // A fixed setTimeout(260) was used here before, tuned against a headless
+  // desktop render — real phones can render slower/janky enough that .25s
+  // of *wall clock* CSS transition time doesn't reliably mean .25s of real
+  // elapsed time before the next paint is observable, so the timeout could
+  // fire while the bar was still mid-collapse and _ccApplyInsets would read
+  // a stale height, leaving a gap. Listen for the actual transitionend on
+  // the property that drives the box height (max-height) instead, with the
+  // old timeout kept only as a safety-net fallback in case the transition
+  // never fires (e.g. reduced-motion, or the property didn't actually
+  // change value so no transition runs at all).
   var ccPanelForInset = document.getElementById('bnavCCPanel');
   if(ccPanelForInset && ccPanelForInset.classList.contains('bnav-cc-open')){
-    setTimeout(function(){
+    if(_ccInsetFallbackTimer){ clearTimeout(_ccInsetFallbackTimer); _ccInsetFallbackTimer=null; }
+    if(bar && _ccInsetTransitionHandler){ bar.removeEventListener('transitionend', _ccInsetTransitionHandler); }
+    var settled = false;
+    var doApply = function(){
+      if(settled) return;
+      settled = true;
+      if(_ccInsetFallbackTimer){ clearTimeout(_ccInsetFallbackTimer); _ccInsetFallbackTimer=null; }
+      if(bar && _ccInsetTransitionHandler){ bar.removeEventListener('transitionend', _ccInsetTransitionHandler); _ccInsetTransitionHandler=null; }
       if(typeof _ccApplyInsets === 'function') _ccApplyInsets();
-    }, 260);
+    };
+    _ccInsetTransitionHandler = function(e){
+      if(e.target !== bar) return;
+      if(e.propertyName !== 'max-height') return;
+      doApply();
+    };
+    if(bar) bar.addEventListener('transitionend', _ccInsetTransitionHandler);
+    // Fallback: 450ms is comfortably past the .25s spec'd duration even
+    // with real-device slowdown, so if transitionend never arrives we still
+    // self-correct rather than leaving the gap permanently.
+    _ccInsetFallbackTimer = setTimeout(doApply, 450);
   }
 }
+var _ccInsetTransitionHandler = null;
+var _ccInsetFallbackTimer = null;
 
 // Restores the mic's centered position on reload/app-reopen if it was left
 // there last session (top bar collapsed + mic glided to center — see
