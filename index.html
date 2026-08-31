@@ -7,7 +7,7 @@
     /* Base app chrome is pure black (sun + moon). Do NOT paint easyview as #0d0c15 —
        that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
        particles/beams only; moon fades beams out over 1.4s to stay true black. */
-    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
+    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;overflow-x:hidden!important;max-width:100vw!important;}
     html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
@@ -1815,6 +1815,17 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
   .bnav-desktop-only{display:none!important;}
   .bnav-mobile-more{display:flex!important;color:white!important;font-size:16px!important;font-weight:700!important;}
   #bottomNavBar.fullwidth{padding-bottom:env(safe-area-inset-bottom,0px)!important;height:auto!important;min-height:52px!important;}
+  /* Pill (non-fullwidth) nav bar is centered with left:50%/translateX(-50%)
+     and has no width cap, so on mobile its full row of icons (498px+) pushes
+     past both screen edges — the right-side icons (Stem/•••/orb) end up
+     off-screen. Cap it to the viewport and let it scroll instead. */
+  #bottomNavBar:not(.fullwidth){
+    max-width:calc(100vw - 24px)!important;
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+    scrollbar-width:none!important;
+  }
+  #bottomNavBar:not(.fullwidth)::-webkit-scrollbar{display:none!important;}
   body.bottom-nav:not(.nav-fullwidth) .main{height:100vh!important;max-height:100vh!important;}
   body.bottom-nav.nav-fullwidth .main{height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100vh - 52px - env(safe-area-inset-bottom,0px))!important;}
   body.nav-fullwidth .main{height:calc(100vh - 60px - env(safe-area-inset-bottom,0px))!important;}
@@ -10561,7 +10572,16 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </aside>
 
 <!-- Bottom Nav Bar -->
-<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;position:fixed;bottom:0;left:0;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+<style>
+/* Fix: these were 8 separately position:fixed;left:Npx buttons — if the WebView's
+   CSS viewport is ever wider than the physical screen (packaged Android app),
+   the later ones (left:288/328px) land off the right edge. Anchor the whole
+   row from one fixed wrapper at left:0 instead, buttons just flow in flex order. */
+#bnavBLRow{position:fixed;bottom:0;left:0;display:flex;align-items:center;z-index:301;}
+#bnavBLRow>button{position:static!important;bottom:auto!important;left:auto!important;}
+</style>
+<div id="bnavBLRow">
+<button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
 <!-- Pulse feed -->
 <button type="button" id="bnavPulseBtn" onclick="window.toggleSynPulse&&window.toggleSynPulse()" aria-label="Pulse" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -10604,6 +10624,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 </button>
 <!-- Customize which icons show in the bottom-left row — opens blIconsDrawerModal -->
 <button type="button" id="bnavBLMoreBtn" onclick="openBLIconsDrawer()" title="Customize icons" aria-label="Customize bottom-left icons" style="display:none;opacity:0;pointer-events:none;">•••</button>
+</div>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
     <div class="pp-top">
