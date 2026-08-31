@@ -27213,8 +27213,8 @@ var FP_VIDEO_CALL_HOLD_MS = 2500;
 window._fpVideoCallTimer = 0;
 window._fpVideoCallFired = false;
 window._fpTapPending = false; /* trusted tap commit deferred until pointerup, so it can lose the race to a still-held 3s video-call press */
-/** Re-require hold if last success was longer ago than this (2 hours) */
-var FP_STALE_MS = 2 * 60 * 60 * 1000;
+/** Re-require hold if last success was longer ago than this (8 hours) */
+var FP_STALE_MS = 8 * 60 * 60 * 1000;
 var FP_TRUST_KEY = 'synapses_fp_trusted';
 var FP_LAST_OK_KEY = 'synapses_fp_last_ok';
 
@@ -27568,6 +27568,12 @@ function _fpBeginHold(e){
   /* Voice already on: no hold chrome — a tap (release) turns it off. */
   if(_fpIsSpeechLive()) return;
 
+  /* Decide once, up front: does this hold need the full 3-stage verification
+     chrome (purple ring + scan line), or is the device already trusted and
+     recently unlocked, in which case we want the plain, simpler fog pulse
+     for the whole hold instead of ever showing the scan animation. */
+  var trustedHold = !_fpRequiresHoldScan();
+
   var _fpToldAlmost = false;
   function tick(now){
     if(!window._fpHoldActive) return;
@@ -27581,13 +27587,17 @@ function _fpBeginHold(e){
       window._fpHoldUiOn = true;
       window._fpTapPending = false;
       try{ if(typeof hideToast==='function') hideToast(); }catch(_ht){}
-      _fpSetState('holding');
-      _fpStatus('Hold for voice');
+      if(trustedHold){
+        _fpSetState('fog');
+      } else {
+        _fpSetState('holding');
+        _fpStatus('Hold for voice');
+      }
       try { if(typeof _haptic === 'function') _haptic(4); } catch(err){}
     }
     var p = Math.min(1, elapsed / FP_HOLD_MS);
     _fpSetProgress(p);
-    if(!_fpToldAlmost && p >= 0.7){
+    if(!trustedHold && !_fpToldAlmost && p >= 0.7){
       _fpToldAlmost = true;
       _fpStatus('Almost…');
     }
@@ -27597,11 +27607,18 @@ function _fpBeginHold(e){
       window._fpTapPending = false;
       window._fpHoldRaf = 0;
       _fpSetProgress(1);
-      _fpSetState('scanning');
-      _fpStatus('Scanning…');
-      try { if(typeof _haptic === 'function') _haptic(8); } catch(err2){}
-      if(_fpRequiresHoldScan()) startFingerprintUnlock();
-      else _fpSuccess();
+      if(trustedHold){
+        /* Trusted device: long-press just activates STS directly, no full
+           scan needed — _fpSuccess() sees the plain 'fog' class (not
+           'holding'/'scanning') and takes its simple, instant path. */
+        try { if(typeof _haptic === 'function') _haptic(8); } catch(err2){}
+        _fpSuccess();
+      } else {
+        _fpSetState('scanning');
+        _fpStatus('Scanning…');
+        try { if(typeof _haptic === 'function') _haptic(8); } catch(err2){}
+        startFingerprintUnlock();
+      }
       return;
     }
     window._fpHoldRaf = requestAnimationFrame(tick);
