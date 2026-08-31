@@ -1599,26 +1599,18 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* COPY FIX: keep panel centered (Create Account's natural spot).
-     Equal min-height on both forms so Sign In rises to match Create Account's
-     green line — without pinning either to the top of the screen. */
+  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
+     Sign In / Guest stays centered - unchanged. */
   #authRightPanel.auth-register-mode{
-    /* no flex-start — stay centered like Sign In */
+    justify-content:flex-start!important;
     overscroll-behavior:contain!important;
+    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authStepForms #loginForm,
-  #authStepForms #registerForm{
-    min-height:420px!important;
-    box-sizing:border-box!important;
-  }
-  /* Extra lift on Sign In only — still slightly low vs Create Account */
-  #authStepForms #loginForm{
-    padding-bottom:28px!important;
-  }
-  #authStepForms #authProgress,
-  #authStepForms #authTabsBar{
+  #authRightPanel.auth-register-mode #registerForm{
     flex-shrink:0!important;
+    padding-bottom:12px!important;
   }
+
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
     background:transparent!important;
