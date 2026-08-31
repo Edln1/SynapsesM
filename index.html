@@ -1599,16 +1599,22 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
-     Sign In / Guest stays centered - unchanged. */
+  /* COPY FIX: centered panel; equal form height so Sign In green line matches Create Account.
+     Bottom nav / icons untouched. */
   #authRightPanel.auth-register-mode{
-    justify-content:flex-start!important;
     overscroll-behavior:contain!important;
-    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authRightPanel.auth-register-mode #registerForm{
+  #authStepForms #loginForm,
+  #authStepForms #registerForm{
+    min-height:420px!important;
+    box-sizing:border-box!important;
+  }
+  #authStepForms #loginForm{
+    padding-bottom:28px!important;
+  }
+  #authStepForms #authProgress,
+  #authStepForms #authTabsBar{
     flex-shrink:0!important;
-    padding-bottom:12px!important;
   }
 
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
