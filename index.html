@@ -1599,26 +1599,16 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     justify-content:center!important;
     transition:background .35s ease!important;
   }
-  /* Forms step (Sign In + Create Account): pin from the top on mobile so the
-     green progress line and tabs stay put when swapping. Sign In sits up with Create Account. */
-  #authRightPanel.auth-forms-mode{
+  /* Only Create Account (taller form): pin to top so overflow can scroll fully.
+     Sign In / Guest stays centered - unchanged. */
+  #authRightPanel.auth-register-mode{
     justify-content:flex-start!important;
     overscroll-behavior:contain!important;
-    padding-top:calc(52px + env(safe-area-inset-top, 0px))!important;
+    padding-bottom:calc(40px + env(safe-area-inset-bottom, 0px))!important;
   }
-  #authRightPanel.auth-forms-mode #authProgress,
-  #authRightPanel.auth-forms-mode #authTabsBar{
+  #authRightPanel.auth-register-mode #registerForm{
     flex-shrink:0!important;
-  }
-  #authRightPanel.auth-forms-mode #loginForm,
-  #authRightPanel.auth-forms-mode #registerForm{
-    display:flex!important;
-    flex-direction:column!important;
-    flex-shrink:0!important;
-  }
-  /* Reserve Create Account step-1 height on Sign In so the block below the tabs doesn't jump */
-  #authRightPanel.auth-forms-mode #loginForm{
-    min-height:280px!important;
+    padding-bottom:12px!important;
   }
   /* Compare: Clear = current (transparent). Dark = deeper wallpaper veil, still no blur. */
   #authModal.auth-field-clear #authRightPanel{
@@ -21260,33 +21250,29 @@ function switchAuthTab(t){
   document.getElementById('tabLogin').classList.toggle('active',t==='login');
   document.getElementById('tabRegister').classList.toggle('active',t==='register');
   document.getElementById('loginForm').style.display=t==='login'?'flex':'none';
-  document.getElementById('registerForm').style.display=t==='register'?'flex':'none';
-  if(t==='register'){ var rf=document.getElementById('registerForm'); if(rf){ rf.style.flexDirection='column'; } }
+  document.getElementById('registerForm').style.display=t==='register'?'block':'none';
   if(t==='login'){ authSetLeftView('brand'); }
   authRegGoStep(1);
   if(t==='login'){
     var prog=document.getElementById('authProgress');
     if(prog){
       prog.style.display='flex';
-      /* Keep all 3 slots so the green track doesn't reflow when swapping to Create Account */
       ['apDot1','apDot2','apDot3'].forEach(function(id,i){
         var d=document.getElementById(id);
         if(!d) return;
-        d.classList.remove('dot-hidden');
+        d.classList.toggle('dot-hidden', i!==0);
         d.classList.remove('done');
         d.classList.toggle('current', i===0);
       });
     }
   }
-  /* Mobile: pin forms from top so green line + tabs don't move when swapping */
+  /* Mobile only: Create Account can scroll; Sign In stays centered (no layout change) */
   try{
     var panel=document.getElementById('authRightPanel');
-    var forms=document.getElementById('authStepForms');
-    var formsVisible = forms && forms.style.display!=='none';
     if(panel){
-      if(formsVisible) panel.classList.add('auth-forms-mode');
-      else panel.classList.remove('auth-forms-mode');
-      panel.classList.remove('auth-register-mode');
+      if(t==='register') panel.classList.add('auth-register-mode');
+      else panel.classList.remove('auth-register-mode');
+      panel.classList.remove('auth-forms-mode');
       panel.scrollTop=0;
     }
   }catch(_e){}
