@@ -1387,6 +1387,13 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .form-row textarea{resize:vertical;min-height:80px;}
 .modal-btn{width:100%;padding:13px;background:rgba(99,102,241,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(99,102,241,0.35);border-radius:10px;color:rgba(255,255,255,0.92);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:4px;}
 .modal-btn:hover{background:rgba(99,102,241,0.25);border-color:rgba(99,102,241,0.6);box-shadow:0 0 22px rgba(99,102,241,0.2);}
+/* Waitlist CTA: swapped off the purple .modal-btn default for a plain
+   white-on-black button — reads more "serious/lab" than "fruity startup",
+   matches the SpaceX/Anthropic/OpenAI pattern of near-monochrome CTAs.
+   Scoped to #waitlistJoinBtn only so every other .modal-btn (login,
+   signup, etc.) is untouched. */
+#waitlistJoinBtn{background:#f2f2f5;border:1px solid #f2f2f5;color:#0a0a0e;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;}
+#waitlistJoinBtn:hover{background:#ffffff;border-color:#ffffff;box-shadow:0 6px 20px rgba(255,255,255,0.12);}
 .modal-err{color:#f76a6a;font-size:12.5px;text-align:center;margin-top:10px;display:none;}
 .form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .modal-cancel{width:100%;padding:11px;background:#161616;border:1px solid rgba(255,255,255,0.07);border-radius:10px;color:#6b6b8a;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;margin-top:8px;transition:all .15s;}
@@ -42308,7 +42315,19 @@ async function sendMessage(){
   // so typing "directions to X" (or "where is X", "find coffee near me",
   // etc.) into Ask-me-anything silently fell through to the plain chat LLM
   // and never opened the map — only saying it out loud worked.
+  //
+  // IMPORTANT: this branch used to `await detectAsync(text)` BEFORE the
+  // user's own message was rendered, so on the (common) regex-miss path it
+  // blocked on a real network round-trip to the backend with nothing showing
+  // on screen — that's what read as "laggy send button". Fix: render the
+  // user's message + clear the input synchronously first (an immediate
+  // paint, no network involved), THEN run detection. The fetch still
+  // happens, but against a chat that already shows what you typed, so the
+  // click itself feels instant and the intent check loads on its own time.
+  var _preShownUserMsg = null;
   if(window.synConnectors && typeof window.synConnectors.detect === 'function' && !sendAttachments.length){
+    inp.value=''; inp.style.height='52px';
+    _preShownUserMsg = addMsg('chatContainer','user',text,false,'chat');
     // Also route here when a connector action is pending confirmation
     // (e.g. calendar.create waiting on "confirm") — detect(text) alone
     // won't match a bare "confirm"/"yes", which used to mean that reply
@@ -42320,8 +42339,6 @@ async function sendMessage(){
       ? { kind:'act', action:'_pendingResume' }
       : (window.synConnectors.detectAsync ? await window.synConnectors.detectAsync(text) : window.synConnectors.detect(text));
     if(_mapHit){
-      inp.value=''; inp.style.height='52px';
-      addMsg('chatContainer','user',text,false,'chat');
       var _mapInterim = _mapHit.action === 'gmail.triage'
         ? '🔍 Scanning your inbox, give me a sec…'
         : (_mapHit.action === 'gmail.triageConfirm' ? '🗑️ Deleting those emails…' : 'Looking that up…');
@@ -42394,7 +42411,10 @@ async function sendMessage(){
   var _imageAttachments = sendAttachments.filter(function(a){ return a.kind==='image'; });
   var displayText = text || ('📎 ' + sendAttachments.map(function(a){return a.name;}).join(', '));
   var outgoingText = (text || 'Please review the attached file(s).') + _textAttachBlock;
-  var _userMsgGroup = addMsg('chatContainer','user',displayText,false,'chat');
+  // If the connector-intent check above already painted this exact message
+  // (regex/backend both came back with no map/gmail/calendar hit), reuse
+  // that bubble instead of adding a second, duplicate one.
+  var _userMsgGroup = _preShownUserMsg || addMsg('chatContainer','user',displayText,false,'chat');
   if(sendAttachments.length) renderMsgAttachments(_userMsgGroup, sendAttachments);
   chatHistory.push({role:'user',content:outgoingText});
   if(!chatSessions[activeSession]) chatSessions[activeSession]={history:[],hasNotes:false};
