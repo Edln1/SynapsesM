@@ -7,7 +7,7 @@
     /* Base app chrome is pure black (sun + moon). Do NOT paint easyview as #0d0c15 —
        that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
        particles/beams only; moon fades beams out over 1.4s to stay true black. */
-    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;overflow-x:hidden!important;max-width:100vw!important;}
+    html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
     html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
@@ -118,6 +118,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Synapses — interruptions fix</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
@@ -641,7 +644,7 @@ body.bottom-nav #bnavAskBtn{display:flex!important;}
 body.bottom-nav #bnavPulseBtn{display:flex!important;}
 body.bottom-nav #bnavCallBtn{display:flex!important;}
 body.bottom-nav #bnavImageGenBtn{display:flex!important;}
-body.bottom-nav #bnavStemBtn{display:flex!important;}
+body.bottom-nav #bnavStemBtn{display:none!important;}
 body.bottom-nav #bnavSettingsBtn{display:flex!important;}
 body.bottom-nav #bnavControlCenterBtn{display:flex!important;}
 body.bottom-nav #bnavBLMoreBtn{display:flex!important;}
@@ -775,7 +778,7 @@ html:not(.chp-sidebar-mode) body:has(.bnav-cc-panel.bnav-cc-open) #chatHistoryTr
 .syn-welcome-greeting{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text,#f2f2f5);line-height:1.25;}
 .syn-welcome-sub{font-size:11.5px;color:rgba(255,255,255,0.4);margin-top:2px;}
 @media (max-width:640px){.syn-welcome-pop{left:12px!important;right:12px;width:auto;top:56px!important;}}
-.bnav-cc-left{grid-area:left;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;min-width:0;}
+.bnav-cc-left{grid-area:left;display:flex;flex-direction:column;gap:12px;overflow-x:hidden;overflow-y:auto;min-height:0;min-width:0;}
 .bnav-cc-card{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:14px;flex-shrink:0;}
 .bnav-cc-card-title{font-size:11px;letter-spacing:.06em;color:rgba(255,255,255,0.55);text-transform:uppercase;margin-bottom:10px;font-weight:600;}
 .bnav-cc-bars{display:flex;align-items:flex-end;gap:5px;height:64px;}
@@ -790,7 +793,12 @@ html:not(.chp-sidebar-mode) body:has(.bnav-cc-panel.bnav-cc-open) #chatHistoryTr
 .bnav-cc-panel.bnav-cc-open .bnav-cc-gauge{background:conic-gradient(var(--gc,#00d9a8) 0% var(--gp,60%), rgba(255,255,255,0.08) var(--gp,60%) 100%);}
 .bnav-cc-gauge span{width:42px;height:42px;border-radius:50%;background:#161022;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;}
 .bnav-cc-gauge-label{font-size:10px;color:rgba(255,255,255,0.45);}
-.bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:stretch;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-y:auto;padding:12px;}
+/* overflow-x:hidden — the center column is a vertical tray of fixed 190px
+   tiles; nothing ever scrolls it sideways on purpose (drag reorder treats it
+   as a wrapping grid). Without this, a saved pulse-widget width or a resized
+   window left a stray horizontal scrollbar under the greeting/balance tiles.
+   Matches the mobile media query below, which already forces the same. */
+.bnav-cc-center{grid-area:center;position:relative;display:flex;flex-flow:row wrap;align-items:stretch;align-content:flex-start;justify-content:flex-start;gap:10px;min-width:190px;width:100%;height:100%;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;padding:12px;}
 .bnav-cc-center>.bnav-cc-card{width:190px;flex:0 0 190px;min-width:0;max-width:190px;box-sizing:border-box;overflow:hidden;}
 .bnav-cc-balance-card{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(124,106,247,0.10),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(0,217,168,0.08),transparent 55%),rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px;min-width:0;cursor:pointer;width:190px;height:190px;flex-shrink:0;z-index:2;transition:box-shadow .15s ease,outline-color .15s ease;}
 .bnav-cc-balance-card.cc-nest-target{outline:2px solid rgba(124,106,247,0.85);outline-offset:-2px;box-shadow:inset 0 0 0 1px rgba(124,106,247,0.35),0 0 16px rgba(124,106,247,0.28);z-index:6;}
@@ -1154,6 +1162,16 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-tile:hover{background:rgba(124,106,247,0.12);border-color:rgba(124,106,247,0.4);transform:translateY(-2px);}
 .bnav-cc-tile .bnav-cc-tile-icon{font-size:18px;}
 .bnav-cc-tile .bnav-cc-tile-label{font-size:10.5px;color:rgba(255,255,255,0.75);}
+.bnav-cc-td-pill{
+  display:inline-flex;align-items:center;justify-content:center;
+  margin-top:12px;padding:0;border:none;background:transparent;cursor:pointer;
+  line-height:0;
+}
+.bnav-cc-td-pill img{height:36px;width:auto;display:block;pointer-events:none;}
+.bnav-cc-td-pill:hover{opacity:0.88;}
+@media(max-width:768px){
+  #bnavCCTradeDesk,#synTradeDesk{display:none!important;}
+}
 /* Colorful accent cards — true-black canvas, bright pastel card blocks
    (borrowed direction from the Intelly dashboard reference). Each card
    sets --acc-bg/--acc-fg/--acc-fg-soft via a .cc-acc-* class; everything
@@ -2301,8 +2319,15 @@ body.pulse-setup-open #chatEmptyState:not(.hidden) .syn-fp{
   #bnavImageGenBtn:hover svg{stroke:rgba(200,203,230,0.55);}
 }
 #bnavImageGenBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;fill:none;}
-/* Stem Studio — furthest right, after Create Image */
-#bnavStemBtn{display:none;position:fixed;bottom:0;left:208px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;}
+/* Stem Studio icon moved inside Studio — keep the old sibling slot hidden */
+#bnavStemBtn,
+body.bottom-nav #bnavStemBtn,
+html.chp-sidebar-mode.chp-apps-board #bnavStemBtn,
+html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{
+  display:none!important;
+  pointer-events:none!important;
+}
+#bnavStemBtn{position:fixed;bottom:0;left:208px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;}
 @media (hover:hover) and (pointer:fine){
   #bnavStemBtn:hover{background:transparent;}
   #bnavStemBtn:hover svg{stroke:rgba(200,203,230,0.55);}
@@ -6434,6 +6459,46 @@ html[data-theme="trueblack"] body.voice-live .syn-fp-icon{
   pointer-events:none!important;
   opacity:0!important;
 }
+#studioGenerateView #imageGenEmptyState #studioStemBtn{
+  position:static!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  padding:7px 14px!important;
+  margin:0!important;
+  border:1px solid rgba(255,255,255,0.1)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,0.04)!important;
+  color:rgba(230,230,240,0.88)!important;
+  cursor:pointer!important;
+  font-family:'DM Sans',sans-serif!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  line-height:1.2!important;
+  letter-spacing:.01em!important;
+  flex-shrink:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  transform:none!important;
+  transition:background .15s,border-color .15s,color .15s!important;
+}
+#studioGenerateView #imageGenEmptyState #studioStemBtn .studio-stem-launch-ico{
+  width:14px!important;
+  height:14px!important;
+  display:block!important;
+  flex-shrink:0!important;
+}
+#studioGenerateView #imageGenEmptyState #studioStemBtn .studio-stem-launch-name{
+  font-size:12px!important;
+  font-weight:600!important;
+  white-space:nowrap!important;
+}
+#studioGenerateView #imageGenEmptyState #studioStemBtn:hover{
+  background:rgba(255,255,255,0.1)!important;
+  border-color:rgba(255,255,255,0.2)!important;
+  color:#fff!important;
+}
 /* Home icon (left cluster, next to Back) hides entirely on Community — no layout reservation needed there */
 #imageGenModal.studio-tab-community #studioHomeBtn{
   display:none!important;
@@ -7312,6 +7377,11 @@ html[data-theme="purple"] #studioTopBarTitle{
     border-color:rgba(255,255,255,0.2)!important;
     color:#fff!important;
   }
+  #studioGenerateView #imageGenEmptyState #studioStemBtn{
+    padding:6px 11px!important;
+    font-size:10.5px!important;
+  }
+  #studioGenerateView #imageGenEmptyState #studioStemBtn .studio-stem-launch-name{ font-size:10.5px!important; }
   #studioGenerateView #imageGenEmptyState .studio-land-section{display:block!important;}
   #studioGenerateView #imageGenEmptyState .studio-sec-head{
     display:flex!important;
@@ -8785,6 +8855,7 @@ html[data-theme="trueblack"].deep-space-on #deepSpaceLayer{opacity:1;}
 }
 /* Stem Studio sits on top as a see-through overlay — aurora stays in #deepSpaceLayer
    (never reparented). Hide page chrome so only the field shows through. */
+body.stem-studio-open #imageGenModal,
 body.stem-studio-open .main,
 body.stem-studio-open .sidebar,
 body.stem-studio-open .sidebar-toggle,
@@ -8825,6 +8896,47 @@ body.stem-studio-open #deepSpaceLayer,
 body.stem-studio-open #deepSpaceLayer *{
   pointer-events:none!important;
 }
+body.trade-desk-open #imageGenModal,
+body.trade-desk-open #stemStudio,
+body.trade-desk-open .main,
+body.trade-desk-open .sidebar,
+body.trade-desk-open .sidebar-toggle,
+body.trade-desk-open #sidebarResize,
+body.trade-desk-open #chpSidebar,
+body.trade-desk-open .top-bar,
+body.trade-desk-open #bottomNavBar,
+body.trade-desk-open #bnavNotesBtn,
+body.trade-desk-open #bnavPulseBtn,
+body.trade-desk-open #bnavAskBtn,
+body.trade-desk-open #bnavCallBtn,
+body.trade-desk-open #bnavImageGenBtn,
+body.trade-desk-open #bnavStemBtn,
+body.trade-desk-open #bnavSettingsBtn,
+body.trade-desk-open #bnavControlCenterBtn,
+body.trade-desk-open #synFingerprint,
+body.trade-desk-open #synFpPad,
+body.trade-desk-open .syn-fp,
+body.trade-desk-open #synPulsePanel,
+body.trade-desk-open #avaTvPopup,
+body.trade-desk-open #avaStsCtxMenu,
+body.trade-desk-open #avaAvatarBox,
+body.trade-desk-open #dgVoicePanel,
+body.trade-desk-open #plusMenu,
+body.trade-desk-open #chatHistoryDropdown,
+body.trade-desk-open #stickyNotesLayer,
+body.trade-desk-open .sticky-note-2030,
+body.trade-desk-open #synBotZone,
+body.trade-desk-open #robotTooltip,
+body.trade-desk-open #tinyBotCanvas,
+body.trade-desk-open #deepSpaceMenu{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.trade-desk-open #deepSpaceLayer,
+body.trade-desk-open #deepSpaceLayer *{ pointer-events:none!important; }
+body.stem-studio-open #synTradeDesk{ display:none!important; }
 /* Very light edge falloff only — full-screen field, not a cockpit slit */
 #deepSpaceVignette{
   position:absolute;inset:0;pointer-events:none;
@@ -10533,8 +10645,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         <button class="cat-btn" id="nav-world" onclick="goWorld()"><span class="cat-dot"></span>🌍 World Accelerator</button>
         <button class="cat-btn" id="nav-whiteboard" onclick="goWhiteboard()"><span class="cat-dot"></span>🎨 Whiteboard</button>
         <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>📓 My Notes</button>
-        <button class="cat-btn" id="nav-stemstudio" onclick="openStemStudio()"><span class="cat-dot"></span>🎚️ Stem Studio</button>
-        <button class="cat-btn" id="nav-imagegen" onclick="typeof openImageGenModal==='function' && openImageGenModal()"><span class="cat-dot"></span>🖼️ Image Studio</button>
+        <button class="cat-btn" id="nav-imagegen" onclick="typeof openImageGenModal==='function' && openImageGenModal()"><span class="cat-dot"></span>🖼️ Studio</button>
         <button class="cat-btn" id="nav-pulse" onclick="window.toggleSynPulse&&window.toggleSynPulse()"><span class="cat-dot"></span>⚡ Pulse</button>
         <button class="cat-btn" id="nav-controlcentre" onclick="typeof openControlCentre==='function' && openControlCentre()"><span class="cat-dot"></span>🎛️ Control Centre</button>
         <button class="cat-btn" id="nav-profile" onclick="goProfile()"><span class="cat-dot"></span>👤 My Profile</button>
@@ -10663,13 +10774,14 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
 <button type="button" id="bnavStemBtn" onclick="openStemStudio()" title="Stem Studio" aria-label="Stem Studio" style="display:none;opacity:0;pointer-events:none;">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-6M9 18v-12M14 15v-6M19 18v-12"/></svg>
 </button>
-<button type="button" id="bnavImageGenBtn" onclick="openImageGenModal()" title="Create Image" aria-label="Create an image" style="display:none;opacity:0;pointer-events:none;">
+<button type="button" id="bnavImageGenBtn" onclick="openImageGenModal()" title="Studio" aria-label="Open Studio" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.4)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <circle cx="8.5" cy="8.5" r="1.5"/>
     <path d="M21 15l-5-5L5 21"/>
   </svg>
 </button>
+
 <!-- Settings — mirrors the sidebar account-menu gear, no other mobile entry point -->
 <button type="button" id="bnavSettingsBtn" onclick="typeof _bnavOpenAccountSettings==='function' ? _bnavOpenAccountSettings() : goProfile()" title="Settings" aria-label="Settings" style="display:none;opacity:0;pointer-events:none;">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -11581,6 +11693,14 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     });
   }
 
+  function canSeeTradeDesk(){
+    if(typeof window !== 'undefined' && window.innerWidth <= 768) return false;
+    var u = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (window && window.currentUser);
+    var email = (u && u.email) ? String(u.email).replace(/\s+/g,'').toLowerCase() : '';
+    return email === 'ednbusiness73@gmail.com';
+  }
+  window.canSeeTradeDesk = canSeeTradeDesk;
+
   function ensureControlCentre(){
     if(document.getElementById('bnavCCBackdrop')) return;
     var navItems = [
@@ -11593,7 +11713,7 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
       {icon:'🌍', label:'World Accelerator', fn:function(){ if(typeof goWorld==='function') goWorld(); }},
       {icon:'🎨', label:'Whiteboard', fn:function(){ if(typeof goWhiteboard==='function') goWhiteboard(); }},
       {icon:'📓', label:'My Notes', fn:function(){ if(typeof goNotes==='function') goNotes(); }},
-      {icon:'🎚️', label:'Stem Studio', fn:function(){ if(typeof openStemStudio==='function') openStemStudio(); }},
+      {icon:'🖼️', label:'Studio', fn:function(){ if(typeof openImageGenModal==='function') openImageGenModal(); }},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbgcc" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbgcc)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbgcc)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbgcc)" stroke-width="1.8"/></svg>', label:'Browse Tools', fn:function(){ if(typeof showTools==='function') showTools('all'); }},
       {icon:'👤', label:'My Profile', fn:function(){ if(typeof goProfile==='function') goProfile(); }},
       {icon:'📺', label:'SYN-TV', fn:function(){ if(typeof tuneControlCentreTV==='function') tuneControlCentreTV('news'); }}
@@ -11694,6 +11814,9 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         '<div class="bnav-cc-card cc-placeholder bnav-cc-greeting-card" data-cc-id="greeting">'+
           '<div class="syn-welcome-greeting" id="bnavCCGreeting">'+esc(_welcomeGreeting())+'</div>'+
           '<div class="syn-welcome-sub">Here\u2019s what\u2019s new</div>'+
+          (canSeeTradeDesk()
+            ? '<button type="button" class="bnav-cc-td-pill" id="bnavCCTradeDesk" title="Trade Desk" aria-label="Open Trade Desk"><img src="tradedesk.png" alt="Trade Desk"></button>'
+            : '')+
         '</div>'+
         '<div class="bnav-cc-card cc-placeholder" data-cc-id="session"><div class="bnav-cc-card-title">Session</div><div class="bnav-cc-gauges">'+
           '<div class="bnav-cc-gauge-wrap"><div class="bnav-cc-gauge" style="--gp:'+_msgPct+'%;--gc:#00d9a8"><span>'+_msgCount+'</span></div><div class="bnav-cc-gauge-label">Messages</div></div>'+
@@ -11784,6 +11907,18 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     // that same already-scrollable widget list instead of the left column
     // (which was its own separate scroll region).
 
+    var _tdPill = panel.querySelector('#bnavCCTradeDesk');
+    if(_tdPill){
+      if(typeof canSeeTradeDesk === 'function' && !canSeeTradeDesk()){
+        _tdPill.remove();
+      } else {
+        _tdPill.addEventListener('click', function(e){
+          e.stopPropagation();
+          closeControlCentre();
+          if(typeof openTradeDesk==='function') openTradeDesk();
+        });
+      }
+    }
     function runNav(i){ var it = navItems[i]; if(!it) return; if(it.label!=='SYN-TV') closeControlCentre(); it.fn(); }
     panel.querySelectorAll('[data-nav]').forEach(function(el){
       el.addEventListener('click', function(){ runNav(parseInt(el.getAttribute('data-nav'),10)); });
@@ -12615,6 +12750,30 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
     })();
     ensureControlCentre();
     var backdrop = document.getElementById('bnavCCBackdrop'), panel = document.getElementById('bnavCCPanel');
+    if(panel){
+      var allowed = typeof canSeeTradeDesk === 'function' && canSeeTradeDesk();
+      var existing = document.getElementById('bnavCCTradeDesk');
+      if(!allowed){
+        if(existing) existing.remove();
+      } else if(!existing){
+        var greet = panel.querySelector('.bnav-cc-greeting-card');
+        if(greet){
+          var pill = document.createElement('button');
+          pill.type = 'button';
+          pill.id = 'bnavCCTradeDesk';
+          pill.className = 'bnav-cc-td-pill';
+          pill.title = 'Trade Desk';
+          pill.setAttribute('aria-label','Open Trade Desk');
+          pill.innerHTML = '<img src="tradedesk.png" alt="Trade Desk">';
+          pill.addEventListener('click', function(e){
+            e.stopPropagation();
+            closeControlCentre();
+            if(typeof openTradeDesk==='function') openTradeDesk();
+          });
+          greet.appendChild(pill);
+        }
+      }
+    }
     if(!backdrop || !panel) return;
     _ccApplyInsets();
     // refresh the greeting (time-of-day can have changed since last open)
@@ -15607,13 +15766,12 @@ var NAV_ALL_ITEMS = [
   {id:'world',  icon:'🌍', label:'World',       fn:'goWorld()'},
   {id:'whiteboard', icon:'🎨', label:'Whiteboard',  fn:'goWhiteboard()'},
   {id:'notes',  icon:'📓', label:'My Notes',    fn:'goNotes()'},
-  {id:'stemstudio', icon:'🎚️', label:'Stem Studio', fn:'openStemStudio()'},
   {id:'tools',  icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rbg2" x1="0%" y1="0%" x2="100%" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#dd7bbb"><animate attributeName="stop-color" values="#dd7bbb;#d79f1e;#5a922c;#4c7894;#dd7bbb" dur="3s" repeatCount="indefinite"/></stop><stop offset="50%" stop-color="#d79f1e"><animate attributeName="stop-color" values="#d79f1e;#5a922c;#4c7894;#dd7bbb;#d79f1e" dur="3s" repeatCount="indefinite"/></stop><stop offset="100%" stop-color="#5a922c"><animate attributeName="stop-color" values="#5a922c;#4c7894;#dd7bbb;#d79f1e;#5a922c" dur="3s" repeatCount="indefinite"/></stop></linearGradient></defs><rect x="2" y="8" width="20" height="13" rx="2" stroke="url(#rbg2)" stroke-width="1.8" fill="none"/><path d="M8 8V6a4 4 0 0 1 8 0v2" stroke="url(#rbg2)" stroke-width="1.8" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="url(#rbg2)" stroke-width="1.8"/></svg>', label:'Tools',       fn:"showTools('all')"},
   {id:'profile',icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label:'Profile',     fn:'goProfile()'},
   {id:'chat',   icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', label:'New Chat',    fn:'newChat({forceAsk:true});triggerNavGlow(this)'},
   {id:'tour',   icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="rgba(124,106,247,0.95)" stroke="none"/></svg>', label:'Tour', fn:'window.startTourFromNav&&window.startTourFromNav()'},
 ];
-var navMainIds  = ['chat','home','hub','human','room','jobs','world','whiteboard','tools','stemstudio'];
+var navMainIds  = ['chat','home','hub','human','room','jobs','world','whiteboard','tools'];
 var navMoreIds  = ['notes'];
 var navTopBarIds = []; // shown as buttons in top bar
 var _custDragId = null;
@@ -15635,13 +15793,11 @@ function loadNavConfig(){
       if(navMainIds.indexOf('notes')===-1 && navMoreIds.indexOf('notes')===-1){
         navMoreIds.push('notes');
       }
-      // Same treatment for the newly added Stem Studio icon: existing saved configs
-      // (from before this feature existed) won't have it in cfg.main, so it'd never
-      // show up without this — surface it in the rail directly rather than burying
-      // a brand-new feature in the overflow tray.
-      if(navMainIds.indexOf('stemstudio')===-1 && navMoreIds.indexOf('stemstudio')===-1){
-        navMainIds.push('stemstudio');
-      }
+      // Stem Studio now lives inside Studio — strip leftover rail pins.
+      navMainIds = navMainIds.filter(function(x){ return x !== 'stemstudio'; });
+      navMoreIds = navMoreIds.filter(function(x){ return x !== 'stemstudio'; });
+      navMainIds = navMainIds.filter(function(x){ return x !== 'tradedesk'; });
+      navMoreIds = navMoreIds.filter(function(x){ return x !== 'tradedesk'; });
       /* After first bottom-left float press, Tour stays in chat/bottom nav forever (right side of bar) */
       try {
         if (localStorage.getItem('synapses_tour_btn_docked') === '1') {
@@ -15737,7 +15893,6 @@ function renderIconRail(){
     world:      {icon:'🌍', label:'World Accelerator',fn:"goWorld()"},
     whiteboard: {icon:'🎨', label:'Whiteboard',      fn:"goWhiteboard()"},
     notes:      {icon:'📓', label:'My Notes',        fn:"goNotes()"},
-    stemstudio: {icon:'🎚️', label:'Stem Studio',    fn:"openStemStudio()"},
     tools:      {icon:toolsSVG, label:'Browse Tools',fn:"showTools('all')"},
     chat:       {icon:'💬', label:'New Chat',        fn:"newChat({forceAsk:true})"},
     profile:    {icon:'👤', label:'My Profile',      fn:"goProfile()"},
@@ -15827,8 +15982,7 @@ var BL_ICONS = [
   { id:'bnavPulseBtn',         label:'Pulse',          width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>' },
   { id:'bnavCallBtn',          label:'Call',           width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' },
   { id:'bnavAskBtn',           label:'Ask',            width:40, glyph:'✦' },
-  { id:'bnavImageGenBtn',      label:'Create Image',   width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' },
-  { id:'bnavStemBtn',          label:'Stem Studio',    width:40, glyph:'🎚' },
+  { id:'bnavImageGenBtn',      label:'Studio',         width:40, glyph:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>' },
   { id:'bnavSettingsBtn',      label:'Settings',       width:40, glyph:'⚙' },
   { id:'bnavControlCenterBtn', label:'Control Centre', width:40, glyph:'▦' }
 ];
@@ -15839,10 +15993,10 @@ var BL_ICONS = [
 var BL_ROW_ALL_IDS = BL_ICONS.map(function(it){ return it.id; }).concat(['bnavBLMoreBtn']);
 // Default for first-time users (no saved localStorage config yet): only
 // Notes / Ask / Control Centre / Settings pinned, in that order, before the
-// ••• button. Pulse, Call, Create Image, and Stem Studio start hidden —
+// ••• button. Pulse, Call, and Studio start hidden —
 // still available via the customizer drawer, just not pinned out of the box.
 var blShownIds = ['bnavNotesBtn','bnavAskBtn','bnavControlCenterBtn','bnavSettingsBtn'];
-var blHiddenIds = ['bnavPulseBtn','bnavCallBtn','bnavImageGenBtn','bnavStemBtn'];
+var blHiddenIds = ['bnavPulseBtn','bnavCallBtn','bnavImageGenBtn'];
 var _blCustDragId = null, _blCustDragZone = null;
 var _blMoreBtnFirstReveal = true; // gates the one-time .5s page-load delay on the ••• button, see _revealBLRow()
 
@@ -15861,6 +16015,8 @@ function loadBLIconConfig(){
     allIds.forEach(function(id){
       if(blShownIds.indexOf(id) === -1 && blHiddenIds.indexOf(id) === -1) blShownIds.push(id);
     });
+    blShownIds = blShownIds.filter(function(id){ return id !== 'bnavTradeDeskBtn'; });
+    blHiddenIds = blHiddenIds.filter(function(id){ return id !== 'bnavTradeDeskBtn'; });
   }catch(e){}
 }
 function saveBLIconConfig(){
@@ -16270,6 +16426,7 @@ function _studioLandData(){
     appTabs: [
       { id:'image', label:'Image' },
       { id:'video', label:'Video' },
+      { id:'audio', label:'Audio' },
       { id:'styles', label:'Styles' },
       { id:'product', label:'Product' },
       { id:'character', label:'Character' },
@@ -16282,6 +16439,10 @@ function _studioLandData(){
         { name:'Product shot', desc:'Clean studio packshot lighting.', prompt:'A glossy product photography shot of ', thumb:null, grad:'linear-gradient(135deg,#111114,#2a2a32,#9ca3af)' },
         { name:'Food photo', desc:'Editorial restaurant-style plating.', prompt:'An appetizing editorial food photo of ', thumb:m.r },
         { name:'Architecture', desc:'Minimal modern exterior or interior.', prompt:'A striking minimal architecture photograph of ', thumb:null, grad:'linear-gradient(145deg,#0c0c10,#374151,#d1d5db)' }
+      ],
+      audio: [
+        { name:'Stem Studio', desc:'Split songs into vocals, drums, bass and more.', action:'stemstudio', badge:'Audio', thumb:null, grad:'linear-gradient(135deg,#0c0c12,#2a2a38,#7c6af7)' },
+        { name:'Import a track', desc:'Drop audio in and mix on the timeline.', action:'stemstudio', thumb:null, grad:'linear-gradient(145deg,#12121a,#3b3348,#a78bfa)' }
       ],
       video: [
         { name:'Seedance clip', desc:'Describe a short motion scene.', prompt:'A short cinematic video of ', action:'mode', value:'video', thumb:null, grad:'linear-gradient(135deg,#0c1020,#1e1b4b,#6366f1)' },
@@ -16319,6 +16480,10 @@ function _studioLandData(){
 
 function applyStudioExploreItem(item){
   if(!item) return;
+  if(item.action === 'stemstudio'){
+    if(typeof openStemStudio === 'function') openStemStudio();
+    return;
+  }
   if(item.action === 'model' && item.value){
     if(typeof selectImageGenOption === 'function') selectImageGenOption('model', item.value);
     else {
@@ -18910,11 +19075,15 @@ function _renderStudioHomeMarkup(emptyEl){
         '<div class="studio-empty-hero-wrap">' +
           '<div class="studio-empty-hero">'+_tag.h+'</div>' +
           '<div class="studio-empty-sub">'+_tag.s+'</div>' +
-          '<div class="studio-empty-chips" aria-hidden="true">' +
+          '<div class="studio-empty-chips">' +
             '<span class="studio-empty-chip studio-empty-chip-on">DreamShaper 8</span>' +
             '<span class="studio-empty-chip">Flux 1</span>' +
             '<span class="studio-empty-chip">Flux.2 Klein</span>' +
             '<span class="studio-empty-chip">GPT Image 2</span>' +
+            '<button type="button" id="studioStemBtn" onclick="typeof openStemStudio===\'function\' && openStemStudio()" title="Stem Studio" aria-label="Open Stem Studio">' +
+              '<svg class="studio-stem-launch-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15v-6M9 18v-12M14 15v-6M19 18v-12"/></svg>' +
+              '<span class="studio-stem-launch-name">Stem Studio</span>' +
+            '</button>' +
           '</div>' +
         '</div>' +
         _buildStudioExploreHtml() +
@@ -25750,6 +25919,11 @@ function _stickyNoteShouldShow(note){
   if(window._stickyNotesVisible) return true;
   return !!(note && note.pinned);
 }
+function _stickyDemoteGpu(el){
+  if(!el || el.id === '_globalNoteOrb') return;
+  el.style.transition = 'none';
+  el.style.transform = '';
+}
 function _applyStickyHiddenState(){
   var layer = document.getElementById('stickyNotesLayer');
   if(!layer) return;
@@ -25763,6 +25937,11 @@ function _applyStickyHiddenState(){
     var note = (!isNaN(idx) && userNotes[idx]) ? userNotes[idx] : null;
     var show = _stickyNoteShouldShow(note);
     if(show) keepLayer = true;
+    // Drop the fly's leftover scale() compositor layer BEFORE display:none /
+    // display:'' — hiding a just-scaled GPU card is what dumped the white
+    // smear on the first un-toggle → re-toggle. Later toggles were clean
+    // because that layer was already gone.
+    if(!show) _stickyDemoteGpu(c);
     c.style.display = show ? '' : 'none';
     c.style.opacity = show ? '1' : '0';
     c.style.pointerEvents = show ? 'auto' : 'none';
@@ -25795,6 +25974,7 @@ function toggleStickyNotes() {
     layer.style.opacity = '1';
     Array.from(layer.children).forEach(function(c){
       if(c.id === '_globalNoteOrb'){ c.style.display=''; return; }
+      _stickyDemoteGpu(c);
       c.style.display=''; c.style.opacity='1'; c.style.pointerEvents='auto';
     });
     if (btn) { btn.style.opacity='1'; btn.style.color='rgba(180,175,210,0.35)'; btn.title=''; }
@@ -25825,8 +26005,7 @@ function openStickyNotesFly(){
   }
   setTimeout(function(){
     window._stickyNotesVisible = true;
-    window._stickyNotesOpen = true;
-    try{ localStorage.setItem('notesVisible', '1'); localStorage.setItem('stickyNotesOpen', '1'); }catch(e){}
+    try{ localStorage.setItem('notesVisible', '1'); }catch(e){}
     var layer = document.getElementById('stickyNotesLayer');
     if(layer) layer.style.opacity = '1';
     var ntb = document.getElementById('notesToggleBtn');
@@ -26128,10 +26307,9 @@ function renderStickyNotes(laserOnNew){
   var NOTE_W = 165, COL_GAP = 10, ROW_GAP = 16, TOP_OFF = 20, R_EDGE = 12;
   var _layerRect = layer.getBoundingClientRect();
   var lW = (_layerRect && _layerRect.width > 0) ? _layerRect.width : (layer.parentElement ? layer.parentElement.getBoundingClientRect().width : window.innerWidth);
-  // Shift columns left when past-chats sidebar is open so notes don't hide behind it
-  var _chpSb = document.getElementById('chpSidebar');
-  var _chpW = (_chpSb && _chpSb.classList.contains('open')) ? (_chpSb.offsetWidth || 240) : 0;
-  lW = lW - _chpW;
+  // Past Chats is an overlay — it does not shrink this layer. Subtracting its
+  // width here pulled the right-column notes left whenever the top-left logo
+  // opened the panel.
   var colX = [ lW - R_EDGE - NOTE_W*2 - COL_GAP, lW - R_EDGE - NOTE_W ];
   if(colX[0] < 4) colX[0] = 4;
 
@@ -26285,14 +26463,13 @@ function renderStickyNotes(laserOnNew){
 
     // PIN BADGE — shown on card when note is pinned
     if(note.pinned){
-      var pinInk = _stickyPinInk(col);
       var pinBadge = document.createElement('div');
       pinBadge.style.cssText =
         'position:absolute;top:6px;left:7px;' +
-        'display:flex;align-items:center;justify-content:center;' +
-        'color:'+pinInk+';opacity:0.9;pointer-events:none;z-index:50;line-height:1;' +
-        'filter:drop-shadow(0 0 4px '+(_stickyIsTrueBlack()?'rgba(255,255,255,0.18)':col.glow)+');';
-      pinBadge.innerHTML = _stickyPinSvg();
+        'font-size:9px;color:'+col.pin+';opacity:0.85;' +
+        'pointer-events:none;z-index:50;line-height:1;' +
+        'text-shadow:0 0 6px '+col.glow+';';
+      pinBadge.textContent = '📌';
       el.appendChild(pinBadge);
     }
 
@@ -26436,6 +26613,14 @@ function renderStickyNotes(laserOnNew){
     ref.wrapper.style.position = 'absolute';
     ref.wrapper.style.left = '0px';
     ref.wrapper.style.top = '0px';
+    // Measure with display:'' — wrappers hidden by the Sticky-Notes-off state
+    // carry display:none here, and offsetHeight of a display:none node is 0.
+    // Measuring 0 for every hidden note collapsed the auto-grid to 14px
+    // spacing, so the next "Show Sticky Notes" revealed the whole stack
+    // piled on top of itself (most visible after the Guide's sticky demo,
+    // whose final render runs with stickies off). _applyStickyHiddenState()
+    // at the bottom of this function re-hides whatever must stay hidden.
+    if(ref.wrapper.style.display === 'none') ref.wrapper.style.display = '';
   });
   // Force a single reflow so all offsetHeights are computed
   void layer.offsetHeight;
@@ -26443,9 +26628,6 @@ function renderStickyNotes(laserOnNew){
   (function(){
     var rect = layer.getBoundingClientRect();
     var lW = (rect && rect.width > 0) ? rect.width : (layer.parentElement ? layer.parentElement.getBoundingClientRect().width : window.innerWidth);
-    var _chpSb2 = document.getElementById('chpSidebar');
-    var _chpW2 = (_chpSb2 && _chpSb2.classList.contains('open')) ? (_chpSb2.offsetWidth || 240) : 0;
-    lW = lW - _chpW2;
     var NOTE_W = 165, COL_GAP = 10, ROW_GAP = 14, TOP_OFF = 21, R_EDGE = 12;
     var rightCol = lW - R_EDGE - NOTE_W;
     var leftCol  = rightCol - NOTE_W - COL_GAP;
@@ -26480,7 +26662,6 @@ function renderStickyNotes(laserOnNew){
         ref.note._top  = dragDestTop  + 'px';
         var dragFly = window._stickyFlyOrigin;
         if(dragFly){
-          // Same "Open Sticky" fly-in as auto-placed notes, just landing on the saved drag spot.
           ref.wrapper.style.transition = 'none';
           ref.wrapper.style.left       = dragFly.x + 'px';
           ref.wrapper.style.top        = dragFly.y + 'px';
@@ -26490,7 +26671,7 @@ function renderStickyNotes(laserOnNew){
           ref.wrapper.style.opacity    = '0';
           ref.wrapper.style.visibility = 'visible';
           (function(w, dl, dt, i2){
-            void w.offsetHeight; // force reflow at the origin before animating out
+            void w.offsetHeight;
             setTimeout(function(){
               w.style.transition = 'left 0.65s cubic-bezier(.22,1.6,.36,1), top 0.65s cubic-bezier(.22,1.6,.36,1), transform 0.65s cubic-bezier(.22,1.6,.36,1), opacity 0.3s ease-out';
               w.style.left      = dl + 'px';
@@ -26499,14 +26680,7 @@ function renderStickyNotes(laserOnNew){
               w.style.opacity   = '1';
               setTimeout(function(){
                 w.style.transition = 'box-shadow 0.25s ease';
-                // Chrome GPU-compositing glitch: a border-radius'd layer that
-                // just finished animating scale/position from way off in the
-                // corner can leave stray pixel fragments behind at its old
-                // spot until something forces a repaint. Same nudge used for
-                // dayNightToggle elsewhere in the app.
-                var _pt = w.style.transform;
-                w.style.transform = _pt + ' scale(1.0001)';
-                requestAnimationFrame(function(){ w.style.transform = _pt; });
+                w.style.transform = '';
               }, 700);
             }, 60 + i2 * 90);
           })(ref.wrapper, dragDestLeft, dragDestTop, idx);
@@ -26523,8 +26697,6 @@ function renderStickyNotes(laserOnNew){
         var destLeft = colX[col], destTop = colY[col];
         var fly = window._stickyFlyOrigin;
         if(fly){
-          // ── "Open Sticky" fly-in: launch from the bottom-left notes icon,
-          // then arc into its normal right-column slot with a bouncy overshoot.
           ref.wrapper.style.transition = 'none';
           ref.wrapper.style.left       = fly.x + 'px';
           ref.wrapper.style.top        = fly.y + 'px';
@@ -26534,7 +26706,7 @@ function renderStickyNotes(laserOnNew){
           ref.wrapper.style.opacity    = '0';
           ref.wrapper.style.visibility = 'visible';
           (function(w, dl, dt, i2){
-            void w.offsetHeight; // force reflow at the origin before animating out
+            void w.offsetHeight;
             setTimeout(function(){
               w.style.transition = 'left 0.65s cubic-bezier(.22,1.6,.36,1), top 0.65s cubic-bezier(.22,1.6,.36,1), transform 0.65s cubic-bezier(.22,1.6,.36,1), opacity 0.3s ease-out';
               w.style.left      = dl + 'px';
@@ -26543,9 +26715,7 @@ function renderStickyNotes(laserOnNew){
               w.style.opacity   = '1';
               setTimeout(function(){
                 w.style.transition = 'box-shadow 0.25s ease';
-                var _pt = w.style.transform;
-                w.style.transform = _pt + ' scale(1.0001)';
-                requestAnimationFrame(function(){ w.style.transform = _pt; });
+                w.style.transform = '';
               }, 700);
             }, 60 + i2 * 90);
           })(ref.wrapper, destLeft, destTop, idx);
@@ -26556,7 +26726,7 @@ function renderStickyNotes(laserOnNew){
           ref.wrapper.style.bottom     = 'auto';
           ref.wrapper.style.visibility = 'visible';
         }
-        colY[col] += h + ROW_GAP;
+        colY[col] += Math.max(h, 70) + ROW_GAP;
       }
     });
     // Persist any off-screen positions that got pulled back on-screen above,
@@ -26581,7 +26751,10 @@ function renderStickyNotes(laserOnNew){
     window._noteOrbStartPending = true;
     setTimeout(function(){ window._noteOrbStartPending = false; _startNoteOrb(); }, 600);
   }
-  _applyStickyHiddenState();
+  // Do not run this during the Open Sticky fly — it forces opacity:1 on every
+  // card while they are still scale(0.1) at the notes button, which is the
+  // white smear the working file never had (it has no _applyStickyHiddenState).
+  if(!window._stickyFlyOrigin) _applyStickyHiddenState();
 }
 
 
@@ -39855,18 +40028,25 @@ function _syncStickyNotesOffset(){
   var layer = document.getElementById('stickyNotesLayer');
   if(!layer) return;
   var isOpen = sidebar && sidebar.classList.contains('open');
-  var sbW = 240;
-  var leash = 580; // push notes within 3 columns of the left sidebar
+  var sbW = (sidebar && sidebar.offsetWidth) ? sidebar.offsetWidth : 240;
   var wrappers = layer.children;
   for(var i=0; i<wrappers.length; i++){
     var w = wrappers[i];
+    if(!w || w.id === '_globalNoteOrb') continue;
     if(w.dataset.manualDrag) continue;
-    var origLeft = w.dataset.origLeft !== undefined ? parseInt(w.dataset.origLeft) : (parseInt(w.style.left) || 0);
-    w.style.transition = 'left 0.3s cubic-bezier(0.22,1,0.36,1)';
-    if(isOpen && origLeft < leash){
-      w.dataset.origLeft = origLeft;
-      w.style.left = (origLeft + sbW) + 'px';
+    if(w.getAttribute && w.getAttribute('data-sticky-fly-clone') === '1') continue;
+    var parsed = parseFloat(w.style.left);
+    if(!isFinite(parsed)) continue;
+    var origLeft = w.dataset.origLeft !== undefined ? parseFloat(w.dataset.origLeft) : parsed;
+    if(!isFinite(origLeft)) continue;
+    if(isOpen && origLeft < sbW){
+      w.dataset.origLeft = String(origLeft);
+      if(parsed !== origLeft + sbW){
+        w.style.transition = 'left 0.3s cubic-bezier(0.22,1,0.36,1)';
+        w.style.left = (origLeft + sbW) + 'px';
+      }
     } else if(!isOpen && w.dataset.origLeft !== undefined){
+      w.style.transition = 'left 0.3s cubic-bezier(0.22,1,0.36,1)';
       w.style.left = origLeft + 'px';
       delete w.dataset.origLeft;
     }
@@ -40336,7 +40516,9 @@ function _chpSyncAppsBoard(){
   var on=document.documentElement.classList.contains('chp-apps-board');
   var btns=document.querySelectorAll('.chp-rail-apps,.chp-apps-dock');
   for(var i=0;i<btns.length;i++) btns[i].setAttribute('aria-pressed', on?'true':'false');
-  var ids=['bnavNotesBtn','bnavPulseBtn','bnavCallBtn','bnavAskBtn','bnavImageGenBtn','bnavStemBtn','bnavSettingsBtn','bnavControlCenterBtn'];
+  var ids=['bnavNotesBtn','bnavPulseBtn','bnavCallBtn','bnavAskBtn','bnavImageGenBtn','bnavSettingsBtn','bnavControlCenterBtn'];
+  var stemGone=document.getElementById('bnavStemBtn');
+  if(stemGone) stemGone.style.setProperty('display','none','important');
   var sidebarOn=document.documentElement.classList.contains('chp-sidebar-mode');
   // Settings is a mobile-only entry point on the bottom-left icon row. This
   // loop otherwise force-shows the whole row with an inline
@@ -45571,7 +45753,8 @@ var _synapsesCtx = 'SYNAPSES APP CONTEXT (this version only):\n' +
 '- Image generation: models, aspect ratio, count, reference photo, style templates, history.\n' +
 '- Video generation (switch Image / Video).\n' +
 '- Community tab for other people\'s gens.\n' +
-'- Open from the Studio / Create Image button (Apps row).\n\n' +
+'- Open from the Studio button (Apps row).\n' +
+'- Stem Studio (split audio into stems) lives inside Studio — mixer icon in the Studio header.\n\n' +
 'APPS ROW (toggle Apps on the left rail): Notes, Pulse, Call, Ask, Studio.\n' +
 '- **Pulse**: live local/topic updates; set city and topics in Pulse settings.\n' +
 '- **Call**: place a phone call to Ava.\n' +
@@ -71748,12 +71931,12 @@ async function srcAgentContact(supplier) {
 </div>
 <!-- SYN_TOUR_FLOAT_START -->
 <style>
-/* First launch: bottom-left tour entry (user must press — never auto-start) */
-/* Hidden until login/guest is chosen (body.syn-authed) */
+/* Story film entry now lives in the bottom-right Guide panel — keep the
+   old bottom-left float hidden so it never paints over Notes. */
 #synTourFloatBtn{
   position:fixed;left:14px;bottom:63px;z-index:100200;
   width:38px;height:38px;border-radius:12px;padding:0;cursor:pointer;
-  display:none;
+  display:none!important;visibility:hidden!important;pointer-events:none!important;opacity:0!important;
   align-items:center;justify-content:center;
   border:1px solid rgba(124,106,247,0.35);
   background:rgba(18,14,36,0.72);
@@ -71764,9 +71947,9 @@ async function srcAgentContact(supplier) {
   pointer-events:none;visibility:hidden;
 }
 body.syn-authed #synTourFloatBtn:not(.docked){
-  display:flex;
-  pointer-events:auto;
-  visibility:visible;
+  display:none!important;
+  pointer-events:none!important;
+  visibility:hidden!important;
 }
 /* Sit in bottom-left row next to Notes (not on top of it) */
 body.bottom-nav #synTourFloatBtn{
@@ -71938,24 +72121,7 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     }
   }
   function showFloat() {
-    var f = document.getElementById('synTourFloatBtn');
-    if (!f) return;
-    syncAuthTourBodyClass();
-    /* Never show over login / guest chooser */
-    if (!isUserAuthedForTour()) {
-      f.classList.remove('docked');
-      f.style.display = 'none';
-      f.style.visibility = 'hidden';
-      f.style.opacity = '0';
-      f.style.pointerEvents = 'none';
-      return;
-    }
-    f.classList.remove('docked');
-    f.style.display = 'flex';
-    f.style.visibility = 'visible';
-    f.style.opacity = '0.92';
-    f.style.pointerEvents = 'auto';
-    f.style.zIndex = '100200';
+    hideFloat();
   }
   function startTourFromNav() {
     try {
@@ -78307,6 +78473,12 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     background: rgba(255,255,255,0.08);
   }
   #stemStudio .ss-iconbtn:disabled { opacity: 0.4; cursor: wait; }
+  #stemStudio .ss-exit-cluster {
+    display: inline-flex; align-items: center; gap: 6px;
+    flex-shrink: 0; margin: 0 8px;
+  }
+  #stemStudio .ss-exit-cluster .ss-homebtn { margin: 0; }
+  #stemStudio .ss-exit-cluster .ss-iconbtn { margin: 0; }
   #stemStudio .ss-top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   #stemStudio .ss-top-actions .ss-iconbtn { margin: 0; }
   #stemStudio #ssLibraryBtn .ss-lib-ico-close { display: none; }
@@ -78705,7 +78877,8 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     /* Row 1: Home (left) + project name (left-aligned, content-sized — NOT
        centered/full-width) so the right side of the row stays open for the
        speech-to-speech icon to land instead of the title spanning under it. */
-    #stemStudio .ss-homebtn { order: 1; flex: 0 0 auto; }
+    #stemStudio .ss-exit-cluster { order: 1; flex: 0 0 auto; margin: 0; }
+    #stemStudio .ss-homebtn { order: unset; flex: 0 0 auto; }
     #stemStudio .ss-projname {
       order: 2; flex: 0 1 auto; max-width: 48vw; text-align: left;
     }
@@ -78969,10 +79142,15 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
         </button>
       </div>
     </div>
-    <button type="button" class="ss-homebtn" onclick="closeStemStudio()" data-ss-hint="home">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>
-      Home
-    </button>
+    <div class="ss-exit-cluster">
+      <button type="button" class="ss-homebtn" onclick="closeStemStudio()" data-ss-hint="home">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>
+        Studio
+      </button>
+      <button type="button" class="ss-iconbtn" id="ssSynHomeBtn" onclick="ssGoSynapsesHome()" title="Home" aria-label="Back to Synapses home" data-ss-hint="synhome">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+      </button>
+    </div>
     <div class="ss-spacer"></div>
     <div class="ss-top-actions">
       <button type="button" class="ss-homebtn ss-topbtn" id="ssNewBtn" onclick="ssNewProject()" data-ss-hint="new">
@@ -79167,6 +79345,12 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   })();
 
   window.openStemStudio = function () {
+    var ig = document.getElementById('imageGenModal');
+    window._ssParkedImageStudio = !!(ig && ig.style.display === 'flex');
+    // Aurora lives inside Image Studio while that's open. Move it back to the
+    // page first so Stem's see-through overlay still has the field, not the
+    // Image Studio UI showing through.
+    try { if (typeof _studioUnmountDeepSpace === 'function') _studioUnmountDeepSpace(); } catch (eU) {}
     const studio = document.getElementById('stemStudio');
     studio.classList.add('open', 'ss-fadein');
     const onFade = function (e) {
@@ -79266,11 +79450,32 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     ssStopAll();
     document.getElementById('stemStudio').classList.remove('ss-fadein');
     document.getElementById('stemStudio').classList.remove('open');
-    try { document.body.classList.remove('stem-studio-open'); } catch (eB) {}
     if (ssPollTimer) clearInterval(ssPollTimer);
     try { ssCloseLibrary(); } catch (eL) {}
     try { window.ssCloseImport(); } catch (eI) {}
     try { ssHintHide(); } catch (eH) {}
+    var toAppHome = !!window._ssLeaveToAppHome;
+    window._ssLeaveToAppHome = false;
+    var parked = !!window._ssParkedImageStudio;
+    window._ssParkedImageStudio = false;
+    try { document.body.classList.remove('stem-studio-open'); } catch (eB) {}
+    if (toAppHome) {
+      try { if (typeof closeImageGenModal === 'function') closeImageGenModal(); } catch (eC) {}
+      if (typeof newChat === 'function') newChat({ forceAsk: false });
+      else if (typeof _restoreEmptyChatHome === 'function') _restoreEmptyChatHome();
+      return;
+    }
+    var ig = document.getElementById('imageGenModal');
+    if (parked && ig) {
+      ig.style.display = 'flex';
+      try { if (typeof _studioMountDeepSpace === 'function') _studioMountDeepSpace(); } catch (eM) {}
+    } else if (typeof window.openImageGenModal === 'function') {
+      try { window.openImageGenModal(); } catch (eS) {}
+    }
+  };
+  window.ssGoSynapsesHome = function () {
+    window._ssLeaveToAppHome = true;
+    window.closeStemStudio();
   };
 
   window.ssSwitchTab = function (mode) {
@@ -83011,7 +83216,8 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     zoomin: { title: 'Zoom in', body: 'Stretch the timeline so you can see more detail.' },
     zoomout: { title: 'Zoom out', body: 'Compress the timeline so more of the song fits on screen.' },
     zoomfit: { title: 'Fit to view', body: 'Show the whole song from start to end without scrolling sideways.' },
-    home: { title: 'Home', body: 'Leave Stem Studio and return to Synapses.' },
+    home: { title: 'Studio', body: 'Leave Stem Studio and go back to Studio.' },
+    synhome: { title: 'Home', body: 'Leave Stem Studio and return to the Synapses home page.' },
     downloadsel: { title: 'Download selection', body: 'Drag on the timeline to highlight a section, then download it as a WAV mix of the audible stems.' },
     new: { title: 'New project', body: 'Clear the page and start a blank session so you can import a new track.', keys: [{ label: 'New', cap: 'CTRL N' }] },
     import: { title: 'Import', body: 'Split a new file, URL, or YouTube track into stems.' },
@@ -83850,6 +84056,7 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.02em;
   box-shadow:0 8px 24px rgba(0,0,0,0.35);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   transition:transform .15s ease,opacity .15s ease;
+  overflow:visible;
 }
 body.syn-authed #synGuideBtn{display:inline-flex;}
 #synGuideBtn:hover{transform:translateY(-1px);}
@@ -83864,17 +84071,30 @@ html[data-theme="light"] #synGuideBtn{
 }
 @media (max-width:480px){ #synGuideBtn .syn-guide-label{display:none;} #synGuideBtn{padding:10px;} }
 
-/* Subtle corner handle used only to flip the button between its normal
-   pill state and the compact "?" state — deliberately faint (barely a
-   dot) so it doesn't compete visually with the button itself; only
-   shows real presence on hover/focus so it stays discoverable but quiet. */
+/* Small corner close — hidden until the pointer is actually on that spot. */
 .syn-guide-btn-toggle{
-  position:absolute;top:-3px;left:-3px;width:9px;height:9px;border-radius:50%;
-  background:rgba(255,255,255,0.14);opacity:0.28;cursor:pointer;
-  transition:opacity .15s ease,transform .15s ease;
+  position:absolute;top:-6px;left:-6px;width:16px;height:16px;border-radius:50%;
+  background:transparent;border:none;box-shadow:none;
+  opacity:0;cursor:pointer;color:rgba(236,236,242,0.92);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .16s ease,background .16s ease,transform .16s ease;
 }
-.syn-guide-btn-toggle:hover{opacity:0.85;transform:scale(1.15);}
-html[data-theme="light"] .syn-guide-btn-toggle{background:rgba(0,0,0,0.16);}
+.syn-guide-btn-toggle .syn-guide-x{display:block;flex-shrink:0;width:9px;height:9px;}
+.syn-guide-btn-toggle:hover{
+  opacity:1;
+  background:transparent;
+  border:none;
+}
+html[data-theme="light"] .syn-guide-btn-toggle{color:#3d3560;}
+html[data-theme="light"] .syn-guide-btn-toggle:hover{background:transparent;border:none;}
+/* Mini "?": original faint bubble to expand back — no X. */
+#synGuideBtn.syn-guide-mini .syn-guide-btn-toggle{
+  top:-3px;left:-3px;width:9px;height:9px;
+  background:rgba(255,255,255,0.14);border:none;box-shadow:none;opacity:0.28;color:transparent;
+}
+#synGuideBtn.syn-guide-mini .syn-guide-btn-toggle .syn-guide-x{display:none;}
+#synGuideBtn.syn-guide-mini .syn-guide-btn-toggle:hover{opacity:0.85;background:rgba(255,255,255,0.28);transform:scale(1.15);}
+html[data-theme="light"] #synGuideBtn.syn-guide-mini .syn-guide-btn-toggle{background:rgba(0,0,0,0.16);}
 
 /* Compact state — just a faint "?", no pill background/border/shadow at all. */
 .syn-guide-mini-q{display:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;line-height:1;color:rgba(120,120,132,0.4);}
@@ -83883,16 +84103,77 @@ html[data-theme="light"] #synGuideBtn.syn-guide-mini .syn-guide-mini-q{color:rgb
 #synGuideBtn.syn-guide-mini{
   background:transparent!important;border:none!important;box-shadow:none!important;
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
-  padding:4px 7px!important;opacity:0.3;
+  padding:4px 7px!important;opacity:0!important;
+  transition:opacity .45s ease;
 }
 html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini{
-  background:transparent!important;border:none!important;box-shadow:none!important;opacity:0.3!important;
+  background:transparent!important;border:none!important;box-shadow:none!important;opacity:0!important;
 }
-#synGuideBtn.syn-guide-mini:hover{opacity:0.8;}
-#synGuideBtn.syn-guide-mini:hover .syn-guide-mini-q{color:rgba(190,190,200,0.85)!important;}
+#synGuideBtn.syn-guide-mini.syn-guide-linger{
+  opacity:0.3!important;z-index:400;
+}
+html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini.syn-guide-linger{
+  opacity:0.3!important;
+}
+#synGuideBtn.syn-guide-mini.syn-guide-linger .syn-guide-mini-q{
+  color:rgba(90,90,95,0.4);
+}
+html[data-theme="light"] #synGuideBtn.syn-guide-mini.syn-guide-linger .syn-guide-mini-q{
+  color:rgba(210,210,216,0.7);
+}
+#synGuideBtn.syn-guide-mini:hover,
+#synGuideBtn.syn-guide-mini.syn-guide-linger:hover{
+  opacity:0.85!important;z-index:400;
+}
+#synGuideBtn.syn-guide-mini:hover .syn-guide-mini-q,
+#synGuideBtn.syn-guide-mini.syn-guide-linger:hover .syn-guide-mini-q{
+  color:rgba(190,190,200,0.9)!important;
+  text-shadow:0 0 8px rgba(255,255,255,0.25);
+}
 #synGuideBtn.syn-guide-mini .syn-guide-full-icon,
 #synGuideBtn.syn-guide-mini .syn-guide-label{display:none;}
 #synGuideBtn.syn-guide-mini .syn-guide-mini-q{display:inline-block;}
+#synGuideBtn:not(.syn-guide-mini) .syn-guide-mini-q{
+  display:none!important;transform:none!important;opacity:0!important;text-shadow:none!important;
+}
+@keyframes synGuideWave{
+  0%{transform:rotate(0deg);}
+  8%{transform:rotate(-32deg);}
+  16%{transform:rotate(30deg);}
+  24%{transform:rotate(-28deg);}
+  32%{transform:rotate(0deg);}
+  50%{transform:rotate(0deg);}
+  58%{transform:rotate(-32deg);}
+  66%{transform:rotate(30deg);}
+  74%{transform:rotate(-28deg);}
+  82%{transform:rotate(0deg);}
+  100%{transform:rotate(0deg);}
+}
+@keyframes synGuideQFlash{
+  0%,32%,50%,82%,100%{opacity:0.32;}
+  16%,66%{opacity:0.9;}
+}
+#synGuideBtn.syn-guide-mini.syn-guide-nudge,
+#synGuideBtn.syn-guide-mini.syn-guide-nudge:hover{
+  opacity:1!important;
+  transform:none!important;
+  transition:none!important;
+}
+#synGuideBtn.syn-guide-mini.syn-guide-nudge .syn-guide-mini-q{
+  display:inline-block!important;
+  color:rgba(245,245,250,0.98)!important;
+  text-shadow:0 0 10px rgba(255,255,255,0.4),0 0 18px rgba(124,106,247,0.35);
+}
+html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini.syn-guide-nudge{
+  opacity:1!important;
+}
+html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini.syn-guide-nudge .syn-guide-mini-q{
+  color:rgba(245,245,250,0.98)!important;
+}
+html[data-theme="light"] #synGuideBtn.syn-guide-mini.syn-guide-nudge .syn-guide-mini-q{
+  color:#3d3560!important;
+  text-shadow:0 0 8px rgba(80,70,140,0.25);
+}
 
 /* ── Manual-style guide modal — reads like the instruction booklet
    that ships in the box with a product, not a settings dialog. ── */
@@ -84075,7 +84356,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
 </style>
 
 <button type="button" id="synGuideBtn" onclick="openSynGuide()" title="How to use Synapses" aria-label="Open app guide">
-  <span class="syn-guide-btn-toggle" onclick="event.stopPropagation(); synGuideToggleMini();" title="Toggle compact guide button" aria-label="Toggle compact guide button"></span>
+  <span class="syn-guide-btn-toggle" onclick="event.stopPropagation(); synGuideCornerHandle();" title="Close guide" aria-label="Close guide"><svg class="syn-guide-x" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.4 2.4l5.2 5.2"/><path d="M7.6 2.4L2.4 7.6"/></svg></span>
   <svg class="syn-guide-full-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
   <span class="syn-guide-label">Guide</span>
   <span class="syn-guide-mini-q">?</span>
@@ -84091,8 +84372,17 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
       Here's what each part does and how to use it.
     </p>
 
-    <div class="syn-guide-step" onclick="synGuideGo('speech', event)">
+    <div class="syn-guide-step" onclick="synGuideGo('story', event)">
       <div class="syn-guide-num">01</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Story <span class="src-meta-sep">·</span> Tour</div>
+        <div class="syn-guide-desc">Play the exploding-planet origin film, then the product tour — the same story that used to sit as a play button in the bottom-left.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10.2,8.2 16.5,12 10.2,15.8" fill="currentColor" stroke="none"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('speech', event)">
+      <div class="syn-guide-num">02</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Speech-to-Speech <span class="src-meta-sep">·</span> Ava</div>
         <div class="syn-guide-desc">Tap the mic icon in the top bar — or hold the fingerprint pad on Home — to talk live with Ava. She's a persistent AI companion that follows you across the whole app, not just one screen, so the conversation keeps going wherever you navigate.</div>
@@ -84101,7 +84391,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('chat', event)">
-      <div class="syn-guide-num">02</div>
+      <div class="syn-guide-num">03</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Ask <span class="src-meta-sep">·</span> Chat</div>
         <div class="syn-guide-desc">Type into the ask bar or tap the send icon to talk with your AI. It remembers earlier conversations, so you can say "continue what we started yesterday" and it will.</div>
@@ -84110,7 +84400,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('connectors', event)">
-      <div class="syn-guide-num">03</div>
+      <div class="syn-guide-num">04</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Connect your tools</div>
         <div class="syn-guide-desc">In Settings, link Gmail, Calendar, Notion or GitHub. Once connected, ask things like "what's on my calendar today" and Synapses pulls the real answer in.</div>
@@ -84119,7 +84409,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('notes', event)">
-      <div class="syn-guide-num">04</div>
+      <div class="syn-guide-num">05</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Notes</div>
         <div class="syn-guide-desc">Tap the notes icon to quick-capture a thought. It saves automatically and stays searchable from chat later.</div>
@@ -84128,16 +84418,16 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('imagegen', event)">
-      <div class="syn-guide-num">05</div>
+      <div class="syn-guide-num">06</div>
       <div class="syn-guide-body">
-        <div class="syn-guide-title">Image <span class="src-meta-sep">·</span> Stem Studio</div>
-        <div class="syn-guide-desc">Generate images from a text prompt, or split an audio track into stems — both live behind their own bottom-nav icons.</div>
+        <div class="syn-guide-title">Studio</div>
+        <div class="syn-guide-desc">Generate images and video from a prompt. Stem Studio lives inside Studio — tap the mixer icon to split a track into stems.</div>
       </div>
       <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('maps', event)">
-      <div class="syn-guide-num">06</div>
+      <div class="syn-guide-num">07</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Maps</div>
         <div class="syn-guide-desc">Ask Ava to show the location of any place — "show location of the Eiffel Tower" — and she'll drop a pin on the map.</div>
@@ -84146,7 +84436,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('pulse', event)">
-      <div class="syn-guide-num">07</div>
+      <div class="syn-guide-num">08</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Pulse</div>
         <div class="syn-guide-desc">A live feed of updates on the cities and topics you set up. Tap the pulse icon any time to check in.</div>
@@ -84155,7 +84445,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('controlcentre', event)">
-      <div class="syn-guide-num">08</div>
+      <div class="syn-guide-num">09</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Control Centre</div>
         <div class="syn-guide-desc">One panel for calendar, inbox, chats, notes and jobs at a glance — hold the orb or tap its bottom-nav icon.</div>
@@ -84164,7 +84454,7 @@ html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba
     </div>
 
     <div class="syn-guide-step" onclick="synGuideGo('themes', event)">
-      <div class="syn-guide-num">09</div>
+      <div class="syn-guide-num">10</div>
       <div class="syn-guide-body">
         <div class="syn-guide-title">Themes</div>
         <div class="syn-guide-desc">Switch the look any time from Settings — True Black, Easy View, Slate, iOS glass, Deep Sea.</div>
@@ -84185,15 +84475,48 @@ function synGuideToggleMini(){
   var mini = btn.classList.toggle('syn-guide-mini');
   try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, mini ? '1' : '0'); }catch(e){}
 }
+function synGuideCloseOut(){
+  try{ closeSynGuide(); }catch(e){}
+  var btn = document.getElementById('synGuideBtn');
+  if(!btn) return;
+  if(!btn.classList.contains('syn-guide-mini')){
+    btn.classList.add('syn-guide-mini');
+    try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '1'); }catch(e2){}
+  }
+  var h = btn.querySelector('.syn-guide-btn-toggle');
+  if(h){ h.title = 'Expand guide'; h.setAttribute('aria-label', 'Expand guide'); }
+}
+function synGuideCornerHandle(){
+  var btn = document.getElementById('synGuideBtn');
+  if(!btn) return;
+  if(btn.classList.contains('syn-guide-mini')){
+    try{ if(typeof window._stopGuideWag==='function') window._stopGuideWag(); }catch(_s){}
+    btn.classList.remove('syn-guide-mini');
+    btn.classList.remove('syn-guide-linger');
+    btn.classList.remove('syn-guide-nudge');
+    try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '0'); }catch(e){}
+    var h = btn.querySelector('.syn-guide-btn-toggle');
+    if(h){ h.title = 'Close guide'; h.setAttribute('aria-label', 'Close guide'); }
+    return;
+  }
+  synGuideCloseOut();
+}
 (function _synGuideRestoreMiniState(){
   try{
     if(localStorage.getItem(SYN_GUIDE_BTN_MINI_KEY) !== '1') return;
-    function apply(){ var btn = document.getElementById('synGuideBtn'); if(btn) btn.classList.add('syn-guide-mini'); }
+    function apply(){
+      var btn = document.getElementById('synGuideBtn');
+      if(!btn) return;
+      btn.classList.add('syn-guide-mini');
+      var h = btn.querySelector('.syn-guide-btn-toggle');
+      if(h){ h.title = 'Expand guide'; h.setAttribute('aria-label', 'Expand guide'); }
+    }
     if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', apply); } else { apply(); }
   }catch(e){}
 })();
 
 function openSynGuide(){
+  try{ if(typeof window._synGuideMarkUsed==='function') window._synGuideMarkUsed(); }catch(_u){}
   var m = document.getElementById('synGuideModal');
   if(m){
     m.style.display = 'flex';
@@ -84206,6 +84529,215 @@ function closeSynGuide(){
   var m = document.getElementById('synGuideModal');
   if(m) m.style.display = 'none';
 }
+(function _synGuideConfusionNudge(){
+  var lastHint = 0, hints = 0, score = 0, lastUseful = Date.now(), guideUsedAt = 0;
+  var lastMove = 0, lastPX = 0, lastPY = 0, startedAt = Date.now();
+  var lastNavId = '', lastNavAt = 0, navHits = 0, homeLeftAt = 0, homeBounces = 0, kinds = {};
+  var lastDeadX = 0, lastDeadY = 0, clusterClicks = 0, clusterAt = 0, deadTimes = [];
+  function onHome(){
+    var es = document.getElementById('chatEmptyState');
+    return !!(es && !es.classList.contains('hidden'));
+  }
+  function busy(){
+    if(window.__synTourActive) return true;
+    if(document.getElementById('appSplash')) return true;
+    var auth = document.getElementById('authModal');
+    if(auth && auth.style.display && auth.style.display !== 'none') return true;
+    var m = document.getElementById('synGuideModal');
+    if(m && m.style.display === 'flex') return true;
+    return false;
+  }
+  function add(kind, amt){
+    var now = Date.now();
+    if(kinds[kind] && now - kinds[kind] < 1200) return;
+    kinds[kind] = now;
+    score += amt;
+    if(score > 10) score = 10;
+    maybe();
+  }
+  var _waveRaf = 0, _hideT = 0, inCorner = false;
+  function scheduleHide(){
+    if(_hideT) clearTimeout(_hideT);
+    _hideT = setTimeout(function(){
+      var b = document.getElementById('synGuideBtn');
+      if(!b || !b.classList.contains('syn-guide-mini')) return;
+      if(inCorner) return;
+      if(b.classList.contains('syn-guide-nudge')) return;
+      b.classList.remove('syn-guide-linger');
+    }, 180);
+  }
+  function showMini(){
+    var b = document.getElementById('synGuideBtn');
+    if(!b || !b.classList.contains('syn-guide-mini')) return;
+    b.classList.add('syn-guide-linger');
+    if(_hideT){ clearTimeout(_hideT); _hideT = 0; }
+  }
+  function stopWave(){
+    if(_waveRaf){ cancelAnimationFrame(_waveRaf); _waveRaf = 0; }
+    var b = document.getElementById('synGuideBtn');
+    var q = b && b.querySelector('.syn-guide-mini-q');
+    if(q){ q.style.transform = ''; q.style.opacity = ''; }
+    if(b){
+      b.classList.remove('syn-guide-nudge');
+      b.style.removeProperty('opacity');
+      if(b.classList.contains('syn-guide-mini')){
+        b.classList.add('syn-guide-linger');
+        if(!inCorner){
+          if(_hideT) clearTimeout(_hideT);
+          _hideT = setTimeout(function(){
+            var bb = document.getElementById('synGuideBtn');
+            if(!bb || inCorner || bb.classList.contains('syn-guide-nudge')) return;
+            bb.classList.remove('syn-guide-linger');
+          }, 10000);
+        }
+      } else {
+        b.classList.remove('syn-guide-linger');
+      }
+    }
+  }
+  function startWave(loop){
+    var b = document.getElementById('synGuideBtn');
+    if(!b) return;
+    b.classList.add('syn-guide-mini');
+    var q = b.querySelector('.syn-guide-mini-q');
+    if(!q) return;
+    if(_waveRaf){ cancelAnimationFrame(_waveRaf); _waveRaf = 0; }
+    b.classList.add('syn-guide-nudge');
+    b.style.setProperty('opacity', '1', 'important');
+    q.style.display = 'inline-block';
+    q.style.transformOrigin = '50% 100%';
+    q.style.opacity = '0.92';
+    var keys = [[0,0],[0.08,-14],[0.16,13],[0.24,-12],[0.32,0],[0.50,0],[0.58,-14],[0.66,13],[0.74,-12],[0.82,0],[1,0]];
+    var dur = 5400, t0 = performance.now();
+    function ease(t){ return t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+    function ang(p){
+      for(var i=0;i<keys.length-1;i++){
+        if(p>=keys[i][0] && p<=keys[i+1][0]){
+          var u = (p-keys[i][0])/(keys[i+1][0]-keys[i][0]||1);
+          return keys[i][1] + (keys[i+1][1]-keys[i][1])*ease(u);
+        }
+      }
+      return 0;
+    }
+    function tick(now){
+      if(!b.classList.contains('syn-guide-mini')){ stopWave(); return; }
+      var elapsed = now - t0;
+      if(!loop && elapsed >= dur * 4){ stopWave(); return; }
+      var p = (elapsed % dur) / dur;
+      var a = ang(p);
+      q.style.transform = 'rotate('+a+'deg)';
+      _waveRaf = requestAnimationFrame(tick);
+    }
+    _waveRaf = requestAnimationFrame(tick);
+  }
+  function markGuideUsed(){
+    guideUsedAt = Date.now();
+    score = 0;
+    stopWave();
+  }
+  window._synGuideMarkUsed = markGuideUsed;
+  function nudge(){
+    if(busy()) return;
+    if(guideUsedAt && Date.now() - guideUsedAt < 30*60*1000) return;
+    if(Date.now() - lastHint < 28000) return;
+    if(hints >= 4) return;
+    var btn = document.getElementById('synGuideBtn');
+    if(!btn) return;
+    lastHint = Date.now();
+    hints++;
+    score = 0;
+    startWave(false);
+  }
+  window.testGuideWave = function(){ startWave(true); };
+  window._stopGuideWag = stopWave;
+  function maybe(){
+    if(Date.now() - startedAt < 8000) return;
+    var now = Date.now();
+    var recentKinds = 0;
+    for(var k in kinds){ if(now - kinds[k] < 12000) recentKinds++; }
+    if(recentKinds >= 2 && score >= 3.4) nudge();
+    else if(score >= 4.2) nudge();
+  }
+  function markUseful(){
+    lastUseful = Date.now();
+    score = Math.max(0, score - 2.5);
+    clusterClicks = 0;
+    navHits = 0;
+    homeBounces = 0;
+    deadTimes = [];
+  }
+  document.addEventListener('pointermove', function(e){
+    lastMove = Date.now();
+    lastPX = e.clientX; lastPY = e.clientY;
+    var b = document.getElementById('synGuideBtn');
+    if(!b || !b.classList.contains('syn-guide-mini')) return;
+    var r = b.getBoundingClientRect();
+    var pad = 160;
+    var near = e.clientX >= r.left - pad && e.clientX <= r.right + pad &&
+               e.clientY >= r.top - pad && e.clientY <= r.bottom + pad;
+    if(near){
+      if(!inCorner){ inCorner = true; showMini(); }
+    } else if(inCorner){
+      inCorner = false;
+      scheduleHide();
+    }
+  }, {passive:true});
+  document.addEventListener('keydown', function(e){
+    if(e.key && e.key.length === 1) markUseful();
+  }, true);
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    if(t.closest('#synGuideBtn')){ markUseful(); markGuideUsed(); return; }
+    var nav = t.closest('.cat-btn,.bnav-btn,#bnavLogoMark,.chp-item,[data-chp-act],#bnavSettingsBtn,#bnavControlCenterBtn,#sidebarIconRail');
+    if(nav){
+      var now = Date.now();
+      var id = nav.id || nav.getAttribute('data-chp-act') || nav.className || 'nav';
+      if(id === lastNavId && now - lastNavAt < 2000){
+        navHits++;
+        if(navHits >= 2) add('flap', 2.0);
+      } else {
+        navHits = 1;
+      }
+      lastNavId = id;
+      lastNavAt = now;
+      if(onHome()){
+        homeLeftAt = now;
+      } else if(homeLeftAt && now - homeLeftAt < 4000){
+        homeBounces++;
+        homeLeftAt = 0;
+        add('bounce-home', 1.8);
+      }
+      return;
+    }
+    if(t.closest('.send-btn,#synFpPad,#inputBox,#bnavNotesBtn,.sticky-note-2030,textarea,input')){
+      markUseful();
+      return;
+    }
+    if(t.closest('button,a,select,[role="button"]')){
+      lastUseful = Date.now();
+      clusterClicks = 0;
+      return;
+    }
+    var now = Date.now();
+    var dx = e.clientX - lastDeadX, dy = e.clientY - lastDeadY;
+    if(clusterClicks && now - clusterAt < 2000 && Math.sqrt(dx*dx + dy*dy) < 56){
+      clusterClicks++;
+    } else {
+      clusterClicks = 1;
+    }
+    lastDeadX = e.clientX;
+    lastDeadY = e.clientY;
+    clusterAt = now;
+    deadTimes.push(now);
+    while(deadTimes.length && now - deadTimes[0] > 4500) deadTimes.shift();
+    if(clusterClicks >= 3 || deadTimes.length >= 4) add('dead', 2.2);
+  }, true);
+  setInterval(function(){
+    score = Math.max(0, score - 0.22);
+    if(homeBounces && Date.now() - lastNavAt > 10000) homeBounces = 0;
+  }, 2000);
+})();
 // Click outside the card closes it, same behavior as other .modal-overlay modals
 document.addEventListener('click', function(e){
   var m = document.getElementById('synGuideModal');
@@ -84288,11 +84820,9 @@ function synGuideFlyTo(stops, onDone, startPoint, sourceRect){
   var f = _synGuideBuildFleet();
   var cursor=f.cursor, trail1=f.trail1, trail2=f.trail2, trail3=f.trail3;
 
-  var start = startPoint || (function(){
-    var b = document.getElementById('synGuideBtn');
-    var r = b ? b.getBoundingClientRect() : null;
-    return r ? {x:r.left+r.width/2, y:r.top+r.height/2} : {x:window.innerWidth/2, y:window.innerHeight/2};
-  })();
+  // Only an explicit startPoint pre-places the cursor now (see the launch
+  // branch below); without one, the first stop itself is the spawn point.
+  var start = startPoint || null;
 
   function place(x,y){
     cursor.style.left = x+'px'; cursor.style.top = y+'px';
@@ -84319,7 +84849,12 @@ function synGuideFlyTo(stops, onDone, startPoint, sourceRect){
     cursor.classList.add('on'); trail1.classList.add('on'); trail2.classList.add('on'); trail3.classList.add('on');
     setTimeout(function(){ visit(0); }, 40);
   } else {
-    place(start.x, start.y);
+    // No launch point given (sub-demo flights like the sticky-notes hop):
+    // don't pre-place the cursor at the Guide button — that made it fade in
+    // to the right of the real target and then glide onto it. Skip the
+    // initial place entirely; visit(0) → proceed() places it straight onto
+    // the first target while still opacity:0, and the existing rAF fade-in
+    // sells the landing there.
     visit(0);
   }
 
@@ -84470,6 +85005,18 @@ function synGuideSpotlightType(el, text, caption, onDone, startPoint, sourceRect
    guide has to open that first, then land on the right row inside it)
    — plus the real function to call once the flight finishes. */
 var SYN_GUIDE_STEPS = {
+  story: {
+    stops: [],
+    action: function(){
+      try{ window.__synTourIntentionalStart = true; }catch(_i){}
+      try{ if(typeof window.dockSynapsesTourBtn==='function') window.dockSynapsesTourBtn(); }catch(_d){}
+      try{
+        if(typeof startSynapsesTour==='function') startSynapsesTour(true);
+        else if(typeof window.startSynapsesTour==='function') window.startSynapsesTour(true);
+        else if(typeof window.startTourFromNav==='function') window.startTourFromNav();
+      }catch(_s){ console.warn('[synGuide] story tour failed', _s); }
+    }
+  },
   speech: {
     // The top-nav mic (#topNavVoiceBtn) is the persistent entry point — it's
     // present across every screen, not just Home, which is the whole point
@@ -84551,7 +85098,7 @@ var SYN_GUIDE_STEPS = {
   },
   imagegen: {
     stops: [
-      { get: function(){ return _synGuidePick([document.getElementById('bnavImageGenBtn'), document.getElementById('nav-imagegen')]); }, caption: 'Opening Image Studio…' }
+      { get: function(){ return _synGuidePick([document.getElementById('bnavImageGenBtn'), document.getElementById('nav-imagegen')]); }, caption: 'Opening Studio…' }
     ],
     action: function(){ if(typeof window.openImageGenModal==='function') window.openImageGenModal(); }
   },
@@ -84656,11 +85203,30 @@ function _synGuideNotesSubDemo(){
     try{ _synGuideSeedDemoNotesIfEmpty(); }catch(_sd){}
     var btn = _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]);
     if(!_synGuideVisible(btn)) return;
-    synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Sticky Notes →' }], function(){
-      if(typeof window.openStickyNotesFly==='function') window.openStickyNotesFly();
-      // Let the fly-in land, then show the rest: drag a note off the grid,
-      // pin it, then turn Sticky Notes off — proving the pinned one stays.
-      setTimeout(function(){ try{ _synGuidePinSubDemo(); }catch(_pd){} }, 1500);
+    synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Hold/right-click → Notes menu' }], function(){
+      // Open the REAL right-click context menu instead of silently toggling
+      // the stickies on from behind the scenes — then fly the cursor onto
+      // the menu's own "Show Sticky Notes" item and activate it there, the
+      // exact way a person would (mirrors _synGuideTurnOffStickyDemo below).
+      var r = btn.getBoundingClientRect();
+      var evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2 });
+      btn.dispatchEvent(evt);
+      setTimeout(function(){
+        var openItem = document.getElementById('stickyFlyOpenBtn');
+        if(!openItem){
+          // Menu never showed (layout variant etc.) — fall back to opening
+          // the stickies directly so the demo still continues.
+          if(typeof window.openStickyNotesFly==='function') window.openStickyNotesFly();
+          setTimeout(function(){ try{ _synGuidePinSubDemo(); }catch(_pd){} }, 1500);
+          return;
+        }
+        synGuideFlyTo([{ get: function(){ return openItem; }, caption: 'Show Sticky Notes →' }], function(){
+          openItem.click(); // real handler: first time = fly-in, after that = on/off toggle
+          // Let the fly-in land, then show the rest: drag a note off the grid,
+          // pin it, then turn Sticky Notes off — proving the pinned one stays.
+          setTimeout(function(){ try{ _synGuidePinSubDemo(); }catch(_pd){} }, 1500);
+        });
+      }, 260);
     });
   }, 480);
 }
@@ -84819,6 +85385,11 @@ function _synGuideAuroraSubDemo(dnt){
 function synGuideGo(step, e){
   var cfg = SYN_GUIDE_STEPS[step];
   if(!cfg) return;
+  if(step === 'story'){
+    try{ closeSynGuide(); }catch(_c){}
+    try{ cfg.action(); }catch(_a){ console.warn('[synGuide] action failed for', step, _a); }
+    return;
+  }
   // Fire the bright sonar "lock-on" ring on the arrow icon that was clicked,
   // remember its exact rect (so the flight can launch as a seamless overlay
   // right on top of it), and empty the orb out to sell "the arrow just left".
@@ -84941,5 +85512,445 @@ function synGuideGo(step, e){
 window.synGuideGo = synGuideGo;
 </script>
 <!-- ════════════════ /App Guide ════════════════ -->
+
+<!-- ── Trade Desk (paper execution engine — same rule schema later feeds live) ── -->
+<style>
+#synTradeDesk{
+  display:none; position:fixed; inset:0; z-index:9998;
+  color:var(--text,#eee); font-family:'DM Sans',sans-serif;
+  background:transparent; flex-direction:column; overflow:hidden;
+}
+#synTradeDesk.open{ display:flex; }
+#synTradeDesk .td-top{
+  display:flex; align-items:center; gap:10px; flex-shrink:0;
+  padding:12px 16px; z-index:2;
+  background:rgba(10,10,14,0.42);
+  backdrop-filter:blur(16px) saturate(150%);
+  -webkit-backdrop-filter:blur(16px) saturate(150%);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+#synTradeDesk .td-brand{ font-family:'Syne',sans-serif; font-weight:800; font-size:15px; letter-spacing:.02em; }
+#synTradeDesk .td-pill{
+  font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  padding:3px 8px; border-radius:999px;
+  border:1px solid rgba(201,162,39,0.35); color:#e8c547;
+}
+#synTradeDesk .td-spacer{ flex:1; }
+#synTradeDesk .td-eq{ text-align:right; line-height:1.15; }
+#synTradeDesk .td-eq .v{ font-family:'Syne',sans-serif; font-size:16px; font-weight:800; }
+#synTradeDesk .td-eq .l{ font-size:10px; color:rgba(180,180,195,0.55); letter-spacing:.08em; text-transform:uppercase; }
+#synTradeDesk .td-eq .up{ color:#6ee7a8; }
+#synTradeDesk .td-eq .dn{ color:#f0a0a8; }
+#synTradeDesk .td-btn{
+  display:inline-flex; align-items:center; gap:6px;
+  height:30px; padding:0 12px; border-radius:999px; cursor:pointer;
+  border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05);
+  color:rgba(230,230,238,0.88); font:600 12px 'DM Sans',sans-serif;
+}
+#synTradeDesk .td-btn:hover{ background:rgba(255,255,255,0.1); color:#fff; }
+#synTradeDesk .td-btn.primary{ border-color:rgba(201,162,39,0.4); color:#e8c547; }
+#synTradeDesk .td-btn.danger{ border-color:rgba(240,80,90,0.35); color:#f0a0a8; }
+#synTradeDesk .td-body{
+  flex:1; min-height:0; display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(280px,0.85fr);
+  gap:0; overflow:hidden;
+}
+#synTradeDesk .td-col{ overflow:auto; padding:16px 18px 28px; }
+#synTradeDesk .td-col + .td-col{ border-left:1px solid rgba(255,255,255,0.06); }
+#synTradeDesk .td-h{
+  font-family:'Syne',sans-serif; font-size:13px; font-weight:800;
+  letter-spacing:.04em; text-transform:uppercase; color:rgba(200,200,214,0.55);
+  margin:0 0 10px;
+}
+#synTradeDesk .td-card{
+  border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03);
+  border-radius:14px; padding:12px 14px; margin-bottom:10px;
+}
+#synTradeDesk .td-row{ display:flex; align-items:center; gap:8px; justify-content:space-between; }
+#synTradeDesk .td-name{ font-weight:700; font-size:13.5px; }
+#synTradeDesk .td-meta{ font-size:11.5px; color:rgba(170,170,185,0.6); }
+#synTradeDesk .td-run{ font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#6ee7a8; }
+#synTradeDesk .td-stop{ color:rgba(170,170,185,0.5); }
+#synTradeDesk table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+#synTradeDesk th{ text-align:left; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(170,170,185,0.45); padding:6px 4px; font-weight:700; }
+#synTradeDesk td{ padding:7px 4px; border-top:1px solid rgba(255,255,255,0.05); }
+#synTradeDesk select, #synTradeDesk input{
+  background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+  color:var(--text,#eee); border-radius:8px; padding:7px 9px; font:13px 'DM Sans',sans-serif; width:100%;
+}
+#synTradeDesk label{ display:block; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:rgba(170,170,185,0.5); margin:8px 0 4px; }
+#synTradeDesk .td-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+#synTradeDesk .td-log{ font-size:12px; max-height:220px; overflow:auto; }
+#synTradeDesk .td-log div{ padding:4px 0; border-top:1px solid rgba(255,255,255,0.04); color:rgba(210,210,220,0.8); }
+@media(max-width:760px){
+  #synTradeDesk .td-body{ grid-template-columns:1fr; }
+  #synTradeDesk .td-col + .td-col{ border-left:none; border-top:1px solid rgba(255,255,255,0.06); }
+}
+</style>
+<div id="synTradeDesk" aria-hidden="true">
+  <div class="td-top">
+    <div class="td-brand">Trade Desk</div>
+    <span class="td-pill" id="tdModePill">Paper</span>
+    <div class="td-spacer"></div>
+    <div class="td-eq"><div class="v" id="tdEquity">$10,000.00</div><div class="l">Equity</div></div>
+    <div class="td-eq" style="margin-left:14px;"><div class="v" id="tdPnl">$0.00</div><div class="l">Today</div></div>
+    <button type="button" class="td-btn" onclick="closeTradeDesk()">Close</button>
+    <button type="button" class="td-btn" onclick="tdGoHome()" title="Synapses home">Home</button>
+  </div>
+  <div class="td-body">
+    <div class="td-col">
+      <div class="td-h">Bots</div>
+      <div id="tdBotList"></div>
+      <div class="td-h" style="margin-top:18px;">Open positions</div>
+      <div class="td-card" style="overflow:auto;"><table><thead><tr><th>Pair</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P&amp;L</th></tr></thead><tbody id="tdPosBody"></tbody></table></div>
+      <div class="td-h" style="margin-top:18px;">Executions</div>
+      <div class="td-card td-log" id="tdLog"></div>
+    </div>
+    <div class="td-col">
+      <div class="td-h">New rule</div>
+      <div class="td-card">
+        <label>Name</label><input id="tdName" value="BTC RSI fade" />
+        <div class="td-grid2">
+          <div><label>Pair</label>
+            <select id="tdSym">
+              <option>BTC-USD</option><option>ETH-USD</option><option>SOL-USD</option>
+              <option>XRP-USD</option><option>DOGE-USD</option><option>LINK-USD</option>
+            </select>
+          </div>
+          <div><label>Timeframe</label>
+            <select id="tdTf">
+              <option value="60">1m</option><option value="300">5m</option>
+              <option value="900">15m</option><option value="3600" selected>1h</option>
+              <option value="21600">6h</option><option value="86400">1d</option>
+            </select>
+          </div>
+        </div>
+        <div class="td-grid2">
+          <div><label>Size % of cash</label><input id="tdQty" type="number" min="1" max="50" value="10" /></div>
+          <div><label>Max daily loss %</label><input id="tdLoss" type="number" min="1" max="50" value="8" /></div>
+        </div>
+        <label>Entry</label>
+        <select id="tdEntry">
+          <option value="rsi_below">RSI below 32</option>
+          <option value="price_below_sma">Price below SMA 20</option>
+          <option value="sma_cross_golden">SMA 9 crosses above SMA 21</option>
+        </select>
+        <label>Exit</label>
+        <select id="tdExit">
+          <option value="rsi_above">RSI above 68</option>
+          <option value="price_above_sma">Price above SMA 20</option>
+          <option value="sma_cross_death">SMA 9 crosses below SMA 21</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button type="button" class="td-btn primary" onclick="tdSaveAndStart()">Save &amp; start bot</button>
+          <button type="button" class="td-btn" onclick="tdSaveRule()">Save only</button>
+        </div>
+        <div class="td-meta" style="margin-top:10px;">Paper fills at live Coinbase prices, 0.1% fee, one position per rule. Bots keep running after you close this desk. Live exchange keys come later via the backend — same rule, different engine.</div>
+      </div>
+      <div class="td-h" style="margin-top:16px;">Manual (same engine)</div>
+      <div class="td-card">
+        <div class="td-meta" style="margin-bottom:8px;">Places a real paper fill at the current mark — same path the bot uses.</div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="td-btn primary" onclick="tdManual('BUY')">Buy 10%</button>
+          <button type="button" class="td-btn danger" onclick="tdManual('SELL')">Sell position</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var KEY='syn_trade_desk_v1', FEE=0.001, START=10000, TICK=12000;
+  var timers={}, marks={};
+  function nid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function money(n){ var s=n<0?'-':''; n=Math.abs(n); return s+'$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function load(){
+    try{
+      var s=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(s && s.cash!=null) return s;
+    }catch(e){}
+    return { cash:START, strategies:[], positions:[], executions:[], runners:{} };
+  }
+  function save(st){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+  var state=load();
+
+  function sma(c,p){ if(c.length<p) return null; var s=0; for(var i=c.length-p;i<c.length;i++) s+=c[i]; return s/p; }
+  function smaSeries(c,p){ var o=[]; for(var i=p-1;i<c.length;i++) o.push(sma(c.slice(0,i+1),p)); return o; }
+  function rsi(c,p){
+    p=p||14; if(c.length<p+1) return null;
+    var g=0,l=0, r=c.slice(-(p+1));
+    for(var i=1;i<r.length;i++){ var d=r[i]-r[i-1]; if(d>=0) g+=d; else l-=d; }
+    var ag=g/p, al=l/p; if(al===0) return 100; return 100-100/(1+ag/al);
+  }
+  function cond(type, candles){
+    var closes=candles.map(function(x){ return x.close; });
+    var last=closes[closes.length-1];
+    if(type==='rsi_below'){ var v=rsi(closes,14); return v!=null && v<32; }
+    if(type==='rsi_above'){ var v2=rsi(closes,14); return v2!=null && v2>68; }
+    if(type==='price_below_sma'){ var s=sma(closes,20); return s!=null && last<s; }
+    if(type==='price_above_sma'){ var s2=sma(closes,20); return s2!=null && last>s2; }
+    if(type==='sma_cross_golden' || type==='sma_cross_death'){
+      var f=smaSeries(closes,9), w=smaSeries(closes,21);
+      var n=Math.min(f.length,w.length); if(n<2) return false;
+      var fc=f[n-1], fp=f[n-2], sc=w[n-1], sp=w[n-2];
+      if(type==='sma_cross_golden') return fp<=sp && fc>sc;
+      return fp>=sp && fc<sc;
+    }
+    return false;
+  }
+  function evaluate(rule, candles){
+    if(cond(rule.exit, candles)) return 'SELL';
+    if(cond(rule.entry, candles)) return 'BUY';
+    return null;
+  }
+
+  async function getCandles(sym, gran){
+    var url='https://api.exchange.coinbase.com/products/'+encodeURIComponent(sym)+'/candles?granularity='+gran;
+    var res=await fetch(url);
+    if(!res.ok) throw new Error('market '+res.status);
+    var raw=await res.json();
+    var rows=(raw||[]).slice().reverse().map(function(k){
+      return { openTime:k[0]*1000, low:+k[1], high:+k[2], open:+k[3], close:+k[4], volume:+k[5] };
+    });
+    return rows;
+  }
+  async function getPrice(sym){
+    if(marks[sym] && Date.now()-marks[sym].t<4000) return marks[sym].p;
+    var res=await fetch('https://api.exchange.coinbase.com/products/'+encodeURIComponent(sym)+'/ticker');
+    if(!res.ok) throw new Error('ticker '+res.status);
+    var j=await res.json();
+    var p=parseFloat(j.price);
+    marks[sym]={ p:p, t:Date.now() };
+    return p;
+  }
+
+  function posFor(sid, sym){
+    for(var i=0;i<state.positions.length;i++){
+      var p=state.positions[i];
+      if(p.status==='open' && p.strategyId===sid && p.symbol===sym) return p;
+    }
+    return null;
+  }
+  function dayPnl(){
+    var start=new Date(); start.setHours(0,0,0,0);
+    var t0=start.getTime(), n=0;
+    state.executions.forEach(function(e){ if(e.ts>=t0 && e.pnl!=null) n+=e.pnl; });
+    return n;
+  }
+  function mtmEquity(){
+    var eq=state.cash;
+    state.positions.forEach(function(p){
+      if(p.status!=='open') return;
+      var px=(marks[p.symbol]&&marks[p.symbol].p)||p.entryPrice;
+      eq += p.qty*px;
+    });
+    return eq;
+  }
+
+  function execute(opts){
+    var side=opts.side, price=opts.price, strategy=opts.strategy, reason=opts.reason||'signal';
+    var sym=strategy.symbol;
+    var open=posFor(strategy.id, sym);
+    var qty=opts.qty;
+    if(side==='BUY'){
+      if(open) throw new Error('already in a '+sym+' position');
+      var spend=state.cash * ((strategy.qtyPct||10)/100);
+      qty = qty || (spend/price);
+      var cost=qty*price;
+      var fee=cost*FEE;
+      if(state.cash < cost+fee) throw new Error('not enough cash');
+      state.cash -= (cost+fee);
+      state.positions.push({ id:nid(), strategyId:strategy.id, symbol:sym, side:'long', qty:qty, entryPrice:price, openedAt:Date.now(), status:'open' });
+      state.executions.unshift({ id:nid(), strategyId:strategy.id, symbol:sym, side:'BUY', qty:qty, price:price, fee:fee, reason:reason, pnl: -fee, ts:Date.now() });
+    } else {
+      if(!open) throw new Error('no open '+sym+' position');
+      qty=open.qty;
+      var proceeds=qty*price;
+      var fee2=proceeds*FEE;
+      var pnl=(price-open.entryPrice)*qty - fee2 - (open.qty*open.entryPrice*FEE);
+      state.cash += (proceeds-fee2);
+      open.status='closed'; open.closedAt=Date.now(); open.exitPrice=price; open.pnl=pnl;
+      state.executions.unshift({ id:nid(), strategyId:strategy.id, symbol:sym, side:'SELL', qty:qty, price:price, fee:fee2, reason:reason, pnl:pnl, ts:Date.now() });
+    }
+    if(state.executions.length>300) state.executions.length=300;
+    save(state);
+    var last=state.executions[0];
+    try{
+      if(typeof showToast==='function') showToast('Trade Desk '+last.side+' '+last.symbol+' @ '+last.price.toFixed(2));
+    }catch(e){}
+    return last;
+  }
+
+  async function tick(sid){
+    var rule=state.strategies.filter(function(s){ return s.id===sid; })[0];
+    var run=state.runners[sid];
+    if(!rule || !run || !run.running) return;
+    try{
+      var loss=dayPnl();
+      var cap=-(START*((rule.maxDailyLossPct||8)/100));
+      if(loss<=cap){
+        run.running=false; run.lastError='kill switch: max daily loss';
+        save(state); stopTimer(sid); paint(); return;
+      }
+      var candles=await getCandles(rule.symbol, rule.interval);
+      if(!candles || candles.length<25) throw new Error('not enough candles');
+      var closed=candles[candles.length-2];
+      if(!closed) return;
+      if(!run.lastBarTs){ run.lastBarTs=closed.openTime; save(state); return; }
+      if(run.lastBarTs===closed.openTime){ run.lastTickAt=Date.now(); save(state); return; }
+      var hist=candles.slice(0,-1);
+      var signal=evaluate(rule, hist);
+      run.lastBarTs=closed.openTime;
+      run.lastTickAt=Date.now();
+      run.lastSignal=signal||'flat';
+      run.lastError=null;
+      if(signal){
+        var px=closed.close;
+        marks[rule.symbol]={ p:px, t:Date.now() };
+        execute({ strategy:rule, side:signal, price:px, reason:'bot '+rule.interval+'s close' });
+      }
+      save(state);
+    }catch(err){
+      run.lastError=err.message||String(err);
+      save(state);
+    }
+    paint();
+  }
+  function stopTimer(sid){
+    if(timers[sid]){ clearInterval(timers[sid]); delete timers[sid]; }
+  }
+  function startBot(sid){
+    var rule=state.strategies.filter(function(s){ return s.id===sid; })[0];
+    if(!rule) return;
+    if(!state.runners[sid]) state.runners[sid]={ running:false, lastBarTs:0 };
+    state.runners[sid].running=true;
+    state.runners[sid].lastError=null;
+    save(state);
+    stopTimer(sid);
+    timers[sid]=setInterval(function(){ tick(sid); }, TICK);
+    tick(sid);
+    paint();
+  }
+  function stopBot(sid){
+    if(state.runners[sid]) state.runners[sid].running=false;
+    save(state); stopTimer(sid); paint();
+  }
+  function runningCount(){
+    var n=0; Object.keys(state.runners).forEach(function(k){ if(state.runners[k].running) n++; });
+    return n;
+  }
+  function condLabel(t){
+    return ({ rsi_below:'RSI<32', rsi_above:'RSI>68', price_below_sma:'Px<SMA20', price_above_sma:'Px>SMA20', sma_cross_golden:'SMA9×21↑', sma_cross_death:'SMA9×21↓' })[t]||t;
+  }
+
+  function paint(){
+    var eq=mtmEquity(), pnl=dayPnl();
+    var eqEl=document.getElementById('tdEquity');
+    var pnlEl=document.getElementById('tdPnl');
+    if(eqEl) eqEl.textContent=money(eq);
+    if(pnlEl){ pnlEl.textContent=(pnl>=0?'+':'')+money(pnl).replace('$-','-$'); pnlEl.className='v '+(pnl>0?'up':pnl<0?'dn':''); }
+    var list=document.getElementById('tdBotList');
+    if(list){
+      if(!state.strategies.length) list.innerHTML='<div class="td-card td-meta">No rules yet — save one on the right, then start it. It will wait for the next candle close, then place fills on its own.</div>';
+      else list.innerHTML=state.strategies.map(function(s){
+        var r=state.runners[s.id]||{};
+        var on=!!r.running;
+        return '<div class="td-card"><div class="td-row"><div><div class="td-name">'+s.name+'</div><div class="td-meta">'+s.symbol+' · '+(s.interval>=3600?(s.interval/3600)+'h':(s.interval/60)+'m')+' · in '+condLabel(s.entry)+' · out '+condLabel(s.exit)+'</div><div class="td-meta">'+(on?('last '+(r.lastSignal||'…')+(r.lastError?' · '+r.lastError:'')):(r.lastError||'stopped'))+'</div></div><div style="display:flex;gap:6px;align-items:center;"><span class="'+(on?'td-run':'td-stop')+'">'+(on?'running':'off')+'</span><button type="button" class="td-btn '+(on?'danger':'primary')+'" onclick="'+(on?('stopTradeBot(\''+s.id+'\')'):('startTradeBot(\''+s.id+'\')'))+'">'+(on?'Stop':'Start')+'</button></div></div></div>';
+      }).join('');
+    }
+    var pb=document.getElementById('tdPosBody');
+    if(pb){
+      var open=state.positions.filter(function(p){ return p.status==='open'; });
+      if(!open.length) pb.innerHTML='<tr><td colspan="5" class="td-meta">Flat</td></tr>';
+      else pb.innerHTML=open.map(function(p){
+        var px=(marks[p.symbol]&&marks[p.symbol].p)||p.entryPrice;
+        var u=(px-p.entryPrice)*p.qty;
+        return '<tr><td>'+p.symbol+'</td><td>'+p.qty.toFixed(6)+'</td><td>'+p.entryPrice.toFixed(2)+'</td><td>'+px.toFixed(2)+'</td><td class="'+(u>=0?'up':'dn')+'">'+(u>=0?'+':'')+money(u).replace('$-','-$')+'</td></tr>';
+      }).join('');
+    }
+    var log=document.getElementById('tdLog');
+    if(log){
+      var rows=state.executions.slice(0,40);
+      log.innerHTML=rows.length?rows.map(function(e){
+        var t=new Date(e.ts).toLocaleTimeString();
+        return '<div>'+t+' · <b>'+e.side+'</b> '+e.symbol+' '+e.qty.toFixed(5)+' @ '+e.price.toFixed(2)+' · '+e.reason+(e.pnl!=null?(' · '+(e.pnl>=0?'+':'')+money(e.pnl).replace('$-','-$')):'')+'</div>';
+      }).join(''):'<div class="td-meta">No fills yet</div>';
+    }
+  }
+
+  function collectRule(start){
+    var name=(document.getElementById('tdName').value||'Rule').trim();
+    var symbol=document.getElementById('tdSym').value;
+    var interval=Number(document.getElementById('tdTf').value)||3600;
+    var qtyPct=Math.max(1, Math.min(50, Number(document.getElementById('tdQty').value)||10));
+    var maxDailyLossPct=Math.max(1, Math.min(50, Number(document.getElementById('tdLoss').value)||8));
+    var entry=document.getElementById('tdEntry').value;
+    var exit=document.getElementById('tdExit').value;
+    var rule={ id:nid(), name:name, symbol:symbol, interval:interval, qtyPct:qtyPct, maxDailyLossPct:maxDailyLossPct, entry:entry, exit:exit, createdAt:Date.now() };
+    state.strategies.unshift(rule);
+    save(state);
+    if(start) startBot(rule.id); else paint();
+    return rule;
+  }
+  window.tdSaveRule=function(){ collectRule(false); };
+  window.tdSaveAndStart=function(){ collectRule(true); };
+  window.startTradeBot=startBot;
+  window.stopTradeBot=stopBot;
+  window.tdManual=async function(side){
+    try{
+      var symbol=document.getElementById('tdSym').value;
+      var dummy=state.strategies.filter(function(s){ return s.symbol===symbol; })[0];
+      if(!dummy) dummy=collectRule(false);
+      var px=await getPrice(symbol);
+      execute({ strategy:dummy, side:side, price:px, reason:'manual' });
+      paint();
+    }catch(err){ try{ showToast(err.message); }catch(e){ alert(err.message); } }
+  };
+
+  function refreshMarks(){
+    var syms={};
+    state.strategies.forEach(function(s){ syms[s.symbol]=1; });
+    state.positions.forEach(function(p){ if(p.status==='open') syms[p.symbol]=1; });
+    Object.keys(syms).forEach(function(sym){
+      getPrice(sym).then(function(){ paint(); }).catch(function(){});
+    });
+  }
+
+  window.canSeeTradeDesk=function(){
+    if(window.innerWidth<=768) return false;
+    var u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser;
+    var email=(u&&u.email)?String(u.email).replace(/\s+/g,'').toLowerCase():'';
+    return email==='ednbusiness73@gmail.com';
+  };
+  window.openTradeDesk=function(){
+    if(typeof window.canSeeTradeDesk==='function' && !window.canSeeTradeDesk()) return;
+    var el=document.getElementById('synTradeDesk');
+    if(!el) return;
+    el.classList.add('open');
+    el.setAttribute('aria-hidden','false');
+    try{ document.body.classList.add('trade-desk-open'); }catch(e){}
+    paint(); refreshMarks();
+  };
+  window.closeTradeDesk=function(){
+    var el=document.getElementById('synTradeDesk');
+    if(el){ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); }
+    try{ document.body.classList.remove('trade-desk-open'); }catch(e){}
+    paint();
+  };
+  window.tdGoHome=function(){
+    closeTradeDesk();
+    if(typeof newChat==='function') newChat({ forceAsk:false });
+    else if(typeof _restoreEmptyChatHome==='function') _restoreEmptyChatHome();
+  };
+
+  if(typeof window.canSeeTradeDesk==='function' && window.canSeeTradeDesk()){
+    Object.keys(state.runners||{}).forEach(function(id){
+      if(state.runners[id] && state.runners[id].running) startBot(id);
+    });
+  }
+  setInterval(refreshMarks, 15000);
+  paint();
+})();
+</script>
 
 </body>
