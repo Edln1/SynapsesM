@@ -1373,6 +1373,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .section{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;}
 .section.active{display:flex;}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:200;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+.modal-overlay#synGuideModal{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
 .modal{background:#0d0d0d;border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:32px;width:420px;max-height:90vh;overflow-y:auto;}
 .modal h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;text-align:center;margin-bottom:6px;}
 .modal .sub{font-size:13px;color:#6b6b8a;text-align:center;margin-bottom:24px;line-height:1.6;}
@@ -4738,8 +4739,7 @@ html[data-theme="trueblack"] #rtBubble{
 /* Outer edge = same as ask bar idle: fill + 1px white@0.14 ring (violet-grey look).
    Kill inline purple border so it doesn’t read as a brighter grey line. */
 html[data-theme="trueblack"] #synBotChat{
-  background:rgba(150,135,205,0.05)!important;
-  -webkit-backdrop-filter:blur(24px)!important;backdrop-filter:blur(24px)!important;
+  background:rgba(18,16,28,0.98)!important;
   border:1px solid transparent!important;
   border-color:transparent!important;
   box-shadow:
@@ -10534,6 +10534,9 @@ html[data-theme="pitchblack"] #appSplash #splashBar{
         <button class="cat-btn" id="nav-whiteboard" onclick="goWhiteboard()"><span class="cat-dot"></span>🎨 Whiteboard</button>
         <button class="cat-btn" id="nav-notes" onclick="goNotes()"><span class="cat-dot"></span>📓 My Notes</button>
         <button class="cat-btn" id="nav-stemstudio" onclick="openStemStudio()"><span class="cat-dot"></span>🎚️ Stem Studio</button>
+        <button class="cat-btn" id="nav-imagegen" onclick="typeof openImageGenModal==='function' && openImageGenModal()"><span class="cat-dot"></span>🖼️ Image Studio</button>
+        <button class="cat-btn" id="nav-pulse" onclick="window.toggleSynPulse&&window.toggleSynPulse()"><span class="cat-dot"></span>⚡ Pulse</button>
+        <button class="cat-btn" id="nav-controlcentre" onclick="typeof openControlCentre==='function' && openControlCentre()"><span class="cat-dot"></span>🎛️ Control Centre</button>
         <button class="cat-btn" id="nav-profile" onclick="goProfile()"><span class="cat-dot"></span>👤 My Profile</button>
       </div>
       <div class="sidebar-section" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:14px;margin-top:8px;user-select:none;" onclick="toggleSideSection('toolItems','toolArrow')">
@@ -26494,7 +26497,17 @@ function renderStickyNotes(laserOnNew){
               w.style.top       = dt + 'px';
               w.style.transform = 'rotate(0deg) scale(1)';
               w.style.opacity   = '1';
-              setTimeout(function(){ w.style.transition = 'box-shadow 0.25s ease'; }, 700);
+              setTimeout(function(){
+                w.style.transition = 'box-shadow 0.25s ease';
+                // Chrome GPU-compositing glitch: a border-radius'd layer that
+                // just finished animating scale/position from way off in the
+                // corner can leave stray pixel fragments behind at its old
+                // spot until something forces a repaint. Same nudge used for
+                // dayNightToggle elsewhere in the app.
+                var _pt = w.style.transform;
+                w.style.transform = _pt + ' scale(1.0001)';
+                requestAnimationFrame(function(){ w.style.transform = _pt; });
+              }, 700);
             }, 60 + i2 * 90);
           })(ref.wrapper, dragDestLeft, dragDestTop, idx);
         } else {
@@ -26528,7 +26541,12 @@ function renderStickyNotes(laserOnNew){
               w.style.top       = dt + 'px';
               w.style.transform = 'rotate(0deg) scale(1)';
               w.style.opacity   = '1';
-              setTimeout(function(){ w.style.transition = 'box-shadow 0.25s ease'; }, 700);
+              setTimeout(function(){
+                w.style.transition = 'box-shadow 0.25s ease';
+                var _pt = w.style.transform;
+                w.style.transform = _pt + ' scale(1.0001)';
+                requestAnimationFrame(function(){ w.style.transform = _pt; });
+              }, 700);
             }, 60 + i2 * 90);
           })(ref.wrapper, destLeft, destTop, idx);
         } else {
@@ -28236,7 +28254,7 @@ function setAskBarVisible(on, opts){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(warm, 200); });
   else setTimeout(warm, 200);
 })();
-function activateAskMe(){
+function activateAskMe(silent){
   // Keep past chats open if already open (user asked not to auto-close on home/ask)
   try {
     if(typeof window.closeSynPulse === 'function') window.closeSynPulse();
@@ -28248,7 +28266,7 @@ function activateAskMe(){
 
   /* Already on empty chat home → just toggle fade */
   if(onChat && emptyHome){
-    setAskBarVisible(!window._askBarOpen);
+    setAskBarVisible(!window._askBarOpen, silent ? { silent: true } : undefined);
     try { if(typeof _haptic === 'function') _haptic(8); } catch(eH){}
     return;
   }
@@ -28266,7 +28284,7 @@ function activateAskMe(){
   }
   var htb = document.getElementById('hubTabBar');
   if(htb) htb.style.display = 'none';
-  _restoreEmptyChatHome(true);
+  _restoreEmptyChatHome(true, silent ? { silent: true } : undefined);
   try { if(typeof _haptic === 'function') _haptic(8); } catch(eH2){}
   setTimeout(function(){
     var ib = document.getElementById('inputBox');
@@ -28275,6 +28293,25 @@ function activateAskMe(){
 }
 window.activateAskMe = activateAskMe;
 window.setAskBarVisible = setAskBarVisible;
+/**
+ * Guide-only helper: make sure the Ask bar is open, without ever toggling
+ * it closed. activateAskMe() toggles (`!window._askBarOpen`) when already
+ * on the empty chat home — fine for a real tap of the Ask button, but wrong
+ * for the app guide's Chat/Maps steps, which just want the bar open so they
+ * can type into it. If it's already open, do nothing and let the guide
+ * proceed straight to typing/focusing; only call activateAskMe when it's
+ * actually closed (or we're not even on the empty chat home yet).
+ */
+function _synGuideEnsureAskOpen(){
+  var sec = document.getElementById('sec-chat');
+  var onChat = sec && sec.classList.contains('active');
+  var emptyHome = _isChatEmptyHome();
+  if(onChat && emptyHome && window._askBarOpen){
+    return;
+  }
+  if(typeof window.activateAskMe === 'function') window.activateAskMe(true);
+}
+window._synGuideEnsureAskOpen = _synGuideEnsureAskOpen;
 function _chpRailNewChat(){
   if(typeof newChat === 'function') newChat({forceAsk:true});
   else if(typeof activateAskMe === 'function') activateAskMe();
@@ -30161,9 +30198,15 @@ function groqStripThink(raw){
     }
     var _whereIsM = t.match(/\bwhere(?:'s| is)\s+(.+)/i);
     var _isWhereM = !_whereIsM && t.match(/\bwhere\s+(.+?)\s+is\b/i);
-    if(_whereIsM || _isWhereM || /\b(address of|locate)\b/i.test(t)){
+    // "Show (me) (the) location of X" — same intent as "where is X" /
+    // "locate X", just a different phrasing someone might naturally use
+    // (e.g. from the app guide's typed demo). Capture X the same way the
+    // other geocode branches do so it strips cleanly to just the place.
+    var _showLocM = t.match(/\bshow\s+(?:me\s+)?(?:the\s+)?location\s+of\s+(.+)/i);
+    if(_whereIsM || _isWhereM || _showLocM || /\b(address of|locate)\b/i.test(t)){
       var gq = _whereIsM ? _whereIsM[1]
              : _isWhereM ? _isWhereM[1]
+             : _showLocM ? _showLocM[1]
              : t.replace(/^.*?\b(what'?s the address of|address of|locate)\s+/i,'');
       gq = String(gq || '').replace(/[?!.]+$/,'').trim();
       return { kind:'act', action:'maps.geocode', args:{ q: gq || t } };
@@ -30744,17 +30787,40 @@ function groqStripThink(raw){
       if(offset === 0) return 'This week';
       return daysArr[0].toLocaleDateString(undefined,{month:'short',day:'numeric'}) + '\u2013' + daysArr[6].toLocaleDateString(undefined,{month:'short',day:'numeric'});
     }
+    // Which event is "the one that was just created" — NOT simply items[0].
+    // 'created' mode is called with `items` already merged with the rest of
+    // the user's upcoming events and re-sorted chronologically, so items[0]
+    // is just whichever event happens to start soonest overall. If you add
+    // something for the 21st while an unrelated event already exists on the
+    // 5th, items[0] after the sort is the 5th's event — and the popup would
+    // jump to (and highlight) the wrong week. Instead, match the event the
+    // caller explicitly told us was just created (by Google event id first,
+    // falling back to its exact start timestamp), and only fall back to
+    // items[0] if neither was supplied (older/other call sites).
+    var createdEv = null;
+    if(mode === 'created'){
+      if(payload.highlightId){
+        createdEv = items.filter(function(it){ return it.googleId && it.googleId === payload.highlightId; })[0] || null;
+      }
+      if(!createdEv && payload.highlightStart){
+        var _hStart = new Date(payload.highlightStart).getTime();
+        if(!isNaN(_hStart)){
+          createdEv = items.filter(function(it){ return it.start && it.start.getTime() === _hStart; })[0] || null;
+        }
+      }
+      if(!createdEv) createdEv = items[0] || null;
+    }
     var weekOffset = 0;
-    if(mode === 'created' && items[0]){
-      var evDayMid = new Date(items[0].start.getFullYear(), items[0].start.getMonth(), items[0].start.getDate());
+    if(mode === 'created' && createdEv){
+      var evDayMid = new Date(createdEv.start.getFullYear(), createdEv.start.getMonth(), createdEv.start.getDate());
       var diffDays = Math.round((evDayMid - today) / 86400000);
       weekOffset = Math.max(WEEK_MIN_OFFSET, Math.min(WEEK_MAX_OFFSET, Math.floor(diffDays / 7)));
     }
     var days = daysFor(weekOffset);
     var hasEvent = days.map(function(d){ return items.some(function(it){ return _cxCalSameDay(it.start, d); }); });
     var highlightIdx = -1;
-    if(mode === 'created' && items[0]){
-      for(var hi=0; hi<days.length; hi++){ if(_cxCalSameDay(days[hi], items[0].start)){ highlightIdx = hi; break; } }
+    if(mode === 'created' && createdEv){
+      for(var hi=0; hi<days.length; hi++){ if(_cxCalSameDay(days[hi], createdEv.start)){ highlightIdx = hi; break; } }
     }
     var selectedIdx = highlightIdx >= 0 ? highlightIdx : 0;
     // Inline-docked mount only: default to today unless today's empty and
@@ -31065,7 +31131,7 @@ function groqStripThink(raw){
           '<span class="cxCalHeadLine">'+_cxHeadEsc(_cxHeadLines[0] || "What's on your calendar")+'</span>' +
         '</div>';
     var subLine = mode === 'created'
-      ? (items[0] ? items[0].title : 'Event added')
+      ? (createdEv ? createdEv.title : 'Event added')
       : (items.length ? items.length + (items.length===1?' event':' events') + ' in the next ' + (payload.days||1) + (payload.days===1?' day':' days') : 'Nothing coming up');
 
     function dowRowHtmlFor(daysArr){
@@ -32638,9 +32704,9 @@ function groqStripThink(raw){
             }
             _merged.push(it);
           });
-          _cxShowCalendarPopup('created', { items: _merged });
+          _cxShowCalendarPopup('created', { items: _merged, highlightStart: _createdEv && _createdEv.start, highlightId: _createdEv && (_createdEv.id || _createdEv.eventId || _createdEv.event_id || _createdEv.googleEventId) });
         }).catch(function(){
-          _cxShowCalendarPopup('created', { items: _newItems });
+          _cxShowCalendarPopup('created', { items: _newItems, highlightStart: _createdEv && _createdEv.start, highlightId: _createdEv && (_createdEv.id || _createdEv.eventId || _createdEv.event_id || _createdEv.googleEventId) });
         });
       }
     }
@@ -45480,11 +45546,11 @@ function _synUserAskingAboutApp(text){
 // Product brief for THIS shipped UI — live surfaces only, not the old hidden hub.
 var _synapsesCtx = 'SYNAPSES APP CONTEXT (this version only):\n' +
 'NAME: Synapses is THIS application the user is in right now. Not brain biology.\n\n' +
-'WHAT IT IS: A neural interface — a personal AI you talk to by typing or by live speech-to-speech. Home is the orb, a time/name greeting (or What\'s on your mind), the line "Synapses · Neural Interface", and a fingerprint pad.\n\n' +
-'USED FOR: If they ask what this app is used for / what it does / what this is, lead with purpose: it is for talking to a personal AI — type in Ask me anything, or hold the fingerprint for live speech-to-speech — plus notes, Studio (images and video), Pulse updates, and calling the companion. Then name the live pieces. Do not list what it is not.\n\n' +
+'WHAT IT IS: A neural interface — a personal AI companion named Ava you talk to by typing or by live speech-to-speech. Home is the orb, a time/name greeting (or What\'s on your mind), the line "Synapses · Neural Interface", and a fingerprint pad.\n\n' +
+'USED FOR: If they ask what this app is used for / what it does / what this is, lead with purpose: it is for talking to Ava, a personal AI companion — type in Ask me anything, or hold the fingerprint for live speech-to-speech — plus notes, Studio (images and video), Pulse updates, Control Centre, and calling Ava. Then name the live pieces. Do not list what it is not.\n\n' +
 'HOME / FINGERPRINT:\n' +
 '- Tap the fingerprint: opens Ask me anything so they can type.\n' +
-'- Hold the fingerprint: live speech-to-speech with the companion.\n' +
+'- Hold the fingerprint: live speech-to-speech with Ava.\n' +
 '- Greeting can flip to live headlines (skip to the next one).\n' +
 '- Sticky notes can sit on the home surface.\n\n' +
 'CHAT (Ask me anything):\n' +
@@ -45495,9 +45561,9 @@ var _synapsesCtx = 'SYNAPSES APP CONTEXT (this version only):\n' +
 '- Mic on the ask bar for voice. Clock sits on the ask bar; chats can be bookmarked or deleted.\n' +
 '- It can remember things the user has told it and use their notes when relevant.\n\n' +
 'SPEECH-TO-SPEECH:\n' +
-'- Real-time spoken conversation (not a one-shot voice note).\n' +
+'- Real-time spoken conversation with Ava (not a one-shot voice note).\n' +
 '- Voices live in Settings → Voice (Deepgram or Hume).\n' +
-'- Optional on-screen live avatar from the voice button.\n\n' +
+'- Optional on-screen live avatar (Ava) from the voice button.\n\n' +
 'NOTES:\n' +
 '- Full Notes app (notebooks, pages, editor, lock) from the Notes icon.\n' +
 '- Sticky notes on home. Quick notes. "Save this as a note" from chat.\n\n' +
@@ -45508,8 +45574,13 @@ var _synapsesCtx = 'SYNAPSES APP CONTEXT (this version only):\n' +
 '- Open from the Studio / Create Image button (Apps row).\n\n' +
 'APPS ROW (toggle Apps on the left rail): Notes, Pulse, Call, Ask, Studio.\n' +
 '- **Pulse**: live local/topic updates; set city and topics in Pulse settings.\n' +
-'- **Call**: place a phone call to the companion.\n' +
+'- **Call**: place a phone call to Ava.\n' +
 '- **Ask**: jumps back to Ask me anything.\n\n' +
+'CONTROL CENTRE: A single panel bringing together calendar, inbox, notes, recent chats, and jobs — calendar and inbox show live data once Google is connected. Opens from its own nav button next to the other apps.\n\n' +
+'GMAIL (once Google is connected): Can check unread mail, and compose, send, or reply to emails from chat or speech.\n\n' +
+'FLIGHTS: Can search and book flights in-app through a dedicated flight search sheet.\n\n' +
+'MAPS: Can also look up the nearest/closest place to the user for a given search (e.g. "nearest coffee shop").\n\n' +
+'MODES: A mode toggle switches how Ava responds — LLM (default), Mini Brain (adds this app context), and Uncensored (fewer content restrictions). Only describe this if asked how responses/modes work.\n\n' +
 'When listing features, write **Pulse**: description with double asterisks so the name is bold. Never *Pulse* (single asterisks make italic).\n\n' +
 'PAST CHATS: New chat, Recent, Saved. Pin, rename, 3-dot menu. Classic hamburger or Sidebar rail.\n\n' +
 'SETTINGS (gear):\n' +
@@ -45517,7 +45588,8 @@ var _synapsesCtx = 'SYNAPSES APP CONTEXT (this version only):\n' +
 '- Connectors: Google (Gmail, Calendar, Drive), Google Maps (places/directions), GitHub, Notion — usable in speech-to-speech once linked.\n' +
 '- Voice. Plan & credits. Day/night toggle. Hide the top bar.\n\n' +
 'LAYOUT: Classic (top header + hamburger) or Sidebar (left rail stays). Both share the same features.\n\n' +
-'Describe only what this version has. Do not list missing or hidden features. Do not volunteer backend/API names unless they ask how it works under the hood.\n\n';
+'Describe only what this version has. Do not list missing or hidden features. Do not volunteer backend/API names unless they ask how it works under the hood.\n\n' +
+'NOT LIVE — ROADMAP ONLY (do not describe as available, do not mention unless the user directly asks what\'s planned/coming next): a galaxy/space background concept where the world itself is a navigable space users travel through (planets, exploration), similar in spirit to No Man\'s Sky. This does not exist in the app yet. If asked, say it\'s an idea being explored, not something they can use today.\n\n';
 
 var _warRoomRoundStart = 0;
 function warRoomReply(userMsg, chId){
@@ -57951,7 +58023,7 @@ function _neuInjectDownloadInterceptor(frame){
 <canvas id="tinyBotCanvas"></canvas>
 <div id="synBotZone" style="position:fixed;bottom:0;right:0;width:0px;height:0px;z-index:88887;"></div>
 
-<div id="synBotChat" style="position:fixed;bottom:90px;right:22px;width:380px;min-width:220px;max-width:600px;min-height:46vh;max-height:66vh;z-index:88890;display:none;flex-direction:column;background:linear-gradient(135deg,rgba(10,10,22,0.15),rgba(16,8,32,0.2));backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(124,106,247,0.45);border-radius:22px;box-shadow:0 16px 48px rgba(0,0,0,0.6),0 0 30px rgba(124,106,247,0.12);overflow:hidden;">
+<div id="synBotChat" style="position:fixed;bottom:90px;right:22px;width:380px;min-width:220px;max-width:600px;min-height:46vh;max-height:66vh;z-index:88890;display:none;flex-direction:column;background:linear-gradient(135deg,rgba(14,13,26,0.97),rgba(20,11,40,0.97));border:1px solid rgba(124,106,247,0.45);border-radius:22px;box-shadow:0 16px 48px rgba(0,0,0,0.6),0 0 30px rgba(124,106,247,0.12);overflow:hidden;">
   <!-- Header -->
   <div style="padding:12px 16px;border-bottom:1px solid rgba(124,106,247,0.2);display:flex;align-items:center;gap:10px;background:rgba(124,106,247,0.06);">
     <div style="width:8px;height:8px;border-radius:50%;background:#00d9a8;box-shadow:0 0 6px #00d9a8;flex-shrink:0;"></div>
@@ -64636,6 +64708,38 @@ function speakVoiceReply(text) {
     return true;
   }
 
+  /**
+   * Fired only when speech-to-speech is turned on FROM the app guide's demo
+   * (window._synGuideDemoIntroPending set right before toggleTopNavVoice()
+   * is called). Unlike _maybeS2SFirstIntro this is NOT a lifetime-once
+   * thing — someone re-running the guide should hear it explain itself
+   * again every time, since the point is showing what this button does.
+   */
+  function _maybeGuideS2SIntro() {
+    if (!window._synGuideDemoIntroPending) return false;
+    window._synGuideDemoIntroPending = false;
+    if (!_on || _busy) return false;
+
+    var intro = "Hey, I'm Ava. This is live speech-to-speech — just talk to me like this, any time, from anywhere in the app, and I'll be right here.";
+
+    var last = _history.length ? _history[_history.length - 1] : null;
+    if (!(last && last.role === 'assistant' && last.content === intro)) {
+      _history.push({ role: 'assistant', content: intro });
+      _saveS2SHistory();
+    }
+    window._avaLastReply = intro;
+    speak(intro);
+    try {
+      if (typeof window._tnvTrackToastDuring === 'function') {
+        window._tnvTrackToastDuring(3200);
+        setTimeout(function () {
+          if (typeof window._tnvTrackToastDuring === 'function') window._tnvTrackToastDuring(1800);
+        }, 900);
+      }
+    } catch (eTr) {}
+    return true;
+  }
+
   // ── Persistent Memory System ────────────────────────────────────────────
   var _memKey = 'synapses_companion_memory';
 
@@ -68397,6 +68501,8 @@ function speakVoiceReply(text) {
       }
       function _afterMicReady() {
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
+        /* Guide demo: explain what this button does, every time it's run from there */
+        if (_maybeGuideS2SIntro()) return;
         /* First open: Ava leads with a real intro — don't jump into random listen/reply */
         if (_maybeS2SFirstIntro()) return;
         if (window._sttProvider === 'flux') {
@@ -83724,6 +83830,1116 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
 
 </script>
 
+<!-- ══════════════════ App Guide (button + modal) ══════════════════
+     Matches the existing design system:
+     - Headings: 'Syne' (same as .modal h3 / .auth-brand-title)
+     - Body/labels: 'DM Sans' (same as .src-meta-pill / .ava-src-block)
+     - Accent purple #7c6af7 / #d8d2ff + teal #3ee8bc, with the same
+       trueblack monochrome override the research pills get.
+     Button only appears once someone is inside the app (guest, OAuth or
+     email) — gated on body.syn-authed, the class onLogin() already adds
+     right after the auth modal is dismissed. It never shows on the
+     landing/sign-in screen itself. -->
+<style>
+#synGuideBtn{
+  display:none; /* revealed by body.syn-authed below, once "open app" has happened */
+  position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom, 0px));z-index:150;
+  align-items:center;gap:6px;
+  padding:8px 13px;border-radius:999px;cursor:pointer;
+  background:rgba(124,106,247,0.16);border:1px solid rgba(124,106,247,0.42);color:#d8d2ff;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.02em;
+  box-shadow:0 8px 24px rgba(0,0,0,0.35);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  transition:transform .15s ease,opacity .15s ease;
+}
+body.syn-authed #synGuideBtn{display:inline-flex;}
+#synGuideBtn:hover{transform:translateY(-1px);}
+#synGuideBtn svg{flex-shrink:0;}
+html[data-theme="trueblack"] #synGuideBtn{
+  background:rgba(28,28,28,0.98)!important;border:1px solid rgba(255,255,255,0.2)!important;
+  color:rgba(220,220,228,0.95)!important;opacity:1!important;-webkit-filter:none!important;filter:none!important;
+}
+html[data-theme="light"] #synGuideBtn{
+  background:rgba(255,255,255,0.9);border:1px solid rgba(60,60,67,0.14);color:#3d3560;
+  box-shadow:0 8px 20px rgba(0,0,0,0.12);
+}
+@media (max-width:480px){ #synGuideBtn .syn-guide-label{display:none;} #synGuideBtn{padding:10px;} }
 
+/* Subtle corner handle used only to flip the button between its normal
+   pill state and the compact "?" state — deliberately faint (barely a
+   dot) so it doesn't compete visually with the button itself; only
+   shows real presence on hover/focus so it stays discoverable but quiet. */
+.syn-guide-btn-toggle{
+  position:absolute;top:-3px;left:-3px;width:9px;height:9px;border-radius:50%;
+  background:rgba(255,255,255,0.14);opacity:0.28;cursor:pointer;
+  transition:opacity .15s ease,transform .15s ease;
+}
+.syn-guide-btn-toggle:hover{opacity:0.85;transform:scale(1.15);}
+html[data-theme="light"] .syn-guide-btn-toggle{background:rgba(0,0,0,0.16);}
+
+/* Compact state — just a faint "?", no pill background/border/shadow at all. */
+.syn-guide-mini-q{display:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;line-height:1;color:rgba(120,120,132,0.4);}
+html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini .syn-guide-mini-q{color:rgba(90,90,95,0.4);}
+html[data-theme="light"] #synGuideBtn.syn-guide-mini .syn-guide-mini-q{color:rgba(210,210,216,0.7);}
+#synGuideBtn.syn-guide-mini{
+  background:transparent!important;border:none!important;box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  padding:4px 7px!important;opacity:0.3;
+}
+html[data-theme="trueblack"] #synGuideBtn.syn-guide-mini{
+  background:transparent!important;border:none!important;box-shadow:none!important;opacity:0.3!important;
+}
+#synGuideBtn.syn-guide-mini:hover{opacity:0.8;}
+#synGuideBtn.syn-guide-mini:hover .syn-guide-mini-q{color:rgba(190,190,200,0.85)!important;}
+#synGuideBtn.syn-guide-mini .syn-guide-full-icon,
+#synGuideBtn.syn-guide-mini .syn-guide-label{display:none;}
+#synGuideBtn.syn-guide-mini .syn-guide-mini-q{display:inline-block;}
+
+/* ── Manual-style guide modal — reads like the instruction booklet
+   that ships in the box with a product, not a settings dialog. ── */
+#synGuideModal .modal{width:520px;max-width:92vw;max-height:86vh;padding:36px 34px;}
+.syn-guide-eyebrow{
+  display:inline-flex;align-items:center;gap:5px;margin:0 auto 14px;padding:3px 10px;border-radius:20px;
+  font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  background:rgba(124,106,247,0.16);border:1px solid rgba(124,106,247,0.42);color:#d8d2ff;
+}
+html[data-theme="trueblack"] .syn-guide-eyebrow{
+  background:rgba(28,28,28,0.98)!important;border:1px solid rgba(255,255,255,0.2)!important;color:rgba(220,220,228,0.95)!important;
+}
+.syn-guide-eyebrow-wrap{text-align:center;}
+#synGuideModal .modal h3{font-size:22px;font-weight:700;margin-bottom:8px;}
+.syn-guide-intro{
+  font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.6;
+  color:var(--muted,#8a8a9a);text-align:center;margin:0 0 26px;padding-bottom:22px;
+  border-bottom:1px solid var(--border,rgba(255,255,255,0.08));
+}
+.syn-guide-step{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-top:1px solid var(--border,rgba(255,255,255,0.08));cursor:pointer;border-radius:8px;transition:background .15s ease;}
+.syn-guide-step:hover{background:rgba(124,106,247,0.06);}
+.syn-guide-step:active{background:rgba(124,106,247,0.1);}
+html[data-theme="trueblack"] .syn-guide-step:hover{background:rgba(255,255,255,0.04);}
+.syn-guide-step:first-of-type{border-top:none;padding-top:0;}
+.syn-guide-go{
+  position:relative;flex-shrink:0;align-self:center;width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(62,232,188,0.35);color:#3ee8bc;background:rgba(62,232,188,0.05);
+  opacity:0.6;transform:scale(0.94);
+  transition:opacity .18s ease,transform .18s ease,border-color .18s ease,background .18s ease;
+  animation:synGuidePulseRing 2.6s ease-out infinite;
+}
+.syn-guide-go svg{width:11px;height:11px;position:relative;z-index:2;transition:transform .18s ease,opacity .22s ease;}
+.syn-guide-step:hover .syn-guide-go{opacity:1;transform:scale(1.06);background:rgba(62,232,188,0.14);border-color:rgba(62,232,188,0.65);animation-play-state:paused;}
+.syn-guide-step:hover .syn-guide-go svg{transform:translate(1px,-1px);}
+/* Emptied state — the arrow itself just flew out to go demo the feature,
+   leaving the ring behind hollow until the guide is reopened. */
+.syn-guide-go.syn-guide-go-emptied{background:rgba(62,232,188,0.02);border-color:rgba(62,232,188,0.16);animation:none;box-shadow:none;}
+.syn-guide-go.syn-guide-go-emptied svg{opacity:0;transform:scale(0.35);}
+@keyframes synGuidePulseRing{
+  0%{box-shadow:0 0 0 0 rgba(62,232,188,0.28);}
+  70%{box-shadow:0 0 0 7px rgba(62,232,188,0);}
+  100%{box-shadow:0 0 0 0 rgba(62,232,188,0);}
+}
+/* Sonar rings — concentric pings that sweep outward from the arrow icon on
+   hover, like a radar/sonar lock-on. */
+.syn-guide-go .syn-sonar-ring{
+  position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+  border:1px solid rgba(62,232,188,0.65);
+  transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:1;
+}
+.syn-guide-step:hover .syn-guide-go .syn-sonar-ring{animation:synSonarPing 1.6s cubic-bezier(0.15,0.6,0.35,1) infinite;}
+.syn-guide-go .syn-sonar-ring:nth-child(1){animation-delay:0s;}
+.syn-guide-go .syn-sonar-ring:nth-child(2){animation-delay:.5s;}
+.syn-guide-go .syn-sonar-ring:nth-child(3){animation-delay:1s;}
+@keyframes synSonarPing{
+  0%{transform:translate(-50%,-50%) scale(1);opacity:0.65;border-color:rgba(62,232,188,0.75);}
+  100%{transform:translate(-50%,-50%) scale(2.3);opacity:0;border-color:rgba(62,232,188,0);}
+}
+/* Click burst — a single bright, fast ring fired when the step is clicked,
+   so activating it feels like a locked-on ping rather than a flat tap. */
+.syn-guide-go .syn-sonar-burst{
+  position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+  border:1.5px solid rgba(62,232,188,0.9);
+  transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:1;
+}
+.syn-guide-step.syn-guide-pinging .syn-sonar-burst{animation:synSonarBurst .5s cubic-bezier(0.15,0.7,0.3,1) forwards;}
+@keyframes synSonarBurst{
+  0%{transform:translate(-50%,-50%) scale(1);opacity:0.95;border-color:rgba(230,255,246,0.95);}
+  100%{transform:translate(-50%,-50%) scale(3);opacity:0;border-color:rgba(62,232,188,0);}
+}
+.syn-guide-num{
+  flex-shrink:0;width:34px;font-family:'Syne',sans-serif;font-size:20px;font-weight:700;
+  color:#7c6af7;opacity:0.55;line-height:1.3;
+}
+html[data-theme="trueblack"] .syn-guide-num{color:rgba(220,220,228,0.6);}
+.syn-guide-body{flex:1;min-width:0;}
+.syn-guide-title{
+  font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:700;letter-spacing:0.01em;
+  color:var(--text,#f2f2f5);display:flex;align-items:center;gap:6px;margin-bottom:3px;
+}
+.syn-guide-title .src-meta-sep{color:#3ee8bc;opacity:1;}
+.syn-guide-desc{
+  font-family:'DM Sans',sans-serif;font-size:12px;line-height:1.5;color:var(--muted,#8a8a9a);
+}
+.syn-guide-footer-note{
+  font-family:'DM Sans',sans-serif;font-size:11px;line-height:1.5;color:var(--muted,#8a8a9a);
+  text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border,rgba(255,255,255,0.08));
+}
+.syn-guide-cta{
+  width:100%;padding:13px;margin-top:16px;border-radius:10px;cursor:pointer;
+  background:#161616;border:1px solid rgba(255,255,255,0.12);color:rgba(245,245,248,0.95);
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.01em;
+  transition:background .15s ease,border-color .15s ease;
+}
+.syn-guide-cta:hover{background:#1c1c1c;border-color:rgba(0,217,168,0.4);}
+html[data-theme="trueblack"] .syn-guide-cta{background:#141414;border:1px solid rgba(255,255,255,0.14);color:rgba(230,230,235,0.95);}
+html[data-theme="light"] .syn-guide-cta{background:#1c1c22;border:1px solid rgba(0,0,0,0.06);color:#fff;}
+
+/* ── Spotlight walkthrough — actually shows the real icon being found,
+   pointed at, and clicked, instead of just jumping to a screen. ── */
+.syn-guide-ring{
+  position:fixed;z-index:100210;pointer-events:none;
+  border:1.5px solid rgba(62,232,188,0.9);
+  box-shadow:0 0 0 9999px rgba(4,4,8,0.62), 0 0 22px rgba(62,232,188,0.45);
+  opacity:0;transform:scale(0.92);
+  transition:left .55s cubic-bezier(0.16,1,0.3,1),top .55s cubic-bezier(0.16,1,0.3,1),
+             width .55s cubic-bezier(0.16,1,0.3,1),height .55s cubic-bezier(0.16,1,0.3,1),
+             border-radius .55s cubic-bezier(0.16,1,0.3,1),opacity .35s ease,transform .35s ease;
+}
+.syn-guide-ring.on{opacity:1;transform:scale(1);}
+.syn-guide-ring.pulse{animation:synGuideRingClick .5s ease;}
+.syn-guide-ring.out{opacity:0;transform:scale(1.08);}
+@keyframes synGuideRingClick{
+  0%{box-shadow:0 0 0 9999px rgba(4,4,8,0.62), 0 0 22px rgba(62,232,188,0.45);}
+  40%{box-shadow:0 0 0 9999px rgba(4,4,8,0.62), 0 0 34px rgba(62,232,188,0.85);}
+  100%{box-shadow:0 0 0 9999px rgba(4,4,8,0.62), 0 0 22px rgba(62,232,188,0.45);}
+}
+.syn-guide-cursor{
+  position:fixed;z-index:100212;pointer-events:none;width:26px;height:26px;margin:-13px 0 0 -13px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(62,232,188,0.65);background:rgba(62,232,188,0.14);color:#3ee8bc;
+  opacity:0;transform:scale(0.7);
+  transition:left .5s cubic-bezier(0.16,1,0.3,1),top .5s cubic-bezier(0.16,1,0.3,1),opacity .25s ease,transform .3s ease,border-color .2s ease,background .2s ease;
+  filter:drop-shadow(0 0 6px rgba(62,232,188,0.85)) drop-shadow(0 0 14px rgba(124,106,247,0.5));
+}
+.syn-guide-cursor.on{opacity:1;transform:scale(1);}
+.syn-guide-cursor.click{transform:scale(0.86);border-color:rgba(62,232,188,0.9);background:rgba(62,232,188,0.22);}
+.syn-guide-cursor.out{opacity:0;transform:scale(0.5);}
+.syn-guide-cursor svg{width:11px;height:11px;display:block;position:relative;z-index:2;}
+.syn-guide-cursor::after{
+  content:'';position:absolute;left:6px;top:6px;width:14px;height:14px;border-radius:50%;
+  border:1.5px solid rgba(62,232,188,0.55);opacity:0;transform:scale(0.4);
+}
+/* Landing rings — the same continuous sonar-ping + click-burst rings the
+   guide list's own arrow icon uses (.syn-guide-go), reused here so the
+   cursor "arriving" on a target reads as the same lock-on ping instead of
+   a plain generic fade ripple. */
+.syn-guide-cursor .syn-cursor-sonar-ring{
+  position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+  border:1px solid rgba(62,232,188,0.65);
+  transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:1;
+}
+.syn-guide-cursor.on .syn-cursor-sonar-ring{animation:synSonarPing .5s cubic-bezier(0.15,0.6,0.35,1) infinite;}
+.syn-guide-cursor .syn-cursor-sonar-ring.r2{animation-delay:.13s;}
+.syn-guide-cursor .syn-cursor-sonar-ring.r3{animation-delay:.26s;}
+.syn-guide-cursor .syn-cursor-sonar-burst{
+  position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+  border:1.5px solid rgba(62,232,188,0.9);
+  transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:1;
+}
+.syn-guide-cursor.click .syn-cursor-sonar-burst{animation:synSonarBurst .5s cubic-bezier(0.15,0.7,0.3,1) forwards;}
+/* Comet trail — 3 ghost echoes of the cursor lag behind on longer, staggered
+   transitions so the flight path reads as a streak instead of a teleport. */
+.syn-guide-trail{
+  position:fixed;z-index:100211;pointer-events:none;width:10px;height:10px;margin:-5px 0 0 -5px;
+  border-radius:50%;background:radial-gradient(circle,rgba(62,232,188,0.9),rgba(124,106,247,0.15) 70%,transparent 100%);
+  opacity:0;transition:left .68s cubic-bezier(0.16,1,0.3,1),top .68s cubic-bezier(0.16,1,0.3,1),opacity .3s ease;
+}
+.syn-guide-trail.on{opacity:0.55;}
+.syn-guide-trail.out{opacity:0;}
+.syn-guide-trail.t2{width:7px;height:7px;margin:-3.5px 0 0 -3.5px;transition-duration:.82s;}
+.syn-guide-trail.t2.on{opacity:0.32;}
+.syn-guide-trail.t3{width:5px;height:5px;margin:-2.5px 0 0 -2.5px;transition-duration:.95s;}
+.syn-guide-trail.t3.on{opacity:0.18;}
+.syn-guide-caption{
+  position:fixed;z-index:100213;pointer-events:none;
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;
+  background:rgba(10,10,14,0.92);border:1px solid rgba(62,232,188,0.4);
+  font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0.02em;
+  color:rgba(230,255,246,0.95);white-space:nowrap;
+  box-shadow:0 8px 20px rgba(0,0,0,0.4);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;transform:translateY(4px);transition:left .55s cubic-bezier(0.16,1,0.3,1),top .55s cubic-bezier(0.16,1,0.3,1),opacity .3s ease,transform .3s ease;
+}
+.syn-guide-caption.on{opacity:1;transform:translateY(0);}
+.syn-guide-caption.out{opacity:0;transform:translateY(-4px);}
+.syn-guide-caption-dot{width:6px;height:6px;border-radius:50%;background:#3ee8bc;flex-shrink:0;animation:synGuideDotBlink 1s ease-in-out infinite;}
+@keyframes synGuideDotBlink{0%,100%{opacity:1;}50%{opacity:0.25;}}
+.syn-guide-caption .syn-guide-cursor-glyph{opacity:0.85;}
+</style>
+
+<button type="button" id="synGuideBtn" onclick="openSynGuide()" title="How to use Synapses" aria-label="Open app guide">
+  <span class="syn-guide-btn-toggle" onclick="event.stopPropagation(); synGuideToggleMini();" title="Toggle compact guide button" aria-label="Toggle compact guide button"></span>
+  <svg class="syn-guide-full-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span class="syn-guide-label">Guide</span>
+  <span class="syn-guide-mini-q">?</span>
+</button>
+
+<div class="modal-overlay" id="synGuideModal" style="display:none;">
+  <div class="modal">
+    <div class="syn-guide-eyebrow-wrap"><span class="syn-guide-eyebrow">Quick Start Guide</span></div>
+    <h3 style="text-align:center;">Welcome to Synapses</h3>
+    <p class="syn-guide-intro">
+      Think of this as the manual that comes in the box. Synapses is your persistent AI workspace —
+      it remembers your context and stays connected to your tools across everything below.
+      Here's what each part does and how to use it.
+    </p>
+
+    <div class="syn-guide-step" onclick="synGuideGo('speech', event)">
+      <div class="syn-guide-num">01</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Speech-to-Speech <span class="src-meta-sep">·</span> Ava</div>
+        <div class="syn-guide-desc">Tap the mic icon in the top bar — or hold the fingerprint pad on Home — to talk live with Ava. She's a persistent AI companion that follows you across the whole app, not just one screen, so the conversation keeps going wherever you navigate.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('chat', event)">
+      <div class="syn-guide-num">02</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Ask <span class="src-meta-sep">·</span> Chat</div>
+        <div class="syn-guide-desc">Type into the ask bar or tap the send icon to talk with your AI. It remembers earlier conversations, so you can say "continue what we started yesterday" and it will.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('connectors', event)">
+      <div class="syn-guide-num">03</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Connect your tools</div>
+        <div class="syn-guide-desc">In Settings, link Gmail, Calendar, Notion or GitHub. Once connected, ask things like "what's on my calendar today" and Synapses pulls the real answer in.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('notes', event)">
+      <div class="syn-guide-num">04</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Notes</div>
+        <div class="syn-guide-desc">Tap the notes icon to quick-capture a thought. It saves automatically and stays searchable from chat later.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('imagegen', event)">
+      <div class="syn-guide-num">05</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Image <span class="src-meta-sep">·</span> Stem Studio</div>
+        <div class="syn-guide-desc">Generate images from a text prompt, or split an audio track into stems — both live behind their own bottom-nav icons.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('maps', event)">
+      <div class="syn-guide-num">06</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Maps</div>
+        <div class="syn-guide-desc">Ask Ava to show the location of any place — "show location of the Eiffel Tower" — and she'll drop a pin on the map.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('pulse', event)">
+      <div class="syn-guide-num">07</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Pulse</div>
+        <div class="syn-guide-desc">A live feed of updates on the cities and topics you set up. Tap the pulse icon any time to check in.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('controlcentre', event)">
+      <div class="syn-guide-num">08</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Control Centre</div>
+        <div class="syn-guide-desc">One panel for calendar, inbox, chats, notes and jobs at a glance — hold the orb or tap its bottom-nav icon.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-step" onclick="synGuideGo('themes', event)">
+      <div class="syn-guide-num">09</div>
+      <div class="syn-guide-body">
+        <div class="syn-guide-title">Themes</div>
+        <div class="syn-guide-desc">Switch the look any time from Settings — True Black, Easy View, Slate, iOS glass, Deep Sea.</div>
+      </div>
+      <div class="syn-guide-go"><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-ring"></span><span class="syn-sonar-burst"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg></div>
+    </div>
+
+    <div class="syn-guide-footer-note">Tap any step to jump straight to it. You can reopen this guide any time from the Guide button.</div>
+    <button class="syn-guide-cta" onclick="closeSynGuide()">Got it →</button>
+  </div>
+</div>
+
+<script>
+var SYN_GUIDE_BTN_MINI_KEY = 'synapses_guide_btn_mini_v1';
+function synGuideToggleMini(){
+  var btn = document.getElementById('synGuideBtn');
+  if(!btn) return;
+  var mini = btn.classList.toggle('syn-guide-mini');
+  try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, mini ? '1' : '0'); }catch(e){}
+}
+(function _synGuideRestoreMiniState(){
+  try{
+    if(localStorage.getItem(SYN_GUIDE_BTN_MINI_KEY) !== '1') return;
+    function apply(){ var btn = document.getElementById('synGuideBtn'); if(btn) btn.classList.add('syn-guide-mini'); }
+    if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', apply); } else { apply(); }
+  }catch(e){}
+})();
+
+function openSynGuide(){
+  var m = document.getElementById('synGuideModal');
+  if(m){
+    m.style.display = 'flex';
+    // Refill any orbs that emptied out from a previous "fly to feature" click.
+    var emptied = m.querySelectorAll('.syn-guide-go-emptied');
+    for(var i=0;i<emptied.length;i++) emptied[i].classList.remove('syn-guide-go-emptied');
+  }
+}
+function closeSynGuide(){
+  var m = document.getElementById('synGuideModal');
+  if(m) m.style.display = 'none';
+}
+// Click outside the card closes it, same behavior as other .modal-overlay modals
+document.addEventListener('click', function(e){
+  var m = document.getElementById('synGuideModal');
+  if(m && e.target === m) closeSynGuide();
+});
+
+/* ── Spotlight engine ─────────────────────────────────────────────
+   Finds the REAL on-screen element for a feature, dims everything else,
+   glides a cursor to it, pulses a "click", and only then fires the
+   actual app function — so the guide visibly shows where each feature
+   lives instead of silently teleporting the user there. */
+function _synGuideVisible(el){
+  if(!el) return false;
+  var r = el.getBoundingClientRect();
+  if(r.width < 2 && r.height < 2) return false;
+  var cs = window.getComputedStyle(el);
+  if(cs.visibility === 'hidden' || cs.display === 'none') return false;
+  if(parseFloat(cs.opacity || '1') < 0.05) return false;
+  // getBoundingClientRect reflects an element's transformed position even
+  // while a parent's slide-open transition is still mid-flight (e.g. a
+  // sidebar animating in via translateX) — the element can be full-size,
+  // display:block, opacity:1, and still sitting off-canvas for a beat.
+  // Require actual overlap with the viewport so callers polling for a
+  // waypoint don't grab it mid-transition and fly the cursor off-screen.
+  if(r.right <= 0 || r.bottom <= 0 || r.left >= window.innerWidth || r.top >= window.innerHeight) return false;
+  return true;
+}
+// Given several possible elements for the same feature (desktop gear vs.
+// mobile bottom-nav gear, etc.), return whichever one is actually on screen.
+function _synGuidePick(candidates){
+  for(var i=0;i<candidates.length;i++){ if(_synGuideVisible(candidates[i])) return candidates[i]; }
+  return null;
+}
+
+// Shared "AI cursor" glyph — a real pointer arrow instead of a plain dot,
+// glowing in the app's signature teal/purple so it reads as the assistant
+// itself moving, not a generic UI affordance.
+var SYN_GUIDE_CURSOR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M8 7h9v9"/></svg>';
+// Same sonar-ring (continuous ping) + sonar-burst (click flash) rings the
+// guide list's own arrow icon uses — reused on the cursor itself so a
+// landing/click reads as the same lock-on ping instead of a plain ripple.
+var SYN_GUIDE_CURSOR_SONAR_HTML =
+  '<span class="syn-cursor-sonar-ring r1"></span>'+
+  '<span class="syn-cursor-sonar-ring r2"></span>'+
+  '<span class="syn-cursor-sonar-ring r3"></span>'+
+  '<span class="syn-cursor-sonar-burst"></span>';
+
+function _synGuideBuildFleet(){
+  var trail3 = document.createElement('div'); trail3.className = 'syn-guide-trail t3';
+  var trail2 = document.createElement('div'); trail2.className = 'syn-guide-trail t2';
+  var trail1 = document.createElement('div'); trail1.className = 'syn-guide-trail';
+  var cursor = document.createElement('div'); cursor.className = 'syn-guide-cursor';
+  cursor.innerHTML = SYN_GUIDE_CURSOR_SVG + SYN_GUIDE_CURSOR_SONAR_HTML;
+  document.body.appendChild(trail3);
+  document.body.appendChild(trail2); document.body.appendChild(trail1);
+  document.body.appendChild(cursor);
+  return {trail1:trail1, trail2:trail2, trail3:trail3, cursor:cursor};
+}
+
+/* ── Flight engine ─────────────────────────────────────────────────
+   Sends the cursor (with a trailing comet tail) on a real, on-screen
+   trip through every control a feature actually needs clicked, in
+   order — e.g. "open the account menu" then "tap Connectors" — instead
+   of teleporting straight to a single end state. `stops` is an array of:
+     { get: fn returning the live element, caption: string,
+       click: optional fn(el) run instead of a plain el.click(),
+       wait: ms to pause after clicking before moving to the next stop }
+   The last stop is only pointed at and pulsed, never auto-clicked —
+   the caller's own onDone() fires the real feature afterward.
+   `sourceRect`, when given, is the exact rect of the guide orb that was
+   clicked — the flight launches as a same-size overlay right on top of
+   it (no fade-in-from-a-point), so it reads as that arrow physically
+   detaching and flying off, rather than a new cursor appearing.
+   No spotlight ring/backdrop dim and no caption bubble anymore — just
+   the cursor itself and its comet trail, kept deliberately quiet. */
+function synGuideFlyTo(stops, onDone, startPoint, sourceRect){
+  stops = (stops || []).slice();
+  if(!stops.length){ onDone(); return; }
+
+  var f = _synGuideBuildFleet();
+  var cursor=f.cursor, trail1=f.trail1, trail2=f.trail2, trail3=f.trail3;
+
+  var start = startPoint || (function(){
+    var b = document.getElementById('synGuideBtn');
+    var r = b ? b.getBoundingClientRect() : null;
+    return r ? {x:r.left+r.width/2, y:r.top+r.height/2} : {x:window.innerWidth/2, y:window.innerHeight/2};
+  })();
+
+  function place(x,y){
+    cursor.style.left = x+'px'; cursor.style.top = y+'px';
+    trail1.style.left = x+'px'; trail1.style.top = y+'px';
+    trail2.style.left = x+'px'; trail2.style.top = y+'px';
+    trail3.style.left = x+'px'; trail3.style.top = y+'px';
+  }
+
+  function cleanup(){ trail1.remove(); trail2.remove(); trail3.remove(); cursor.remove(); }
+
+  function finish(){
+    cursor.classList.add('out');
+    trail1.classList.add('out'); trail2.classList.add('out'); trail3.classList.add('out');
+    setTimeout(cleanup, 300);
+    onDone();
+  }
+
+  if(sourceRect){
+    // Land the cursor exactly on the orb (same size, same spot) already
+    // "on" and un-faded, then hold a beat so the overlap actually registers
+    // before it takes off — this is what sells "the arrow flew out of it".
+    var sx = sourceRect.left + sourceRect.width/2, sy = sourceRect.top + sourceRect.height/2;
+    place(sx, sy);
+    cursor.classList.add('on'); trail1.classList.add('on'); trail2.classList.add('on'); trail3.classList.add('on');
+    setTimeout(function(){ visit(0); }, 40);
+  } else {
+    place(start.x, start.y);
+    visit(0);
+  }
+
+  function visit(i){
+    var stop = stops[i];
+    // Some stops (e.g. "open the sidebar" / "open the account menu") only
+    // need to happen if that thing isn't already open — if the guide is
+    // re-run mid-session and the sidebar/dock is already sitting open,
+    // skip straight to the next real stop instead of flying to (and
+    // re-clicking, which would just close it again) an already-done step.
+    var skipped = false;
+    try{ skipped = typeof stop.skip === 'function' && !!stop.skip(); }catch(_sk){}
+    if(skipped){
+      if(i === stops.length-1){ finish(); return; }
+      visit(i+1);
+      return;
+    }
+    // Waypoints after the first one are frequently behind an async open
+    // (a panel sliding in, a dock's CSS transition, etc.) — checking once
+    // and bailing the instant it isn't on screen yet is what was silently
+    // killing the Connectors/Appearance flights: _bnavOpenAccountSettings()
+    // opens the sidebar then clicks the gear a frame later, and the dock's
+    // own slide-open transition can easily outlast a single fixed wait.
+    // Poll for up to ~1.4s instead of checking exactly once.
+    var attempts = 0, maxAttempts = (i === 0) ? 6 : 24;
+    function tryGet(){
+      var e = null;
+      try{ e = typeof stop.get === 'function' ? stop.get() : stop.get; }catch(_e){}
+      return _synGuideVisible(e) ? e : null;
+    }
+    // If a stop's real on-screen element genuinely can't be found (a layout
+    // variant hides it, a fresh page hasn't finished laying it out, etc.),
+    // don't just abort the whole guide silently — run the stop's own
+    // fallback (the plain non-visual version of what that click would have
+    // done) so the *function* still happens, then keep going to the next
+    // real, visible stop instead of leaving the person with nothing.
+    function giveUp(){
+      var ran = false;
+      try{ if(typeof stop.fallback === 'function'){ stop.fallback(); ran = true; } }catch(_fb){}
+      if(!ran){ finish(); return; }
+      if(i === stops.length-1){ finish(); } else { visit(i+1); }
+    }
+    var el = tryGet();
+    if(!el && maxAttempts > 1){
+      (function poll(){
+        attempts++;
+        el = tryGet();
+        if(el){ proceed(el); return; }
+        if(attempts >= maxAttempts){ giveUp(); return; } // still not there — run fallback (if any) and continue
+        setTimeout(poll, 60);
+      })();
+      return;
+    }
+    if(!el){ giveUp(); return; } // first waypoint isn't on this screen at all
+    proceed(el);
+
+    function proceed(el){
+    var r = el.getBoundingClientRect();
+    var cx = r.left + r.width/2, cy = r.top + r.height/2;
+    place(cx, cy);
+
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){ cursor.classList.add('on'); trail1.classList.add('on'); trail2.classList.add('on'); trail3.classList.add('on'); });
+    });
+
+    setTimeout(function(){
+      cursor.classList.add('click');
+      try{ if(typeof _haptic === 'function') _haptic(6); }catch(_h){}
+      var isLast = (i === stops.length-1);
+      setTimeout(function(){
+        if(!isLast){ try{ if(stop.click) stop.click(el); else el.click(); }catch(_ce){} }
+        if(isLast){ finish(); }
+        else{ setTimeout(function(){ visit(i+1); }, stop.wait != null ? stop.wait : 480); }
+      }, 410);
+    }, 620);
+    }
+  }
+}
+window.synGuideFlyTo = synGuideFlyTo;
+
+/* Same flight, but types a demo prompt into the target field, character
+   by character, before handing off — used for steps like Maps where the
+   "feature" is really a prompt pattern rather than a button. */
+function synGuideSpotlightType(el, text, caption, onDone, startPoint, sourceRect){
+  if(!_synGuideVisible(el)){ onDone(); return; }
+  var r = el.getBoundingClientRect();
+  var trail3 = document.createElement('div'); trail3.className = 'syn-guide-trail t3';
+  var trail2 = document.createElement('div'); trail2.className = 'syn-guide-trail t2';
+  var trail1 = document.createElement('div'); trail1.className = 'syn-guide-trail';
+  var cursor = document.createElement('div'); cursor.className = 'syn-guide-cursor';
+  cursor.innerHTML = SYN_GUIDE_CURSOR_SVG + SYN_GUIDE_CURSOR_SONAR_HTML;
+  document.body.appendChild(trail3); document.body.appendChild(trail2);
+  document.body.appendChild(trail1); document.body.appendChild(cursor);
+
+  // Center the cursor in the input box while typing — NOT the right edge
+  // (that's where the send-button icon cluster lives, so the click-pulse
+  // when typing starts looked like clicking send) and NOT the left edge
+  // either (that's where chatHistoryBtn sits). Dead center is clear of
+  // every icon in either cluster.
+  function place(rect){
+    var cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+    cursor.style.left = cx + 'px'; cursor.style.top = cy + 'px';
+    trail1.style.left = cx + 'px'; trail1.style.top = cy + 'px';
+    trail2.style.left = cx + 'px'; trail2.style.top = cy + 'px';
+    trail3.style.left = cx + 'px'; trail3.style.top = cy + 'px';
+  }
+  // Start from the exact spot the user clicked in the guide (falls back to
+  // the Guide FAB, then the target itself) so the flight reads as travel.
+  var startRect = sourceRect || (startPoint ? {left:startPoint.x, top:startPoint.y, width:0, height:0} :
+    (function(){ var b = document.getElementById('synGuideBtn'); return b ? b.getBoundingClientRect() : {left:r.left, top:r.top, width:0, height:0}; })());
+  var sx = startRect.left + (startRect.width||0)/2, sy = startRect.top + (startRect.height||0)/2;
+  cursor.style.left = sx + 'px'; cursor.style.top = sy + 'px';
+  trail1.style.left = sx + 'px'; trail1.style.top = sy + 'px';
+  trail2.style.left = sx + 'px'; trail2.style.top = sy + 'px';
+  trail3.style.left = sx + 'px'; trail3.style.top = sy + 'px';
+
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      cursor.classList.add('on');
+      trail1.classList.add('on'); trail2.classList.add('on'); trail3.classList.add('on');
+      place(el.getBoundingClientRect());
+    });
+  });
+
+  setTimeout(function(){
+    cursor.classList.add('click');
+    var i = 0;
+    var typer = setInterval(function(){
+      i++;
+      try{ el.value = text.slice(0, i); el.dispatchEvent(new Event('input', {bubbles:true})); el.focus(); }catch(_ti){}
+      if(i >= text.length){
+        clearInterval(typer);
+        setTimeout(function(){
+          cursor.classList.add('out');
+          trail1.classList.add('out'); trail2.classList.add('out'); trail3.classList.add('out');
+          setTimeout(function(){ cursor.remove(); trail1.remove(); trail2.remove(); trail3.remove(); }, 300);
+          onDone();
+        }, 500);
+      }
+    }, 32);
+  }, 620);
+}
+
+/* Maps each step to the ordered list of *real* on-screen stops the cursor
+   has to visit to actually reach that feature — one stop for anything
+   that's a single tap away, two+ for anything buried behind a menu (e.g.
+   Connectors and Appearance both live inside the account dock, so the
+   guide has to open that first, then land on the right row inside it)
+   — plus the real function to call once the flight finishes. */
+var SYN_GUIDE_STEPS = {
+  speech: {
+    // The top-nav mic (#topNavVoiceBtn) is the persistent entry point — it's
+    // present across every screen, not just Home, which is the whole point
+    // being demoed here. Fall back to the fingerprint pad if for some
+    // reason the top-nav icon isn't on screen yet.
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('topNavVoiceBtn'), document.getElementById('synFpPad')]); }, caption: 'Start speech-to-speech →' }
+    ],
+    action: function(){
+      if(!window._topNavVoiceActive){ window._synGuideDemoIntroPending = true; }
+      if(typeof window.toggleTopNavVoice === 'function'){ window.toggleTopNavVoice(); }
+      else if(typeof window._synGuideEnsureAskOpen === 'function'){ window._synGuideEnsureAskOpen(); }
+    }
+  },
+  chat: {
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('inputBox'), document.querySelector('#sec-chat .send-btn'), document.getElementById('synFpPad')]); }, caption: 'Opening the Ask bar…' }
+    ],
+    action: function(){ if(typeof window._synGuideEnsureAskOpen==='function') window._synGuideEnsureAskOpen(); }
+  },
+  connectors: {
+    // Real fix: Connectors lives two real taps deep — the top-left "Past
+    // chats" icon opens the sidebar, then the gear inside its header flips
+    // it into the account/settings view. Actually fly to and click each of
+    // those in order (skipping any hop that's already open) instead of
+    // opening things instantly behind the scenes and hoping a single fly-to
+    // lands on the right spot — this is what makes the sidebar's own open
+    // animation visibly play before the gear, and the gear's own flip
+    // animation play before Connectors.
+    stops: [
+      {
+        get: function(){ return document.getElementById('chatHistoryTrigger'); },
+        skip: function(){
+          var sb = document.getElementById('chpSidebar');
+          return !!(sb && (sb.classList.contains('open') || sb.classList.contains('fade-open')));
+        },
+        // Belt-and-suspenders: if this layout hides/repositions the trigger
+        // in a way the visibility check can't see (e.g. a thin/rail layout
+        // variant), still actually open the sidebar so the flight isn't
+        // dead in the water — just without a visible first hop.
+        fallback: function(){ try{ if(typeof toggleChatHistoryPanel==='function') toggleChatHistoryPanel('user'); }catch(_fe){} },
+        caption: 'Opening chat sidebar…',
+        wait: 420
+      },
+      {
+        get: function(){ return document.getElementById('chpUserBtn'); },
+        skip: function(){
+          var d = document.getElementById('chpUserDock');
+          return !!(d && d.classList.contains('open'));
+        },
+        fallback: function(){ try{ if(typeof window._bnavOpenAccountSettings==='function') window._bnavOpenAccountSettings(); }catch(_fe){} },
+        caption: 'Opening account menu…',
+        wait: 420
+      },
+      { get: function(){ return document.querySelector('[data-chp-act="connectors"]'); }, caption: 'Connectors →' }
+    ],
+    // Mobile has no top-left sidebar icon to fly to — Settings opens as its
+    // own full-screen page instead, triggered directly, then the guide flies
+    // straight to the now-open row.
+    presetupMobile: function(cb){
+      try{ if(typeof window._bnavOpenMobileSettingsPage==='function') window._bnavOpenMobileSettingsPage(); }catch(_e2){}
+      setTimeout(cb, 340);
+    },
+    mobileStops: [
+      { get: function(){ return document.querySelector('[data-chp-act="connectors"]'); }, caption: 'Connectors →' }
+    ],
+    action: function(){ var el = document.querySelector('[data-chp-act="connectors"]'); if(el){ el.click(); } else if(typeof window._bnavOpenAccountSettings==='function') window._bnavOpenAccountSettings(); }
+  },
+  notes: {
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]); }, caption: 'Opening Notes…' }
+    ],
+    // Notes itself, then back out and show off Sticky Notes too — same
+    // notes, floating on Home — instead of stopping at the full-page view.
+    action: function(){
+      if(typeof window.goNotes==='function') window.goNotes();
+      setTimeout(function(){ try{ _synGuideNotesSubDemo(); }catch(_nd){} }, 900);
+    }
+  },
+  imagegen: {
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('bnavImageGenBtn'), document.getElementById('nav-imagegen')]); }, caption: 'Opening Image Studio…' }
+    ],
+    action: function(){ if(typeof window.openImageGenModal==='function') window.openImageGenModal(); }
+  },
+  maps: {
+    // Special-cased below: the ask bar has to be opened before there's
+    // anything on screen to fly to, so this runs its own two-phase flow.
+    caption: 'Typing a map prompt…',
+    typeText: 'Show location of ',
+    action: function(){ if(typeof window._synGuideEnsureAskOpen==='function') window._synGuideEnsureAskOpen(); }
+  },
+  pulse: {
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('bnavPulseBtn'), document.getElementById('nav-pulse')]); }, caption: 'Opening Pulse…' }
+    ],
+    action: function(){ if(typeof window.toggleSynPulse==='function') window.toggleSynPulse(); }
+  },
+  controlcentre: {
+    // Real path: the Welcome (sun icon) button in the collapsed chat-rail
+    // opens the "what's new" popup, which itself has a grid icon that opens
+    // the actual Control Centre panel — two real clicks, not one.
+    stops: [
+      { get: function(){ return _synGuidePick([document.getElementById('chpRailWelcomeBtn'), document.getElementById('bnavControlCenterBtn'), document.getElementById('nav-controlcentre')]); }, caption: 'Opening Welcome…', wait: 480 },
+      { get: function(){ return document.getElementById('synWelcomeCCBtn'); }, caption: 'Control Centre →' }
+    ],
+    action: function(){ var el = document.getElementById('synWelcomeCCBtn'); if(el){ el.click(); } else if(typeof window.openControlCentre==='function') window.openControlCentre(); }
+  },
+  themes: {
+    // Same real fix as Connectors — actually fly through the top-left
+    // sidebar icon, then the gear, then land on Appearance (they live
+    // behind the same account dock).
+    stops: [
+      {
+        get: function(){ return document.getElementById('chatHistoryTrigger'); },
+        skip: function(){
+          var sb = document.getElementById('chpSidebar');
+          return !!(sb && (sb.classList.contains('open') || sb.classList.contains('fade-open')));
+        },
+        fallback: function(){ try{ if(typeof toggleChatHistoryPanel==='function') toggleChatHistoryPanel('user'); }catch(_fe){} },
+        caption: 'Opening chat sidebar…',
+        wait: 420
+      },
+      {
+        get: function(){ return document.getElementById('chpUserBtn'); },
+        skip: function(){
+          var d = document.getElementById('chpUserDock');
+          return !!(d && d.classList.contains('open'));
+        },
+        fallback: function(){ try{ if(typeof window._bnavOpenAccountSettings==='function') window._bnavOpenAccountSettings(); }catch(_fe){} },
+        caption: 'Opening account menu…',
+        wait: 420
+      },
+      { get: function(){ return document.querySelector('[data-chp-act="theme"]'); }, caption: 'Appearance →' }
+    ],
+    presetupMobile: function(cb){
+      try{ if(typeof window._bnavOpenMobileSettingsPage==='function') window._bnavOpenMobileSettingsPage(); }catch(_e2){}
+      setTimeout(cb, 340);
+    },
+    mobileStops: [
+      { get: function(){ return document.querySelector('[data-chp-act="theme"]'); }, caption: 'Appearance →' }
+    ],
+    action: function(){
+      var el = document.querySelector('[data-chp-act="theme"]');
+      if(el){ el.click(); } else if(typeof window._bnavOpenAccountSettings==='function') window._bnavOpenAccountSettings();
+      // Sub-demo: once Appearance is open, fly to the sun/moon toggle and
+      // actually flip it (then flip back), so people see the day/night
+      // switch in action instead of just reading about it — then, if that
+      // leaves Night/True Black active, simulate the right-click on the
+      // moon that reveals the Deep Space Aurora / Warp Speed toggles.
+      setTimeout(function(){ try{ _synGuideThemesSubDemo(); }catch(_td){} }, 550);
+    }
+  }
+};
+
+/* Brand-new accounts have zero real notes, so the Sticky Notes fly-in below
+   would animate in nothing. Seed a few real (editable, deletable) example
+   notes — same shape saveNote() writes — only when userNotes is actually
+   empty, so the demo has something to fly. Existing notes are never
+   touched. */
+var SYN_GUIDE_DEMO_NOTES = [
+  {title:'Welcome to Notes', body:'Anything you save here also shows up as a sticky note — drag it anywhere.', tags:['notes'], colorIdx:0},
+  {title:'Tag to sort later', body:'Add tags when you save a note to find it faster.', tags:['tips'], colorIdx:1},
+  {title:'Pin your favorites', body:'Pin a note and it stays visible even with Sticky Notes toggled off.', tags:['tips'], colorIdx:2},
+  {title:'Ask Ava to remember', body:'Tell Ava something worth keeping and she can save it here for you.', tags:['ava'], colorIdx:3}
+];
+function _synGuideSeedDemoNotesIfEmpty(){
+  if(typeof userNotes === 'undefined' || !userNotes || userNotes.length > 0) return;
+  var d = new Date(), mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dateStr = mon[d.getMonth()] + ' ' + d.getDate();
+  SYN_GUIDE_DEMO_NOTES.forEach(function(n){
+    userNotes.push({ title: n.title, body: n.body, tags: n.tags.slice(), date: dateStr, colorIdx: n.colorIdx });
+  });
+  try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); }catch(e){}
+  if(typeof renderNotes === 'function') renderNotes();
+}
+/* Notes step sub-demo: close the full Notes page back out (goNotes() is a
+   toggle, so calling it again while sec-notes is active does exactly that
+   and returns to wherever the guide found them), then fly the Sticky Notes
+   layer in on Home so both forms of Notes get shown, not just the page. */
+function _synGuideNotesSubDemo(){
+  if(typeof window.goNotes==='function' && _currentViewId === 'sec-notes') window.goNotes();
+  setTimeout(function(){
+    try{ _synGuideSeedDemoNotesIfEmpty(); }catch(_sd){}
+    var btn = _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]);
+    if(!_synGuideVisible(btn)) return;
+    synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Sticky Notes →' }], function(){
+      if(typeof window.openStickyNotesFly==='function') window.openStickyNotesFly();
+      // Let the fly-in land, then show the rest: drag a note off the grid,
+      // pin it, then turn Sticky Notes off — proving the pinned one stays.
+      setTimeout(function(){ try{ _synGuidePinSubDemo(); }catch(_pd){} }, 1500);
+    });
+  }, 480);
+}
+/* Drags the first sticky note off its auto grid slot, pins it via the real
+   note editor (same Pin + Save buttons a person would click), then opens
+   the notes-icon context menu and clicks its "Show Sticky Notes" toggle to
+   turn Sticky Notes off — the pinned note is the only one left showing,
+   which is the whole point of the demo. Whatever that note's pin/position
+   was before the demo touched it gets restored once the demo is done, so
+   the guide never leaves a permanent trace on the person's real notes. */
+function _synGuidePinSubDemo(){
+  var layer = document.getElementById('stickyNotesLayer');
+  var wrapper = layer && layer.querySelector('[data-note-idx]');
+  if(!wrapper){ _synGuideFinishStickyDemo(); return; }
+  var idx = parseInt(wrapper.dataset.noteIdx, 10);
+  var orig = userNotes[idx] ? { pinned: !!userNotes[idx].pinned, _left: userNotes[idx]._left, _top: userNotes[idx]._top } : null;
+  window._synGuideStickyDemoState = { idx: idx, orig: orig };
+  synGuideFlyTo([{ get: function(){ return wrapper; }, caption: 'Drag a note anywhere →' }], function(){
+    var lRect = layer.getBoundingClientRect();
+    var destLeft = Math.max(24, lRect.width * 0.14);
+    var destTop = 60;
+    wrapper.style.zIndex = '999';
+    wrapper.style.transition = 'left 0.6s cubic-bezier(.22,1.6,.36,1), top 0.6s cubic-bezier(.22,1.6,.36,1)';
+    wrapper.style.left = destLeft + 'px';
+    wrapper.style.top = destTop + 'px';
+    wrapper.style.right = 'auto';
+    wrapper.style.bottom = 'auto';
+    if(userNotes[idx]){
+      userNotes[idx]._left = destLeft + 'px';
+      userNotes[idx]._top = destTop + 'px';
+      try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); }catch(_pe){}
+    }
+    setTimeout(function(){
+      synGuideFlyTo([{ get: function(){ return wrapper; }, caption: 'Pin it →' }], function(){
+        if(typeof window._openNoteEdit==='function') window._openNoteEdit(idx);
+        else if(typeof _openNoteEdit==='function') _openNoteEdit(idx);
+        setTimeout(function(){
+          var modal = document.getElementById('_noteEditModal');
+          var btns = modal ? modal.querySelectorAll('button') : [];
+          var pinBtn = btns[0], saveBtn = btns[1];
+          if(pinBtn) pinBtn.click();
+          setTimeout(function(){
+            if(saveBtn) saveBtn.click(); else if(modal) modal.remove();
+            setTimeout(_synGuideTurnOffStickyDemo, 500);
+          }, 500);
+        }, 160);
+      });
+    }, 700);
+  });
+}
+function _synGuideTurnOffStickyDemo(){
+  var btn = _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]);
+  if(!_synGuideVisible(btn)){ _synGuideFinishStickyDemo(); return; }
+  synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Hold/right-click → Show Sticky Notes' }], function(){
+    var r = btn.getBoundingClientRect();
+    var evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2 });
+    btn.dispatchEvent(evt);
+    setTimeout(function(){
+      var openItem = document.getElementById('stickyFlyOpenBtn');
+      if(openItem) openItem.click(); // _stickyNotesOpen is already true here, so this just calls toggleStickyNotes()
+      setTimeout(_synGuideFinishStickyDemo, 900);
+    }, 260);
+  });
+}
+function _synGuideFinishStickyDemo(){
+  var menu = document.getElementById('stickyFlyCtxMenu');
+  if(menu) menu.style.display = 'none';
+  // Put the demo note back exactly how it was — unpinned (unless it really
+  // was pinned already) and back on its own grid slot, not floating where
+  // the demo dragged it — then re-render so it actually disappears along
+  // with Sticky Notes instead of being left stuck on screen.
+  var st = window._synGuideStickyDemoState;
+  window._synGuideStickyDemoState = null;
+  if(st && userNotes[st.idx]){
+    var n = userNotes[st.idx];
+    if(st.orig){
+      n.pinned = st.orig.pinned;
+      if(st.orig._left){ n._left = st.orig._left; } else { delete n._left; }
+      if(st.orig._top){ n._top = st.orig._top; } else { delete n._top; }
+    } else {
+      n.pinned = false;
+      delete n._left;
+      delete n._top;
+    }
+    try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); }catch(_re){}
+  }
+  // Sticky Notes is already toggled off at this point — this just makes
+  // sure nothing (the just-restored note, the layer itself) is still
+  // sitting visible on screen after the demo ends.
+  window._stickyNotesVisible = false;
+  try{ localStorage.setItem('notesVisible', '0'); }catch(_ve){}
+  if(typeof renderStickyNotes === 'function') renderStickyNotes(false);
+  else if(typeof _applyStickyHiddenState === 'function') _applyStickyHiddenState();
+}
+/* Themes step sub-demo: sun/moon flip, then (Night only) the moon's
+   right-click menu for Deep Space Aurora / Warp Speed. Simulated via the
+   exact same events/elements a real person would use — dispatched
+   'contextmenu' for the right-click, real .click() on the menu buttons —
+   so it exercises the real code path, not a fake overlay. Whatever got the
+   guide here (desktop: sidebar + account dock) gets closed again once the
+   sub-demo is done, same as the guide itself always leaves things as it
+   found them elsewhere. */
+function _synGuideCloseThemesLeftMenu(){
+  try{
+    if(window.innerWidth > 768 && typeof closeChatHistoryPanel === 'function') closeChatHistoryPanel();
+  }catch(_c){}
+}
+function _synGuideThemesSubDemo(){
+  var dnt = document.getElementById('dayNightToggle');
+  if(!_synGuideVisible(dnt)){ _synGuideCloseThemesLeftMenu(); return; }
+  synGuideFlyTo([{ get: function(){ return dnt; }, caption: 'Sun ↔ Moon — tap to switch look' }], function(){
+    if(typeof window.toggleDayNight !== 'function'){ _synGuideCloseThemesLeftMenu(); return; }
+    window.toggleDayNight();
+    setTimeout(function(){
+      window.toggleDayNight(); // flip back — demo only, don't change their theme
+      setTimeout(function(){
+        var theme = localStorage.getItem('_appTheme') || 'trueblack';
+        if(theme === 'trueblack') _synGuideAuroraSubDemo(dnt);
+        else _synGuideCloseThemesLeftMenu();
+      }, 420);
+    }, 900);
+  });
+}
+function _synGuideAuroraSubDemo(dnt){
+  var r = dnt.getBoundingClientRect();
+  var evt = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2 });
+  dnt.dispatchEvent(evt);
+  setTimeout(function(){
+    var aurora = document.getElementById('dsmToggleAurora');
+    var warp = document.getElementById('dsmToggleWarp');
+    if(!_synGuideVisible(aurora)){ _synGuideCloseThemesLeftMenu(); return; }
+    synGuideFlyTo([{ get: function(){ return aurora; }, caption: 'Right-click the moon → Deep Space Aurora' }], function(){
+      aurora.click();
+      setTimeout(function(){
+        aurora.click(); // demo only — restore whatever it was before
+        if(_synGuideVisible(warp)){
+          synGuideFlyTo([{ get: function(){ return warp; }, caption: '…and Warp Speed / Hyperspace' }], function(){
+            warp.click();
+            setTimeout(function(){
+              warp.click();
+              var menu = document.getElementById('deepSpaceMenu');
+              if(menu) menu.classList.remove('open');
+              _synGuideCloseThemesLeftMenu();
+            }, 900);
+          });
+        } else {
+          var menu = document.getElementById('deepSpaceMenu');
+          if(menu) menu.classList.remove('open');
+          _synGuideCloseThemesLeftMenu();
+        }
+      }, 900);
+    });
+  }, 260);
+}
+
+function synGuideGo(step, e){
+  var cfg = SYN_GUIDE_STEPS[step];
+  if(!cfg) return;
+  // Fire the bright sonar "lock-on" ring on the arrow icon that was clicked,
+  // remember its exact rect (so the flight can launch as a seamless overlay
+  // right on top of it), and empty the orb out to sell "the arrow just left".
+  var sourceRect = null;
+  try{
+    var rowEl = e && e.currentTarget ? e.currentTarget : null;
+    if(rowEl){
+      var goEl = rowEl.querySelector('.syn-guide-go') || rowEl;
+      var gr = goEl.getBoundingClientRect();
+      sourceRect = { left: gr.left, top: gr.top, width: gr.width, height: gr.height };
+      rowEl.classList.remove('syn-guide-pinging');
+      void rowEl.offsetWidth; // restart animation if clicked again quickly
+      rowEl.classList.add('syn-guide-pinging');
+      setTimeout(function(){ rowEl.classList.remove('syn-guide-pinging'); }, 550);
+      goEl.classList.add('syn-guide-go-emptied');
+    }
+  }catch(_p){}
+
+  function runAction(){ try{ cfg.action(); }catch(_a){ console.warn('[synGuide] action failed for', step, _a); } }
+
+  try{
+    // Maps needs the ask bar open *before* it can type into it — launch the
+    // orb overlay now, close the guide a beat later, then trigger the real
+    // ask-bar action and fly/type into the now-visible field.
+    if(step === 'maps'){
+      setTimeout(function(){
+        try{ closeSynGuide(); }catch(_c){}
+        // If the Ask bar is already open, the fingerprint pad is gone —
+        // it's replaced by the input box the moment the bar opens — so
+        // flying to it would be pointing at nothing. Same check
+        // _synGuideEnsureAskOpen() itself uses to decide whether opening
+        // is even needed. Skip straight to typing in that case instead of
+        // pointing twice at essentially the same spot.
+        var sec = document.getElementById('sec-chat');
+        var onChat = sec && sec.classList.contains('active');
+        var emptyHome = typeof _isChatEmptyHome === 'function' && _isChatEmptyHome();
+        var alreadyOpen = onChat && emptyHome && window._askBarOpen;
+
+        function typeAndSend(){
+        setTimeout(function(){
+          var el = document.getElementById('inputBox');
+          if(el) synGuideSpotlightType(el, cfg.typeText, cfg.caption, function(){
+            // Typing's done — pause here so the fully-typed message actually
+            // registers on screen for a beat before anything moves again,
+            // THEN point at the send button. Firing the fly-to immediately
+            // made it read as if send was being pointed at right as/before
+            // the text landed, since the two happen back-to-back with
+            // nothing to visually separate them.
+            // Plain '.send-btn' matches the FIRST one in document order,
+            // which is sec-welcome's (Home) send button, not sec-chat's —
+            // and since Home is usually inactive/invisible, _synGuideVisible
+            // rejected it and the flight silently gave up with nothing
+            // visible happening. Scope to #sec-chat so it grabs the real one.
+            var sendEl = document.querySelector('#sec-chat .send-btn');
+            if(sendEl){
+              setTimeout(function(){
+                // Don't start the cursor at the input box and let it travel
+                // to the send button — with the .syn-guide-cursor CSS
+                // transition on left/top, any position change gets animated
+                // by the browser, which is exactly what reads as "gliding
+                // right". Passing a sourceRect (instead of a startPoint)
+                // uses the same "land already on it" mechanic the orb-launch
+                // flights use elsewhere: the cursor is placed directly on
+                // the send button's own rect and only *then* re-measures
+                // that same element, so there's no start/end position
+                // difference left for the transition to animate.
+                var er = sendEl.getBoundingClientRect();
+                var sendRect = { left: er.left, top: er.top, width: er.width, height: er.height };
+                synGuideFlyTo([{ get: function(){ return sendEl; }, caption: 'Send it →' }], function(){}, null, sendRect);
+              }, 650);
+            }
+          }, null, sourceRect);
+        }, 380);
+        }
+
+        if(alreadyOpen){
+          typeAndSend();
+          return;
+        }
+
+        // Fly to and point at the same element the "chat" step opens the
+        // Ask bar from (fingerprint pad / input box / send-btn, whichever
+        // is actually on screen) — same single-stop pattern as chat:
+        // synGuideFlyTo(cfg.stops, runAction, null, sourceRect) — instead
+        // of calling runAction() with no visual step at all.
+        synGuideFlyTo([{
+          get: function(){ return _synGuidePick([document.getElementById('inputBox'), document.querySelector('#sec-chat .send-btn'), document.getElementById('synFpPad')]); },
+          caption: 'Opening the Ask bar…'
+        }], function(){
+        runAction();
+        typeAndSend();
+        }, null, sourceRect);
+      }, 180);
+      return;
+    }
+    // Steps like Connectors/Appearance live behind a menu with no top-left
+    // sidebar icon on mobile — Settings opens as its own full-screen page
+    // instead, so on mobile only, open that for real first, then fly
+    // straight to the now-open target row.
+    if(typeof cfg.presetupMobile === 'function' && window.innerWidth <= 768){
+      try{ closeSynGuide(); }catch(_c){}
+      cfg.presetupMobile(function(){
+        synGuideFlyTo(cfg.mobileStops || cfg.stops, runAction, null, sourceRect);
+      });
+      return;
+    }
+    // Desktop: actually fly through and click each real hop in order (the
+    // top-left "Past chats" icon, then the account gear, then the target
+    // row) — each stop's own skip() check no-ops any hop that's already
+    // open, so re-running the guide mid-session doesn't just toggle things
+    // closed again.
+    synGuideFlyTo(cfg.stops, runAction, null, sourceRect);
+    setTimeout(function(){ try{ closeSynGuide(); }catch(_c){} }, 180);
+  }catch(_g){
+    console.warn('[synGuide] step failed', step, _g);
+    try{ closeSynGuide(); }catch(_c){}
+    runAction();
+  }
+}
+window.synGuideGo = synGuideGo;
+</script>
+<!-- ════════════════ /App Guide ════════════════ -->
 
 </body>
