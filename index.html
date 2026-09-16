@@ -29965,7 +29965,7 @@ window._BARE_GREETING_RE = /^\s*(hi+|hey+|hello+|yo+|sup|hola|howdy|morning|even
 /* Groq shuts down llama-3.1-8b-instant + llama-3.3-70b-versatile on 2026-08-16.
    Stay on Llama until then; flip every chat/helper call to Qwen 3.6 27B after
    that date, or sooner if Groq returns a decommission error. */
-var GROQ_QWEN27 = 'qwen/qwen3.6-27b';
+var GROQ_QWEN27 = 'qwen/qwen3.8-27b';
 var GROQ_LLAMA_OFF = Date.parse('2026-08-16T00:00:00Z');
 function groqLlamaDead(){
   if(Date.now() >= GROQ_LLAMA_OFF) return true;
@@ -38143,7 +38143,7 @@ function groqStripThink(raw){
         + '- "notes": goals, reflections, life areas, or anything that is not a single dated/timed action. Each item: {"title": short string, "body": string, "tags": [lowercase strings]}.\n'
         + '- "events": concrete one-off or this-week things to attend/do that carry any timing or day info. Each item: {"title": short string, "day": one of "today","tomorrow","mon","tue","wed","thu","fri","sat","sun", or null if no day is implied, "time": "HH:MM" 24hr or null, "location": string or null}.\n'
         + 'Keep titles short and in the user\'s own words where possible. Do not invent details the text does not imply. Every distinct idea in the input should land in exactly one of the two arrays.';
-      var modelId = (typeof groqModel==='function') ? groqModel('qwen/qwen3.6-27b') : 'qwen/qwen3.6-27b';
+      var modelId = (typeof groqModel==='function') ? groqModel('qwen/qwen3.8-27b') : 'qwen/qwen3.8-27b';
       var reqBody = { model: modelId, messages:[{role:'system',content:sys},{role:'user',content:text}], max_tokens:1600, stream:false, reasoning_effort:'none', reasoning_format:'parsed' };
       var base = (typeof GROQ_PROXY==='string' && GROQ_PROXY) ? GROQ_PROXY : 'https://synbot-whatsapp-2.onrender.com';
       var res = await fetch(base+'/groq-chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reqBody)});
@@ -39632,7 +39632,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
-              model: 'qwen/qwen3.6-27b',
+              model: 'qwen/qwen3.8-27b',
               messages: [{role:'user', content:_visionContentParts}],
               max_tokens: 800,
               stream: false,
@@ -39687,7 +39687,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         // model already proven on this same Groq endpoint/streaming format
         // (used by SYN-BOT elsewhere in this file) for far more reliable
         // instruction-following, at a modest latency cost.
-        model: groqModel(_hasImages ? 'qwen/qwen3.6-27b' : 'llama-3.3-70b-versatile'),
+        model: groqModel(_hasImages ? 'qwen/qwen3.8-27b' : 'llama-3.3-70b-versatile'),
         messages: messages,
         max_tokens: maxTok||2400,
         stream: true,
@@ -39715,7 +39715,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
       var _deadMsg = String((err && err.error && (err.error.message || err.error.code)) || err && err.message || '');
       if(_aiMode !== 'uncensored' && _reqBody && String(_reqBody.model).indexOf('llama-') === 0 && /decommission|deprecated|model_not_found|does not exist|invalid model/i.test(_deadMsg + ' ' + res.status)){
         if(typeof groqMarkLlamaDead === 'function') groqMarkLlamaDead();
-        _reqBody.model = (typeof GROQ_QWEN27 !== 'undefined') ? GROQ_QWEN27 : 'qwen/qwen3.6-27b';
+        _reqBody.model = (typeof GROQ_QWEN27 !== 'undefined') ? GROQ_QWEN27 : 'qwen/qwen3.8-27b';
         _reqBody.reasoning_effort = 'none';
         _reqBody.reasoning_format = 'parsed';
         delete _reqBody.include_reasoning;
@@ -67206,7 +67206,7 @@ function speakVoiceReply(text) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify((typeof groqApplyQwenFlags==='function'?groqApplyQwenFlags:function(b){return b;})({
-          model: (typeof GROQ_QWEN27 !== 'undefined') ? GROQ_QWEN27 : 'qwen/qwen3.6-27b',
+          model: (typeof GROQ_QWEN27 !== 'undefined') ? GROQ_QWEN27 : 'qwen/qwen3.8-27b',
           avaLife: true,
           messages: [{ role: 'system', content: sys }].concat(msgs),
           max_tokens: _maxTok,
