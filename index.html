@@ -1993,6 +1993,14 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
      of .main. Hidden bar: only clear the status/notch (fill the header
      strip). Visible bar: same gap as the old in-flow header — bar height
      (~60px) + 12px air — so the first name/msg is not tight under it. */
+  /* Floor: guarantees clearance even if body is missing .llm-thread/.topbar-hidden
+     for any reason (timing, a state the class logic doesn't cover, etc). The
+     more specific rules below still win when those classes ARE present. Fewer
+     classes than the rules below on purpose, so it never fights them. */
+  body.bottom-nav #sec-chat.active .chat-messages{
+    margin-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
+    padding-top:0!important;
+  }
   body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
   body.topbar-hidden.llm-thread .chat-messages,
   body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
@@ -2430,7 +2438,7 @@ html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{
   #bnavSettingsBtn:hover{background:transparent;}
   #bnavSettingsBtn:hover svg{stroke:rgba(200,203,230,0.55);}
 }
-#bnavSettingsBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;fill:none;}
+#bnavSettingsBtn svg{stroke:rgba(255,255,255,0.55);transition:stroke .15s;fill:none;}
 /* Control Centre — furthest right, after Settings. Panel already existed but
    had no visible mobile entry point (only long-pressing the orb). */
 #bnavControlCenterBtn{display:none;position:fixed;bottom:0;left:288px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;}
@@ -2438,12 +2446,12 @@ html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bnavStemBtn{
   #bnavControlCenterBtn:hover{background:transparent;}
   #bnavControlCenterBtn:hover svg{stroke:rgba(200,203,230,0.55);}
 }
-#bnavControlCenterBtn svg{stroke:rgba(160,163,220,0.4);transition:stroke .15s;fill:none;}
+#bnavControlCenterBtn svg{stroke:rgba(255,255,255,0.55);transition:stroke .15s;fill:none;}
 /* Bottom-left icon row customizer trigger — always last (right after Control
    Centre by default), opens blIconsDrawerModal to show/hide the row's icons.
    Its own left offset is recomputed live by applyBLIconLayout() so it always
    sits right after whichever icons are currently visible. */
-#bnavBLMoreBtn{display:none;position:fixed;bottom:0;left:328px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;color:rgba(160,163,220,0.4);font-size:16px;letter-spacing:1px;}
+#bnavBLMoreBtn{display:none;position:fixed;bottom:0;left:328px;height:52px;width:40px;background:transparent;border:none;border-radius:0;cursor:pointer;z-index:301;align-items:center;justify-content:center;flex-shrink:0;padding:0;color:rgba(255,255,255,0.55);font-size:16px;letter-spacing:1px;}
 @media (hover:hover) and (pointer:fine){
   #bnavBLMoreBtn:hover{color:rgba(200,203,230,0.7);}
 }
@@ -11282,8 +11290,8 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
    overridden to neutral, and only under True Black, so Settings, Control
    Centre and the ooo button kept the purple tint. One rule set for all of
    them, in every theme: same white the True Black icons already use. */
-#bnavBLRow > button svg{stroke:rgba(255,255,255,0.55);}
-#bnavBLRow > #bnavBLMoreBtn{color:rgba(255,255,255,0.55);}
+#bnavBLRow > button svg{stroke:rgba(255,255,255,0.55)!important;}
+#bnavBLRow > #bnavBLMoreBtn{color:rgba(255,255,255,0.55)!important;}
 @media (hover:hover) and (pointer:fine){
   #bnavBLRow > button:hover:not(.active) svg{stroke:rgba(255,255,255,0.85);}
   #bnavBLRow > #bnavBLMoreBtn:hover{color:rgba(255,255,255,0.85);}
@@ -11331,15 +11339,15 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
 
 <!-- Settings — mirrors the sidebar account-menu gear, no other mobile entry point -->
 <button type="button" id="bnavSettingsBtn" onclick="typeof _bnavOpenAccountSettings==='function' ? _bnavOpenAccountSettings() : goProfile()" title="Settings" aria-label="Settings" style="display:none;opacity:0;pointer-events:none;">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 </button>
 <!-- Control Centre — panel already existed (calendar/inbox/chats/notes/jobs),
      only trigger was holding the orb; give it a real entry point on mobile -->
 <button type="button" id="bnavControlCenterBtn" onclick="typeof openControlCentre==='function' && openControlCentre()" title="Control Centre" aria-label="Open Control Centre" style="display:none;opacity:0;pointer-events:none;">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
 </button>
 <!-- Customize which icons show in the bottom-left row — opens blIconsDrawerModal -->
-<button type="button" id="bnavBLMoreBtn" onclick="openBLIconsDrawer()" title="Customize icons" aria-label="Customize bottom-left icons" style="display:none;opacity:0;pointer-events:none;">•••</button>
+<button type="button" id="bnavBLMoreBtn" onclick="openBLIconsDrawer()" title="Customize icons" aria-label="Customize bottom-left icons" style="display:none;opacity:0;pointer-events:none;color:rgba(255,255,255,0.55);">•••</button>
 </div>
 <div id="synPulsePanel" role="dialog" aria-label="Pulse updates" aria-hidden="true">
   <div class="pp-glass">
