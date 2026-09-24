@@ -40852,6 +40852,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
      * Race each read against a stall timeout so a dead stream always
      * resolves (as an error) instead of hanging indefinitely. */
     var _STALL_MS = 20000;
+    var _finishReason = '', _midStreamErr = false;
     while(true){
       var _r;
       var _stallTimer = null;
@@ -40877,6 +40878,8 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         if(line.startsWith('data: ')){
           try{
             var json = JSON.parse(line.slice(6));
+            if(json && json.error) _midStreamErr = true;
+            if(json && json.choices && json.choices[0] && json.choices[0].finish_reason) _finishReason = json.choices[0].finish_reason;
             var delta = json.choices&&json.choices[0]&&json.choices[0].delta&&json.choices[0].delta.content;
             /* bakcusapd: only artificial delay when pace > 0. setTimeout(0) on every
              * token still throttles the whole stream (timer/event-loop cost) and made
@@ -40891,7 +40894,7 @@ async function callClaude(sys, msgs, maxTok, onChunk, signal, _retryDepth, image
         }
       }
     }
-    return {content:[{type:'text',text:(typeof groqStripThink==='function'?groqStripThink(fullText):fullText)}]};
+    return {content:[{type:'text',text:(typeof groqStripThink==='function'?groqStripThink(fullText):fullText)}], _finish:_finishReason, _midStreamErr:_midStreamErr};
   } catch(e) {
     // User aborted (new send) vs hard timeout — keep timeout text so UI can show it
     if(e && (e.name === 'AbortError' || e.name === 'TimeoutError')){
@@ -45869,6 +45872,36 @@ async function sendMessage(){
           reply = reply.replace(/\n{3,}/g,'\n\n').replace(/\s+$/,'');
         }
       }catch(_contErr){ console.error('[LIST CONTINUATION] failed:', _contErr); }
+
+      // Cut-off reply (server stopped mid-answer: token ceiling, dropped stream,
+      // or it just quit after "1. Heading" + a bare bullet). Detect it and ask
+      // for ONE seamless continuation so the answer actually finishes.
+      try{
+        if(!_isResearchReply && !_streamStopped && reply && reply.length > 120){
+          var _tail = reply.replace(/\s+$/,'');
+          var _dangling = /(^|\n)[ \t]*(?:[*\-\u2022]|\d+[.)])?[ \t]*(?:\*\*|__|\*|_)?[ \t]*$/.test(_tail)   // bare bullet / number / lone ** on the last line
+                       || /(^|\n)[ \t]*#{1,6}[ \t]+[^\n]*$/.test(_tail)                                     // ends on a heading with no body
+                       || /[:,;\u2014-]$/.test(_tail)                                                           // ends mid-thought
+                       || ((_tail.match(/\*\*/g)||[]).length % 2 === 1);                                       // unclosed bold
+          var _cutOff = (data && (data._finish === 'length' || data._midStreamErr)) || _dangling;
+          if(_cutOff){
+            // Drop the dangling fragment (bare bullet / lone ** / half heading) before continuing.
+            var _base = _tail.replace(/(^|\n)[ \t]*(?:[*\-\u2022]|\d+[.)])?[ \t]*(?:\*\*|__|\*|_)?[ \t]*$/, '').replace(/\s+$/,'');
+            var _cSys = sys + '\n\nCONTINUATION TASK: Your previous answer was cut off before it finished. Continue seamlessly from exactly where it stopped and finish the whole answer. Do NOT repeat anything already written, do NOT apologize or mention being cut off, and keep the same format and numbering style.';
+            var _cHist = chatHistory.slice(-12).concat([
+              {role:'assistant', content: _base},
+              {role:'user', content:'Continue exactly where you left off and finish the answer. Do not repeat what you already wrote.'}
+            ]);
+            var _cData = await callClaude(_cSys, _cHist, 2000);
+            if(_cData && !_cData.error && _cData.content){
+              var _cTxt = _cData.content.map(function(b){return b.text||'';}).join('').trim();
+              if(_cTxt && _cTxt.length > 10){
+                reply = _base + (/^[.,;:!?]/.test(_cTxt) ? '' : '\n\n') + _cTxt;
+              }
+            }
+          }
+        }
+      }catch(_cutErr){ console.warn('[CUT-OFF CONTINUATION] failed:', _cutErr); }
 
       _finalReplyForSources = reply;
 
@@ -87719,6 +87752,11 @@ html[data-theme="light"] #synGuideBtn{
    That's why it looked like it "disappeared": it was rendering underneath
    the opaque/blurred nav row instead of floating above the page. Push it
    above that row and raise its z-index past it. */
+@media (max-width:768px), (pointer:coarse){
+  #synGuideBtn.syn-guide-mini.syn-guide-linger,
+  #synGuideBtn.syn-guide-mini.syn-guide-nudge{opacity:0!important;}
+  #synGuideBtn .syn-guide-mini-q{animation:none!important;}
+}
 body.bottom-nav #synGuideBtn{
   bottom:calc(66px + env(safe-area-inset-bottom, 0px))!important;
   z-index:305!important;
@@ -88110,6 +88148,14 @@ html[data-theme="light"] .syn-guide-footer-note{color:rgba(60,62,92,0.5);}
   #synGuideModal .modal{z-index:310!important;}
   .syn-guide-status{padding-top:calc(10px + env(safe-area-inset-top, 0px))!important;}
   .syn-guide-foot{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px))!important;}
+
+  /* While the Guide is open, hide the floating chrome (top-middle logo,
+     top-right toggle, Voice pill + its panel) so nothing sits on top of it. */
+  body.syn-guide-open .top-bar,
+  body.syn-guide-open #bnavLogoMark,
+  body.syn-guide-open #winStrip,
+  body.syn-guide-open #dgVoiceToggle,
+  body.syn-guide-open #dgVoicePanel{visibility:hidden!important;pointer-events:none!important;}
 
   /* ── Guide sheet: true mobile layout ──
      Full-screen (not a 94vw drawer with a dead strip), sized with dvh so the
@@ -88535,6 +88581,7 @@ function closeSynGuide(){
     }, 180);
   }
   function showMini(){
+    if(_isMobileGuide()) return;
     var b = document.getElementById('synGuideBtn');
     if(!b || !b.classList.contains('syn-guide-mini')) return;
     b.classList.add('syn-guide-linger');
@@ -88548,7 +88595,7 @@ function closeSynGuide(){
     if(b){
       b.classList.remove('syn-guide-nudge');
       b.style.removeProperty('opacity');
-      if(b.classList.contains('syn-guide-mini')){
+      if(b.classList.contains('syn-guide-mini') && !_isMobileGuide()){
         b.classList.add('syn-guide-linger');
         if(!inCorner){
           if(_hideT) clearTimeout(_hideT);
@@ -88564,6 +88611,7 @@ function closeSynGuide(){
     }
   }
   function startWave(loop){
+    if(_isMobileGuide()) return;
     var b = document.getElementById('synGuideBtn');
     if(!b) return;
     b.classList.add('syn-guide-mini');
@@ -88604,7 +88652,12 @@ function closeSynGuide(){
     stopWave();
   }
   window._synGuideMarkUsed = markGuideUsed;
+  // Phones/touch: never auto-pop or wiggle the "?" — it was interrupting people.
+  function _isMobileGuide(){
+    try{ return window.matchMedia('(max-width:768px), (pointer:coarse)').matches; }catch(_e){ return false; }
+  }
   function nudge(){
+    if(_isMobileGuide()) return;
     if(busy()) return;
     if(guideUsedAt && Date.now() - guideUsedAt < 30*60*1000) return;
     if(Date.now() - lastHint < 28000) return;
@@ -88705,6 +88758,14 @@ function closeSynGuide(){
     score = Math.max(0, score - 0.22);
     if(homeBounces && Date.now() - lastNavAt > 10000) homeBounces = 0;
   }, 2000);
+})();
+// Track open/closed state on <body> (covers every code path that shows/hides it)
+(function(){
+  var m = document.getElementById('synGuideModal');
+  if(!m || !window.MutationObserver) return;
+  function sync(){ document.body.classList.toggle('syn-guide-open', m.style.display === 'flex'); }
+  new MutationObserver(sync).observe(m, {attributes:true, attributeFilter:['style']});
+  sync();
 })();
 // Click outside the card closes it, same behavior as other .modal-overlay modals
 document.addEventListener('click', function(e){
