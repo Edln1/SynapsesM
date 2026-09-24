@@ -2001,29 +2001,29 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
      shouldn't have, dragging #dgVoiceToggle out of its normal-layout position
      along with it. The more specific rules below still win when they match. */
   body.bottom-nav.llm-thread #sec-chat.active .chat-messages{
-    margin-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
+    margin-top:calc(env(safe-area-inset-top, 0px) + 60px)!important;
     padding-top:0!important;
   }
   body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
   body.topbar-hidden.llm-thread .chat-messages,
   body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    margin-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
+    margin-top:calc(env(safe-area-inset-top, 0px) + 60px)!important;
     padding-top:0!important;transition:margin-top .25s ease!important;
   }
   html.android-status-blend body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
   html.android-status-blend body.topbar-hidden.llm-thread .chat-messages,
   html.android-status-blend body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    margin-top:calc(var(--android-status-inset, 28px) + 40px)!important;
+    margin-top:calc(var(--android-status-inset, 28px) + 60px)!important;
     padding-top:0!important;
   }
   body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
   body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    margin-top:calc(env(safe-area-inset-top, 0px) + 72px)!important;
+    margin-top:calc(env(safe-area-inset-top, 0px) + 88px)!important;
     padding-top:0!important;transition:margin-top .25s ease!important;
   }
   html.android-status-blend body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
   html.android-status-blend body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    margin-top:calc(var(--android-status-inset, 28px) + 72px)!important;
+    margin-top:calc(var(--android-status-inset, 28px) + 88px)!important;
     padding-top:0!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
@@ -2108,13 +2108,13 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
   body.topbar-hidden:not(.llm-thread) .chat-messages{padding-top:6px!important;transition:none!important;}
   /* Hidden header only: Delia under #topBarToggle with ~12px air — closer
      than before, still a tap gap. Header-on / welcome / Notes unchanged. */
-  body.llm-thread.topbar-hidden #dgVoiceToggle{top:36px!important;}
-  body.llm-thread.topbar-hidden #dgVoicePanel{top:72px!important;}
+  body.llm-thread.topbar-hidden #dgVoiceToggle{top:22px!important;}
+  body.llm-thread.topbar-hidden #dgVoicePanel{top:58px!important;}
   html.android-status-blend body.llm-thread.topbar-hidden #dgVoiceToggle{
-    top:calc(var(--android-status-inset, 28px) + 36px)!important;
+    top:calc(var(--android-status-inset, 28px) + 22px)!important;
   }
   html.android-status-blend body.llm-thread.topbar-hidden #dgVoicePanel{
-    top:calc(var(--android-status-inset, 28px) + 72px)!important;
+    top:calc(var(--android-status-inset, 28px) + 58px)!important;
   }
   /* Visible overlay header covers y=0 of #sec-chat. Park Vesta just under
      the bar — same 12px / 48px offset it had when the header was in-flow. */
@@ -5179,6 +5179,8 @@ html[data-theme="trueblack"] .gen-doc-dl:hover{
   border-color:rgba(255,255,255,0.28)!important;
 }
 #buildModeBtn.active{opacity:0.95!important;border-color:rgba(255,255,255,0.35)!important;background:rgba(255,255,255,0.08)!important;}
+/* Hide the Build mode (coding agent) launcher on mobile — not a mobile flow. */
+body.bottom-nav #buildModeBtn{display:none!important;}
 .gen-build-preview{margin-top:12px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;background:rgba(8,8,14,0.72);width:100%;max-width:100%;box-sizing:border-box;}
 html[data-theme="trueblack"] .gen-build-preview{background:#000;border-color:rgba(255,255,255,0.12);}
 .gen-build-bar{display:flex;align-items:center;gap:4px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.08);}
@@ -87712,6 +87714,15 @@ html[data-theme="light"] #synGuideBtn{
   box-shadow:0 8px 20px rgba(0,0,0,0.12);
 }
 @media (max-width:480px){ #synGuideBtn .syn-guide-label{display:none;} #synGuideBtn{padding:10px;} }
+/* Mobile: the fixed bottom-left icon row (52px tall, z-index 301) sits at
+   bottom:0 — the same corner this button used (bottom:14px, z-index 150).
+   That's why it looked like it "disappeared": it was rendering underneath
+   the opaque/blurred nav row instead of floating above the page. Push it
+   above that row and raise its z-index past it. */
+body.bottom-nav #synGuideBtn{
+  bottom:calc(66px + env(safe-area-inset-bottom, 0px))!important;
+  z-index:305!important;
+}
 
 /* Small corner close — hidden until the pointer is actually on that spot. */
 .syn-guide-btn-toggle{
@@ -88089,6 +88100,60 @@ html[data-theme="light"] .syn-guide-footer-note{color:rgba(60,62,92,0.5);}
   .syn-guide-head{padding:20px 16px 14px;}
   .syn-guide-list{padding:2px 12px 14px;}
   .syn-guide-foot{padding:12px 16px 20px;}
+  /* The panel is a plain .modal-overlay (z-index:200) — the fixed bottom
+     icon row is z-index:301 and was sitting ON TOP of it, so the bottom of
+     the sheet (footer CTA, last list items) rendered underneath that row
+     and got visually clipped/hidden. Lift the whole sheet above it, and
+     pad the sticky header/footer for the status bar and home-indicator/
+     gesture-bar safe areas so nothing sits flush under either. */
+  #synGuideModal{z-index:310!important;}
+  #synGuideModal .modal{z-index:310!important;}
+  .syn-guide-status{padding-top:calc(10px + env(safe-area-inset-top, 0px))!important;}
+  .syn-guide-foot{padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px))!important;}
+
+  /* ── Guide sheet: true mobile layout ──
+     Full-screen (not a 94vw drawer with a dead strip), sized with dvh so the
+     Android URL/gesture bars can't push the footer off-screen, opaque enough
+     that text stays readable (60px backdrop blur is heavy + unreliable in
+     WebView), and every row reflowed so nothing overflows a 360px screen. */
+  #synGuideModal{align-items:stretch!important;justify-content:stretch!important;height:100vh;height:100dvh;bottom:auto!important;}
+  #synGuideModal .modal{
+    width:100vw!important;max-width:100vw!important;
+    height:100vh!important;height:100dvh!important;
+    border-left:none!important;box-shadow:none!important;
+    background:#15161e!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    overflow-x:hidden!important;overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+    animation-name:synGuideDrawerIn;
+  }
+  html[data-theme="light"] #synGuideModal .modal{background:#f3f4fc!important;}
+  .syn-guide-status{background:#15161e!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  .syn-guide-foot{background:#15161e!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;}
+  html[data-theme="light"] .syn-guide-status,
+  html[data-theme="light"] .syn-guide-foot{background:#f3f4fc!important;}
+
+  #synGuideModal .modal h3{font-size:21px;}
+  .syn-guide-intro{font-size:13px;margin-bottom:14px;}
+
+  /* Stat strip: 3 nowrap cells overflowed on narrow phones — stack the value
+     under a smaller label and let long values wrap. */
+  .syn-guide-meta-item{white-space:normal;padding:10px 4px;font-size:10.5px;text-align:center;overflow-wrap:anywhere;}
+  .syn-guide-meta-item b{font-size:8.5px;letter-spacing:0.1em;}
+
+  /* Begin-orientation row: hint + button side by side got squeezed. Stack. */
+  .syn-guide-play-row{flex-direction:column;align-items:stretch;gap:10px;}
+  .syn-guide-play-hint{text-align:center;}
+  .syn-guide-play{width:100%;padding:12px 16px;font-size:14px;min-height:44px;}
+
+  /* Module cards: tighter number gutter, 44px tap target, no hover-only FX */
+  .syn-guide-step{gap:10px;padding:12px 10px;min-height:56px;}
+  .syn-guide-num{width:26px;font-size:11px;}
+  .syn-guide-title{flex-wrap:wrap;font-size:13.5px;}
+  .syn-guide-desc{font-size:12.5px;line-height:1.5;overflow-wrap:anywhere;}
+  .syn-guide-go{width:32px;height:32px;}
+  .syn-guide-footer-note{font-size:11px;margin-bottom:10px;}
+  .syn-guide-cta{padding:14px 16px;font-size:14.5px;min-height:48px;}
 }
 body.syn-showcase-on .syn-guide-ring{
   box-shadow:0 0 26px rgba(62,232,188,0.55);
