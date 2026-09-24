@@ -1983,27 +1983,37 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
     min-height:0!important;
     overflow:hidden!important;
   }
-  /* Overlay header takes the bar out of flow, so the thread starts at y=0
+  /* The clearance below is a MARGIN on the scroller, not padding inside it.
+     Padding scrolls away with the content, so once a long thread was scrolled
+     the messages slid up underneath the floating header and its icons. With
+     a margin the scroll viewport itself begins below the header, so messages
+     clip at that line and the top gap stays put at any scroll position.
+     (JS that reserves map/calendar space reads this margin too.)
+     Overlay header takes the bar out of flow, so the thread starts at y=0
      of .main. Hidden bar: only clear the status/notch (fill the header
      strip). Visible bar: same gap as the old in-flow header — bar height
      (~60px) + 12px air — so the first name/msg is not tight under it. */
   body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
   body.topbar-hidden.llm-thread .chat-messages,
   body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    padding-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
+    margin-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
+    padding-top:0!important;transition:margin-top .25s ease!important;
   }
   html.android-status-blend body.llm-thread.topbar-hidden #sec-chat.active .chat-messages,
   html.android-status-blend body.topbar-hidden.llm-thread .chat-messages,
   html.android-status-blend body.bottom-nav.llm-thread.topbar-hidden .chat-messages{
-    padding-top:calc(var(--android-status-inset, 28px) + 40px)!important;
+    margin-top:calc(var(--android-status-inset, 28px) + 40px)!important;
+    padding-top:0!important;
   }
   body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
   body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    padding-top:calc(env(safe-area-inset-top, 0px) + 72px)!important;
+    margin-top:calc(env(safe-area-inset-top, 0px) + 72px)!important;
+    padding-top:0!important;transition:margin-top .25s ease!important;
   }
   html.android-status-blend body.llm-thread:not(.topbar-hidden) #sec-chat.active .chat-messages,
   html.android-status-blend body.bottom-nav.llm-thread:not(.topbar-hidden) .chat-messages{
-    padding-top:calc(var(--android-status-inset, 28px) + 72px)!important;
+    margin-top:calc(var(--android-status-inset, 28px) + 72px)!important;
+    padding-top:0!important;
   }
   /* ── Home input: desktop-style rectangle on mobile ── */
   .input-box{background:rgba(0,0,0,0.62)!important;border:1px solid rgba(255,255,255,0.1)!important;}
@@ -10495,16 +10505,20 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     var bounds=art.getBoundingClientRect(),width=root.clientWidth,height=root.clientHeight;
     var centerX=bounds.left+836*baseScale,centerY=bounds.top+835*baseScale,surfaceRadius=683*baseScale;
     var touchX=event&&event.detail?event.clientX:centerX,touchY=event&&event.detail?event.clientY:centerY;
-    var snapshot=document.createElement('canvas');snapshot.width=width;snapshot.height=height;
-    var shot=snapshot.getContext('2d');shot.fillStyle='#000';shot.fillRect(0,0,width,height);
+    // Back every crossing surface with physical pixels. CSS-pixel-sized canvases get
+    // upscaled by devicePixelRatio on phones, which is what made the text and the
+    // whole scene go soft the moment the entrance was tapped.
+    var dpr=Math.min(3,Math.max(1,window.devicePixelRatio||1)),pw=Math.round(width*dpr),ph=Math.round(height*dpr);
+    var snapshot=document.createElement('canvas');snapshot.width=pw;snapshot.height=ph;
+    var shot=snapshot.getContext('2d');shot.setTransform(pw/width,0,0,ph/height,0,0);shot.imageSmoothingQuality='high';shot.fillStyle='#000';shot.fillRect(0,0,width,height);
     shot.drawImage(wideStars,0,0,width,height);
     shot.drawImage(canvas,bounds.left,bounds.top,bounds.width,bounds.height);
     shot.drawImage(brandCanvas,bounds.left+605*baseScale,bounds.top+908*baseScale,465*baseScale,142*baseScale);
-    var fadeMask=document.createElement('canvas');fadeMask.width=width;fadeMask.height=height;
-    fadeMask.getContext('2d').drawImage(cleanSurface,bounds.left,bounds.top,bounds.width,bounds.height);
+    var fadeMask=document.createElement('canvas');fadeMask.width=pw;fadeMask.height=ph;
+    var maskCtx=fadeMask.getContext('2d');maskCtx.setTransform(pw/width,0,0,ph/height,0,0);maskCtx.imageSmoothingQuality='high';maskCtx.drawImage(cleanSurface,bounds.left,bounds.top,bounds.width,bounds.height);
     portalGlass=document.createElement('canvas');portalGlass.setAttribute('aria-hidden','true');
     portalGlass.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
-    portalGlass.width=width;portalGlass.height=height;root.appendChild(portalGlass);
+    portalGlass.width=pw;portalGlass.height=ph;root.appendChild(portalGlass);
     var gl=portalGlass.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false,depth:false});
     var renderSurface=null;
     if(gl){try{
@@ -10569,14 +10583,14 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,fadeMask);gl.uniform1i(gl.getUniformLocation(program,'fadeMask'),1);
       gl.uniform2f(gl.getUniformLocation(program,'viewport'),width,height);gl.uniform2f(gl.getUniformLocation(program,'center'),centerX,centerY);
       gl.uniform2f(gl.getUniformLocation(program,'touch'),touchX,touchY);gl.uniform1f(gl.getUniformLocation(program,'radius'),surfaceRadius);
-      var timeUniform=gl.getUniformLocation(program,'seconds');gl.viewport(0,0,width,height);
+      var timeUniform=gl.getUniformLocation(program,'seconds');gl.viewport(0,0,pw,ph);
       renderSurface=function(seconds){gl.uniform1f(timeUniform,seconds);gl.drawArrays(gl.TRIANGLES,0,6);};
       renderSurface(0);art.style.visibility='hidden';root.style.setProperty('background','transparent','important');
     }catch(error){renderSurface=null;portalGlass.remove();portalGlass=null;}}
     if(!renderSurface){
       // The fallback also passes through an opaque surface, with no dissolve.
       if(portalGlass)portalGlass.remove();
-      portalGlass=document.createElement('canvas');portalGlass.width=width;portalGlass.height=height;
+      portalGlass=document.createElement('canvas');portalGlass.width=pw;portalGlass.height=ph;
       portalGlass.setAttribute('aria-hidden','true');portalGlass.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
       root.appendChild(portalGlass);var fallback=portalGlass.getContext('2d');
       art.style.visibility='hidden';root.style.transformOrigin=centerX+'px '+centerY+'px';
@@ -11263,6 +11277,23 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
    applyBLIconLayout), not px offsets — a static left here would otherwise
    physically shift a relative-positioned element off its flex slot. */
 #bnavBLRow>button{position:relative!important;bottom:auto!important;left:auto!important;top:auto!important;right:auto!important;}
+/* Neutral icon colour for the whole bottom-left row. Every icon here used to
+   default to a lavender stroke (rgba(160,163,220)); only six of the eight were
+   overridden to neutral, and only under True Black, so Settings, Control
+   Centre and the ooo button kept the purple tint. One rule set for all of
+   them, in every theme: same white the True Black icons already use. */
+#bnavBLRow > button svg{stroke:rgba(255,255,255,0.55);}
+#bnavBLRow > #bnavBLMoreBtn{color:rgba(255,255,255,0.55);}
+@media (hover:hover) and (pointer:fine){
+  #bnavBLRow > button:hover:not(.active) svg{stroke:rgba(255,255,255,0.85);}
+  #bnavBLRow > #bnavBLMoreBtn:hover{color:rgba(255,255,255,0.85);}
+  #bnavBLRow > #bnavNotesBtn:hover{background:rgba(255,255,255,0.035);}
+}
+/* Selected state: purple wash / purple stroke -> neutral. Pulse keeps its teal
+   'on' colour and the unread dots keep their colours (those carry meaning). */
+#bnavBLRow > #bnavNotesBtn.active{background:rgba(255,255,255,0.055)!important;}
+#bnavBLRow > #bnavNotesBtn.active svg,
+#bnavBLRow > #bnavAskBtn.active svg{stroke:rgba(255,255,255,0.92);}
 </style>
 <div id="bnavBLRow">
 <button id="bnavNotesBtn" onclick="goNotes()" aria-label="Notes" style="display:none;opacity:0;pointer-events:none;height:52px;width:48px;background:transparent;border:none;border-radius:0;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(160,163,220,0.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
@@ -32840,7 +32871,7 @@ function groqStripThink(raw){
         var msgsPadTop = 0, msgsPadBottom = 0;
         if(msgsEl){
           var _msgsCs = getComputedStyle(msgsEl);
-          msgsPadTop = parseFloat(_msgsCs.paddingTop) || 0;
+          msgsPadTop = (parseFloat(_msgsCs.paddingTop) || 0) + (parseFloat(_msgsCs.marginTop) || 0);
           msgsPadBottom = parseFloat(_msgsCs.paddingBottom) || 0;
         }
         if(gapAbove <= gapBelow){
@@ -34250,7 +34281,7 @@ function groqStripThink(raw){
       var msgsPadTop = 0, msgsPadBottom = 0;
       if(msgsEl){
         var _msgsCs = getComputedStyle(msgsEl);
-        msgsPadTop = parseFloat(_msgsCs.paddingTop) || 0;
+        msgsPadTop = (parseFloat(_msgsCs.paddingTop) || 0) + (parseFloat(_msgsCs.marginTop) || 0);
         msgsPadBottom = parseFloat(_msgsCs.paddingBottom) || 0;
       }
       if(anchoredTop){
@@ -72153,7 +72184,6 @@ function speakVoiceReply(text) {
     try { _setTopNavVoiceActive(false); } catch(e2){}
   };
   window.toggleTopNavVoice = function() {
-    if(!_on && !(typeof isPro==='function' && isPro())){if(window.avaPreviewRequestLive)window.avaPreviewRequestLive();return;}
     // Only a real user toggle releases the showcase mic lock. Showcase
     // teardown also toggles voice off internally, so it marks that cleanup
     // path to prevent delayed TTS callbacks from reopening the mic.
