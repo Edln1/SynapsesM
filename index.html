@@ -1993,11 +1993,14 @@ body:has(#authModal[style*="flex"]) #bnavControlCenterBtn{
      of .main. Hidden bar: only clear the status/notch (fill the header
      strip). Visible bar: same gap as the old in-flow header — bar height
      (~60px) + 12px air — so the first name/msg is not tight under it. */
-  /* Floor: guarantees clearance even if body is missing .llm-thread/.topbar-hidden
-     for any reason (timing, a state the class logic doesn't cover, etc). The
-     more specific rules below still win when those classes ARE present. Fewer
-     classes than the rules below on purpose, so it never fights them. */
-  body.bottom-nav #sec-chat.active .chat-messages{
+  /* Floor: guarantees clearance even if body is missing .topbar-hidden for any
+     reason (timing, a state the class logic doesn't cover, etc). Requires
+     .llm-thread too, so it never fires outside an actual conversation — that
+     was the earlier bug: without requiring llm-thread, this also fired in the
+     normal (non-overlay-header) state and shoved .chat-messages down when it
+     shouldn't have, dragging #dgVoiceToggle out of its normal-layout position
+     along with it. The more specific rules below still win when they match. */
+  body.bottom-nav.llm-thread #sec-chat.active .chat-messages{
     margin-top:calc(env(safe-area-inset-top, 0px) + 40px)!important;
     padding-top:0!important;
   }
