@@ -87752,14 +87752,33 @@ html[data-theme="light"] #synGuideBtn{
    That's why it looked like it "disappeared": it was rendering underneath
    the opaque/blurred nav row instead of floating above the page. Push it
    above that row and raise its z-index past it. */
+/* Mobile: ALWAYS the tiny, low-key "?" tucked in the very bottom-right corner —
+   never the full pill, never animated, never popping up. */
 @media (max-width:768px), (pointer:coarse){
+  #synGuideBtn,
+  #synGuideBtn.syn-guide-mini,
   #synGuideBtn.syn-guide-mini.syn-guide-linger,
-  #synGuideBtn.syn-guide-mini.syn-guide-nudge{opacity:0!important;}
-  #synGuideBtn .syn-guide-mini-q{animation:none!important;}
-}
-body.bottom-nav #synGuideBtn{
-  bottom:calc(66px + env(safe-area-inset-bottom, 0px))!important;
-  z-index:305!important;
+  #synGuideBtn.syn-guide-mini.syn-guide-nudge,
+  html[data-theme="trueblack"] #synGuideBtn,
+  html[data-theme="light"] #synGuideBtn{
+    right:6px!important;left:auto!important;
+    bottom:calc(4px + env(safe-area-inset-bottom, 0px))!important;
+    z-index:305!important;
+    padding:6px 9px!important;
+    background:transparent!important;border:none!important;box-shadow:none!important;
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+    opacity:0.3!important;transform:none!important;animation:none!important;
+    transition:none!important;
+  }
+  #synGuideBtn .syn-guide-full-icon,
+  #synGuideBtn .syn-guide-label,
+  #synGuideBtn .syn-guide-btn-toggle{display:none!important;}
+  #synGuideBtn .syn-guide-mini-q{
+    display:inline-block!important;opacity:1!important;transform:none!important;
+    animation:none!important;text-shadow:none!important;
+    font-size:12px!important;color:rgba(170,170,182,0.9)!important;
+  }
+  html[data-theme="light"] #synGuideBtn .syn-guide-mini-q{color:rgba(90,90,110,0.9)!important;}
 }
 
 /* Small corner close — hidden until the pointer is actually on that spot. */
@@ -88151,6 +88170,7 @@ html[data-theme="light"] .syn-guide-footer-note{color:rgba(60,62,92,0.5);}
 
   /* While the Guide is open, hide the floating chrome (top-middle logo,
      top-right toggle, Voice pill + its panel) so nothing sits on top of it. */
+  .syn-guide-hid{visibility:hidden!important;pointer-events:none!important;}
   body.syn-guide-open .top-bar,
   body.syn-guide-open #bnavLogoMark,
   body.syn-guide-open #winStrip,
@@ -88763,7 +88783,53 @@ function closeSynGuide(){
 (function(){
   var m = document.getElementById('synGuideModal');
   if(!m || !window.MutationObserver) return;
-  function sync(){ document.body.classList.toggle('syn-guide-open', m.style.display === 'flex'); }
+  function _restore(){
+    var hs = document.querySelectorAll('.syn-guide-hid');
+    for(var i=0;i<hs.length;i++) hs[i].classList.remove('syn-guide-hid');
+  }
+  /* Anything with a higher stacking order than the sheet (top-left icon, etc.)
+     paints over it. Probe a grid of points; every element hit BEFORE we reach
+     the sheet itself is sitting on top of it — hide it while the Guide is open. */
+  function _hideAbove(){
+    try{
+      if(m.style.display !== 'flex') return;
+      if(!window.matchMedia('(max-width:768px), (pointer:coarse)').matches) return;
+      var W = window.innerWidth, H = window.innerHeight, seen = [];
+      for(var y=4; y<H; y+=Math.max(18, Math.round(H/40))){
+        for(var x=4; x<W; x+=Math.max(18, Math.round(W/16))){
+          var list = document.elementsFromPoint(x, y);
+          for(var k=0;k<list.length;k++){
+            var el = list[k];
+            if(m.contains(el)) break;
+            if(el === document.documentElement || el === document.body || el.contains(m)) continue;
+            if(seen.indexOf(el) === -1) seen.push(el);
+          }
+        }
+      }
+      /* Second pass: elementsFromPoint skips pointer-events:none elements (the
+         home page's decorative top-left icon can be one). Sweep the top strip
+         directly for any small element sitting there and hide it too. */
+      var all = document.body.getElementsByTagName('*');
+      for(var q=0;q<all.length;q++){
+        var e2 = all[q];
+        if(m.contains(e2) || e2.contains(m)) continue;
+        var tg = e2.tagName;
+        if(tg==='SCRIPT'||tg==='STYLE'||tg==='LINK'||tg==='META'||tg==='HEAD') continue;
+        var r = e2.getBoundingClientRect();
+        if(r.width < 2 || r.height < 2 || r.width > 220 || r.height > 120) continue;
+        if(r.top >= 0 && r.bottom <= 110 && r.right > 0 && r.left < W){
+          if(seen.indexOf(e2) === -1) seen.push(e2);
+        }
+      }
+      for(var j=0;j<seen.length;j++) seen[j].classList.add('syn-guide-hid');
+    }catch(_e){}
+  }
+  function sync(){
+    var open = m.style.display === 'flex';
+    document.body.classList.toggle('syn-guide-open', open);
+    if(open){ _hideAbove(); setTimeout(_hideAbove, 120); setTimeout(_hideAbove, 480); }
+    else _restore();
+  }
   new MutationObserver(sync).observe(m, {attributes:true, attributeFilter:['style']});
   sync();
 })();
