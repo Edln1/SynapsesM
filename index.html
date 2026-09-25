@@ -4165,6 +4165,8 @@ html[data-theme="trueblack"] .chp-item:hover{background:rgba(255,255,255,0.07)!i
 #chatHistoryDropdown.open{display:block;}
 .chd-item{padding:8px 8px 8px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s;}
 .chd-item:hover{background:rgba(124,106,247,0.12);}
+/* True Black only: swap the purple hover for the same white/grey used by .chp-item above, to match the monochrome theme. */
+html[data-theme="trueblack"] .chd-item:hover{background:rgba(255,255,255,0.07)!important;}
 .chd-item-label{font-size:12.5px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .chd-item-actions{display:flex;align-items:center;justify-content:flex-end;gap:0;flex-shrink:0;width:44px;opacity:0;pointer-events:none;}
 .chd-item:hover .chd-item-actions,.chd-item.chd-actions-on .chd-item-actions{opacity:1;pointer-events:auto;}
@@ -8871,6 +8873,7 @@ html[data-theme="trueblack"] #nbCol1 > div:first-child,
 html[data-theme="trueblack"] #nbCol2 > div:first-child,
 html[data-theme="trueblack"] #notesTopBar{
   border-bottom-color:rgba(255,255,255,0.08)!important;
+  background:#000000!important;
 }
 html[data-theme="trueblack"] #nbCol1 > div:first-child span,
 html[data-theme="trueblack"] #nbPagesLabel{color:rgba(255,255,255,0.35)!important;}
@@ -8883,6 +8886,39 @@ html[data-theme="trueblack"] #sec-notes .nb-mobile-back{
 }
 html[data-theme="trueblack"] #sec-notes > div:last-child,
 html[data-theme="trueblack"] #notesEditorWrap{background:#000000!important;}
+/* Action-steps note pages default to the purple look for the WHOLE Notes page
+   (notebooks/pages sidebars, topbar and editor) — see toggleDayNight /
+   _nbSyncActionPlanView, which set data-ap-theme="purple" on #sec-notes.
+   Higher specificity than the flat-black/monochrome rules above and below, so
+   these win whenever that attribute is present; the page's local toggle can
+   switch it to "black", which drops back to the normal True Black rules. */
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol1{background:rgba(7,8,16,0.98)!important;border-right-color:rgba(79,86,200,0.15)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol2{background:rgba(9,10,19,0.97)!important;border-right-color:rgba(79,86,200,0.12)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol1 > div:first-child{border-bottom-color:rgba(79,86,200,0.12)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol2 > div:first-child{border-bottom-color:rgba(79,86,200,0.10)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesTopBar{border-bottom-color:rgba(79,86,200,0.10)!important;background:rgba(10,11,20,0.99)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol1 > div:first-child span{color:rgba(99,102,195,0.55)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbPagesLabel{color:rgba(99,102,195,0.5)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbCol1 > div:first-child button,
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbAddPageBtn,
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] .nb-mobile-back{
+  background:rgba(79,86,200,0.14)!important;
+  border-color:rgba(79,86,200,0.3)!important;
+  color:rgba(190,193,235,0.8)!important;
+}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] > div:last-child,
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesEditorWrap{background:rgba(10,11,20,0.99)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesPageTitle{color:rgba(220,222,255,0.92)!important;caret-color:#a78bfa!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesEditor{color:rgba(235,237,255,0.95)!important;caret-color:#a78bfa!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesSaveIndicator{color:rgba(99,102,195,0.4)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #notesEditor:empty:before{color:rgba(99,102,195,0.3)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbFormatBar button{color:rgba(160,160,210,0.5)!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbFormatBar button:hover{color:#a78bfa!important;}
+html[data-theme="trueblack"] #sec-notes[data-ap-theme="purple"] #nbFormatBar span{background:rgba(79,86,200,0.2)!important;}
+/* The shared app .top-bar (logo/title/day-night toggle) lives outside
+   #sec-notes, so the rules above never reach it — see _nbApplyTopBarTheme,
+   which mirrors the purple/black state onto <body> for this. */
+html[data-theme="trueblack"] body.notes-ap-topbar-purple .top-bar{background:rgba(10,11,20,0.99)!important;border-bottom-color:rgba(79,86,200,0.15)!important;}
 html[data-theme="trueblack"] #notesPageTitle{color:rgba(255,255,255,0.92)!important;caret-color:#ffffff!important;}
 html[data-theme="trueblack"] #notesEditor{color:rgba(255,255,255,0.88)!important;caret-color:#ffffff!important;}
 html[data-theme="trueblack"] #notesSaveIndicator{color:rgba(255,255,255,0.35)!important;}
@@ -23588,6 +23624,10 @@ function setView(id){
   if(window._deepSpaceAurora && typeof window._deepSpaceAurora.sync === 'function') window._deepSpaceAurora.sync();
 
   document.querySelectorAll('.section').forEach(function(s){ if(s.id !== id) s.classList.remove('active'); });
+  // Leaving Notes must also drop the global top-bar's purple override (see
+  // _nbApplyTopBarTheme) — it's only meant to apply while an action-steps
+  // note page is actually the visible page.
+  if(id !== 'sec-notes' && typeof _nbApplyTopBarTheme === 'function') _nbApplyTopBarTheme(false);
   if(id!=='sec-chat'){ if(window._avaOrbRaf){cancelAnimationFrame(window._avaOrbRaf);window._avaOrbRaf=null;} var _ob=document.getElementById('avaGlowToggle');if(_ob)_ob.classList.remove('orb-active'); }
   // Kill orbit loop and hide orb when leaving chat
   var el=document.getElementById(id);
@@ -45879,9 +45919,26 @@ async function sendMessage(){
       try{
         if(!_isResearchReply && !_streamStopped && reply && reply.length > 120){
           var _tail = reply.replace(/\s+$/,'');
-          var _dangling = /(^|\n)[ \t]*(?:[*\-\u2022]|\d+[.)])?[ \t]*(?:\*\*|__|\*|_)?[ \t]*$/.test(_tail)   // bare bullet / number / lone ** on the last line
+          // OLD BUG: this only recognized a few explicit dangling shapes (bare bullet,
+          // empty heading, trailing :/;/—) and silently passed anything that just
+          // stopped on an ordinary word — which is exactly what a token-ceiling or
+          // dropped-stream truncation looks like ("...whose specific", "...heals on").
+          // Real, finished answers end on sentence-terminal punctuation (optionally
+          // followed by a closing quote/paren/bracket), a closed code fence, or a
+          // trailing emoji — so flip the check: anything else is cut off, EXCEPT a
+          // short (<=6 word) bullet/number label, since those are routinely written
+          // without a trailing period on purpose (e.g. "- Faster iteration").
+          var _lastLine = _tail.split('\n').pop();
+          var _lastLineWords = (_lastLine.match(/\S+/g)||[]).length;
+          var _isShortLabelLine = _lastLineWords > 0 && _lastLineWords <= 6
+                       && /^[ \t]*(?:[*\-\u2022]|\d+[.)])[ \t]+\S/.test(_lastLine);
+          var _endsClean = _isShortLabelLine
+                         || /[.!?][\"'\u201d\u2019\)\]]*$/.test(_tail)
+                         || /```[ \t]*$/.test(_tail)
+                         || /[\u{1F300}-\u{1FAFF}\u2600-\u27BF]$/u.test(_tail);
+          var _dangling = !_endsClean
+                       || /(^|\n)[ \t]*(?:[*\-\u2022]|\d+[.)])?[ \t]*(?:\*\*|__|\*|_)?[ \t]*$/.test(_tail)   // bare bullet / number / lone ** on the last line
                        || /(^|\n)[ \t]*#{1,6}[ \t]+[^\n]*$/.test(_tail)                                     // ends on a heading with no body
-                       || /[:,;\u2014-]$/.test(_tail)                                                           // ends mid-thought
                        || ((_tail.match(/\*\*/g)||[]).length % 2 === 1);                                       // unclosed bold
           var _cutOff = (data && (data._finish === 'length' || data._midStreamErr)) || _dangling;
           if(_cutOff){
@@ -51286,6 +51343,12 @@ var _nb = {
   activePg: 0,
   saveTimer: null
 };
+// Action-steps note pages default to the "purple" look even when the app's
+// global theme is True Black (the top-right toggle can flip a given page back
+// to black — see toggleDayNight — but re-opening/switching pages resets to
+// purple by default, per product ask).
+var _nbApBlackOverride = false; // true = user chose black for the CURRENT action-plan page
+var _nbApLastPlanKey = null;    // notebook/page key the override above applies to
 
 var NB_KEY = 'synapses_nb4';
 var QN_LOCK_KEY = 'synapses_qn_locked';
@@ -52046,10 +52109,18 @@ function _nbRenderActionPlanHtml(plan){
     + '<button type="button" onclick="nbClearActionPlan()">Keep as a plain note</button>'
     + '</div>';
 }
+// The global .top-bar (logo/title/day-night toggle) sits outside #sec-notes
+// entirely, so the data-ap-theme attribute on #sec-notes never reaches it —
+// it needs its own explicit hook. This mirrors the current purple/black
+// state onto <body> so a plain CSS rule can pick it up.
+function _nbApplyTopBarTheme(purple){
+  try{ document.body.classList.toggle('notes-ap-topbar-purple', !!purple); }catch(e){}
+}
 function _nbSyncActionPlanView(){
   var page = _nbCurrentPage();
   var view = document.getElementById('nbActionPlanView');
   var wrap = document.getElementById('notesEditorWrap');
+  var secNotes = document.getElementById('sec-notes');
   var btn = document.getElementById('nbTurnStepsBtn');
   var speak = document.getElementById('nbAvaSpeakBtn');
   var plan = page && page.actionPlan;
@@ -52059,10 +52130,23 @@ function _nbSyncActionPlanView(){
       view.innerHTML = _nbRenderActionPlanHtml(plan);
       view.classList.add('on');
       if(wrap) wrap.classList.add('has-action-plan');
+      // Default to the purple look each time a DIFFERENT page's plan is opened;
+      // a manual black choice (top-right toggle) sticks only while that same
+      // page stays open.
+      var _apKey = _nb.activeNb + '/' + _nb.activePg;
+      if(_apKey !== _nbApLastPlanKey){
+        _nbApBlackOverride = false;
+        _nbApLastPlanKey = _apKey;
+      }
+      if(secNotes) secNotes.setAttribute('data-ap-theme', _nbApBlackOverride ? 'black' : 'purple');
+      _nbApplyTopBarTheme(!_nbApBlackOverride);
     } else {
       view.innerHTML = '';
       view.classList.remove('on');
-      if(wrap) wrap.classList.remove('has-action-plan');
+      if(wrap){ wrap.classList.remove('has-action-plan'); }
+      if(secNotes) secNotes.removeAttribute('data-ap-theme');
+      _nbApLastPlanKey = null;
+      _nbApplyTopBarTheme(false);
     }
   }
   if(btn){
@@ -58421,6 +58505,26 @@ setTimeout(function(){
 
 // ── Day / Night toggle ──────────────────────────────────────────
 function toggleDayNight(){
+  // Action-steps note pages force the purple look by default (see
+  // _nbSyncActionPlanView) even on the True Black theme. While one of those
+  // pages is open, this button flips ONLY that page's local look between
+  // purple (default) and true black, instead of the normal light/dark swap —
+  // it never touches the global theme, so leaving/reopening the page goes
+  // back to purple by default.
+  var _apWrap = document.getElementById('notesEditorWrap');
+  var _apSecNotes = document.getElementById('sec-notes');
+  // NOTE: 'has-action-plan' is only cleared when the currently-open note itself
+  // loses its plan — it is NOT cleared just by navigating away from Notes. So we
+  // also require #sec-notes to actually be the visible/active section here;
+  // otherwise this branch kept firing (and silently no-opping) on every other
+  // page after merely having viewed an action-steps note once, which is what
+  // made the toggle look "stuck" back on the main app.
+  if(_apWrap && _apSecNotes && _apSecNotes.classList.contains('active') && _apWrap.classList.contains('has-action-plan') && (localStorage.getItem('_appTheme')||'trueblack') === 'trueblack'){
+    _nbApBlackOverride = !_nbApBlackOverride;
+    if(_apSecNotes) _apSecNotes.setAttribute('data-ap-theme', _nbApBlackOverride ? 'black' : 'purple');
+    _nbApplyTopBarTheme(!_nbApBlackOverride);
+    return;
+  }
   var cur = localStorage.getItem('_appTheme') || 'trueblack';
   // Moon side isn't a single fixed theme anymore — it's whichever dark theme (True
   // Black or Dark Mode) was last chosen in profile settings, so the toggle always
