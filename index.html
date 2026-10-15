@@ -93481,9 +93481,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatMini:hover{background:#17171b;border-color:#ffffff44}
 #avaFloatMini:focus-visible{outline:2px solid #b5b5bf;outline-offset:3px}
 #avaFloatButton:focus-visible{outline:2px solid #b5b5bf;outline-offset:4px}
-#avaFloatButton .af-character{transform-origin:66px 66px}
-#avaFloatButton .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 7.3s infinite}
-#avaFloatButton .af-pupil{transition:transform .4s ease}
+#avaFloatButton .af-character,#avaFloatMini .af-character{transform-origin:66px 66px;animation:af-breathe 4.2s ease-in-out infinite}
+#avaFloatButton .af-eye,#avaFloatMini .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 4.6s infinite}
+#avaFloatButton .af-pupil,#avaFloatMini .af-pupil{animation:af-look 7.2s ease-in-out infinite}
+#avaFloatButton .af-smile,#avaFloatMini .af-smile{transform-box:fill-box;transform-origin:center;animation:af-smile 6.8s ease-in-out infinite}
 #avaFloatingAssistant[data-mood="curious"] .af-pupil{transform:translate(1px,-1px)}
 #avaFloatingAssistant[data-mood="voice"] .af-smile{stroke-width:3.4}
 #avaFloatButton:hover>svg,#avaFloatButton:focus-visible>svg,#avaFloatingAssistant[data-open="true"] #avaFloatButton>svg{animation-play-state:paused}
@@ -93533,8 +93534,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatTools{width:100%;margin-top:8px;min-height:44px;color:#a5a5ae;background:transparent;border-color:transparent;padding:9px 12px}
 #avaFloatTools svg:last-child{margin-left:auto;width:14px;height:14px}
 #avaFloatRoam{display:block;min-height:44px;width:100%;margin-top:3px;border:0;border-top:1px solid #ffffff0d;background:transparent;color:#81818a;font:400 10.5px 'DM Sans',sans-serif;text-align:center;cursor:pointer;padding:12px 8px 3px}
-@keyframes af-blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
-@media(prefers-reduced-motion:reduce){#avaFloatButton>svg,#avaFloatButton .af-eye{animation:none!important}#avaFloatButton .af-pupil{transition:none!important}}
+@keyframes af-breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.6px) scale(1.018)}}
+@keyframes af-blink{0%,19%,25%,29%,33%,72%,78%,100%{transform:scaleY(1)}22%,31%,75%{transform:scaleY(.06)}}
+@keyframes af-look{0%,37%,100%{transform:translate(0,0)}45%,55%{transform:translate(2px,-1px)}65%,76%{transform:translate(-1.5px,0)}}
+@keyframes af-smile{0%,42%,62%,100%{transform:translateY(0) scaleX(1)}51%{transform:translateY(-.9px) scaleX(1.18)}}
+@media(prefers-reduced-motion:reduce){#avaFloatButton .af-character,#avaFloatButton .af-eye,#avaFloatButton .af-pupil,#avaFloatButton .af-smile,#avaFloatMini .af-character,#avaFloatMini .af-eye,#avaFloatMini .af-pupil,#avaFloatMini .af-smile{animation:none!important}}
 </style>
 <aside id="avaFloatingAssistant" aria-label="Ava assistant shortcuts" hidden>
  <button type="button" id="avaFloatButton" aria-label="Open Ava" aria-haspopup="dialog" aria-controls="avaFloatPopover" aria-expanded="false"><svg class="af-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="af-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="af-pupil" fill="#242420"><ellipse class="af-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="af-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="af-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></button>
@@ -93586,8 +93590,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   return{size:size,minX:minX,maxX:maxX,minY:Math.max(8,baseY-38),maxY:baseY+4,baseX:maxX,baseY:baseY,perches:[{x:maxX,y:baseY},{x:Math.max(minX,maxX-42),y:baseY},{x:minX,y:baseY},{x:Math.max(minX,maxX-20),y:baseY}]};
  }
  function menuAnchor(rect,width,height,pw,ph){return{x:clamp(rect.right-pw,16,Math.max(16,width-pw-16)),y:clamp(rect.top-ph-12,16,Math.max(16,height-ph-16))};}
- function near(rect,x,y){return x>=rect.left-104&&x<=rect.right+104&&y>=rect.top-92&&y<=rect.bottom+92;}
- function hopFrames(from,to,minY,maxY){var dx=to.x-from.x,lower=Number.isFinite(minY)?minY:-Infinity,upper=Number.isFinite(maxY)?maxY:Infinity,frames=[{x:from.x,y:from.y,offset:0},{x:from.x,y:from.y+2,offset:.14}];for(var i=0;i<=8;i++){var p=i/8;frames.push({x:from.x+dx*p,y:from.y+(to.y-from.y)*p-108*p*(1-p),offset:.2+p*.58});}frames.push({x:to.x,y:to.y+2.5,offset:.87},{x:to.x,y:to.y,offset:1});return frames.map(function(p){p.y=clamp(p.y,lower,upper);return p;});}
+ function near(rect,x,y){return x>=rect.left-48&&x<=rect.right+48&&y>=rect.top-42&&y<=rect.bottom+42;}
+ function hopFrames(from,to,minY,maxY){var dx=to.x-from.x,peak=clamp(Math.abs(dx)*.32,10,27),lower=Number.isFinite(minY)?minY:-Infinity,upper=Number.isFinite(maxY)?maxY:Infinity,frames=[{x:from.x,y:from.y,offset:0},{x:from.x,y:from.y+2,offset:.14}];for(var i=0;i<=8;i++){var p=i/8;frames.push({x:from.x+dx*p,y:from.y+(to.y-from.y)*p-4*peak*p*(1-p),offset:.2+p*.58});}frames.push({x:to.x,y:to.y+2.5,offset:.87},{x:to.x,y:to.y,offset:1});return frames.map(function(p){p.y=clamp(p.y,lower,upper);return p;});}
  function currentGeometry(){var input=document.getElementById('inputBox');return geometry(window.innerWidth,window.innerHeight,visible(input)?input.getBoundingClientRect():null);}
  function canRoam(){return roamEnabled&&!minimized&&!motion.matches&&!document.hidden&&!root.hidden&&!opened&&!window.__avaCompanionChatOpen&&!voiceActive()&&!editing()&&!hovered&&!blocked()&&!(root.contains(document.activeElement)&&document.activeElement.matches(':focus-visible'))&&Date.now()>=freezeUntil&&!(lastPointer&&near(root.getBoundingClientRect(),lastPointer.x,lastPointer.y));}
  function scheduleRoam(delay){clearTimeout(roamTimer);roamTimer=0;if(!minimized)roamTimer=setTimeout(roamTick,delay||2800);}
@@ -93600,15 +93604,16 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  }
  function controlAt(point){if(!document.elementsFromPoint)return false;return document.elementsFromPoint(point.x+31,point.y+31).filter(function(el){return !root.contains(el);}).some(function(el){return !!el.closest('button,a,input,textarea,select,[role="button"],[contenteditable="true"]');});}
  function roamTick(){
-  roamTimer=0;if(!canRoam()){scheduleRoam(2200);return;}
+  roamTimer=0;if(!canRoam()){scheduleRoam(1100);return;}
   var g=currentGeometry(),next=null,frames=null,rect=root.getBoundingClientRect(),from={x:rect.left,y:rect.top};
   for(var tries=0;tries<g.perches.length;tries++){perchIndex=(perchIndex+1)%g.perches.length;var point=g.perches[perchIndex],arc=hopFrames(from,point,g.minY,g.maxY);if(Math.hypot(from.x-point.x,from.y-point.y)>7&&arc.every(function(p){return p.x>=g.minX&&p.x<=g.maxX&&p.y>=g.minY&&p.y<=g.maxY&&!controlAt(p);})){next=point;frames=arc;break;}}
   if(!next||typeof root.animate!=='function'){scheduleRoam(2600);return;}
   root.dataset.frozen='false';root.dataset.travel='true';root.dataset.motionZone='bottom-right';traveling=true;root.style.transition='none';
-  var animation=root.animate(frames.map(function(p){return{left:p.x+'px',top:p.y+'px',offset:p.offset};}),{duration:760,easing:'linear',fill:'forwards'});hopAnimation=animation;
-  var face=button.querySelector('svg');if(face&&typeof face.animate==='function')poseAnimation=face.animate([{transform:'scale(1,1)',offset:0},{transform:'scale(1.07,.93)',offset:.15},{transform:'scale(.97,1.035)',offset:.48},{transform:'scale(1.045,.96)',offset:.84},{transform:'scale(1,1)',offset:1}],{duration:760,easing:'ease-in-out'});
-  function settle(){if(hopAnimation!==animation)return;clearTimeout(travelTimer);travelTimer=0;root.style.left=next.x+'px';root.style.top=next.y+'px';animation.onfinish=null;animation.cancel();hopAnimation=null;if(poseAnimation){poseAnimation.cancel();poseAnimation=null;}traveling=false;root.dataset.travel='false';scheduleRoam(2600);}
-  animation.onfinish=settle;travelTimer=setTimeout(settle,900);
+  var duration=620+Math.min(150,Math.abs(next.x-from.x)*1.2);
+  var animation=root.animate(frames.map(function(p){return{left:p.x+'px',top:p.y+'px',offset:p.offset};}),{duration:duration,easing:'linear',fill:'forwards'});hopAnimation=animation;
+  var face=button.querySelector('svg');if(face&&typeof face.animate==='function')poseAnimation=face.animate([{transform:'scale(1,1)',offset:0},{transform:'scale(1.07,.93)',offset:.15},{transform:'scale(.97,1.035)',offset:.48},{transform:'scale(1.045,.96)',offset:.84},{transform:'scale(1,1)',offset:1}],{duration:duration,easing:'ease-in-out'});
+  function settle(){if(hopAnimation!==animation)return;clearTimeout(travelTimer);travelTimer=0;root.style.left=next.x+'px';root.style.top=next.y+'px';animation.onfinish=null;animation.cancel();hopAnimation=null;if(poseAnimation){poseAnimation.cancel();poseAnimation=null;}traveling=false;root.dataset.travel='false';scheduleRoam(1350+Math.random()*750);}
+  animation.onfinish=settle;travelTimer=setTimeout(settle,duration+140);
  }
  function user(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
  function voiceActive(){return !!window._topNavVoiceActive;}
@@ -93637,8 +93642,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  }
  function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
  function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;popover.hidden=false;root.dataset.open='true';button.setAttribute('aria-expanded','true');status.textContent='';refresh();(start.hidden?stop:start).focus({preventScroll:true});}
- function minimize(){minimized=true;close(false);freezeMotion(0);clearTimeout(roamTimer);roamTimer=0;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}mini.focus({preventScroll:true});}
- function restore(){minimized=false;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();button.focus({preventScroll:true});scheduleRoam(2800);}
+ function minimize(){minimized=true;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}mini.focus({preventScroll:true});}
+ function restore(event){var keyboard=!!(event&&event.detail===0);minimized=false;hovered=false;lastPointer=null;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();if(keyboard)button.focus({preventScroll:true});else{mini.blur();var g=currentGeometry();root.style.left=g.minX+'px';root.style.top=g.baseY+'px';}scheduleRoam(900);}
  // This is a gesture entry only. Keep the app's existing verification and S2S
  // functions responsible for permissions, microphone startup and access rules.
  window.avaFloatingStartVoice=function(){
