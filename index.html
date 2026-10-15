@@ -8441,13 +8441,22 @@ html[data-theme="purple"] #studioTopBarTitle{
       try {
         var FLAG = 'synapses_first_launch_v1';
         if (localStorage.getItem(FLAG) === '1') return; // not first launch — leave saved prefs alone
-        localStorage.setItem('synapses_topbar_hidden', '1');   // top-right icons hidden
+        localStorage.setItem('synapses_topbar_hidden', '0');   // top-right icons open
         localStorage.setItem('synapses_askbar_open', '0');     // Ask me anything off
         localStorage.setItem('synapses_synbot_enabled', '0');  // SynBot off
         localStorage.setItem('synapses_pulse_open_v1', '0');   // Pulse closed
         localStorage.setItem('synapses_rel_enabled', 'false'); // Ava relationship bond OFF until user turns it on
         localStorage.setItem(FLAG, '1');
       } catch(e) {}
+    })();
+    // The previous release seeded hidden=1. Open once for existing installs too;
+    // after this migration the ordinary saved toggle remains authoritative.
+    (function _avaMigrateTopbarOpenV2(){
+      try{
+        if(localStorage.getItem('synapses_topbar_default_open_v2') === '1') return;
+        localStorage.setItem('synapses_topbar_hidden', '0');
+        localStorage.setItem('synapses_topbar_default_open_v2', '1');
+      }catch(e){}
     })();
     /* Also: if bond key never set (older installs without the flag path), default off once */
     (function _defaultRelBondOffIfUnset(){
@@ -8621,12 +8630,12 @@ html[data-theme="purple"] #studioTopBarTitle{
               if(typeof renderBottomNav==='function') renderBottomNav();
               if(typeof renderIconRail==='function') renderIconRail();
               if(typeof renderTopBarBtns==='function') renderTopBarBtns();
-              // Apply top bar hidden state after storage loads (first launch default: hidden)
+              // Restore the saved top bar toggle after storage loads (unset: open).
               (function(){
                 var _tbh = localStorage.getItem('synapses_topbar_hidden');
-                var _hidden = (_tbh === null || _tbh === undefined) ? true : (_tbh === '1');
+                var _hidden = (_tbh === null || _tbh === undefined) ? false : (_tbh === '1');
                 if(_tbh === null || _tbh === undefined){
-                  try{ localStorage.setItem('synapses_topbar_hidden','1'); }catch(eTb){}
+                  try{ localStorage.setItem('synapses_topbar_hidden','0'); }catch(eTb){}
                 }
                 TOP_BAR_HIDDEN = _hidden;
                 var bar = document.querySelector('.top-bar');
@@ -8685,6 +8694,12 @@ html[data-theme="purple"] #studioTopBarTitle{
             Neutralino.storage.getData('synapses_persist').then(function(raw){
               try{
                 var b = JSON.parse(raw);
+                // Native disk snapshots from before v2 must not restore the old hidden default.
+                if(b && b.synapses_topbar_default_open_v2 !== '1'){
+                  var _avaToolbarMigrated = localStorage.getItem('synapses_topbar_default_open_v2') === '1';
+                  b.synapses_topbar_hidden = _avaToolbarMigrated && localStorage.getItem('synapses_topbar_hidden') === '1' ? '1' : '0';
+                  b.synapses_topbar_default_open_v2 = '1';
+                }
                 Object.keys(b).forEach(function(k){ localStorage.setItem(k, b[k]); });
               }catch(e){}
               // After restoring localStorage, sync userNotes variable
@@ -10400,6 +10415,11 @@ window.getWebAudioNode = getWebAudioNode;
 })();
 </script>
 
+<style id="avaToolbarVoiceStyles">
+#avaTopSettingsBtn{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--muted,#85858d);opacity:.72;cursor:pointer;transition:opacity .16s,color .16s,background .16s;-webkit-app-region:no-drag;app-region:no-drag}
+#avaTopSettingsBtn:hover{opacity:1;color:var(--text,#ededed);background:rgba(127,127,127,.09)}
+#avaTopSettingsBtn:focus-visible{opacity:1;outline:1px solid currentColor;outline-offset:2px}
+</style>
 </head>
 <body>
 <script>
@@ -15497,6 +15517,9 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           <rect x="17" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
           <rect x="32" y="45" width="7" height="9" rx="2.5" stroke="#7c6af7" stroke-width="1.5"/>
         </svg>
+      </button>
+      <button type="button" id="avaTopSettingsBtn" aria-label="Settings" title="Settings" onclick="typeof _bnavOpenAccountSettings==='function' ? _bnavOpenAccountSettings() : goProfile()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <div id="dayNightToggle" onclick="toggleDayNight()" role="button" tabindex="0" aria-label="Toggle day / night" style="display:flex;width:64px;height:32px;padding:4px;border-radius:9999px;cursor:pointer;transition:background .3s,border-color .3s;background:#09090b;border:1px solid #27272a;flex-shrink:0;box-sizing:border-box;overflow:hidden;">
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
@@ -23542,6 +23565,7 @@ function onLogin(){window._loginDone=true;
 if(typeof window.avaWelcomePrepareLogin==='function')window.avaWelcomePrepareLogin();
 try{if(window.avaPreviewAfterLogin)window.avaPreviewAfterLogin();}catch(_previewError){}
 try{ window.currentUser = currentUser; }catch(_cu){}
+try{if(window.avaCallsAccountChanged)window.avaCallsAccountChanged();}catch(_callsAccountError){}
 try{ document.body.classList.add('syn-authed'); }catch(_ba){}
 try{ if(typeof window._synRevealTourAfterAuth==='function') window._synRevealTourAfterAuth(); else if(typeof window._applyDockedTourBtn==='function') window._applyDockedTourBtn(); }catch(_tr){}
 try{ if(typeof median!=='undefined' && median.storage) median.storage.app.set({key:'syn_user_email', value:(currentUser&&currentUser.email)||''}); }catch(eMedian){}
@@ -28906,7 +28930,7 @@ function _fpSuccess(){
   var fromFullScan = !!(wrap && (wrap.classList.contains('holding') || wrap.classList.contains('scanning')));
   if(fromFullScan){
     _fpSetState('ok');
-    _fpStatus('Recognized');
+    _fpStatus('Starting voice…');
   } else if(!wrap || !wrap.classList.contains('fog')){
     _fpPlayFogOnce();
     _fpStatus('');
@@ -28952,7 +28976,7 @@ function _fpFail(msg){
 }
 /** Full hold path after sensor / PC — let the teal 'scanning' state actually be visible */
 function _fpOpenWithoutSensor(){
-  _fpStatus('Scanning…');
+  _fpStatus('Starting voice…');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
   setTimeout(function(){ _fpSuccess(); }, 550);
@@ -28960,27 +28984,63 @@ function _fpOpenWithoutSensor(){
 /** Full unlock after hold (native biometric when available) */
 function startFingerprintUnlock(){
   if(window._fpBusy) return;
+  // The bridge returns only (ok,message), without a request id. Never overlap
+  // a timed-out native prompt with another prompt that its late reply could unlock.
+  if(window._fpNativePendingAttempt){
+    window._fpHoldActive = false;
+    window._fpHoldDone = false;
+    _fpSetState('');
+    _fpSetProgress(0);
+    _fpStatus('Finish or cancel the device prompt, then try again.');
+    setTimeout(function(){if(!window._fpBusy)_fpStatus('');},1800);
+    return;
+  }
   window._fpBusy = true;
-  /* stay in holding/fog — don't re-trigger scanning pulse */
-  _fpStatus('Scanning…');
+  var attempt = (window._fpUnlockAttempt || 0) + 1;
+  window._fpUnlockAttempt = attempt;
+  var settled = false, timeout = 0;
+  /* Keep the existing verification and activation path; correct only its UI. */
+  _fpStatus('Confirm on your device…');
   _fpSetProgress(1);
   try { if(typeof _haptic === 'function') _haptic(6); } catch(e){}
 
   window.__onBiometricResult = function(ok, message){
+    if(window._fpNativePendingAttempt === attempt) window._fpNativePendingAttempt = 0;
+    if(settled || window._fpUnlockAttempt !== attempt) return;
+    settled = true;
+    clearTimeout(timeout);
+    window._fpUnlockTimer = 0;
     if(ok) _fpSuccess();
     else _fpFail(message || 'failed');
   };
 
+  window._fpNativePendingAttempt = attempt;
   var usedNative = _postNativeBiometric();
   if(!usedNative){
+    window._fpNativePendingAttempt = 0;
+    settled = true;
     _fpOpenWithoutSensor();
+  } else if(!settled){
+    timeout = setTimeout(function(){
+      if(settled || window._fpUnlockAttempt !== attempt) return;
+      settled = true;
+      window._fpUnlockTimer = 0;
+      window._fpBusy = false;
+      window._fpHoldActive = false;
+      window._fpHoldDone = false;
+      _fpSetState('');
+      _fpStatus('');
+      _fpSetProgress(0);
+      try{_fpSyncTapModeUi();}catch(eTimeout){}
+      // Keep the pending native reply quarantined. Its eventual callback
+      // clears that pending slot above, then returns without activating voice.
+    },15000);
+    window._fpUnlockTimer = timeout;
   }
 }
 window.startFingerprintUnlock = startFingerprintUnlock;
-window.__onBiometricResult = function(ok, message){
-  if(ok) _fpSuccess();
-  else _fpFail(message || 'failed');
-};
+// An unsolicited native reply before a deliberate activation cannot start voice.
+window.__onBiometricResult = function(){};
 
 /** True if speech-to-speech / companion voice is considered live */
 function _fpIsSpeechLive(){
@@ -57415,17 +57475,17 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 
-/* First launch (no saved pref): top-right icons hidden. Saved toggle wins after that. */
-var TOP_BAR_HIDDEN=true;
+/* Unset toolbar preference: open. After the v2 migration the saved toggle wins. */
+var TOP_BAR_HIDDEN=false;
 try{
   var _tbPref = localStorage.getItem('synapses_topbar_hidden');
   if(_tbPref === null || _tbPref === undefined){
-    TOP_BAR_HIDDEN = true;
-    try{ localStorage.setItem('synapses_topbar_hidden','1'); }catch(e0){}
+    TOP_BAR_HIDDEN = false;
+    try{ localStorage.setItem('synapses_topbar_hidden','0'); }catch(e0){}
   } else {
     TOP_BAR_HIDDEN = (_tbPref === '1');
   }
-}catch(e){ TOP_BAR_HIDDEN = true; }
+}catch(e){ TOP_BAR_HIDDEN = false; }
 function _chpSyncTopbarH(){
   var bar = document.querySelector('.top-bar');
   if(!bar) return;
@@ -76186,7 +76246,7 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
       /* Restore top bar from user pref without flashing dyn icons during tour */
       var pref = null;
       try { pref = localStorage.getItem('synapses_topbar_hidden'); } catch (eP) {}
-      var hide = (pref === null || pref === undefined) ? true : (pref === '1');
+      var hide = (pref === null || pref === undefined) ? false : (pref === '1');
       var bar = document.querySelector('.top-bar');
       var tbtn = document.getElementById('topBarToggle');
       try { if (typeof TOP_BAR_HIDDEN !== 'undefined') TOP_BAR_HIDDEN = hide; } catch (eT) {}
@@ -81681,6 +81741,36 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   var csShowing = false;
   var csCurrent = null; /* the log actively shown or minimized-but-unacked */
   var csUnread = false; /* true only until the user actually opens/views the result */
+  var csOwner = null;
+  var csReceived = []; /* Only rows returned by the existing pending endpoint. */
+  function csSyncOwner(owner){
+    if(csOwner===owner)return;
+    csOwner=owner;csQueue=[];csCurrent=null;csReceived=[];csUnread=false;
+    if(csShowing)csMinimize();else csUpdateBadge();
+  }
+  window.avaCallsSetOwner=csSyncOwner;
+  window.avaCallsPendingSnapshot=function(){
+    var owner=csIdentifier();csSyncOwner(owner);
+    return {owner:owner,records:csReceived.slice()};
+  };
+  window.avaCallsMarkReviewed=async function(id){
+    var owner=csIdentifier();csSyncOwner(owner);id=String(id||'');
+    if(!owner||!id)return {ok:false};
+    var known=csReceived.some(function(row){return String(row.id)===id;});
+    if(!known)return {ok:false};
+    var pending=csQueue.some(function(row){return String(row.id)===id;})||(csCurrent&&String(csCurrent.id)===id);
+    if(!pending)return {ok:true,already:true};
+    try{
+      var response=await fetch(CS_BACKEND+'/call-logs/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});
+      if(!response.ok)return {ok:false};
+      if(owner!==csIdentifier()||owner!==csOwner)return {ok:false,stale:true};
+      csQueue=csQueue.filter(function(row){return String(row.id)!==id;});
+      if(csCurrent&&String(csCurrent.id)===id){csCurrent=null;csMinimize();}
+      csReceived.forEach(function(row){if(String(row.id)===id)row.seen=true;});
+      csUnread=!!(csQueue.length||csCurrent);csUpdateBadge();
+      return {ok:true};
+    }catch(error){return {ok:false};}
+  };
 
   function csIdentifier(){
     try{
@@ -81701,15 +81791,15 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     csResetFoot();
     var failed = log.success === false;
     var badge = document.getElementById('csBadge');
-    document.getElementById('csBadgeText').textContent = failed ? 'Call Failed' : 'Call Success';
+    document.getElementById('csBadgeText').textContent = failed ? 'Unsuccessful' : 'Completed';
     badge.className = 'cs-badge' + (failed ? ' failed' : '');
     document.getElementById('csTitle').textContent = (failed ? "Couldn't reach " : 'Called ') + (log.contact_name || 'them');
     document.getElementById('csSub').textContent = log.objective ? ('About: ' + log.objective) : '';
     document.getElementById('csReplyLbl').textContent = failed ? 'What went wrong' : 'What they said';
     document.getElementById('csReply').textContent = log.reply_summary || log.summary || (failed ? 'The call never connected.' : 'No summary available.');
-    document.getElementById('csTranscriptLbl').style.display = failed ? 'none' : '';
+    document.getElementById('csTranscriptLbl').style.display = '';
     var tEl = document.getElementById('csTranscript');
-    tEl.style.display = failed ? 'none' : '';
+    tEl.style.display = '';
     tEl.textContent = log.transcript || 'No transcript saved for this call.';
   }
 
@@ -81748,6 +81838,8 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   }
 
   function csShowNext(){
+    csSyncOwner(csIdentifier());
+    if(window.avaCallsIsOpen&&window.avaCallsIsOpen()){csUpdateBadge();return;}
     if (csShowing) return;
     if (!csCurrent){
       if (!csQueue.length) return;
@@ -81814,22 +81906,29 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     document.getElementById('csCompose').style.display = 'flex';
     input.focus();
   }
-  function csFollowUp(type, message){
+  var csFollowBusy=false;
+  async function csFollowUp(type, message){
     if(type==='call'&&!requireAvaCallPro())return;
-    if (!csCurrent) return;
-    var url, body;
-    if (type === 'call') {
-      url = CS_BACKEND + '/call-logs/follow-up-call';
-      body = { requestingUser: csIdentifier(), contactPhone: csCurrent.contact_phone, contactName: csCurrent.contact_name, objective: message };
-    } else {
-      url = CS_BACKEND + '/call-logs/follow-up-message';
-      body = { contactPhone: csCurrent.contact_phone, message: message };
+    if(!csCurrent||csFollowBusy)return;
+    var owner=csIdentifier(),record=csCurrent,url,body;
+    if(type==='call'){
+      url=CS_BACKEND+'/call-logs/follow-up-call';
+      body={requestingUser:owner,contactPhone:record.contact_phone,contactName:record.contact_name,objective:message};
+    }else{
+      url=CS_BACKEND+'/call-logs/follow-up-message';
+      body={contactPhone:record.contact_phone,message:message};
     }
-    fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
-      .then(function(r){ return r.json(); })
-      .then(function(data){ if (!data || data.error) console.error('[call-popup] follow-up failed:', data && data.error); })
-      .catch(function(e){ console.error('[call-popup] follow-up error:', e); });
-    csDismiss();
+    var status=document.getElementById('csFollowRequestStatus');
+    if(!status){status=document.createElement('p');status.id='csFollowRequestStatus';status.style.cssText='font-size:11px;line-height:1.6;color:#a9a69e;margin:8px 0 0;';status.setAttribute('role','status');document.getElementById('csCompose').appendChild(status);}
+    status.textContent='Requesting follow-up…';csFollowBusy=true;
+    var submit=document.getElementById('csComposeSendBtn');submit.disabled=true;
+    try{
+      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),data=await response.json();
+      if(!response.ok||!data||data.error||data.success!==true)throw Error(data&&data.error||'Request was not accepted.');
+      if(owner===csIdentifier()&&csCurrent===record)csDismiss();
+    }catch(error){
+      if(owner===csIdentifier()&&csCurrent===record)status.textContent='Could not confirm the follow-up. Your record and instruction are kept. Check Calls before retrying.';
+    }finally{csFollowBusy=false;submit.disabled=false;}
   }
 
   document.getElementById('csMinBtn').onclick = csMinimize;
@@ -81844,12 +81943,17 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   };
 
   function csPoll(){
-    var user = csIdentifier();
+    var user = csIdentifier();csSyncOwner(user);
     if (!user) return;
     fetch(CS_BACKEND + '/call-logs/pending?user=' + encodeURIComponent(user))
       .then(function(r){ return r.json(); })
       .then(function(data){
-        var calls = (data && data.calls) || [];
+        // An account switch must never display/cache the previous request's rows.
+        if(user!==csIdentifier()||user!==csOwner)return;
+        var calls = data&&Array.isArray(data.calls)?data.calls.filter(function(row){return row&&typeof row==='object'&&row.id!=null;}):[];
+        calls.forEach(function(row){if(!row||row.id==null)return;var index=csReceived.findIndex(function(old){return String(old.id)===String(row.id);});if(index<0)csReceived.push(row);else csReceived[index]=row;});
+        csReceived=csReceived.slice(-100);
+        if(window.avaCallsReceive)window.avaCallsReceive(calls,{owner:user});
         if (calls.length){
           calls.forEach(function(c){
             if (!csQueue.some(function(q){ return q.id === c.id; }) && (!csCurrent || csCurrent.id !== c.id)) csQueue.push(c);
@@ -81862,6 +81966,7 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
       .catch(function(){});
   }
 
+  window.avaCallsRefreshPending=csPoll;
   setInterval(csPoll, 8000);
   setTimeout(csPoll, 3000);
 
@@ -93416,6 +93521,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatPopover *{box-sizing:border-box}
 #avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 27px 10px 0;color:#f1eee6}
 #avaFloatPopover p{font-size:12px;line-height:1.7;color:#96958e;margin:0 0 16px}
+#avaFloatIdentity{font:400 11px/1.5 'DM Sans',sans-serif;color:#aaa79e;margin:-3px 0 13px;overflow-wrap:anywhere}
+.af-account-actions{display:flex;gap:6px;border-top:1px solid #282828;padding-top:9px;margin-top:7px}
+.af-account-actions button{flex:1;min-height:40px;border:0;border-radius:10px;background:transparent;color:#aaa79e;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
+.af-account-actions button:hover{background:#202020;color:#eeeae1}
+.af-account-actions [hidden]{display:none!important}
 #avaFloatClose{position:absolute;right:4px;top:3px;width:44px;height:44px;display:grid;place-items:center;border:0;background:none;color:#85857f;font:22px/1 sans-serif;cursor:pointer;border-radius:12px}
 #avaFloatStart,#avaFloatStop{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:46px;border:1px solid #ded9ce;border-radius:14px;background:#eeeae1;color:#1b1b1b;font:600 12px 'DM Sans',sans-serif;cursor:pointer;padding:10px 16px}
 #avaFloatPopover button svg{display:block;width:18px;height:18px;flex-shrink:0}
@@ -93424,6 +93534,18 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatPopover button:focus-visible{outline:2px solid #aaa69c;outline-offset:4px}
 #avaFloatStatus{font-size:10px!important;color:#8b8b85!important;line-height:1.6!important;margin:12px 0 0!important}
 #avaFloatStatus:empty{display:none}
+#avaFloatCopy{display:none}
+#avaFloatChatForm{display:flex;align-items:center;gap:6px;min-height:44px;border:1px solid #383836;border-radius:13px;background:#191919;padding:3px 4px 3px 12px;margin:0}
+#avaFloatChatForm[hidden]{display:none!important}
+#avaFloatDraft{min-width:0;flex:1;border:0;background:transparent;color:#eeeae1;font:400 12px/1.4 'DM Sans',sans-serif;padding:7px 0;outline:none}
+#avaFloatDraft::placeholder{color:#84847e}
+#avaFloatSend{flex:0 0 36px;width:36px;height:36px;border:0;border-radius:10px;background:#e9e5db;color:#222;font:20px/1 sans-serif;cursor:pointer}
+#avaFloatSend:disabled{opacity:.5}
+#avaFloatOpenChat{display:block;margin:1px 0 7px auto;padding:5px 2px;min-height:30px;border:0;background:transparent;color:#96938a;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
+.af-actions button{min-height:44px}
+.af-actions #avaFloatTools{width:auto;min-height:44px;margin:0;padding:10px 12px;background:#19191a;border:1px solid #2c2c2c}
+.af-actions #avaFloatTools svg:last-child{display:none}
+.af-account-actions #avaFloatRoam{width:auto;flex:1;min-height:40px;margin:0;padding:8px 2px;border:0;font-size:10px}
 .af-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}
 .af-actions button,#avaFloatTools{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;background:#19191a;color:#bbb8af;border:1px solid #2c2c2c;border-radius:12px;padding:11px 12px;text-align:left;font:500 11.5px 'DM Sans',sans-serif;cursor:pointer}
 .af-actions button:hover,#avaFloatTools:hover{background:#232322;color:#eeeae1;border-color:#41413d}
@@ -93439,19 +93561,28 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  <section id="avaFloatPopover" role="dialog" aria-modal="false" aria-labelledby="avaFloatTitle" hidden>
   <button type="button" id="avaFloatClose" aria-label="Close Ava shortcuts">×</button>
   <h2 id="avaFloatTitle">Ava</h2>
+  <div id="avaFloatIdentity"></div>
+  <form id="avaFloatChatForm" hidden><input type="text" id="avaFloatDraft" aria-label="Message Ava" placeholder="Ask Ava…" autocomplete="off"/><button type="submit" id="avaFloatSend" aria-label="Send message to Ava">↑</button></form>
+  <button type="button" id="avaFloatOpenChat" data-af-action="chat">Open chat ↗</button>
   <p id="avaFloatCopy">Talk things through, or jump into something useful.</p>
   <button type="button" id="avaFloatStart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3m-3 0h6" stroke-linecap="round"/></svg><span id="avaFloatStartLabel">Talk with Ava</span></button>
   <button type="button" id="avaFloatStop" hidden>End voice conversation</button>
   <div class="af-actions" role="group" aria-label="Ava quick actions">
-   <button type="button" data-af-action="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 5h14v11H9l-4 4V5Z" stroke-linejoin="round"/><path d="M9 9h6m-6 3h4" stroke-linecap="round"/></svg>Chat / Ask</button>
+   
    <button type="button" data-af-action="calls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m5 3 4 1 1 5-2 2a15 15 0 0 0 5 5l2-2 5 1 1 4c-1 4-6 3-11-1S1 7 5 3Z" stroke-linejoin="round"/></svg>Calls</button>
    <button type="button" data-af-action="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4" stroke-linecap="round" stroke-linejoin="round"/></svg>Notes</button>
    <button type="button" data-af-action="memory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m12 3-9 5 9 5 9-5-9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke-linecap="round" stroke-linejoin="round"/></svg>Memory</button>
    <button type="button" data-af-action="inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6" stroke-linejoin="round"/></svg>Inbox</button>
    <button type="button" data-af-action="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-11 5h2m2 0h2" stroke-linecap="round"/></svg>Calendar</button>
-  </div>
   <button type="button" id="avaFloatTools" data-af-action="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>More tools<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12h15m-5-5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+
+  <div class="af-account-actions" role="group" aria-label="Your account">
+   <button type="button" id="avaFloatAccount" data-af-action="account">Account</button>
+   <button type="button" data-af-action="settings">Settings</button>
+   <button type="button" id="avaFloatLogout" data-af-action="logout">Log out</button>
   <button type="button" id="avaFloatRoam" aria-pressed="false">Stay here</button>
+  </div>
   <p id="avaFloatStatus" role="status" aria-live="polite"></p>
  </section>
 </aside>
@@ -93464,17 +93595,17 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';}catch(e){}
  function clamp(n,min,max){return Math.max(min,Math.min(n,max));}
  function geometry(width,height,composer){
-  var size=62,margin=width<600?13:22,maxX=Math.max(8,width-size-margin),minX=Math.max(8,maxX-40),baseY=clamp(height-(width<600?158:176),30,Math.max(30,height-size-12));
+  var size=62,margin=width<600?13:22,maxX=Math.max(8,width-size-margin),minX=Math.max(8,maxX-84),baseY=clamp(height-(width<600?158:176),30,Math.max(30,height-size-12));
   // A centered composer must not pull a corner companion up the whole page.
   // Raise this small zone only when their horizontal AND vertical bounds meet.
   if(composer&&composer.width>0&&composer.height>0){var left=Number.isFinite(composer.left)?composer.left:0,right=Number.isFinite(composer.right)?composer.right:left+composer.width,bottom=Number.isFinite(composer.bottom)?composer.bottom:composer.top+composer.height;if(minX<right+12&&maxX+size>left-12&&baseY+size+4>composer.top-12&&baseY-24<bottom+12)baseY=clamp(composer.top-size-22,30,Math.max(30,height-size-12));}
-  return{size:size,minX:minX,maxX:maxX,minY:Math.max(8,baseY-24),maxY:baseY+4,baseX:maxX,baseY:baseY,perches:[{x:maxX,y:baseY},{x:Math.max(minX,maxX-22),y:baseY},{x:minX,y:baseY},{x:Math.max(minX,maxX-12),y:baseY}]};
+  return{size:size,minX:minX,maxX:maxX,minY:Math.max(8,baseY-38),maxY:baseY+4,baseX:maxX,baseY:baseY,perches:[{x:maxX,y:baseY},{x:Math.max(minX,maxX-42),y:baseY},{x:minX,y:baseY},{x:Math.max(minX,maxX-20),y:baseY}]};
  }
  function menuAnchor(rect,width,height,pw,ph){return{x:clamp(rect.right-pw,16,Math.max(16,width-pw-16)),y:clamp(rect.top-ph-12,16,Math.max(16,height-ph-16))};}
  function near(rect,x,y){return x>=rect.left-104&&x<=rect.right+104&&y>=rect.top-92&&y<=rect.bottom+92;}
- function hopFrames(from,to,minY,maxY){var dx=to.x-from.x,apex=Math.min(from.y,to.y)-15,lower=Number.isFinite(minY)?minY:-Infinity,upper=Number.isFinite(maxY)?maxY:Infinity;return[{x:from.x,y:from.y,offset:0},{x:from.x+dx*.06,y:from.y+2,offset:.15},{x:from.x+dx*.52,y:apex,offset:.48},{x:to.x,y:to.y-2,offset:.79},{x:to.x,y:to.y+1.5,offset:.92},{x:to.x,y:to.y,offset:1}].map(function(p){p.y=clamp(p.y,lower,upper);return p;});}
+ function hopFrames(from,to,minY,maxY){var dx=to.x-from.x,lower=Number.isFinite(minY)?minY:-Infinity,upper=Number.isFinite(maxY)?maxY:Infinity,frames=[{x:from.x,y:from.y,offset:0},{x:from.x,y:from.y+2,offset:.14}];for(var i=0;i<=8;i++){var p=i/8;frames.push({x:from.x+dx*p,y:from.y+(to.y-from.y)*p-108*p*(1-p),offset:.2+p*.58});}frames.push({x:to.x,y:to.y+2.5,offset:.87},{x:to.x,y:to.y,offset:1});return frames.map(function(p){p.y=clamp(p.y,lower,upper);return p;});}
  function currentGeometry(){var input=document.getElementById('inputBox');return geometry(window.innerWidth,window.innerHeight,visible(input)?input.getBoundingClientRect():null);}
- function canRoam(){return roamEnabled&&!motion.matches&&!document.hidden&&!root.hidden&&!opened&&!voiceActive()&&!editing()&&!hovered&&!blocked()&&!root.contains(document.activeElement)&&Date.now()>=freezeUntil&&!(lastPointer&&near(root.getBoundingClientRect(),lastPointer.x,lastPointer.y));}
+ function canRoam(){return roamEnabled&&!motion.matches&&!document.hidden&&!root.hidden&&!opened&&!window.__avaCompanionChatOpen&&!voiceActive()&&!editing()&&!hovered&&!blocked()&&!root.contains(document.activeElement)&&Date.now()>=freezeUntil&&!(lastPointer&&near(root.getBoundingClientRect(),lastPointer.x,lastPointer.y));}
  function scheduleRoam(delay){clearTimeout(roamTimer);roamTimer=setTimeout(roamTick,delay||2800);}
  function freezeMotion(ms){
   clearTimeout(travelTimer);travelTimer=0;clearTimeout(roamTimer);roamTimer=0;
@@ -93488,11 +93619,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   roamTimer=0;if(!canRoam()){scheduleRoam(2200);return;}
   var g=currentGeometry(),next=null,frames=null,rect=root.getBoundingClientRect(),from={x:rect.left,y:rect.top};
   for(var tries=0;tries<g.perches.length;tries++){perchIndex=(perchIndex+1)%g.perches.length;var point=g.perches[perchIndex],arc=hopFrames(from,point,g.minY,g.maxY);if(Math.hypot(from.x-point.x,from.y-point.y)>7&&arc.every(function(p){return p.x>=g.minX&&p.x<=g.maxX&&p.y>=g.minY&&p.y<=g.maxY&&!controlAt(p);})){next=point;frames=arc;break;}}
-  if(!next||typeof root.animate!=='function'){scheduleRoam(4600);return;}
+  if(!next||typeof root.animate!=='function'){scheduleRoam(2600);return;}
   root.dataset.frozen='false';root.dataset.travel='true';root.dataset.motionZone='bottom-right';traveling=true;root.style.transition='none';
-  var animation=root.animate(frames.map(function(p){return{left:p.x+'px',top:p.y+'px',offset:p.offset};}),{duration:660,easing:'linear',fill:'forwards'});hopAnimation=animation;
-  var face=button.querySelector('svg');if(face&&typeof face.animate==='function')poseAnimation=face.animate([{transform:'scale(1,1)',offset:0},{transform:'scale(1.07,.93)',offset:.15},{transform:'scale(.97,1.035)',offset:.48},{transform:'scale(1.045,.96)',offset:.84},{transform:'scale(1,1)',offset:1}],{duration:660,easing:'ease-in-out'});
-  function settle(){if(hopAnimation!==animation)return;clearTimeout(travelTimer);travelTimer=0;root.style.left=next.x+'px';root.style.top=next.y+'px';animation.onfinish=null;animation.cancel();hopAnimation=null;if(poseAnimation){poseAnimation.cancel();poseAnimation=null;}traveling=false;root.dataset.travel='false';scheduleRoam(4600);}
+  var animation=root.animate(frames.map(function(p){return{left:p.x+'px',top:p.y+'px',offset:p.offset};}),{duration:760,easing:'linear',fill:'forwards'});hopAnimation=animation;
+  var face=button.querySelector('svg');if(face&&typeof face.animate==='function')poseAnimation=face.animate([{transform:'scale(1,1)',offset:0},{transform:'scale(1.07,.93)',offset:.15},{transform:'scale(.97,1.035)',offset:.48},{transform:'scale(1.045,.96)',offset:.84},{transform:'scale(1,1)',offset:1}],{duration:760,easing:'ease-in-out'});
+  function settle(){if(hopAnimation!==animation)return;clearTimeout(travelTimer);travelTimer=0;root.style.left=next.x+'px';root.style.top=next.y+'px';animation.onfinish=null;animation.cancel();hopAnimation=null;if(poseAnimation){poseAnimation.cancel();poseAnimation=null;}traveling=false;root.dataset.travel='false';scheduleRoam(2600);}
   animation.onfinish=settle;travelTimer=setTimeout(settle,900);
  }
  function user(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
@@ -93502,7 +93633,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function close(restore){opened=false;popover.hidden=true;root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';if(restore&&!root.hidden)button.focus({preventScroll:true});scheduleRoam(2800);}
  function blocked(){
   if(!user()||document.hidden||window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())||document.documentElement.classList.contains('synapses-welcome-pending'))return true;
-  if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay'))||visible(document.getElementById('bnavCCPanel')))return true;
+  if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay'))||(document.getElementById('bnavCCPanel')?.classList.contains('bnav-cc-open')&&visible(document.getElementById('bnavCCPanel'))))return true;
   return Array.from(document.querySelectorAll('.modal-overlay,dialog[open],[role="dialog"][aria-modal="true"]')).some(function(el){return !root.contains(el)&&visible(el);});
  }
  function place(){
@@ -93513,9 +93644,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.getBoundingClientRect().height||470,anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
  }
  function refresh(){
-  refreshTimer=0;var hide=blocked();if(hide&&opened)close(false);if(hide){if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
-  if(voiceActive()||editing()){if(traveling)freezeMotion(0);root.dataset.frozen='true';}
+  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false);if(hide){if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
+  if(voiceActive()||editing()||window.__avaCompanionChatOpen){if(traveling)freezeMotion(0);root.dataset.frozen='true';}
   root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
+  if(opened){var identityUser=user(),identityGuest=!identityUser||identityUser.isGuest;document.getElementById('avaFloatIdentity').textContent=identityGuest?'Guest preview':(identityUser.email||'Your account');document.getElementById('avaFloatAccount').textContent=identityGuest?'Sign in':'Account';document.getElementById('avaFloatLogout').hidden=identityGuest;}
   if(opened){var u=user(),guest=!u||u.isGuest,live=voiceActive();document.getElementById('avaFloatCopy').textContent=live?'Your voice conversation is active. Everything else is close by.':guest?'Explore a little. Sign in when you’re ready for live voice.':'Talk things through, or jump into something useful.';document.getElementById('avaFloatStartLabel').textContent=guest?'Sign in for live voice':'Talk with Ava';start.setAttribute('aria-label',guest?'Sign in for live speech-to-speech':'Start a speech-to-speech conversation with Ava');start.hidden=live;stop.hidden=!live;}
   if(!roamTimer&&!traveling)scheduleRoam(2800);
  }
@@ -93543,14 +93675,19 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  }
  function openTools(){if(typeof openControlCentre==='function'){openControlCentre();return true;}var control=document.getElementById('bnavControlCenterBtn');if(control){control.click();return true;}status.textContent='The Control Centre is unavailable. Try its existing navigation button.';return false;}
  window.avaFloatingOpenAction=function(action){
-  if(action==='chat'){if(typeof setView!=='function')return 'unavailable';close(false);setView('sec-chat');if(typeof setAskBarVisible==='function')setAskBarVisible(true,{silent:true});var input=document.getElementById('inputBox');if(input)input.focus({preventScroll:true});return 'chat';}
-  if(action==='calls'){var call=document.getElementById('csNewCallBtn');if(!call){status.textContent='Calls is unavailable. Use the existing Calls control to try again.';return 'unavailable';}close(false);call.click();['csNewName','csNewPhone','csNewObjective'].forEach(function(id){var field=document.getElementById(id);if(field)field.value='';});var phone=document.getElementById('csNewPhone');if(phone)phone.focus({preventScroll:true});return 'calls';}
+  if(action==='chat'){if(typeof window.avaCompanionChatOpen==='function'){close(false);window.avaCompanionChatOpen();return 'chat';}if(typeof setView!=='function')return 'unavailable';close(false);setView('sec-chat');if(typeof setAskBarVisible==='function')setAskBarVisible(true,{silent:true});var input=document.getElementById('inputBox');if(input)input.focus({preventScroll:true});return 'chat';}
+  if(action==='account'){close(false);var accountUser=user();if(!accountUser||accountUser.isGuest){if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return 'account';}if(typeof goProfile==='function'){goProfile();return 'account';}return 'unavailable';}
+  if(action==='settings'){close(false);if(typeof _bnavOpenAccountSettings==='function'){_bnavOpenAccountSettings();return 'settings';}var settingsButton=document.getElementById('bnavSettingsBtn');if(settingsButton){settingsButton.click();return 'settings';}if(typeof goProfile==='function'){goProfile();return 'settings';}return 'unavailable';}
+  if(action==='logout'){var accountUser=user();if(!accountUser||accountUser.isGuest)return 'unavailable';if(typeof logout==='function'){close(false);root.hidden=true;logout();return 'logout';}status.textContent='Use Account to sign out.';return 'unavailable';}
+  if(action==='calls'){if(typeof window.openAvaCallsWorkspace==='function'){close(false);window.openAvaCallsWorkspace();return 'calls';}var call=document.getElementById('csNewCallBtn');if(!call){status.textContent='Calls is unavailable. Use the existing Calls control to try again.';return 'unavailable';}close(false);call.click();['csNewName','csNewPhone','csNewObjective'].forEach(function(id){var field=document.getElementById(id);if(field)field.value='';});var phone=document.getElementById('csNewPhone');if(phone)phone.focus({preventScroll:true});return 'calls';}
   if(action==='notes'){if(typeof _currentViewId!=='undefined'&&_currentViewId==='sec-notes'){close(false);focusTarget(document.getElementById('sec-notes'));return 'notes';}if(typeof goNotes==='function'){close(false);goNotes();return 'notes';}var notes=document.getElementById('bnavNotesBtn');if(notes){close(false);notes.click();return 'notes';}status.textContent='Notes is unavailable. Try the existing Notes control.';return 'unavailable';}
   if(action==='memory'){if(typeof goProfile!=='function'){status.textContent='Memory is available in your profile.';return 'unavailable';}close(false);goProfile();var u=user();if(u&&!u.isGuest){var profile=document.getElementById('sec-profile');focusWhen(function(){var clear=document.getElementById('clearMemBtn');return clear&&clear.closest('.section-card');},profile);}return 'memory';}
   if(['tools','inbox','calendar'].indexOf(action)!==-1){if(!openTools())return 'unavailable';close(false);var panel=document.getElementById('bnavCCPanel');if(action==='tools'){focusWhen(function(){return document.getElementById('bnavCCPanel');},panel);}else{focusWhen(function(){return document.querySelector('#bnavCCPanel [data-cc-id="'+action+'"]');},panel);}return action;}
   return 'unavailable';
  };
+ window.avaFloatingPause=function(){freezeMotion(0);};
  root.querySelectorAll('[data-af-action]').forEach(function(control){control.onclick=function(){window.avaFloatingOpenAction(control.dataset.afAction);};});
+ document.getElementById('avaFloatChatForm').addEventListener('submit',function(e){e.preventDefault();var draft=document.getElementById('avaFloatDraft'),message=draft.value.trim(),send=document.getElementById('avaFloatSend');if(!message)return;if(typeof window.avaCompanionChatOpen!=='function'){status.textContent='Open Chat / Ask to continue with Ava.';return;}send.disabled=true;close(false);Promise.resolve(window.avaCompanionChatOpen({message:message,send:true})).then(function(result){if(result==='sending')draft.value='';}).catch(function(){status.textContent='Your draft is still here. Try opening chat again.';}).finally(function(){send.disabled=false;});});
  var roamControl=document.getElementById('avaFloatRoam');
  function syncRoam(){roamControl.textContent=roamEnabled?'Stay here':'Let Ava hop';roamControl.setAttribute('aria-pressed',String(!roamEnabled));}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
@@ -93558,6 +93695,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
  document.addEventListener('pointerdown',function(e){if(!root.hidden&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target))close(false);},true);
  document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target))close(false);schedule();});
+ document.addEventListener('click',function(e){if(!root.contains(e.target))schedule();},true);
+ document.addEventListener('transitionend',function(e){if(!root.contains(e.target)&&e.target.matches('#authModal,#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel,.modal-overlay,dialog,[role="dialog"][aria-modal="true"]'))refresh();},true);
  document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);
  document.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;lastPointer={x:e.clientX,y:e.clientY};if(!root.hidden&&!opened&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1300);},{passive:true});
  button.addEventListener('pointerenter',function(){hovered=true;freezeMotion(0);});button.addEventListener('pointerleave',function(){hovered=false;freezeUntil=Date.now()+900;scheduleRoam(2800);});button.addEventListener('focus',function(){freezeMotion(0);});
@@ -93566,7 +93705,140 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function watch(){[document.body,document.documentElement].concat(Array.from(document.querySelectorAll('.modal-overlay,dialog,[role="dialog"][aria-modal="true"],#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel'))).forEach(function(el){if(el&&!watched.has(el)){watched.add(el);observer.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});}});}
  watch();var bodyObserver=new MutationObserver(function(){watch();schedule();});bodyObserver.observe(document.body,{childList:true});
  setInterval(refresh,1500);window.addEventListener('synapses:intro-complete',schedule);window.addEventListener('ava:welcome-closed',schedule);
+ window.addEventListener('ava:chat-ready',schedule);
  if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
+})();
+</script>
+
+
+<!-- Calls workspace: real received results, account-bound device history. -->
+<style id="avaCallsStyles">
+#avaCallsWorkspace{position:fixed;inset:0;z-index:99940;background:#080809;color:#eeeae2;font-family:'DM Sans',sans-serif;color-scheme:dark;isolation:isolate}
+#avaCallsWorkspace[hidden]{display:none!important}#avaCallsWorkspace *{box-sizing:border-box}#avaCallsWorkspace button,#avaCallsWorkspace input{font:inherit}#avaCallsWorkspace button{cursor:pointer;touch-action:manipulation}#avaCallsWorkspace button:disabled{cursor:default;opacity:.4}#avaCallsWorkspace button:focus-visible,#avaCallsWorkspace input:focus-visible,#avaCallsWorkspace [tabindex]:focus-visible{outline:2px solid #b8b4a9;outline-offset:4px}
+.acw-shell{height:100%;height:100dvh;max-width:1600px;margin:auto;display:flex;flex-direction:column}.acw-header{height:87px;flex-shrink:0;padding:0 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #242425;gap:16px}.acw-heading{display:flex;align-items:center;gap:14px}.acw-heading>svg{width:23px;height:23px;color:#9a978e}.acw-heading h1{font:600 27px/1.1 'Syne',sans-serif;letter-spacing:-.9px;margin:0}.acw-heading small{font-size:10px;color:#787873;display:block;margin-top:5px}.acw-header-actions{display:flex;align-items:center;gap:9px}.acw-button,.acw-icon{min-height:42px;border:1px solid #343433;background:#171718;color:#c5c1b8;padding:10px 15px;border-radius:12px;font-size:11.5px!important;display:inline-flex;align-items:center;justify-content:center;gap:8px;line-height:1.3}.acw-button svg,.acw-icon svg{width:16px;height:16px;flex-shrink:0}.acw-button:hover,.acw-icon:hover{background:#252524;border-color:#494941}.acw-primary{background:#eeeae1;color:#181818;border-color:#eeeae1;font-weight:600!important}.acw-primary:hover{background:#dcd7ca;border-color:#dcd7ca}.acw-icon{width:44px;min-height:44px;padding:10px;background:transparent;border-color:transparent}.acw-header .acw-icon:last-child{font-size:25px!important;color:#8e8b83}.acw-preview{background:#20201d;border-bottom:1px solid #393932;color:#bdb9ad;font-size:11px;padding:10px 30px;line-height:1.5}.acw-preview[hidden]{display:none}
+.acw-body{display:grid;grid-template-columns:310px minmax(0,1fr);flex:1;min-height:0}.acw-sidebar{display:flex;flex-direction:column;min-height:0;border-right:1px solid #242425;background:#0c0c0d}.acw-sidebar-top{padding:24px 20px 17px}.acw-sidebar-label{display:flex;justify-content:space-between;font-size:11px;color:#9c9991;margin-bottom:16px}.acw-sidebar-label span:last-child{font-variant-numeric:tabular-nums;color:#62625e}.acw-search{width:100%;height:42px;border:1px solid #30302e;border-radius:11px;background:#131314;color:#e5e1d7;padding:0 13px;font-size:11.5px!important;outline:none}.acw-search::placeholder{color:#63635f}.acw-filters{display:flex;gap:4px;margin-top:13px}.acw-filters button{min-height:34px;border:1px solid transparent;border-radius:99px;background:none;color:#73736f;padding:7px 11px;font-size:10px!important}.acw-filters button[aria-pressed="true"]{background:#242422;border-color:#3b3b36;color:#d3cec2}.acw-list{flex:1;min-height:0;overflow:auto;padding:0 11px 15px}.acw-row{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:13px;padding:16px 12px;color:#bebbb2;margin:0 0 4px}.acw-row:hover{background:#171717}.acw-row[aria-current="true"]{background:#20201e;border-color:#3c3c35}.acw-row-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px}.acw-row-name{font-size:13px;font-weight:500;color:#dedacf;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.acw-dot{width:5px;height:5px;background:#aaa69b;border-radius:50%;flex-shrink:0}.acw-row-summary{font-size:11px;line-height:1.6;color:#85847e;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.acw-row-meta{display:flex;justify-content:space-between;gap:10px;margin-top:11px;font-size:9px;color:#62625e}.acw-row-meta span:first-child{max-width:65%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.acw-sidebar-bottom{padding:17px 22px;border-top:1px solid #242425;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:9px;color:#696963}.acw-sidebar-bottom button{min-height:32px;padding:5px 0;border:0;background:none;color:#797970;font-size:9px!important}.acw-list-empty{padding:30px 16px;font-size:11px;color:#77766f;line-height:1.75}.acw-detail{overflow:auto;min-width:0;padding:34px clamp(24px,4vw,65px) 60px;scrollbar-gutter:stable}.acw-back{display:none;margin:0 0 21px}.acw-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:28px}.acw-detail-head h2{font:600 clamp(25px,2.6vw,36px)/1.14 'Syne',sans-serif;letter-spacing:-1px;margin:0 0 11px;overflow-wrap:anywhere}.acw-meta{font-size:11px;color:#77766e;display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6}.acw-pill{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:5px 10px;border:1px solid #3e3e36;border-radius:99px;background:#20201c;color:#bdb8a8;font-size:9px;letter-spacing:.2px;white-space:nowrap}.acw-pill[data-outcome="false"]{color:#a3a19a;background:#191919;border-color:#343433}.acw-summary{padding:25px 27px 24px;border:1px solid #35352f;border-radius:20px;background:#141412;margin:0 0 23px}.acw-eyebrow{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:#7c7a70;display:block;margin:0 0 13px}.acw-summary p{font-size:16px;line-height:1.85;color:#d2cdc0;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.acw-summary-foot{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-top:19px;border-top:1px solid #2b2b26;padding-top:15px}.acw-summary-foot small{font-size:9px;color:#64645d}.acw-text-button{min-height:34px;padding:6px 0;border:0;background:none;color:#979489;font-size:10px!important;text-align:left}.acw-objective{border:1px solid #292929;border-radius:15px;padding:18px 21px;margin-bottom:22px}.acw-objective summary{cursor:pointer;font-size:11px;color:#929087;line-height:1.5}.acw-objective p{font-size:12px;line-height:1.8;color:#a6a297;margin:12px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.acw-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 38px}.acw-section-title{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px}.acw-section-title h3{font:550 21px/1.2 'Syne',sans-serif;letter-spacing:-.5px;color:#d6d1c6;margin:0}.acw-section-title small{font-size:10px;color:#66665f}.acw-transcript-tools{display:flex;align-items:center;gap:12px;margin-bottom:23px}.acw-transcript-tools input{height:38px;max-width:260px;flex:1;min-width:0;font-size:10.5px!important}.acw-find-controls{display:flex;align-items:center;gap:4px}.acw-find-controls button{width:34px;min-height:34px;border:1px solid #2d2d2b;border-radius:9px;color:#86847b;background:none;font-size:14px!important}.acw-find-count{font-size:9px;color:#65655e;white-space:nowrap;min-width:44px;text-align:center}.acw-transcript{max-width:850px}.acw-turn{display:grid;grid-template-columns:85px minmax(0,1fr);gap:15px;padding:18px 0;border-bottom:1px solid #242423}.acw-turn:first-child{padding-top:4px}.acw-speaker{font-size:10px;font-weight:500;color:#8c897f;padding-top:4px;overflow-wrap:anywhere}.acw-turn p,.acw-plain{font-size:13px;line-height:1.9;color:#b3afa3;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}.acw-turn[data-speaker="ava"] p{color:#d2cdc0}.acw-unavailable{padding:23px;border:1px dashed #30302d;border-radius:14px;color:#6d6d65;font-size:12px;line-height:1.7}.acw-unlabelled{font-size:9px;color:#65655e;margin:0 0 16px}.acw-transcript mark{color:#f0ead8;background:#454034;border-radius:3px;padding:1px 0}.acw-transcript mark[data-active="true"]{background:#c6bc9e;color:#141413}.acw-empty{min-height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:55px 25px}.acw-empty>svg{width:42px;height:42px;color:#77746b;margin-bottom:24px}.acw-empty h2{font:550 29px/1.2 'Syne',sans-serif;letter-spacing:-.8px;margin:0 0 13px;color:#d6d0c3}.acw-empty p{font-size:12px;line-height:1.9;color:#76756c;max-width:365px;margin:0 0 24px}.acw-status{flex-shrink:0;min-height:30px;padding:7px 30px;font-size:10px;line-height:1.6;color:#89867a;border-top:1px solid #232323}.acw-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:760px){.acw-header{height:76px;padding:0 18px}.acw-heading{gap:11px}.acw-heading h1{font-size:23px}.acw-heading small{font-size:9px}.acw-header-actions{gap:2px}.acw-header-actions .acw-primary{padding:10px 12px;font-size:10.5px!important}.acw-header-actions .acw-primary svg{display:none}.acw-body{grid-template-columns:minmax(0,1fr)}.acw-sidebar{border-right:0}.acw-detail{display:none;padding:22px 22px 42px}#avaCallsWorkspace[data-detail="true"] .acw-sidebar{display:none}#avaCallsWorkspace[data-detail="true"] .acw-detail{display:block}.acw-back{display:inline-flex}.acw-detail-head{margin-bottom:23px;gap:12px}.acw-summary{padding:21px;border-radius:17px}.acw-summary p{font-size:14px;line-height:1.85}.acw-summary-foot small{max-width:160px;line-height:1.6}.acw-actions{gap:7px;margin-bottom:31px}.acw-actions .acw-button{font-size:10px!important;padding:10px 12px}.acw-turn{grid-template-columns:62px 1fr;gap:12px}.acw-turn p,.acw-plain{font-size:12px}.acw-speaker{font-size:9px}.acw-preview{padding:10px 20px;font-size:10px}.acw-status{padding:7px 19px;font-size:9px}.acw-find-controls{gap:2px}.acw-transcript-tools{gap:7px}.acw-section-title h3{font-size:20px}}
+@media(prefers-reduced-motion:reduce){#avaCallsWorkspace *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+<section id="avaCallsWorkspace" role="dialog" aria-modal="true" aria-labelledby="acwTitle" hidden>
+ <div class="acw-shell">
+  <header class="acw-header"><div class="acw-heading"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="m5 3 4 1 1 5-2 2a15 15 0 0 0 5 5l2-2 5 1 1 4c-1 4-6 3-11-1S1 7 5 3Z" stroke-linejoin="round"/></svg><div><h1 id="acwTitle" tabindex="-1">Calls</h1><small>Ava by Synapses</small></div></div><div class="acw-header-actions"><button type="button" class="acw-icon" id="acwRefresh" aria-label="Check for new call results" title="Check for new results"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 7M19 3v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="acw-button acw-primary" id="acwNewCall"><span aria-hidden="true">＋</span> New call</button><button type="button" class="acw-icon" id="acwClose" aria-label="Close Calls">×</button></div></header>
+  <div class="acw-preview" id="acwPreview" hidden>Local preview · Example records. No call has been placed.</div>
+  <div class="acw-body"><aside class="acw-sidebar"><div class="acw-sidebar-top"><div class="acw-sidebar-label"><span>Your call records</span><span id="acwCount">0</span></div><label class="acw-sr" for="acwSearch">Search call records</label><input id="acwSearch" class="acw-search" type="search" placeholder="Search a name, purpose, or phrase…" autocomplete="off"><div class="acw-filters" role="group" aria-label="Filter outcomes"><button type="button" data-acw-filter="all" aria-pressed="true">All</button><button type="button" data-acw-filter="completed" aria-pressed="false">Completed</button><button type="button" data-acw-filter="unsuccessful" aria-pressed="false">Unsuccessful</button></div></div><nav class="acw-list" id="acwList" aria-label="Call records"></nav><footer class="acw-sidebar-bottom"><span id="acwDeviceLabel">Saved on this device</span><button type="button" id="acwClear">Clear device history</button></footer></aside><main class="acw-detail" id="acwDetail"></main></div>
+  <div class="acw-status" id="acwStatus" role="status" aria-live="polite"></div>
+ </div>
+</section>
+<script id="avaCallsScript">
+(function(){
+ 'use strict';
+ var root=document.getElementById('avaCallsWorkspace');if(!root)return;
+ var records=[],ignoredIds=[],selected=null,filter='all',search='',opened=false,focusBefore=null,inertBefore=[],bodyOverflow='',identity=null,identityVersion=0,resolving=false,lastUi='',cacheFailure=false,findText='',findIndex=0,marks=[],fixtureNode=document.getElementById('avaCallsLocalFixture'),fixture=!!fixtureNode&&/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+ var list=document.getElementById('acwList'),detail=document.getElementById('acwDetail'),status=document.getElementById('acwStatus');
+ function text(value){return value==null?'':typeof value==='string'?value:String(value);}
+ function node(tag,cls,value){var el=document.createElement(tag);if(cls)el.className=cls;if(value!=null)el.textContent=value;return el;}
+ function uiUser(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
+ function uiEmail(){var u=uiUser();return u&&!u.isGuest?text(u.email).trim().toLowerCase():'';}
+ function ownerEmail(owner){return text(owner).replace(/^web_/,'').trim().toLowerCase();}
+ function identityMatches(){var u=uiUser();return !!(identity&&u&&!u.isGuest&&uiEmail()===identity.email&&(!u.id||text(u.id)===identity.id));}
+ function cacheKey(){return identity?'synapses_ava_calls_v1_'+encodeURIComponent(identity.id):null;}
+ function notify(message){status.textContent=message||'';}
+ function normalize(raw){
+  if(!raw||typeof raw!=='object')return null;var id=text(raw.id).trim();if(!id)return null;
+  return{id:id,contact_name:text(raw.contact_name),contact_phone:text(raw.contact_phone),objective:text(raw.objective),summary:text(raw.summary),reply_summary:text(raw.reply_summary),transcript:typeof raw.transcript==='string'?raw.transcript:'',duration_seconds:Number.isFinite(Number(raw.duration_seconds))&&raw.duration_seconds!=null?Math.max(0,Number(raw.duration_seconds)):null,success:raw.success===true?true:raw.success===false?false:null,created_at:text(raw.created_at),reviewed:raw.reviewed===true||raw.seen===true};
+ }
+ function sorted(){records.sort(function(a,b){return (Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0);});}
+ function save(){if(fixture||!identityMatches())return;try{localStorage.setItem(cacheKey(),JSON.stringify({version:1,accountId:identity.id,records:records.slice(0,100),clearedIds:ignoredIds.slice(-1000)}));cacheFailure=false;}catch(e){cacheFailure=true;notify('Device storage is full or unavailable. Download records you want to keep.');}}
+ function load(){records=[];ignoredIds=[];if(!identityMatches())return;try{var stored=JSON.parse(localStorage.getItem(cacheKey())||'null');if(stored&&stored.accountId===identity.id&&Array.isArray(stored.records)){records=stored.records.map(normalize).filter(Boolean).slice(0,100);ignoredIds=Array.isArray(stored.clearedIds)?stored.clearedIds.filter(function(id){return typeof id==='string';}).slice(-1000):[];}}catch(e){notify('Saved records could not be read. New results can still appear here.');}sorted();}
+ function clearIdentity(){identity=null;records=[];ignoredIds=[];selected=null;findText='';resolving=false;if(opened)render();}
+ async function syncIdentity(){
+  if(fixture)return;var u=uiUser(),email=uiEmail(),version=++identityVersion;
+  if(!u||u.isGuest||!email){clearIdentity();return;}
+  if(typeof _supabase==='undefined'||!_supabase.auth||typeof _supabase.auth.getSession!=='function'){clearIdentity();return;}
+  resolving=true;try{
+   var result=await _supabase.auth.getSession(),session=result&&result.data&&result.data.session,auth=session&&session.user;
+   if(version!==identityVersion)return;
+   if(!auth||!text(auth.id).trim()||text(auth.email).trim().toLowerCase()!==email||uiEmail()!==email||(u.id&&text(u.id)!==text(auth.id))){clearIdentity();return;}
+   var changed=!identity||identity.id!==text(auth.id);identity={id:text(auth.id),email:email};if(changed){selected=null;load();}
+   var snapshot=typeof window.avaCallsPendingSnapshot==='function'?window.avaCallsPendingSnapshot():null;
+   if(snapshot)receive(snapshot.records,{owner:snapshot.owner});
+  }catch(e){if(version===identityVersion)clearIdentity();}finally{if(version===identityVersion){resolving=false;if(opened)render();}}
+ }
+ function receive(items,context){
+  if(fixture||!identityMatches()||ownerEmail(context&&context.owner)!==identity.email||!Array.isArray(items))return false;
+  var changed=false;items.forEach(function(raw){var record=normalize(raw);if(!record||ignoredIds.indexOf(record.id)!==-1)return;var index=records.findIndex(function(r){return r.id===record.id;});if(index<0){records.push(record);changed=true;}else{record.reviewed=records[index].reviewed||record.reviewed;if(JSON.stringify(records[index])!==JSON.stringify(record)){records[index]=record;changed=true;}}});
+  if(changed){sorted();records=records.slice(0,100);save();if(opened)render();}return true;
+ }
+ window.avaCallsReceive=receive;
+ window.avaCallsAccountChanged=function(){if(fixture)return;var u=uiUser();lastUi=text(u&&u.id)+'|'+uiEmail()+'|'+!!(u&&u.isGuest);clearIdentity();if(typeof window.avaCallsSetOwner==='function')window.avaCallsSetOwner(u&&u.email?'web_'+u.email:null);syncIdentity();};
+ function summary(record){return record.reply_summary||record.summary||'No summary was returned for this call.';}
+ function outcome(record){return record.success===true?'Completed':record.success===false?'Unsuccessful':'Result received';}
+ function date(record,short){var d=new Date(record.created_at);if(!record.created_at||!Number.isFinite(d.getTime()))return 'Date unavailable';return d.toLocaleString(undefined,short?{month:'short',day:'numeric'}:{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}
+ function duration(record){if(record.duration_seconds==null)return '';var seconds=Math.round(record.duration_seconds);return Math.floor(seconds/60)+'m '+String(seconds%60).padStart(2,'0')+'s';}
+ function current(){return records.find(function(r){return r.id===selected;})||null;}
+ function visibleRecords(){var needle=search.trim().toLowerCase();return records.filter(function(r){return (filter==='all'||filter==='completed'&&r.success===true||filter==='unsuccessful'&&r.success===false)&&(!needle||[r.contact_name,r.contact_phone,r.objective,r.summary,r.reply_summary,r.transcript].join(' ').toLowerCase().includes(needle));});}
+ function renderList(){
+  var rows=visibleRecords();list.replaceChildren();document.getElementById('acwCount').textContent=String(records.length);document.getElementById('acwClear').disabled=fixture||!identityMatches()||!records.length;
+  if(!rows.length){list.appendChild(node('p','acw-list-empty',search?'No records match that search.':records.length?'No calls match this outcome.':'Call results will appear here when they arrive.'));return;}
+  rows.forEach(function(r){var button=node('button','acw-row');button.type='button';button.setAttribute('aria-current',String(r.id===selected));var head=node('span','acw-row-head');head.appendChild(node('span','acw-row-name',r.contact_name||r.contact_phone||'Call record'));if(!r.reviewed){var dot=node('span','acw-dot');dot.setAttribute('aria-label','Not reviewed');head.appendChild(dot);}button.appendChild(head);button.appendChild(node('span','acw-row-summary',summary(r)));var meta=node('span','acw-row-meta');meta.appendChild(node('span','',outcome(r)));meta.appendChild(node('span','',date(r,true)));button.appendChild(meta);button.onclick=function(){selected=r.id;findText='';root.dataset.detail='true';renderList();renderDetail();var title=detail.querySelector('h2');if(title)title.focus({preventScroll:true});};list.appendChild(button);});
+ }
+ function action(label,fn,primary){var button=node('button','acw-button'+(primary?' acw-primary':''),label);button.type='button';button.onclick=fn;return button;}
+ function parseTranscript(record){
+  var turns=[],leading=[],contact=(record.contact_name||'').trim().toLowerCase();record.transcript.split(/\r?\n/).forEach(function(line){var match=line.match(/^\s*([^:\n]{1,40}):\s*(.*)$/),label=match&&match[1].trim(),key=label&&label.toLowerCase(),known=key&&(/^(ava|assistant|agent|contact|callee|caller|user|customer|human|speaker\s*\d+)$/.test(key)||contact&&key===contact);if(known){if(leading.join('\n').trim()){turns.push({speaker:'Unlabeled',kind:'unknown',body:leading.join('\n')});leading=[];}var isAva=/^(ava|assistant|agent)$/.test(key);turns.push({speaker:isAva?'Ava':/^(contact|callee)$/.test(key)?record.contact_name||label:label,kind:isAva?'ava':'contact',body:match[2]});}else if(match&&turns.length)turns.push({speaker:'Unlabeled',kind:'unknown',body:line});else if(turns.length)turns[turns.length-1].body+='\n'+line;else leading.push(line);});return turns;
+ }
+ function markedText(parent,value){
+  var needle=findText.trim();if(!needle){parent.textContent=value;return;}var at=0,lower=value.toLowerCase(),query=needle.toLowerCase(),index;
+  while((index=lower.indexOf(query,at))!==-1){parent.appendChild(document.createTextNode(value.slice(at,index)));var mark=node('mark','',value.slice(index,index+needle.length));parent.appendChild(mark);marks.push(mark);at=index+needle.length;}parent.appendChild(document.createTextNode(value.slice(at)));
+ }
+ function renderTranscript(record,container,count){
+  container.replaceChildren();marks=[];var turns=parseTranscript(record);
+  if(!record.transcript.trim()){container.appendChild(node('p','acw-unavailable','No transcript was returned for this call.'));count.textContent='';return;}
+  if(!turns.length){container.appendChild(node('p','acw-unlabelled','Speaker labels were not included in this transcript.'));var plain=node('p','acw-plain');markedText(plain,record.transcript);container.appendChild(plain);count.textContent='Full transcript';}
+  else{turns.forEach(function(turn){var row=node('div','acw-turn');row.dataset.speaker=turn.kind;row.appendChild(node('div','acw-speaker',turn.speaker));var body=node('p');markedText(body,turn.body);row.appendChild(body);container.appendChild(row);});count.textContent=turns.length+' turns';}
+ }
+ function jumpMatch(direction){if(!marks.length)return;findIndex=(findIndex+direction+marks.length)%marks.length;marks.forEach(function(mark,index){mark.dataset.active=String(index===findIndex);});marks[findIndex].scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});var counter=detail.querySelector('.acw-find-count');if(counter)counter.textContent=(findIndex+1)+' / '+marks.length;}
+ function recordText(record){return[(record.contact_name||'Call record'),outcome(record),date(record,false)+(duration(record)?' · '+duration(record):''),record.contact_phone,'','SUMMARY',summary(record),'','OBJECTIVE',record.objective||'No objective saved.','','TRANSCRIPT',record.transcript||'No transcript returned.'].join('\n');}
+ function canExport(){return !fixture&&identityMatches();}
+ async function copy(value,label){if(!canExport()){notify(fixture?'Example records cannot be exported.':'Sign in to copy your call records.');return;}try{if(!navigator.clipboard||!navigator.clipboard.writeText)throw new Error('clipboard');await navigator.clipboard.writeText(value);notify(label+' copied.');}catch(e){notify('Clipboard is unavailable. Use Download record to keep a copy.');}}
+ function download(record){if(!canExport()){notify(fixture?'Example records cannot be exported.':'Sign in to download your call records.');return;}var blob=new Blob([recordText(record)],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='Ava-call-'+(record.contact_name||record.id).replace(/[^A-Za-z0-9_-]+/g,'-').slice(0,60)+'.txt';document.body.appendChild(link);link.click();link.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);notify('Call record downloaded.');}
+ function draft(record){
+  if(fixture){notify('Local preview only. In your account this opens a call draft for review.');return false;}
+  var button=document.getElementById('csNewCallBtn');if(!button){notify('The existing call form is unavailable. Try the Calls navigation again.');return false;}
+  close(false);button.click();var values={csNewName:record?record.contact_name:'',csNewPhone:record?record.contact_phone:'',csNewObjective:record&&record.objective?'Follow up on: '+record.objective:''};Object.keys(values).forEach(function(id){var field=document.getElementById(id);if(field)field.value=values[id];});var existingStatus=document.getElementById('csNewStatus');if(existingStatus)existingStatus.textContent='Review the number and purpose before starting. Nothing has been called.';var target=document.getElementById(record&&record.contact_phone?'csNewObjective':'csNewPhone');if(target)target.focus({preventScroll:true});return true;
+ }
+ async function markReviewed(record){
+  if(fixture||!identityMatches()){notify(fixture?'Example only. No call record has been changed.':'Sign in to review your call records.');return;}var capturedId=identity.id;
+  if(typeof window.avaCallsMarkReviewed!=='function'){notify('Review confirmation is unavailable. Your saved record is still here.');return;}
+  notify('Marking reviewed…');try{var result=await window.avaCallsMarkReviewed(record.id);if(!identityMatches()||identity.id!==capturedId)return;if(!result||!result.ok)throw new Error('review');var saved=records.find(function(r){return r.id===record.id;});if(saved)saved.reviewed=true;save();render();notify('Marked reviewed. The record stays saved on this device.');}catch(e){notify('Could not confirm review. The record has been kept; you can try again.');}
+ }
+ function renderDetail(){
+  detail.replaceChildren();var record=current();
+  if(!record){var empty=node('div','acw-empty');empty.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.15" aria-hidden="true"><path d="m5 3 4 1 1 5-2 2a15 15 0 0 0 5 5l2-2 5 1 1 4c-1 4-6 3-11-1S1 7 5 3Z" stroke-linejoin="round"/></svg>';empty.appendChild(node('h2','',identityMatches()?'A little less phone tag.':'Your calls, kept together.'));empty.appendChild(node('p','',identityMatches()?'When a call finishes, its returned summary and transcript appear here. Records received here are saved on this device.':'Sign in to view saved call records. Summaries and transcripts received here stay separate for each account.'));empty.appendChild(action('New call',function(){draft(null);},true));detail.appendChild(empty);return;}
+  var back=action('← All calls',function(){root.dataset.detail='false';document.getElementById('acwSearch').focus();});back.classList.add('acw-back');detail.appendChild(back);
+  var head=node('div','acw-detail-head'),heading=node('div'),title=node('h2','',record.contact_name||record.contact_phone||'Call record');title.tabIndex=-1;heading.appendChild(title);var meta=node('div','acw-meta');meta.appendChild(node('span','',date(record,false)));if(duration(record))meta.appendChild(node('span','',duration(record)));if(record.contact_phone)meta.appendChild(node('span','',record.contact_phone));heading.appendChild(meta);head.appendChild(heading);var pill=node('span','acw-pill',outcome(record));pill.dataset.outcome=String(record.success);head.appendChild(pill);detail.appendChild(head);
+  var box=node('section','acw-summary');box.appendChild(node('span','acw-eyebrow','Call summary'));box.appendChild(node('p','',summary(record)));var foot=node('div','acw-summary-foot');foot.appendChild(node('small','',record.reply_summary?'What the contact said':'Returned call summary'));var copySummary=node('button','acw-text-button','Copy summary');copySummary.type='button';copySummary.disabled=!canExport();copySummary.onclick=function(){copy(summary(record),'Summary');};foot.appendChild(copySummary);box.appendChild(foot);detail.appendChild(box);
+  var objective=node('details','acw-objective');objective.appendChild(node('summary','', 'Original purpose'));objective.appendChild(node('p','',record.objective||'No objective was saved for this call.'));detail.appendChild(objective);
+  var actions=node('div','acw-actions');var follow=action('Prepare follow-up',function(){draft(record);},true);follow.disabled=!record.contact_phone;actions.appendChild(follow);var exportButton=action('Download record',function(){download(record);});exportButton.disabled=!canExport();actions.appendChild(exportButton);if(!record.reviewed)actions.appendChild(action('Mark reviewed',function(){markReviewed(record);}));detail.appendChild(actions);
+  var transcriptHead=node('div','acw-section-title');transcriptHead.appendChild(node('h3','', 'Transcript'));var turnCount=node('small');transcriptHead.appendChild(turnCount);detail.appendChild(transcriptHead);
+  var tools=node('div','acw-transcript-tools'),find=node('input','acw-search');find.type='search';find.placeholder='Find in transcript…';find.setAttribute('aria-label','Find in transcript');find.value=findText;tools.appendChild(find);var findControls=node('div','acw-find-controls'),prev=node('button','', '↑'),counter=node('span','acw-find-count',''),next=node('button','', '↓');prev.type=next.type='button';prev.setAttribute('aria-label','Previous transcript match');next.setAttribute('aria-label','Next transcript match');prev.onclick=function(){jumpMatch(-1);};next.onclick=function(){jumpMatch(1);};findControls.append(prev,counter,next);tools.appendChild(findControls);detail.appendChild(tools);var transcript=node('div','acw-transcript');detail.appendChild(transcript);renderTranscript(record,transcript,turnCount);
+  find.oninput=function(){findText=this.value;findIndex=0;renderTranscript(record,transcript,turnCount);counter.textContent=marks.length?marks.length+' found':'';prev.disabled=next.disabled=!marks.length;};find.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();jumpMatch(e.shiftKey?-1:1);}if(e.key==='Escape'&&findText){e.preventDefault();e.stopPropagation();find.value='';find.oninput();}};prev.disabled=next.disabled=!marks.length;counter.textContent=marks.length?marks.length+' found':'';
+  var copyTranscript=action('Copy full transcript',function(){copy(record.transcript,'Transcript');});copyTranscript.style.marginTop='22px';copyTranscript.disabled=!canExport()||!record.transcript;detail.appendChild(copyTranscript);
+ }
+ function render(){
+  if(!fixture&&!identityMatches()){records=[];selected=null;}sorted();if(!selected||!records.some(function(r){return r.id===selected;}))selected=records[0]&&records[0].id||null;renderList();renderDetail();document.getElementById('acwDeviceLabel').textContent=fixture?'Example records':'Saved on this device';if(!fixture&&!identityMatches())notify(resolving?'Checking your signed-in account…':'Sign in to view saved call records.');else if(cacheFailure)notify('Device storage is unavailable. Download records you want to keep.');
+ }
+ function open(){
+  if(opened)return;focusBefore=document.activeElement;opened=true;window.__avaCallsOpen=true;
+  if(typeof window._csMinimizeForPulse==='function')window._csMinimizeForPulse();root.hidden=false;bodyOverflow=document.body.style.overflow;document.body.style.overflow='hidden';inertBefore=[];Array.from(document.body.children).forEach(function(el){if(el!==root&&!/^(SCRIPT|STYLE)$/.test(el.tagName)){inertBefore.push([el,el.inert]);el.inert=true;}});render();document.getElementById('acwTitle').focus({preventScroll:true});if(!fixture)syncIdentity();
+ }
+ function close(restore){if(!opened)return;opened=false;window.__avaCallsOpen=false;root.hidden=true;document.body.style.overflow=bodyOverflow;inertBefore.forEach(function(entry){entry[0].inert=entry[1];});inertBefore=[];if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});}
+ window.openAvaCallsWorkspace=open;window.avaCallsIsOpen=function(){return opened;};
+ document.getElementById('acwClose').onclick=function(){close(true);};document.getElementById('acwNewCall').onclick=function(){draft(null);};document.getElementById('acwRefresh').onclick=function(){if(fixture){notify('Local example records. No server request was made.');return;}if(!identityMatches()){syncIdentity();notify('Sign in to check for new call results.');return;}if(typeof window.avaCallsRefreshPending==='function'){window.avaCallsRefreshPending();notify('Checking for new results. Existing saved records stay here.');}else notify('New-result checking is unavailable. Saved records are still available.');};
+ document.getElementById('acwClear').onclick=function(){if(fixture||!identityMatches()||!records.length)return;if(!window.confirm('Clear this account’s saved call history on this device? This does not delete server records.'))return;try{var cleared=Array.from(new Set(ignoredIds.concat(records.map(function(r){return r.id;})))).slice(-1000);localStorage.setItem(cacheKey(),JSON.stringify({version:1,accountId:identity.id,records:[],clearedIds:cleared}));ignoredIds=cleared;records=[];selected=null;render();notify('Device history cleared. Newly received results can appear here.');}catch(e){notify('Could not clear device history. No records were changed.');}};
+ document.getElementById('acwSearch').oninput=function(){search=this.value;renderList();};root.querySelectorAll('[data-acw-filter]').forEach(function(button){button.onclick=function(){filter=button.dataset.acwFilter;root.querySelectorAll('[data-acw-filter]').forEach(function(b){b.setAttribute('aria-pressed',String(b===button));});renderList();};});
+ root.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close(true);return;}if(e.key!=='Tab')return;var items=Array.from(root.querySelectorAll('button:not([disabled]),input:not([disabled]),summary,[tabindex="0"]')).filter(function(el){return el.getClientRects().length>0;}),first=items[0],last=items[items.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===document.getElementById('acwTitle'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+ var callsNav=document.getElementById('bnavCallBtn');if(callsNav)callsNav.onclick=open;
+ function attachAuth(){if(typeof _supabase!=='undefined'&&_supabase.auth&&typeof _supabase.auth.onAuthStateChange==='function')_supabase.auth.onAuthStateChange(function(event,session){identityVersion++;if(!session||!session.user||identity&&identity.id!==text(session.user.id))clearIdentity();setTimeout(syncIdentity,0);});}
+ attachAuth();if(!fixture){var initialUser=uiUser();lastUi=text(initialUser&&initialUser.id)+'|'+uiEmail()+'|'+!!(initialUser&&initialUser.isGuest);syncIdentity();setInterval(function(){var u=uiUser(),next=text(u&&u.id)+'|'+uiEmail()+'|'+!!(u&&u.isGuest);if(next!==lastUi){lastUi=next;window.avaCallsAccountChanged();}},1000);window.addEventListener('focus',syncIdentity);}else{try{records=JSON.parse(fixtureNode.textContent).map(normalize).filter(Boolean);document.getElementById('acwPreview').hidden=false;open();root.dataset.detail='true';}catch(e){notify('Local preview records could not be loaded.');}}
 })();
 </script>
 
