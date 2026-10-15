@@ -28,7 +28,11 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
     paintTimer=setTimeout(function(){window.avaWelcomeReleasePaint('timeout');},15000);
   };
   var entry=new URLSearchParams(location.search);
-  if(entry.get('welcome')==='preview'||entry.get('guest')==='1'||entry.get('auth')==='login'){
+  var mayResume=false;
+  if(!entry.has('auth')&&!entry.has('guest')&&!entry.has('welcome')){
+    try{mayResume=!!localStorage.getItem('synapses-supabase-auth-v1');}catch(e){}
+  }
+  if(entry.get('welcome')==='preview'||entry.get('guest')==='1'||entry.get('auth')==='login'||mayResume){
     window.avaWelcomeHoldPaint();
     window.addEventListener('load',function(){
       if(paintHeld&&(!document.getElementById('avaWelcome')||typeof window.avaWelcomeMaybeStart!=='function'))window.avaWelcomeReleasePaint('welcome-unavailable');
@@ -21243,9 +21247,11 @@ var allJobs=[],currentUser=null,jobFilter='all';
     }catch(e){ done(false); }
   }
 
-  // The landing's explicit Log in route may already have a valid web session.
-  // Verify it with Supabase before reusing the normal application login path.
-  window.avaResumeLoginSession = function(){
+  // Both the landing Log in link and a normal page refresh may already have a
+  // valid web session. Verify it before opening the waitlist/sign-in surface.
+  window.avaResumeLoginSession = function(options){
+    options=options||{};
+    var normalEntry=options.normalEntry===true;
     return new Promise(function(resolve){
       var finished=false,subscription=null,expectedId=null;
       var deadline=setTimeout(function(){finish(false);},8000);
@@ -21255,7 +21261,15 @@ var allJobs=[],currentUser=null,jobFilter='all';
         try{if(subscription)subscription.unsubscribe();}catch(e){}
         resolve(!!ok);
       }
-      function active(){return !finished&&new URLSearchParams(location.search).get('auth')==='login';}
+      function active(){
+        if(finished)return false;
+        var route=new URLSearchParams(location.search);
+        if(normalEntry){
+          return !route.has('auth')&&!route.has('guest')&&!route.has('welcome')
+            &&!(typeof currentUser!=='undefined'&&currentUser);
+        }
+        return route.get('auth')==='login';
+      }
       Promise.resolve().then(async function(){
         try{
           var client=window._supabase;
@@ -21276,7 +21290,8 @@ var allJobs=[],currentUser=null,jobFilter='all';
           if(!active()||verified.error||!u||u.id!==expectedId||!u.email){finish(false);return;}
           var profile=await client.from('profiles').select('*').eq('id',u.id).single();
           if(!active()){finish(false);return;}
-          if(profile&&profile.error){finish(false);return;}
+          // A profile lookup can fail while the verified auth token remains
+          // valid. Restore with account defaults and refresh profile later.
           var p=profile&&profile.data||{};
           // Recheck after profile loading: a late response must not undo sign-out.
           var latest=await client.auth.getSession();
@@ -21291,8 +21306,10 @@ var allJobs=[],currentUser=null,jobFilter='all';
             postMediaPref:localPref||p.post_media_pref||'photo',
             plan:p.plan||'free',planStatus:p.plan_status||'active',
             stripeCustomerId:p.stripe_customer_id||null,isGuest:false};
-          var route=new URL(location.href);route.searchParams.delete('auth');
-          history.replaceState(history.state,'',route.pathname+route.search+route.hash);
+          if(!normalEntry){
+            var route=new URL(location.href);route.searchParams.delete('auth');
+            history.replaceState(history.state,'',route.pathname+route.search+route.hash);
+          }
           window._waitlistGateActive=false;
           if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);
           finish(_bootUserSession(restored));
@@ -21302,7 +21319,25 @@ var allJobs=[],currentUser=null,jobFilter='all';
   };
 
   if(WAITLIST_MODE){
-    showAuthModal();
+    var entryRoute=new URLSearchParams(location.search);
+    var savedAuth=false;
+    try{savedAuth=!!localStorage.getItem('synapses-supabase-auth-v1');}catch(e){}
+    if(savedAuth&&!entryRoute.has('auth')&&!entryRoute.has('guest')&&!entryRoute.has('welcome')){
+      function releaseSessionPaint(reason){
+        function ready(){
+          if(!window.__avaWelcomePending&&!window.__avaWelcomeActive)window.avaWelcomeReleasePaint(reason);
+        }
+        if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',ready,{once:true});
+        else ready();
+      }
+      Promise.resolve(window.avaResumeLoginSession({normalEntry:true})).then(function(resumed){
+        if(!resumed&&!currentUser)showAuthModal();
+        releaseSessionPaint('session-refresh-ready');
+      },function(){
+        if(!currentUser)showAuthModal();
+        releaseSessionPaint('session-refresh-error');
+      });
+    } else showAuthModal();
   } else if(_tryBootFromLocalSession()){
     /* already in from WebView localStorage */
   } else if(window._supabase && _supabase.auth && typeof _supabase.auth.getSession === 'function'){
@@ -45617,6 +45652,7 @@ async function sendMessage(){
   // bakcusapd file: pace 0 always. Sun story: 17ms. Rapid: 0.
   window._streamPaceMs = (_paintMode === 2 && !_storyBak) ? 17 : 0;
   var _storyRevealSlot = 0; // Sun smooth only
+  var _storyNextAt = 0; // absolute timing survives separate network updates
   var STORY_GAP_MS = 1200;
   // Why bakcusapd feels so fast: each onChunk resets burst → most new groups
   // get delay 0 (paint the moment 1 / 3 sentences exist). Artificial 1200 only
@@ -45685,6 +45721,8 @@ async function sendMessage(){
     var _streamDone = false;
     var _storyRevealDone = false;
     var _storyRevealPending = 0;
+    var _storyFinalReady = false;
+    var _storyFinalized = false;
     var _ctrlsRemoved = false;
     function _removeStreamControls(){
       if(_ctrlsRemoved) return;
@@ -45746,6 +45784,22 @@ async function sendMessage(){
         if(_srcM) streamP.insertAdjacentHTML('beforeend', _srcM[0]);
         _scheduleScroll();
       }catch(_as){}
+    }
+    function _storyDelay(){
+      if(!_storyNextAt) _storyNextAt=Date.now();
+      var delay=Math.max(0,_storyNextAt-Date.now());
+      _storyNextAt=Math.max(_storyNextAt,Date.now())+STORY_GAP_MS;
+      return delay;
+    }
+    function _finishStoryReveal(){
+      if(_storyFinalized||!_storyFinalReady||_storyRevealPending||_streamStopped||_streamSkip||!streamP)return;
+      _storyFinalized=true;
+      _replyMdLocked=true;
+      // Normalize completed markdown only after every queued chunk appears.
+      streamP.innerHTML=_isResearchReply&&typeof _avaRenderResearchHtml==='function'
+        ? _avaRenderResearchHtml(reply) : fmtMD(reply);
+      _scheduleScroll();
+      _removeStreamControls();
     }
     /** Body only — same text for story paint and voice (no Sources). */
     function _researchBodyOnly(t){
@@ -45849,7 +45903,7 @@ async function sendMessage(){
           var _take = (_cursor === 0) ? 1 : chunkSize;
           if(_cursor + _take > sentences.length) break;
           // bak: always 0 (show when ready). Sun: slot * 1200.
-          var _delay = _storyBak ? 0 : (_storyRevealSlot * STORY_GAP_MS);
+          var _delay = _storyBak ? 0 : _storyDelay();
           (function(_start, _len, _d){
             var _chunk = sentences.slice(_start, _start+_len).join(' ');
             var _chunkHtml = fmtMDstream(_chunk, _storyListCounter);
@@ -45863,10 +45917,12 @@ async function sendMessage(){
               _cp.innerHTML = _chunkHtml;
               streamP.appendChild(_cp);
               _scheduleScroll();
-              if(_streamDone && _storyRevealPending === 0 && !_streamStopped){
-                if(typeof _appendResearchSourcesIfNeeded === 'function') _appendResearchSourcesIfNeeded();
-                _removeStreamControls();
-              }
+              if(_storyBak){
+                if(_streamDone && _storyRevealPending === 0 && !_streamStopped){
+                  if(typeof _appendResearchSourcesIfNeeded === 'function') _appendResearchSourcesIfNeeded();
+                  _removeStreamControls();
+                }
+              } else _finishStoryReveal();
             }, _d);
           })(_cursor, _take, _delay);
           if(!_storyBak) _storyRevealSlot++;
@@ -46097,18 +46153,15 @@ async function sendMessage(){
                 _lp2.innerHTML = _html;
                 streamP.appendChild(_lp2);
                 _scheduleScroll();
-                if(_storyRevealPending === 0){
-                  if(_isResearchReply) _appendResearchSourcesIfNeeded();
-                  _removeStreamControls();
-                }
+                _finishStoryReveal();
               }, _delay);
-            })(_lastShownSentences, _ft, _storyRevealSlot * STORY_GAP_MS);
+            })(_lastShownSentences, _ft, _storyDelay());
             _storyRevealSlot++;
             _lastShownSentences += _ft;
           }
         }
-        if(_isResearchReply && _storyRevealPending === 0) _appendResearchSourcesIfNeeded();
-        if(streamP){
+        if(_isResearchReply && _storyRevealPending === 0 && (_paintMode===1 || _storyBak)) _appendResearchSourcesIfNeeded();
+        if(streamP && (_paintMode===1 || _storyBak)){
           _replyMdLocked = true;
           _storyRevealPending = 0;
           streamP.innerHTML = _isResearchReply && typeof _avaRenderResearchHtml==='function' ? _avaRenderResearchHtml(reply) : fmtMD(reply);
@@ -46118,11 +46171,14 @@ async function sendMessage(){
         if(_storyRevealPending === 0) _appendResearchSourcesIfNeeded();
       }
     }
+    _storyFinalReady=true;
+    if(_paintMode===2&&!_storyBak&&!_streamSkip) _finishStoryReveal();
     if(!_streamStopped && _storyRevealPending === 0){
       _removeStreamControls();
-    } else if(!_streamStopped){
+    } else if(!_streamStopped && (_paintMode!==2 || _storyBak || _streamSkip)){
       setTimeout(function(){
-        if(typeof _appendResearchSourcesIfNeeded === 'function') _appendResearchSourcesIfNeeded();
+        if(_paintMode===2&&!_storyBak&&!_streamSkip) _finishStoryReveal();
+        else if(typeof _appendResearchSourcesIfNeeded === 'function') _appendResearchSourcesIfNeeded();
         _removeStreamControls();
       }, 20000);
     }
