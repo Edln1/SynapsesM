@@ -1,11 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script id="avaWelcomeGate">
+<style id="avaWelcomeBootStyles">
+/* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
+   the route has prepared its actual destination; never change authentication. */
+html.ava-welcome-boot,html.ava-welcome-boot body,html.ava-welcome-boot[data-theme] body{background:#000000!important;transition:none!important}
+html.ava-welcome-boot body{overflow:hidden!important}
+html.ava-welcome-boot body>:not(script):not(style){visibility:hidden!important}
+html.ava-welcome-boot::after{content:""!important;display:block!important;position:fixed!important;inset:0!important;z-index:2147483647!important;background:#000000!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;transition:none!important;animation:none!important}
+</style><script id="avaWelcomeGate">
 (function(){
+  var paintHeld=false,paintTimer=0;
+  window.__avaWelcomePending=false;
+  window.avaWelcomeReleasePaint=function(reason){
+    window.__avaWelcomePending=false;
+    if(!paintHeld)return false;
+    paintHeld=false;clearTimeout(paintTimer);paintTimer=0;
+    document.documentElement.classList.remove('ava-welcome-boot');
+    window.__avaWelcomePaintRelease=reason||'ready';return true;
+  };
+  window.avaWelcomePaintHeld=function(){return paintHeld;};
+  window.avaWelcomeHoldPaint=function(){
+    if(paintHeld)return;
+    paintHeld=true;document.documentElement.classList.add('ava-welcome-boot');
+    // A missing/failed module must reveal the normal app/auth surface, not leave
+    // a permanently blank screen. Readiness normally releases synchronously.
+    paintTimer=setTimeout(function(){window.avaWelcomeReleasePaint('timeout');},15000);
+  };
+  var entry=new URLSearchParams(location.search);
+  if(entry.get('welcome')==='preview'||entry.get('guest')==='1'){
+    window.avaWelcomeHoldPaint();
+    window.addEventListener('load',function(){
+      if(paintHeld&&(!document.getElementById('avaWelcome')||typeof window.avaWelcomeMaybeStart!=='function'))window.avaWelcomeReleasePaint('welcome-unavailable');
+    },{once:true});
+  }
   window.__avaWelcomeActive=false;
   window.avaWelcomeStorageKey=function(){var u=null;try{u=typeof currentUser!=='undefined'?currentUser:window.currentUser;}catch(e){}return 'synapses_ava_welcome_v1_'+(!u||u.isGuest?'guest':String(u.id||u.email||'member').toLowerCase());};
-  window.avaWelcomeShouldStart=function(){try{if(window.__avaWelcomePreviewDismissed)return false;if(new URLSearchParams(location.search).get('welcome')==='preview')return true;var u=typeof currentUser!=='undefined'?currentUser:window.currentUser;if(!u)return false;return !localStorage.getItem(window.avaWelcomeStorageKey());}catch(e){return true;}};
+  window.avaWelcomeShouldStart=function(){try{if(window.__avaWelcomePreviewDismissedKey===window.avaWelcomeStorageKey())return false;if(new URLSearchParams(location.search).get('welcome')==='preview')return true;var u=typeof currentUser!=='undefined'?currentUser:window.currentUser;if(!u)return false;return !localStorage.getItem(window.avaWelcomeStorageKey());}catch(e){return true;}};
+  function startWhenReady(){
+    if(!window.__avaWelcomePending)return;
+    try{if(typeof window.avaWelcomeMaybeStart==='function')window.avaWelcomeMaybeStart();}
+    catch(error){window.avaWelcomeReleasePaint('login-error');throw error;}
+  }
+  window.avaWelcomePrepareLogin=function(){
+    var u=null;try{u=typeof currentUser!=='undefined'?currentUser:window.currentUser;}catch(e){}
+    if(!u||!window.avaWelcomeShouldStart())return false;
+    window.__avaWelcomePending=true;
+    // Preserve the existing daily entrance while it covers the app. Take over
+    // at its completion; otherwise cover this same synchronous auth handoff.
+    if(!document.documentElement.classList.contains('synapses-welcome-pending'))window.avaWelcomeHoldPaint();
+    if(typeof queueMicrotask==='function')queueMicrotask(startWhenReady);else Promise.resolve().then(startWhenReady);
+    return true;
+  };
+  window.addEventListener('synapses:intro-complete',function(){
+    if(window.__avaWelcomePending){window.avaWelcomeHoldPaint();startWhenReady();}
+  });
 })();
 </script>
 <link rel="icon" type="image/png" href="/favicon.png"><script>(function(){
@@ -23490,6 +23539,7 @@ function _synMaybeAutoBrief(force){
 }
 
 function onLogin(){window._loginDone=true;
+if(typeof window.avaWelcomePrepareLogin==='function')window.avaWelcomePrepareLogin();
 try{if(window.avaPreviewAfterLogin)window.avaPreviewAfterLogin();}catch(_previewError){}
 try{ window.currentUser = currentUser; }catch(_cu){}
 try{ document.body.classList.add('syn-authed'); }catch(_ba){}
@@ -92790,7 +92840,7 @@ var narratedReplyPending=false,narratedReplyLastBusy=0;
 function narrationBusy(){return (typeof _nbApSpeakUtter!=='undefined'&&!!_nbApSpeakUtter)||(typeof _vmSpeaking!=='undefined'&&_vmSpeaking)||(typeof _ttsProcessing!=='undefined'&&_ttsProcessing)||(typeof _ttsQueue!=='undefined'&&_ttsQueue.length>0);}
 function narrationEnabled(){return narratedReplyPending||narrationBusy();}
 window.avaPreviewOnChatSend=function(){if(typeof _vmActive!=='undefined'&&_vmActive){narratedReplyPending=true;narratedReplyLastBusy=Date.now();window.avaPreviewSilenceForNarration();}};
-function eligible(key){return !window.__avaWelcomeActive&&!(window.avaWelcomeShouldStart&&window.avaWelcomeShouldStart())&&!(introStage(key)&&introSeen&&introSeen[introStage(key)])&&!!clips[key]&&!narrationEnabled()&&!document.hidden&&!window._avaAvatarConnected&&!window._topNavVoiceActive&&(key==='actionsteps'||key==='livecall'||/^(checkin|feature|topic)/.test(key)||appearanceCount<5)&&Date.now()>=dismissedUntil;}
+function eligible(key){return !window.__avaWelcomeActive&&!window.__avaWelcomePending&&!(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())&&!(introStage(key)&&introSeen&&introSeen[introStage(key)])&&!!clips[key]&&!narrationEnabled()&&!document.hidden&&!window._avaAvatarConnected&&!window._topNavVoiceActive&&(key==='actionsteps'||key==='livecall'||/^(checkin|feature|topic)/.test(key)||appearanceCount<5)&&Date.now()>=dismissedUntil;}
 var activeMoment=null;
 var introDone={welcome:false,chatstart:false,chatprompt:false},liveCallDone=false,lastPortraitEnd=0,ongoingCount=0,checkinIndex=0,lastCheckin=Date.now();
 // Public visitors retain onboarding progress; loopback previews remain replayable.
@@ -92812,6 +92862,12 @@ async function play(key){if(!eligible(key)){if(narrationEnabled()&&Object.protot
 window.enterAvaGuest=function(){if(typeof doGuest==='function')doGuest();};
 var welcomeStarted=!!introSeen.welcome;
 window.avaPreviewAfterLogin=function(){if(typeof currentUser==='undefined'||!currentUser||!currentUser.isGuest||welcomeStarted)return;if(clips.welcome){welcomeStarted=true;play('welcome').then(function(ok){if(!ok)welcomeStarted=false;});}};
+// Welcome UI is not narration. Pause without marking an unplayed hint done.
+window.avaPreviewPauseForWelcome=function(){clearTimeout(pendingMoment);pendingMoment=0;if(!box.hidden){video.pause();close();box.hidden=true;}};
+window.avaPreviewResumeAfterWelcome=function(){
+  function resume(){if(window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld()))return;var auth=document.getElementById('authModal');if(auth&&getComputedStyle(auth).display!=='none')return;window.avaPreviewAfterLogin();}
+  if(typeof queueMicrotask==='function')queueMicrotask(resume);else Promise.resolve().then(resume);
+};
 window.avaPreviewRequiresSubscription=function(){return !(typeof isPro==='function'&&isPro());};
 window.avaPreviewRequestLive=function(){close();if(typeof showPaywall==='function')showPaywall('video');};
 window.avaPreviewTopic=function(query){var text=String(query||'').trim();if(text.length<4||Date.now()-lastPlayed<90000)return false;for(var r of rules){if(r[1].test(text)){if(r[0]===lastTopic||!eligible(r[0]))return false;lastTopic=r[0];play(r[0]);return true;}}return false;};
@@ -93153,7 +93209,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 <script id="avaWelcomeScript">
 (function(){
   'use strict';
+  function releasePaint(reason){if(typeof window.avaWelcomeReleasePaint==='function')window.avaWelcomeReleasePaint(reason);}
+  try{
   var root=document.getElementById('avaWelcome'), step=0, scene=0, timers=[], cycle=0, demoPaused=false, opened=false, preview=false, replay=false, focusBefore=null, inertBefore=[], googleConnected=false, pendingPrompt='', generation=0;
+  if(!root){releasePaint('welcome-unavailable');return;}
   var reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   var mascot='<svg class="aw-mascot" viewBox="0 0 148 118" fill="none" aria-hidden="true"><g class="aw-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="aw-pupil" fill="#242420"><ellipse class="aw-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="aw-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="aw-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg>';
   document.querySelectorAll('[data-aw-mascot]').forEach(function(el){el.innerHTML=mascot;});
@@ -93201,17 +93260,26 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   }
   function preventBackground(){inertBefore=[];Array.from(document.body.children).forEach(function(el){if(el!==root&&!/^(SCRIPT|STYLE)$/.test(el.tagName)){inertBefore.push([el,el.inert]);el.inert=true;}});}
   function open(options){
-    options=options||{};if(opened){go(options.step||0);return;}
+    options=options||{};if(opened){go(options.step||0,false);releasePaint('welcome-ready');document.getElementById('awTitle'+step).focus({preventScroll:true});return;}
     preview=!!options.preview;replay=!!options.replay;focusBefore=document.activeElement;opened=true;window.__avaWelcomeActive=true;
-    try{if(typeof window.avaPreviewSilenceForNarration==='function')window.avaPreviewSilenceForNarration();}catch(e){}
+    try{if(typeof window.avaPreviewPauseForWelcome==='function')window.avaPreviewPauseForWelcome();}catch(e){}
     var video=document.getElementById('avaRecordedVideo');if(video)video.pause();
-    root.hidden=false;document.body.classList.add('ava-welcome-active');preventBackground();syncBrandMotion();go(options.step||0,true);
+    root.hidden=false;document.body.classList.add('ava-welcome-active');preventBackground();syncBrandMotion();go(options.step||0,false);
+    // One synchronous handoff: reveal only after the opaque welcome, first
+    // screen, focus target and inert background are all prepared.
+    releasePaint('welcome-ready');
+    // The first heading cannot receive focus while the boot CSS hides its
+    // ancestor. Focus after releasing that CSS, before this stack can paint.
+    document.getElementById('awTitle'+step).focus({preventScroll:true});
   }
   function save(status){if(preview)return;try{localStorage.setItem(window.avaWelcomeStorageKey(),JSON.stringify({completedAt:new Date().toISOString(),status:status,version:1}));}catch(e){}try{sessionStorage.removeItem('synapses_ava_welcome_resume');}catch(e){}}
   function close(options){
     options=options||{};clearTimers();opened=false;window.__avaWelcomeActive=false;root.hidden=true;syncBrandMotion();document.body.classList.remove('ava-welcome-active');inertBefore.forEach(function(entry){entry[0].inert=entry[1];});inertBefore=[];
     if(options.save)save(options.save);
     if(options.restoreFocus!==false&&focusBefore&&focusBefore.isConnected)try{focusBefore.focus({preventScroll:true});}catch(e){}
+    releasePaint('welcome-closed');
+    if(options.resume!==false&&typeof window.avaPreviewResumeAfterWelcome==='function')window.avaPreviewResumeAfterWelcome();
+    window.dispatchEvent(new CustomEvent('ava:welcome-closed'));
   }
   function toast(text){var el=document.createElement('div');el.className='aw-preview-toast';el.setAttribute('role','status');el.textContent=text;document.body.appendChild(el);setTimeout(function(){el.remove();},5000);}
   function stagePrompt(text){
@@ -93235,7 +93303,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   function finish(prompt,action){
     pendingPrompt=prompt||'';
     var wasPreview=preview, u=user();close({save:'complete',restoreFocus:false});
-    if(wasPreview){window.__avaWelcomePreviewDismissed=true;try{var clean=new URL(location.href);clean.searchParams.delete('welcome');history.replaceState(history.state,'',clean.pathname+clean.search+clean.hash);}catch(e){}}
+    if(wasPreview){window.__avaWelcomePreviewDismissed=true;window.__avaWelcomePreviewDismissedKey=window.avaWelcomeStorageKey();try{var clean=new URL(location.href);clean.searchParams.delete('welcome');history.replaceState(history.state,'',clean.pathname+clean.search+clean.hash);}catch(e){}}
     if(!u){
       if(typeof doGuest==='function')doGuest();else if(typeof showAuthModal==='function')showAuthModal();
       // A preview is never a completion for a real account. Suppress only this guest transition.
@@ -93259,19 +93327,19 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     var u=user();
     if(!u||u.isGuest||!u.id){
       try{sessionStorage.setItem('synapses_ava_welcome_resume','2');}catch(e){}
-      close({restoreFocus:false});if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;
+      close({restoreFocus:false,resume:false});if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;
     }
     if(!window.synConnectors||!window.synConnectors.connect){document.getElementById('awConnectStatus').textContent='Connection tools are unavailable. You can connect later in Settings.';return;}
     try{window.synConnectors.connect('google');document.getElementById('awConnectStatus').textContent='Finish reviewing permissions in the Google window. Then return here. You can also continue for now.';}
     catch(e){document.getElementById('awConnectStatus').textContent='Couldn\u2019t open Google. Check your pop-up settings or connect later in Settings.';}
   }
   function maybeStart(){
-    if(opened||!user())return;
-    if(document.documentElement.classList.contains('synapses-welcome-pending'))return;
-    var auth=document.getElementById('authModal');if(auth&&getComputedStyle(auth).display!=='none')return;
-    if(!window.avaWelcomeShouldStart())return;
+    if(opened)return true;if(!user())return false;
+    if(document.documentElement.classList.contains('synapses-welcome-pending'))return false;
+    var auth=document.getElementById('authModal');if(auth&&getComputedStyle(auth).display!=='none')return false;
+    if(!window.avaWelcomeShouldStart())return false;
     var resume=0;try{resume=Number(sessionStorage.getItem('synapses_ava_welcome_resume'))||0;}catch(e){}
-    open({step:resume});
+    open({step:resume});return true;
   }
   window.avaWelcomeMaybeStart=maybeStart;
   window.openAvaWelcome=function(options){open(Object.assign({replay:true},options||{}));};
@@ -93303,20 +93371,123 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     if(typeof doGuest==='function')return doGuest();
   };
   function applyRoute(){
+    try{
     var query=new URLSearchParams(location.search);
     if(query.get('guest')==='1'){
       try{var guestRoute=new URL(location.href);guestRoute.searchParams.delete('guest');history.replaceState(history.state,'',guestRoute.pathname+guestRoute.search+guestRoute.hash);}catch(e){}
-      if(typeof window._hideSplash==='function')window._hideSplash();window.enterAvaGuest();return;
+      if(typeof window._hideSplash==='function')window._hideSplash();window.enterAvaGuest();
+      // Existing doGuest/onLogin is synchronous. First guests can prepare the
+      // welcome now; returning guests reveal the existing app without waiting
+      // for the legacy 800ms onboarding timer.
+      if(!user())releasePaint('guest-unavailable');
+      else if(!window.avaWelcomeShouldStart())releasePaint('guest-ready');
+      else if(!maybeStart())releasePaint('guest-entry-unavailable');
+      return;
     }
     if(query.get('welcome')==='preview'){if(typeof window._hideSplash==='function')window._hideSplash();open({preview:true});return;}
     if(query.get('auth')==='login'){if(typeof window._hideSplash==='function')window._hideSplash();if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;}
     maybeStart();
     var staged='';try{staged=sessionStorage.getItem('synapses_ava_welcome_prompt')||'';sessionStorage.removeItem('synapses_ava_welcome_prompt');}catch(e){}if(staged&&user()&&!opened)stagePrompt(staged);
+    }catch(error){releasePaint('route-error');throw error;}
   }
   // The legacy auth bootstrap queues its first modal open on window. Run route
   // entry after those earlier window callbacks, not on the preceding document
   // event phase, so its queued waitlist cannot reopen after explicit guest entry.
   if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',applyRoute,{once:true});else applyRoute();
+  }catch(error){releasePaint('welcome-error');throw error;}
+})();
+</script>
+
+<!-- Original Ava face · deliberate entry to the existing speech-to-speech flow. -->
+<style id="avaFloatingStyles">
+#avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#e8e5dd;isolation:isolate}
+#avaFloatingAssistant[hidden],#avaFloatPopover[hidden]{display:none!important}
+#avaFloatButton{display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:22px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
+#avaFloatButton>svg{width:62px;height:62px;overflow:visible;display:block;animation:af-drift 13s ease-in-out infinite}
+#avaFloatButton:focus-visible{outline:2px solid #a8a69d;outline-offset:4px}
+#avaFloatButton .af-character{transform-origin:66px 66px}
+#avaFloatButton .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 7.3s infinite}
+#avaFloatButton .af-pupil{transition:transform .4s ease}
+#avaFloatingAssistant[data-mood="curious"] .af-pupil{transform:translate(1px,-1px)}
+#avaFloatingAssistant[data-mood="voice"] .af-smile{stroke-width:3.4}
+#avaFloatButton:hover>svg,#avaFloatButton:focus-visible>svg,#avaFloatingAssistant[data-open="true"] #avaFloatButton>svg{animation-play-state:paused}
+#avaFloatPopover{position:fixed;width:min(282px,calc(100vw - 32px));border:1px solid #373736;border-radius:18px;background:#111112;padding:19px;box-shadow:0 12px 40px rgba(0,0,0,.32);text-align:left;color-scheme:dark}
+#avaFloatPopover *{box-sizing:border-box}
+#avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 27px 10px 0;color:#f1eee6}
+#avaFloatPopover p{font-size:12px;line-height:1.7;color:#96958e;margin:0 0 16px}
+#avaFloatClose{position:absolute;right:6px;top:5px;width:39px;height:39px;display:grid;place-items:center;border:0;background:none;color:#85857f;font:22px/1 sans-serif;cursor:pointer;border-radius:12px}
+#avaFloatStart,#avaFloatStop{width:100%;min-height:43px;border:1px solid #ded9ce;border-radius:100px;background:#eeeae1;color:#1b1b1b;font:600 12px 'DM Sans',sans-serif;cursor:pointer;padding:9px 18px}
+#avaFloatStop{background:#232323;color:#ddd9cf;border-color:#44443f}
+#avaFloatStart[hidden],#avaFloatStop[hidden]{display:none!important}
+#avaFloatPopover button:focus-visible{outline:2px solid #aaa69c;outline-offset:4px}
+#avaFloatStatus{font-size:10px!important;color:#8b8b85!important;line-height:1.6!important;margin:12px 0 0!important}
+#avaFloatStatus:empty{display:none}
+@keyframes af-drift{0%,100%{transform:translate(0,0) rotate(-1deg)}35%{transform:translate(-3px,-4px) rotate(1deg)}70%{transform:translate(2px,-1px) rotate(-.6deg)}}
+@keyframes af-blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
+@media(prefers-reduced-motion:reduce){#avaFloatButton>svg,#avaFloatButton .af-eye{animation:none!important}#avaFloatButton .af-pupil{transition:none!important}}
+</style>
+<aside id="avaFloatingAssistant" aria-label="Ava voice shortcut" hidden>
+ <button type="button" id="avaFloatButton" aria-label="Talk with Ava" aria-haspopup="dialog" aria-controls="avaFloatPopover" aria-expanded="false"><svg class="af-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="af-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="af-pupil" fill="#242420"><ellipse class="af-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="af-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="af-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></button>
+ <section id="avaFloatPopover" role="dialog" aria-modal="false" aria-labelledby="avaFloatTitle" hidden>
+  <button type="button" id="avaFloatClose" aria-label="Close voice options">×</button>
+  <h2 id="avaFloatTitle">Talk with Ava</h2>
+  <p id="avaFloatCopy">Start a live voice conversation. Your browser may ask for microphone access.</p>
+  <button type="button" id="avaFloatStart">Start voice</button>
+  <button type="button" id="avaFloatStop" hidden>End voice conversation</button>
+  <p id="avaFloatStatus" role="status" aria-live="polite"></p>
+ </section>
+</aside>
+<script id="avaFloatingScript">
+(function(){
+ 'use strict';
+ var root=document.getElementById('avaFloatingAssistant'),button=document.getElementById('avaFloatButton'),popover=document.getElementById('avaFloatPopover'),start=document.getElementById('avaFloatStart'),stop=document.getElementById('avaFloatStop'),status=document.getElementById('avaFloatStatus'),opened=false,refreshTimer=0,watched=new WeakSet();
+ if(!root)return;
+ function user(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
+ function voiceActive(){return !!window._topNavVoiceActive;}
+ function visible(el){if(!el||el.hidden)return false;var css=getComputedStyle(el),rect=el.getBoundingClientRect();return css.display!=='none'&&css.visibility!=='hidden'&&Number(css.opacity)!==0&&rect.width>0&&rect.height>0;}
+ function close(restore){opened=false;popover.hidden=true;root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';if(restore&&!root.hidden)button.focus({preventScroll:true});}
+ function blocked(){
+  if(!user()||document.hidden||window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())||document.documentElement.classList.contains('synapses-welcome-pending'))return true;
+  var active=document.activeElement;if(active&&active.matches('input,textarea,[contenteditable="true"]')&&!root.contains(active))return true;
+  if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup')))return true;
+  return Array.from(document.querySelectorAll('.modal-overlay,dialog[open],[role="dialog"][aria-modal="true"]')).some(function(el){return !root.contains(el)&&visible(el);});
+ }
+ function place(){
+  var width=window.innerWidth,height=window.innerHeight,size=62,margin=width<600?13:22,x=width-size-margin,y=height-(width<600?158:176);
+  var input=document.getElementById('inputBox');if(visible(input)){var rect=input.getBoundingClientRect();if(x<rect.right+16&&x+size>rect.left-16&&y<rect.bottom+16&&y+size>rect.top-16)y=rect.top-size-22;}
+  y=Math.max(90,Math.min(y,height-size-90));x=Math.max(13,x);root.style.left=x+'px';root.style.top=y+'px';
+  if(opened){var pw=Math.min(282,width-32),ph=popover.getBoundingClientRect().height||230;popover.style.left=Math.max(16,Math.min(x+size-pw,width-pw-16))+'px';popover.style.top=Math.max(70,Math.min(y-ph-12,height-ph-18))+'px';}
+ }
+ function refresh(){
+  refreshTimer=0;var hide=blocked();if(hide&&opened)close(false);root.hidden=hide;if(hide)return;
+  root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
+  if(opened){var u=user(),guest=!u||u.isGuest,live=voiceActive();document.getElementById('avaFloatCopy').textContent=live?'Your voice conversation is active. You can end it here or use the existing voice controls.':guest?'You can explore recorded previews as a guest. Sign in to start a live voice conversation.':'Start a live voice conversation. Your browser may ask for microphone access.';start.textContent=guest?'Sign in for live voice':'Start voice';start.hidden=live;stop.hidden=!live;}
+ }
+ function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
+ function open(){refresh();if(root.hidden)return;opened=true;popover.hidden=false;root.dataset.open='true';button.setAttribute('aria-expanded','true');status.textContent='';refresh();(start.hidden?stop:start).focus({preventScroll:true});}
+ // This is a gesture entry only. Keep the app's existing verification and S2S
+ // functions responsible for permissions, microphone startup and access rules.
+ window.avaFloatingStartVoice=function(){
+  var u=user();if(!u||u.isGuest){close(false);if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return 'sign-in';}
+  if(voiceActive()){refresh();return 'already-active';}
+  if(typeof setView==='function')setView('sec-chat');
+  var needsScan=typeof _fpRequiresHoldScan==='function'?_fpRequiresHoldScan():true;
+  if(needsScan){if(typeof window.startFingerprintUnlock!=='function'){status.textContent='Voice verification is unavailable. Use the existing voice control to try again.';return 'unavailable';}close(false);window.startFingerprintUnlock();return 'verification';}
+  if(typeof _fpActivateSpeechToSpeech==='function'){close(false);_fpActivateSpeechToSpeech();return 'speech-to-speech';}
+  if(typeof window.startFingerprintUnlock==='function'){close(false);window.startFingerprintUnlock();return 'verification';}
+  status.textContent='Voice is unavailable. Use the existing voice control to try again.';return 'unavailable';
+ };
+ window.avaFloatingStopVoice=function(){if(!voiceActive())return 'inactive';if(typeof window.stopTopNavVoice==='function'){window.stopTopNavVoice();close(true);schedule();return 'stopped';}status.textContent='Use the existing voice control to end the conversation.';return 'unavailable';};
+ button.onclick=function(){if(opened)close(false);else open();};document.getElementById('avaFloatClose').onclick=function(){close(true);};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
+ root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();close(true);}});
+ document.addEventListener('pointerdown',function(e){if(opened&&!root.contains(e.target))close(false);},true);
+ document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target))close(false);schedule();});
+ document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);
+ var observer=new MutationObserver(schedule);
+ function watch(){[document.body,document.documentElement].concat(Array.from(document.querySelectorAll('.modal-overlay,dialog,[role="dialog"][aria-modal="true"],#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup'))).forEach(function(el){if(el&&!watched.has(el)){watched.add(el);observer.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});}});}
+ watch();var bodyObserver=new MutationObserver(function(){watch();schedule();});bodyObserver.observe(document.body,{childList:true});
+ setInterval(refresh,1500);window.addEventListener('synapses:intro-complete',schedule);window.addEventListener('ava:welcome-closed',schedule);
+ if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 })();
 </script>
 
