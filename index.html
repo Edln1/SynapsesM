@@ -93284,7 +93284,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     maybeStart();
     var staged='';try{staged=sessionStorage.getItem('synapses_ava_welcome_prompt')||'';sessionStorage.removeItem('synapses_ava_welcome_prompt');}catch(e){}if(staged&&user()&&!opened)stagePrompt(staged);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyRoute);else applyRoute();
+  // The legacy auth bootstrap queues its first modal open on window. Run route
+  // entry after those earlier window callbacks, not on the preceding document
+  // event phase, so its queued waitlist cannot reopen after explicit guest entry.
+  if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',applyRoute,{once:true});else applyRoute();
 })();
 </script>
 
