@@ -28,7 +28,7 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
     paintTimer=setTimeout(function(){window.avaWelcomeReleasePaint('timeout');},15000);
   };
   var entry=new URLSearchParams(location.search);
-  if(entry.get('welcome')==='preview'||entry.get('guest')==='1'){
+  if(entry.get('welcome')==='preview'||entry.get('guest')==='1'||entry.get('auth')==='login'){
     window.avaWelcomeHoldPaint();
     window.addEventListener('load',function(){
       if(paintHeld&&(!document.getElementById('avaWelcome')||typeof window.avaWelcomeMaybeStart!=='function'))window.avaWelcomeReleasePaint('welcome-unavailable');
@@ -21209,6 +21209,64 @@ var allJobs=[],currentUser=null,jobFilter='all';
       }
     }catch(e){ done(false); }
   }
+
+  // The landing's explicit Log in route may already have a valid web session.
+  // Verify it with Supabase before reusing the normal application login path.
+  window.avaResumeLoginSession = function(){
+    return new Promise(function(resolve){
+      var finished=false,subscription=null,expectedId=null;
+      var deadline=setTimeout(function(){finish(false);},8000);
+      function finish(ok){
+        if(finished)return;
+        finished=true;clearTimeout(deadline);
+        try{if(subscription)subscription.unsubscribe();}catch(e){}
+        resolve(!!ok);
+      }
+      function active(){return !finished&&new URLSearchParams(location.search).get('auth')==='login';}
+      Promise.resolve().then(async function(){
+        try{
+          var client=window._supabase;
+          if(!client||!client.auth||typeof client.auth.getUser!=='function'){finish(false);return;}
+          if(typeof client.auth.onAuthStateChange==='function'){
+            var listener=client.auth.onAuthStateChange(function(event,session){
+              if(event==='SIGNED_OUT'||(expectedId&&session&&session.user&&session.user.id!==expectedId))finish(false);
+            });
+            subscription=listener&&listener.data&&listener.data.subscription;
+            if(finished){if(subscription)subscription.unsubscribe();return;}
+          }
+          var initial=await client.auth.getSession();
+          var session=initial&&initial.data&&initial.data.session;
+          if(!active()||initial.error||!session||!session.access_token||!session.user||!session.user.id){finish(false);return;}
+          expectedId=session.user.id;
+          var verified=await client.auth.getUser(session.access_token);
+          var u=verified&&verified.data&&verified.data.user;
+          if(!active()||verified.error||!u||u.id!==expectedId||!u.email){finish(false);return;}
+          var profile=await client.from('profiles').select('*').eq('id',u.id).single();
+          if(!active()){finish(false);return;}
+          if(profile&&profile.error){finish(false);return;}
+          var p=profile&&profile.data||{};
+          // Recheck after profile loading: a late response must not undo sign-out.
+          var latest=await client.auth.getSession();
+          var current=latest&&latest.data&&latest.data.session;
+          if(!active()||latest.error||!current||!current.user||current.user.id!==expectedId){finish(false);return;}
+          var localPref=null;
+          try{localPref=localStorage.getItem('synapses_postmedia_'+u.email);}catch(e){}
+          var restored={id:u.id,email:u.email,name:p.name||u.email.split('@')[0],
+            roles:p.role?[p.role]:['personal'],color:p.color||'#6366f1',
+            initial:((p.name||u.email)[0]||'U').toUpperCase(),
+            avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,
+            postMediaPref:localPref||p.post_media_pref||'photo',
+            plan:p.plan||'free',planStatus:p.plan_status||'active',
+            stripeCustomerId:p.stripe_customer_id||null,isGuest:false};
+          var route=new URL(location.href);route.searchParams.delete('auth');
+          history.replaceState(history.state,'',route.pathname+route.search+route.hash);
+          window._waitlistGateActive=false;
+          if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);
+          finish(_bootUserSession(restored));
+        }catch(error){finish(false);}
+      });
+    });
+  };
 
   if(WAITLIST_MODE){
     showAuthModal();
@@ -93490,7 +93548,19 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
       return;
     }
     if(query.get('welcome')==='preview'){if(typeof window._hideSplash==='function')window._hideSplash();open({preview:true});return;}
-    if(query.get('auth')==='login'){if(typeof window._hideSplash==='function')window._hideSplash();if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;}
+    if(query.get('auth')==='login'){
+      if(typeof window._hideSplash==='function')window._hideSplash();
+      function finishLoginRoute(resumed){
+        if(!resumed&&new URLSearchParams(location.search).get('auth')==='login'){
+          if(typeof showAuthModal==='function')showAuthModal();
+          if(typeof authShowForms==='function')authShowForms('login');
+        }
+        if(!window.__avaWelcomePending&&!window.__avaWelcomeActive)releasePaint('login-route-ready');
+      }
+      try{Promise.resolve(typeof window.avaResumeLoginSession==='function'?window.avaResumeLoginSession():false).then(finishLoginRoute,function(){finishLoginRoute(false);});}
+      catch(error){finishLoginRoute(false);}
+      return;
+    }
     maybeStart();
     var staged='';try{staged=sessionStorage.getItem('synapses_ava_welcome_prompt')||'';sessionStorage.removeItem('synapses_ava_welcome_prompt');}catch(e){}if(staged&&user()&&!opened)stagePrompt(staged);
     }catch(error){releasePaint('route-error');throw error;}
