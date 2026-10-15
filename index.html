@@ -92933,7 +92933,7 @@ if(typeof currentUser!=='undefined'&&currentUser)window.avaPreviewAfterLogin();
 #avaTvPopup>div{background:#000000!important;border-color:#303030!important;box-shadow:0 8px 40px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06)!important}
 #avaTvPopup #avaTvActLabel{color:#999999!important}
 #avaTvPopup>div>div:first-child>div>div:first-child{background:#b0b0b0!important;box-shadow:none!important}
-.chat-ava-portrait,#ava-header-pic{border-color:#303030!important;box-shadow:0 3px 10px rgba(0,0,0,.28)!important}
+.chat-ava-portrait,#ava-header-pic,html[data-theme] .chat-ava-portrait,html[data-theme] #ava-header-pic{border-color:#303030!important;box-shadow:0 3px 10px rgba(0,0,0,.28)!important}
 #synTourCard.st-video{background:#000000!important;border-color:#303030!important;box-shadow:0 12px 40px rgba(0,0,0,.5)!important}
 #synTourCard.st-video::before{background:#303030!important}
 #synTourVideoWrap,#synTourVideoWrap .st-vmedia,#synTourVideoWrap .st-vloader{background:#000000!important}
@@ -93196,7 +93196,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     root.querySelectorAll('.aw-progress span').forEach(function(el,i){if(i===step)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
     document.getElementById('awStepLabel').textContent=(step+1)+' of 4';root.scrollTop=0;
     if(step===0)cycleGreeting();if(step===1)renderDemo();if(step===2)refreshConnection();
-    if(step===3){var guest=!user()||user().isGuest;document.getElementById('awReadyCopy').innerHTML=guest?'Take a look around and meet Ava.<br>Your guest visit includes recorded previews.':'A big idea, a busy week, or a small question.<br>Let\u2019s start wherever you are.';document.getElementById('awReadyNote').textContent=guest?'Live AI and connected actions require an account and eligible access.':'Choose an idea to edit before sending, or start your own.';}
+    if(step===3){var guest=!user()||user().isGuest;document.getElementById('awReadyCopy').innerHTML=guest?'Take a look around and meet Ava.<br>Your guest visit includes recorded previews.':'A big idea, a busy week, or a small question.<br>Let\u2019s start wherever you are.';document.getElementById('awReadyNote').textContent=guest?'Live AI and connected actions require an account and eligible access.':'Choose a starting point to review, or start your own.';}
     if(focus!==false)document.getElementById('awTitle'+step).focus({preventScroll:true});
   }
   function preventBackground(){inertBefore=[];Array.from(document.body.children).forEach(function(el){if(el!==root&&!/^(SCRIPT|STYLE)$/.test(el.tagName)){inertBefore.push([el,el.inert]);el.inert=true;}});}
