@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script id="avaWelcomeGate">
+(function(){
+  window.__avaWelcomeActive=false;
+  window.avaWelcomeStorageKey=function(){var u=null;try{u=typeof currentUser!=='undefined'?currentUser:window.currentUser;}catch(e){}return 'synapses_ava_welcome_v1_'+(!u||u.isGuest?'guest':String(u.id||u.email||'member').toLowerCase());};
+  window.avaWelcomeShouldStart=function(){try{if(window.__avaWelcomePreviewDismissed)return false;if(new URLSearchParams(location.search).get('welcome')==='preview')return true;var u=typeof currentUser!=='undefined'?currentUser:window.currentUser;if(!u)return false;return !localStorage.getItem(window.avaWelcomeStorageKey());}catch(e){return true;}};
+})();
+</script>
 <link rel="icon" type="image/png" href="/favicon.png"><script>(function(){
   // Keep the covered app's animation loops asleep during the welcome.
   // The welcome uses the captured native functions and remains independent.
@@ -35,6 +42,7 @@
     var introAge=Date.now()-introLast;
     window._synSkipDailyIntro=window.SYNAPSES_INTRO_PREVIEW!==true&&introLast>0&&introAge>=0&&introAge<86400000;
   }catch(e){}
+  if(new URLSearchParams(location.search).get('welcome')==='preview'||new URLSearchParams(location.search).get('guest')==='1'||['login','waitlist-success'].includes(new URLSearchParams(location.search).get('auth')))window._synSkipDailyIntro=true;
   if(window._synSkipDailyIntro)document.documentElement.classList.add('synapses-intro-skipped');
   else document.documentElement.classList.add('synapses-welcome-pending');
 })();
@@ -10848,17 +10856,18 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           <div class="form-row"><label>Email</label><input id="waitlistEmail" type="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter'){event.preventDefault();joinWaitlist();}"></div>
           <div class="modal-err" id="waitlistErr"></div>
           <button class="modal-btn" id="waitlistJoinBtn" onclick="joinWaitlist()">Join the waitlist →</button>
-          <div class="auth-switch-row">Already invited? <a onclick="authShowForms('login')">Sign in</a> <span aria-hidden="true"> · </span> <button type="button" id="waitlistGuestBtn" onclick="enterAvaGuest()">Explore as guest</button></div>
+          <div class="auth-switch-row">Already invited? <a onclick="authShowForms('login')">Sign in</a></div>
           <div class="auth-legal">By joining, you agree to Synapses' <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</div>
+          <div class="aw-guest-bottom"><button type="button" id="waitlistGuestBtn" onclick="enterAvaGuest()">Explore as guest <span aria-hidden="true">↗</span></button></div>
         </div>
         <div id="waitlistDoneWrap" style="display:none;text-align:center;">
-          <button type="button" class="ava-guest-inline" onclick="enterAvaGuest()">Explore as guest</button>
           <div style="width:48px;height:48px;border-radius:50%;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div class="auth-start-title" style="font-size:22px;">You're on the list</div>
           <div class="auth-start-sub" id="waitlistDoneSub" style="max-width:none;">We'll email you the moment a spot opens up.</div>
           <div class="auth-switch-row">Already invited? <a onclick="authShowForms('login')">Sign in</a></div>
+          <div class="aw-guest-bottom"><button type="button" class="ava-guest-inline" onclick="enterAvaGuest()">Explore as guest <span aria-hidden="true">↗</span></button></div>
         </div>
       </div>
 
@@ -51265,7 +51274,8 @@ function clearRoomDot(){
 var _ob = {role:'', interests:[], focus:''};
 
 function checkOnboarding(){
-  /* Onboarding modal deactivated for now — remove this line to re-enable */
+  /* AVA welcome replaces the retired role/interests modal below. */
+  if(typeof window.avaWelcomeMaybeStart==='function') window.avaWelcomeMaybeStart();
   return;
   if(!currentUser) return;
   /* Guests can still open once — skip stores synapses_onboarded_guest */
@@ -92780,7 +92790,7 @@ var narratedReplyPending=false,narratedReplyLastBusy=0;
 function narrationBusy(){return (typeof _nbApSpeakUtter!=='undefined'&&!!_nbApSpeakUtter)||(typeof _vmSpeaking!=='undefined'&&_vmSpeaking)||(typeof _ttsProcessing!=='undefined'&&_ttsProcessing)||(typeof _ttsQueue!=='undefined'&&_ttsQueue.length>0);}
 function narrationEnabled(){return narratedReplyPending||narrationBusy();}
 window.avaPreviewOnChatSend=function(){if(typeof _vmActive!=='undefined'&&_vmActive){narratedReplyPending=true;narratedReplyLastBusy=Date.now();window.avaPreviewSilenceForNarration();}};
-function eligible(key){return !(introStage(key)&&introSeen&&introSeen[introStage(key)])&&!!clips[key]&&!narrationEnabled()&&!document.hidden&&!window._avaAvatarConnected&&!window._topNavVoiceActive&&(key==='actionsteps'||key==='livecall'||/^(checkin|feature|topic)/.test(key)||appearanceCount<5)&&Date.now()>=dismissedUntil;}
+function eligible(key){return !window.__avaWelcomeActive&&!(window.avaWelcomeShouldStart&&window.avaWelcomeShouldStart())&&!(introStage(key)&&introSeen&&introSeen[introStage(key)])&&!!clips[key]&&!narrationEnabled()&&!document.hidden&&!window._avaAvatarConnected&&!window._topNavVoiceActive&&(key==='actionsteps'||key==='livecall'||/^(checkin|feature|topic)/.test(key)||appearanceCount<5)&&Date.now()>=dismissedUntil;}
 var activeMoment=null;
 var introDone={welcome:false,chatstart:false,chatprompt:false},liveCallDone=false,lastPortraitEnd=0,ongoingCount=0,checkinIndex=0,lastCheckin=Date.now();
 // Public visitors retain onboarding progress; loopback previews remain replayable.
@@ -92913,5 +92923,369 @@ if(typeof currentUser!=='undefined'&&currentUser)window.avaPreviewAfterLogin();
 
 
 
+
+<!-- AVA welcome · original Synapses onboarding, layered into the current app. -->
+<style id="avaWelcomeStyles">
+#avaWelcome{--aw-bg:#0c0c0d;--aw-ink:#f4f2ec;--aw-muted:#96958f;--aw-line:#29292b;--aw-accent:#d2cdc1;position:fixed;inset:0;z-index:2147483000;background:var(--aw-bg);color:var(--aw-ink);font-family:'DM Sans',sans-serif;overflow:auto;overscroll-behavior:contain;isolation:isolate;color-scheme:dark}
+#avaWelcome[hidden]{display:none!important}
+#avaWelcome *{box-sizing:border-box}
+#avaWelcome button{font-family:inherit;cursor:pointer;touch-action:manipulation}
+#avaWelcome button:focus-visible,#avaWelcome [tabindex]:focus-visible{outline:2px solid var(--aw-accent);outline-offset:5px}
+#avaWelcome h1[tabindex="-1"]:focus,#avaWelcome h2[tabindex="-1"]:focus{outline:none}
+.aw-shell{width:min(1100px,100%);min-height:100%;min-height:100dvh;margin:auto;display:flex;flex-direction:column;padding:0 42px}
+.aw-header{height:94px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.aw-brand{display:flex;align-items:center;gap:10px;color:#dedbd4;font-family:'Syne',sans-serif;font-weight:650;letter-spacing:-.5px}
+.aw-brand-mark{width:36px;height:36px;display:block;flex-shrink:0}
+.aw-brand-mark svg{display:block;width:36px;height:36px;margin:0;overflow:visible}
+.aw-brand-copy{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.aw-brand-name{font-size:22px;line-height:1.05;letter-spacing:-.7px}
+.aw-brand-byline{font:400 9px/1.3 'DM Sans',sans-serif;letter-spacing:.2px;color:#92918a}
+.aw-quiet{border:0;background:transparent;color:var(--aw-muted);font-size:13px;line-height:20px;min-height:44px;padding:10px 8px}
+.aw-quiet:hover{color:var(--aw-ink)}
+.aw-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px 0 26px;position:relative;min-height:540px}
+.aw-screen{width:min(560px,100%);animation:aw-reveal .38s ease both}
+.aw-screen[hidden]{display:none!important}
+.aw-eyebrow{display:block;color:var(--aw-muted);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 16px}
+#avaWelcome h1,#avaWelcome h2{color:var(--aw-ink);font-family:'Syne',sans-serif;font-weight:650;letter-spacing:-1.7px;font-size:42px;line-height:1.13;margin:17px 0 15px}
+#avaWelcome h2{font-size:34px;letter-spacing:-1.3px}
+#avaWelcome p.aw-lead{font-size:15px;line-height:1.7;color:#a4a39e;max-width:380px;margin:0 auto 25px;font-weight:400}
+.aw-primary{background:var(--aw-ink);border:1px solid var(--aw-ink);color:#141415;padding:0 28px;min-height:47px;border-radius:100px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:12px;transition:background .2s,transform .2s}
+.aw-primary:hover{background:#e5e1d8;border-color:#e5e1d8;transform:translateY(-1px)}
+.aw-primary:active{transform:translateY(0)}
+.aw-primary svg,.aw-arrow{width:16px;height:16px}
+.aw-subnote{font-size:11.5px;color:#757571;margin:13px 0 0;line-height:1.6}
+.aw-mascot{width:143px;height:115px;margin:0 auto;display:block;overflow:visible}
+.aw-character{transform-origin:66px 66px;animation:aw-bob 5s ease-in-out infinite}
+.aw-eye{transform-box:fill-box;transform-origin:center;animation:aw-blink 6.8s infinite}
+.aw-mascot[data-mood="thinking"] .aw-character{transform:rotate(-5deg);animation:none}
+.aw-mascot[data-mood="thinking"] .aw-pupil{transform:translate(1px,-2px)}
+.aw-mascot[data-mood="happy"] .aw-character{animation:aw-nod .55s ease-in-out 2}
+.aw-mascot[data-mood="happy"] .aw-smile{stroke-width:3.6}
+.aw-welcome-chat{height:63px;margin:18px auto 25px;display:flex;align-items:flex-start;justify-content:center;position:relative;width:min(360px,100%)}
+.aw-welcome-line{font-size:12.5px;line-height:1.5;border:1px solid #353531;border-radius:13px 13px 13px 3px;padding:11px 16px;color:#c6c3b9;opacity:0;transform:translateY(7px);position:absolute;max-width:100%;transition:opacity .4s,transform .4s}
+.aw-welcome-line.on{opacity:1;transform:translateY(0)}
+.aw-footer{min-height:91px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-shrink:0;border-top:1px solid #222224}
+.aw-back{display:inline-flex;align-items:center;justify-content:flex-start;gap:6px;min-width:70px}
+.aw-back[disabled]{visibility:hidden;pointer-events:none}
+.aw-progress{display:flex;align-items:center;gap:7px}
+.aw-progress span{width:5px;height:5px;border-radius:10px;background:#404041;transition:width .3s,background .3s}
+.aw-progress span[aria-current="step"]{width:21px;background:#d7d2c7}
+.aw-step{font-size:11px;color:#777774;min-width:70px;text-align:right;font-variant-numeric:tabular-nums}
+.aw-demo .aw-mascot{width:91px;height:73px;margin-bottom:6px}
+#avaWelcome .aw-demo h2{margin-top:9px;margin-bottom:13px}
+.aw-demo-tabs{display:flex;gap:4px;justify-content:center;margin:19px auto 18px;flex-wrap:wrap}
+.aw-demo-tab{min-height:35px;background:none;border:1px solid transparent;border-radius:100px;font-size:11.5px;padding:6px 13px;color:#8f8e8a}
+.aw-demo-tab[aria-pressed="true"]{color:#d8d3c8;border-color:#494943;background:#1c1c1a}
+.aw-demo-tab:hover{color:#eee9df}
+.aw-demo-stage{width:min(390px,100%);min-height:245px;margin:0 auto;text-align:left;position:relative}
+.aw-demo-bubble{font-size:13px;line-height:1.6;padding:13px 17px;border-radius:16px;width:fit-content;max-width:90%;margin:0 0 15px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.aw-demo-bubble.is-visible{opacity:1;transform:translateY(0)}
+.aw-demo-user{margin-left:auto;background:#242423;color:#e6e2d8;border-radius:16px 16px 4px 16px;max-width:85%}
+.aw-demo-ava{background:#141415;border:1px solid #2b2b29;color:#d7d3c9;border-radius:16px 16px 16px 4px}
+.aw-demo-name{display:block;font-size:10px;letter-spacing:1px;color:var(--aw-accent);margin-bottom:5px;font-weight:600}
+.aw-demo-result{padding:11px 0 0;color:#aaa79d;border-top:1px solid #343430;margin-top:10px;display:grid;gap:7px;font-size:12px}
+.aw-demo-result span:before{content:'\2713';color:#c4bfb3;font-size:11px;margin-right:8px}
+.aw-typing{height:18px;display:flex;align-items:center;gap:4px}
+.aw-typing i{width:4px;height:4px;background:#a7a49b;border-radius:100%;animation:aw-think 1s infinite}
+.aw-typing i:nth-child(2){animation-delay:.15s}.aw-typing i:nth-child(3){animation-delay:.3s}
+.aw-demo-controls{display:flex;justify-content:center;gap:13px;align-items:center;margin:-3px 0 13px}
+.aw-demo-controls .aw-quiet{font-size:10.5px;padding:4px;min-height:32px}
+.aw-demo-label{font-size:10px;color:#74736f}
+.aw-connect-icon{width:54px;height:54px;border:1px solid #353531;display:grid;place-items:center;border-radius:17px;margin:0 auto 22px;color:#d0cabe}
+.aw-connect-card{width:min(390px,100%);margin:25px auto 20px;text-align:left;padding:20px 21px;border:1px solid #353531;border-radius:18px;background:#111112}
+.aw-connect-title{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:500;color:#eeebe3}
+.aw-google{width:24px;height:24px;flex-shrink:0}
+.aw-connect-apps{display:block;font-weight:400;font-size:11px;color:#92918a;margin-top:3px}
+#avaWelcome p.aw-connect-copy{margin:17px 0 18px;font-size:12px;line-height:1.7;color:#99978f}
+.aw-connect-button{background:#242422;color:#ddd8cd;border:1px solid #494943;min-height:42px;border-radius:10px;width:100%;font-size:12.5px;font-weight:500}
+.aw-connect-button:hover{background:#30302c}
+.aw-connect-button:disabled{opacity:.65;cursor:default}
+.aw-connect-status{font-size:11.5px;line-height:1.7;color:#b8b4a9;min-height:0;margin:0}
+.aw-connect-status:not(:empty){margin-top:12px}
+.aw-privacy{font-size:11px;color:#77766f;max-width:340px;margin:0 auto 23px;line-height:1.6}
+.aw-skip-step{display:block;margin:4px auto 0}
+.aw-starters{display:flex;flex-direction:column;gap:9px;width:min(390px,100%);margin:24px auto 23px}
+.aw-starter{border:1px solid #33332f;background:#121213;padding:15px 17px;border-radius:13px;text-align:left;color:#d2cec3;min-height:54px;font-size:12.5px;display:flex;align-items:center;justify-content:space-between;gap:15px;transition:background .2s,border-color .2s}
+.aw-starter:hover{border-color:#77766e;background:#1e1e1b}
+.aw-starter svg{width:15px;height:15px;flex-shrink:0;color:#aaa79d}
+.aw-ready .aw-mascot{width:117px;height:94px}
+.aw-preview-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:2147483001;padding:11px 17px;background:#262623;color:#e3dfd5;border:1px solid #494943;border-radius:100px;font:12px 'DM Sans',sans-serif;max-width:calc(100% - 32px);text-align:center}
+body.ava-welcome-active{overflow:hidden!important}
+body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoot,body.ava-welcome-active #synTourFloat{visibility:hidden!important;pointer-events:none!important}
+#waitlistFormWrap .aw-guest-bottom,#waitlistDoneWrap .aw-guest-bottom{display:flex;justify-content:center;margin:25px 0 0}
+#waitlistGuestBtn,#waitlistDoneWrap .ava-guest-inline{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:40px!important;width:auto!important;padding:8px 10px!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:#93918b!important;font:400 12.5px/1.6 'DM Sans',sans-serif!important;text-decoration:none!important;text-underline-offset:4px;cursor:pointer}
+#waitlistGuestBtn:hover,#waitlistDoneWrap .ava-guest-inline:hover{color:#d8d3c8!important;text-decoration:underline!important}
+#waitlistGuestBtn:focus-visible,#waitlistDoneWrap .ava-guest-inline:focus-visible{outline:2px solid #b1ada3;outline-offset:3px;border-radius:5px}
+@keyframes aw-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes aw-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-4px) rotate(1deg)}}
+@keyframes aw-blink{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.1)}}
+@keyframes aw-nod{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@keyframes aw-think{0%,70%,100%{opacity:.3;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
+@media(max-width:600px){.aw-shell{padding:0 23px}.aw-header{height:78px}.aw-brand{font-size:16px}.aw-main{min-height:490px;padding:15px 0 25px}.aw-footer{min-height:78px}#avaWelcome h1{font-size:36px;letter-spacing:-1.5px}#avaWelcome h2{font-size:30px;letter-spacing:-1.2px}#avaWelcome p.aw-lead{font-size:14px;max-width:320px}.aw-demo-stage{min-height:245px}.aw-demo-tab{font-size:10.5px;padding:6px 10px}.aw-mascot{width:128px;height:103px}.aw-welcome-chat{margin:15px auto 19px}.aw-demo .aw-mascot{width:76px;height:61px}.aw-connect-card{padding:19px}.aw-starter{font-size:12px;padding:14px}.aw-eyebrow{font-size:10px}}
+@media(max-height:720px) and (min-width:601px){.aw-header{height:70px}.aw-main{padding:12px 0 20px;min-height:480px}.aw-footer{min-height:70px}.aw-demo .aw-mascot{width:72px;height:58px}.aw-demo-tabs{margin:14px auto}.aw-demo-stage{min-height:225px}}
+@media(prefers-reduced-motion:reduce){#avaWelcome *,#avaWelcome *:before,#avaWelcome *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.aw-welcome-line{transform:none}.aw-demo-bubble{transform:none}}
+</style>
+<section id="avaWelcome" role="dialog" aria-modal="true" aria-labelledby="awTitle0" hidden>
+  <div class="aw-shell">
+    <header class="aw-header">
+      <div class="aw-brand" aria-label="aVa by Synapses"><span class="aw-brand-mark"><svg class="syn-logo-mark" width="36" height="36" viewBox="0 0 80 80" fill="none" aria-hidden="true" data-aw-source="authLeftBrand.syn-logo-mark">
+          <defs>
+            <radialGradient id="synCoreAwWelcome" cx="36%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#f5f2eb"/>
+              <stop offset="28%" stop-color="#d5d1c7"/>
+              <stop offset="62%" stop-color="#aaa69c"/>
+              <stop offset="100%" stop-color="#4a4842"/>
+            </radialGradient>
+            <radialGradient id="synHaloAwWelcome" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#b6b1a5" stop-opacity="0.45"/>
+              <stop offset="55%" stop-color="#9c988e" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#9c988e" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="synSpokeAwWelcome" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#d5d1c7" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#9c988e" stop-opacity="0.55"/>
+            </linearGradient>
+            <filter id="synNodeGlowAwWelcome" x="-120%" y="-120%" width="340%" height="340%" color-interpolation-filters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="b"/>
+              <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.85 0" result="g"/>
+              <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="synCoreGlowAwWelcome" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <circle cx="40" cy="40" r="18" fill="url(#synHaloAwWelcome)"/>
+          <g stroke="url(#synSpokeAwWelcome)" stroke-width="1.35" stroke-linecap="round">
+            <line x1="40" y1="40" x2="40" y2="10"><animate attributeName="opacity" values="0.8;0.8;0.2;0.8;0.8" dur="7s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="40" y2="70"><animate attributeName="opacity" values="0.8;0.8;0.8;0.1;0.8" dur="9s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="12" y2="28"><animate attributeName="opacity" values="0.8;0.8;0.3;0.8;0.8" dur="11s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="68" y2="28"><animate attributeName="opacity" values="0.8;0.1;0.8;0.8;0.8" dur="8s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="16" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.8;0.2;0.8" dur="6s" repeatCount="indefinite"/></line>
+            <line x1="40" y1="40" x2="64" y2="62"><animate attributeName="opacity" values="0.8;0.8;0.4;0.8;0.8" dur="10s" repeatCount="indefinite"/></line>
+          </g>
+          <g filter="url(#synNodeGlowAwWelcome)">
+            <circle cx="40" cy="10" r="2.5" fill="#dedad0"><animate attributeName="fill" values="#dedad0;#dedad0;#ffffff;#dedad0;#dedad0" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="8s" repeatCount="indefinite"/></circle>
+            <circle cx="40" cy="70" r="2.5" fill="#dedad0"><animate attributeName="fill" values="#dedad0;#dedad0;#dedad0;#ffffff;#dedad0" dur="11s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="11s" repeatCount="indefinite"/></circle>
+            <circle cx="12" cy="28" r="2.5" fill="#c9c5bb"><animate attributeName="fill" values="#c9c5bb;#c9c5bb;#ffffff;#c9c5bb;#c9c5bb" dur="6.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.05;1;1;1" dur="6.5s" repeatCount="indefinite"/></circle>
+            <circle cx="68" cy="28" r="2.5" fill="#c9c5bb"><animate attributeName="fill" values="#c9c5bb;#c9c5bb;#c9c5bb;#ffffff;#c9c5bb" dur="9.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="9.5s" repeatCount="indefinite"/></circle>
+            <circle cx="16" cy="62" r="2.5" fill="#dedad0"><animate attributeName="fill" values="#dedad0;#dedad0;#ffffff;#dedad0;#dedad0" dur="12s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0.05;1;1" dur="12s" repeatCount="indefinite"/></circle>
+            <circle cx="64" cy="62" r="2.5" fill="#dedad0"><animate attributeName="fill" values="#dedad0;#ffffff;#dedad0;#dedad0;#dedad0" dur="7.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;1;0.05;1" dur="7.5s" repeatCount="indefinite"/></circle>
+          </g>
+          <circle cx="40" cy="40" r="3.2" fill="url(#synCoreAwWelcome)" filter="url(#synCoreGlowAwWelcome)">
+            <animate attributeName="opacity" values="0.9;1;0.85;1;0.9" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="40" cy="40" r="1.35" fill="#f2eee5" opacity="0.9">
+            <animate attributeName="r" values="1.25;1.5;1.25;1.55;1.25" dur="6s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.9;1;0.8;1;0.9" dur="6s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="39.1" cy="39" r="0.55" fill="#fff" opacity="0.55"/>
+        </svg></span><span class="aw-brand-copy"><span class="aw-brand-name">aVa</span><span class="aw-brand-byline">by Synapses</span></span></div>
+      <button type="button" class="aw-quiet" id="awSkip">Skip for now <span aria-hidden="true">↗</span></button>
+    </header>
+    <main class="aw-main">
+      <section class="aw-screen aw-intro" data-aw-screen="0">
+        <div data-aw-mascot></div>
+        <h1 id="awTitle0" tabindex="-1">Meet AVA.</h1>
+        <p class="aw-lead">A little help with the everyday.<br>More room for what matters to you.</p>
+        <div class="aw-welcome-chat" aria-hidden="true"><span class="aw-welcome-line on">Hi, I'm AVA. It's lovely to meet you.</span><span class="aw-welcome-line">A busy day? Let's untangle it together.</span><span class="aw-welcome-line">One less thing on your mind.</span></div>
+        <button type="button" class="aw-primary" id="awGetStarted">Let's get acquainted <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+        <div class="aw-subnote">A quick hello. About a minute.</div>
+      </section>
+      <section class="aw-screen aw-demo" data-aw-screen="1" hidden>
+        <div data-aw-mascot></div>
+        <h2 id="awTitle1" tabindex="-1">Big day. Little assist.</h2>
+        <p class="aw-lead">Bring the messy thought.<br>We'll find a place to start.</p>
+        <div class="aw-demo-tabs" aria-label="Example conversation">
+          <button type="button" class="aw-demo-tab" data-aw-demo="0" aria-pressed="true">Make a plan</button>
+          <button type="button" class="aw-demo-tab" data-aw-demo="1" aria-pressed="false">Find the words</button>
+          <button type="button" class="aw-demo-tab" data-aw-demo="2" aria-pressed="false">Untangle an idea</button>
+        </div>
+        <div class="aw-demo-stage" id="awDemoStage" aria-live="polite" aria-atomic="false"></div>
+        <div class="aw-demo-controls"><span class="aw-demo-label">Example conversation</span><button type="button" class="aw-quiet" id="awReplayDemo">Replay</button><button type="button" class="aw-quiet" id="awPauseDemo" aria-pressed="false">Pause motion</button></div>
+        <button type="button" class="aw-primary" id="awDemoNext">I like the sound of that <span aria-hidden="true">→</span></button>
+      </section>
+      <section class="aw-screen aw-connections" data-aw-screen="2" hidden>
+        <div class="aw-connect-icon"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="m10 13 4-4m-6 6-1 1a4.2 4.2 0 0 1-6-6l4-4a4.2 4.2 0 0 1 6 0m2 3 1-1a4.2 4.2 0 0 1 6 6l-4 4a4.2 4.2 0 0 1-6 0" transform="translate(1 0)"/></svg></div>
+        <span class="aw-eyebrow">A little more connected</span>
+        <h2 id="awTitle2" tabindex="-1">Your day, in the picture.</h2>
+        <p class="aw-lead">Let AVA help with your inbox and calendar.<br>Only if you're comfortable.</p>
+        <div class="aw-connect-card">
+          <div class="aw-connect-title"><svg class="aw-google" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.6 20.5H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6A20 20 0 1 0 44 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#34A853" d="M24 44c5.4 0 10.3-1.8 13.9-4.9l-6.6-5.4A12 12 0 0 1 12.7 28l-6.8 5.2A20 20 0 0 0 24 44z"/><path fill="#FBBC05" d="M12.7 28a12 12 0 0 1 0-8l-6.8-5.2a20 20 0 0 0 0 18.4z"/><path fill="#EA4335" d="M24 12c3.1 0 5.8 1.1 8 3l6-6A20 20 0 0 0 5.9 14.8l6.8 5.2A12 12 0 0 1 24 12z"/></svg><div>Connect Google<span class="aw-connect-apps">Gmail · Calendar · Drive</span></div></div>
+          <p class="aw-connect-copy">Find the email you're looking for, see what's ahead, or draft a reply with your own context.</p>
+          <button type="button" class="aw-connect-button" id="awConnectGoogle">Connect Google <span aria-hidden="true">↗</span></button>
+          <p class="aw-connect-status" id="awConnectStatus" role="status"></p>
+        </div>
+        <p class="aw-privacy">You'll review Google's permissions before connecting.<br>You can disconnect at any time in Settings.</p>
+        <button type="button" class="aw-primary" id="awConnectionsNext">Continue <span aria-hidden="true">→</span></button>
+        <button type="button" class="aw-quiet aw-skip-step" id="awConnectionsSkip">I'll do this later</button>
+      </section>
+      <section class="aw-screen aw-ready" data-aw-screen="3" hidden>
+        <div data-aw-mascot></div>
+        <h2 id="awTitle3" tabindex="-1">What's on your mind?</h2>
+        <p class="aw-lead" id="awReadyCopy">A big idea, a busy week, or a small question.<br>Let's start wherever you are.</p>
+        <div class="aw-starters">
+          <button type="button" class="aw-starter" data-aw-prompt="Help me turn my busy week into a simple plan."><span>Help me make a little room in my week</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+          <button type="button" class="aw-starter" data-aw-prompt="I have a messy idea. Can you help me think it through?"><span>Think through an idea with me</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+          <button type="button" class="aw-starter" data-aw-prompt="Help me draft a thoughtful email. Ask me who it is for and what I want to say."><span>Find the right words for an email</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+        </div>
+        <button type="button" class="aw-primary" id="awOpenApp">Make yourself at home <span aria-hidden="true">→</span></button>
+        <div class="aw-subnote" id="awReadyNote">Choose an idea to edit before sending, or start your own.</div>
+      </section>
+    </main>
+    <footer class="aw-footer"><button type="button" class="aw-quiet aw-back" id="awBack" disabled><span aria-hidden="true">←</span> Back</button><div class="aw-progress" role="list" aria-label="Welcome progress"><span role="listitem" aria-label="Meet AVA" aria-current="step"></span><span role="listitem" aria-label="A little assist"></span><span role="listitem" aria-label="Connections"></span><span role="listitem" aria-label="Get started"></span></div><span class="aw-step" id="awStepLabel">1 of 4</span></footer>
+  </div>
+</section>
+<script id="avaWelcomeScript">
+(function(){
+  'use strict';
+  var root=document.getElementById('avaWelcome'), step=0, scene=0, timers=[], cycle=0, demoPaused=false, opened=false, preview=false, replay=false, focusBefore=null, inertBefore=[], googleConnected=false, pendingPrompt='', generation=0;
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+  var mascot='<svg class="aw-mascot" viewBox="0 0 148 118" fill="none" aria-hidden="true"><g class="aw-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="aw-pupil" fill="#242420"><ellipse class="aw-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="aw-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="aw-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg>';
+  document.querySelectorAll('[data-aw-mascot]').forEach(function(el){el.innerHTML=mascot;});
+  function syncBrandMotion(){var mark=root.querySelector('.aw-brand-mark svg');if(!mark||typeof mark.pauseAnimations!=='function')return;if(!opened||document.hidden||reduced.matches||demoPaused)mark.pauseAnimations();else mark.unpauseAnimations();}
+  var scenes=[
+    {user:'My week is already a lot. Where do I even start?',reply:'Let\u2019s make it feel a little lighter. What are the three things you most need to get done?',items:['Start with what matters','Make the first step small']},
+    {user:'Help me say no to a project, without sounding unkind.',reply:'Of course. Here\u2019s a starting point you can make your own:',items:['\u201cThank you for thinking of me. I\u2019m at capacity right now, so I won\u2019t be able to give this the attention it deserves.\u201d']},
+    {user:'I have an idea for a little business, but it\u2019s all over the place.',reply:'Messy is a perfectly good place to start. Tell me who it\u2019s for and the problem you want to solve.',items:['Who are you helping?','What would make their day easier?']}
+  ];
+  function user(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
+  function clearTimers(){timers.forEach(clearTimeout);timers=[];clearInterval(cycle);cycle=0;generation++;}
+  function after(fn,ms){var g=generation;timers.push(setTimeout(function(){if(g===generation&&opened)fn();},ms));}
+  function mood(value){root.querySelectorAll('.aw-mascot').forEach(function(el){el.dataset.mood=value||'';});}
+  function allDemoVisible(){root.querySelectorAll('.aw-demo-bubble').forEach(function(el){el.classList.add('is-visible');el.removeAttribute('aria-hidden');});var typing=document.getElementById('awDemoTyping');if(typing)typing.hidden=true;mood('happy');}
+  function renderDemo(){
+    clearTimers();
+    var stage=document.getElementById('awDemoStage'), data=scenes[scene];
+    stage.replaceChildren();
+    var request=document.createElement('div');request.className='aw-demo-bubble aw-demo-user';request.textContent=data.user;request.setAttribute('aria-hidden','true');stage.appendChild(request);
+    var typing=document.createElement('div');typing.id='awDemoTyping';typing.className='aw-demo-bubble aw-demo-ava';typing.setAttribute('aria-hidden','true');typing.innerHTML='<span class="aw-demo-name">AVA</span><span class="aw-typing"><i></i><i></i><i></i></span>';stage.appendChild(typing);
+    var response=document.createElement('div');response.className='aw-demo-bubble aw-demo-ava';response.setAttribute('aria-hidden','true');var name=document.createElement('span');name.className='aw-demo-name';name.textContent='AVA';response.appendChild(name);response.appendChild(document.createTextNode(data.reply));
+    var results=document.createElement('div');results.className='aw-demo-result';data.items.forEach(function(text){var line=document.createElement('span');line.textContent=text;results.appendChild(line);});response.appendChild(results);stage.appendChild(response);
+    root.querySelectorAll('[data-aw-demo]').forEach(function(el){el.setAttribute('aria-pressed',Number(el.dataset.awDemo)===scene?'true':'false');});
+    if(reduced.matches||demoPaused){allDemoVisible();return;}
+    after(function(){request.classList.add('is-visible');request.removeAttribute('aria-hidden');mood('thinking');},150);
+    after(function(){typing.classList.add('is-visible');},950);
+    after(function(){typing.hidden=true;response.classList.add('is-visible');response.removeAttribute('aria-hidden');mood('happy');},2400);
+  }
+  function cycleGreeting(){
+    var lines=root.querySelectorAll('.aw-welcome-line'), index=0;
+    lines.forEach(function(el,i){el.classList.toggle('on',i===0);});
+    if(reduced.matches||demoPaused)return;
+    cycle=setInterval(function(){if(!opened||document.hidden)return;index=(index+1)%lines.length;lines.forEach(function(el,i){el.classList.toggle('on',i===index);});mood(index===1?'thinking':index===2?'happy':'');},3600);
+  }
+  function go(next,focus){
+    clearTimers();step=Math.max(0,Math.min(3,next));mood('');
+    root.querySelectorAll('[data-aw-screen]').forEach(function(el){el.hidden=Number(el.dataset.awScreen)!==step;});
+    root.setAttribute('aria-labelledby','awTitle'+step);document.getElementById('awBack').disabled=step===0;
+    root.querySelectorAll('.aw-progress span').forEach(function(el,i){if(i===step)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+    document.getElementById('awStepLabel').textContent=(step+1)+' of 4';root.scrollTop=0;
+    if(step===0)cycleGreeting();if(step===1)renderDemo();if(step===2)refreshConnection();
+    if(step===3){var guest=!user()||user().isGuest;document.getElementById('awReadyCopy').innerHTML=guest?'Take a look around and meet AVA.<br>Your guest visit includes recorded previews.':'A big idea, a busy week, or a small question.<br>Let\u2019s start wherever you are.';document.getElementById('awReadyNote').textContent=guest?'Live AI and connected actions require an account and eligible access.':'Choose an idea to edit before sending, or start your own.';}
+    if(focus!==false)document.getElementById('awTitle'+step).focus({preventScroll:true});
+  }
+  function preventBackground(){inertBefore=[];Array.from(document.body.children).forEach(function(el){if(el!==root&&!/^(SCRIPT|STYLE)$/.test(el.tagName)){inertBefore.push([el,el.inert]);el.inert=true;}});}
+  function open(options){
+    options=options||{};if(opened){go(options.step||0);return;}
+    preview=!!options.preview;replay=!!options.replay;focusBefore=document.activeElement;opened=true;window.__avaWelcomeActive=true;
+    try{if(typeof window.avaPreviewSilenceForNarration==='function')window.avaPreviewSilenceForNarration();}catch(e){}
+    var video=document.getElementById('avaRecordedVideo');if(video)video.pause();
+    root.hidden=false;document.body.classList.add('ava-welcome-active');preventBackground();syncBrandMotion();go(options.step||0,true);
+  }
+  function save(status){if(preview)return;try{localStorage.setItem(window.avaWelcomeStorageKey(),JSON.stringify({completedAt:new Date().toISOString(),status:status,version:1}));}catch(e){}try{sessionStorage.removeItem('synapses_ava_welcome_resume');}catch(e){}}
+  function close(options){
+    options=options||{};clearTimers();opened=false;window.__avaWelcomeActive=false;root.hidden=true;syncBrandMotion();document.body.classList.remove('ava-welcome-active');inertBefore.forEach(function(entry){entry[0].inert=entry[1];});inertBefore=[];
+    if(options.save)save(options.save);
+    if(options.restoreFocus!==false&&focusBefore&&focusBefore.isConnected)try{focusBefore.focus({preventScroll:true});}catch(e){}
+  }
+  function toast(text){var el=document.createElement('div');el.className='aw-preview-toast';el.setAttribute('role','status');el.textContent=text;document.body.appendChild(el);setTimeout(function(){el.remove();},5000);}
+  function stagePrompt(text){
+    if(typeof setView==='function')setView('sec-chat');
+    if(typeof newChat==='function')newChat({forceAsk:true});
+    setTimeout(function(){var input=document.getElementById('inputBox');if(!input)return;if('value' in input)input.value=text;else input.textContent=text;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();},150);
+  }
+  function finish(prompt){
+    pendingPrompt=prompt||'';
+    var wasPreview=preview, u=user();close({save:'complete',restoreFocus:false});
+    if(wasPreview){window.__avaWelcomePreviewDismissed=true;try{var clean=new URL(location.href);clean.searchParams.delete('welcome');history.replaceState(history.state,'',clean.pathname+clean.search+clean.hash);}catch(e){}}
+    if(!u){
+      if(typeof doGuest==='function')doGuest();else if(typeof showAuthModal==='function')showAuthModal();
+      // A preview is never a completion for a real account. Suppress only this guest transition.
+      if(pendingPrompt)setTimeout(function(){stagePrompt(pendingPrompt);},250);
+    }else{if(pendingPrompt)stagePrompt(pendingPrompt);else if(typeof setView==='function')setView('sec-chat');}
+    if(wasPreview&&pendingPrompt)toast('Example added to the composer. Nothing has been sent.');
+  }
+  async function refreshConnection(){
+    var button=document.getElementById('awConnectGoogle'), status=document.getElementById('awConnectStatus');
+    var u=user(), authenticated=!!(u&&u.id&&!u.isGuest);button.disabled=false;button.textContent=authenticated?'Connect Google ↗':'Sign in to connect ↗';
+    status.textContent=authenticated?'':'You can explore first and connect after signing in.';
+    googleConnected=false;if(!authenticated||!window.synConnectors||!window.synConnectors.list)return;
+    var visit=generation;
+    try{var result=await window.synConnectors.list();if(!opened||step!==2||visit!==generation)return;
+      googleConnected=!!(result&&result.connected&&result.connected.google);
+      if(googleConnected){button.textContent='Google connected ✓';button.disabled=true;status.textContent='You\u2019re connected. You can manage access in Settings.';}
+      else if(!result||result.ok===false)status.textContent='Connection status is unavailable. You can try connecting or continue for now.';
+    }catch(e){if(opened&&step===2)status.textContent='Couldn\u2019t check your connection. You can continue and connect later.';}
+  }
+  function connectGoogle(){
+    var u=user();
+    if(!u||u.isGuest||!u.id){
+      try{sessionStorage.setItem('synapses_ava_welcome_resume','2');}catch(e){}
+      close({restoreFocus:false});if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;
+    }
+    if(!window.synConnectors||!window.synConnectors.connect){document.getElementById('awConnectStatus').textContent='Connection tools are unavailable. You can connect later in Settings.';return;}
+    try{window.synConnectors.connect('google');document.getElementById('awConnectStatus').textContent='Finish reviewing permissions in the Google window. Then return here. You can also continue for now.';}
+    catch(e){document.getElementById('awConnectStatus').textContent='Couldn\u2019t open Google. Check your pop-up settings or connect later in Settings.';}
+  }
+  function maybeStart(){
+    if(opened||!user())return;
+    if(document.documentElement.classList.contains('synapses-welcome-pending'))return;
+    var auth=document.getElementById('authModal');if(auth&&getComputedStyle(auth).display!=='none')return;
+    if(!window.avaWelcomeShouldStart())return;
+    var resume=0;try{resume=Number(sessionStorage.getItem('synapses_ava_welcome_resume'))||0;}catch(e){}
+    open({step:resume});
+  }
+  window.avaWelcomeMaybeStart=maybeStart;
+  window.openAvaWelcome=function(options){open(Object.assign({replay:true},options||{}));};
+  document.getElementById('awSkip').onclick=function(){if(!user()||preview){finish();return;}close({save:'skipped'});};
+  document.getElementById('awGetStarted').onclick=function(){go(1);};document.getElementById('awBack').onclick=function(){go(step-1);};document.getElementById('awDemoNext').onclick=function(){go(2);};
+  document.getElementById('awConnectionsNext').onclick=function(){go(3);};document.getElementById('awConnectionsSkip').onclick=function(){go(3);};document.getElementById('awOpenApp').onclick=function(){finish();};document.getElementById('awConnectGoogle').onclick=connectGoogle;
+  root.querySelectorAll('[data-aw-demo]').forEach(function(el){el.onclick=function(){scene=Number(el.dataset.awDemo);renderDemo();};});
+  root.querySelectorAll('[data-aw-prompt]').forEach(function(el){el.onclick=function(){finish(el.dataset.awPrompt);};});
+  document.getElementById('awReplayDemo').onclick=renderDemo;
+  document.getElementById('awPauseDemo').onclick=function(){demoPaused=!demoPaused;this.textContent=demoPaused?'Resume motion':'Pause motion';this.setAttribute('aria-pressed',demoPaused?'true':'false');root.style.setProperty('--aw-motion',demoPaused?'paused':'running');root.querySelectorAll('.aw-character,.aw-eye').forEach(function(el){el.style.animationPlayState=demoPaused?'paused':'running';});syncBrandMotion();renderDemo();};
+  root.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){e.preventDefault();document.getElementById('awSkip').click();return;}
+    if(e.key!=='Tab')return;
+    var focusables=Array.from(root.querySelectorAll('button:not([disabled]),a[href],[tabindex="0"]')).filter(function(el){return !!el.getClientRects().length;});var first=focusables[0],last=focusables[focusables.length-1];
+    if(e.shiftKey&&(document.activeElement===first||document.activeElement.matches('[tabindex="-1"]'))){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
+  document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target))document.getElementById('awTitle'+step).focus({preventScroll:true});});
+  window.addEventListener('focus',function(){if(opened&&step===2)refreshConnection();});
+  window.addEventListener('synapses:intro-complete',function(){if(!['login','waitlist-success'].includes(new URLSearchParams(location.search).get('auth')))maybeStart();});
+  document.addEventListener('visibilitychange',function(){syncBrandMotion();if(!opened)return;if(document.hidden){clearTimers();}else if(step===0){cycleGreeting();}else if(step===1){renderDemo();}});
+  reduced.addEventListener('change',function(){syncBrandMotion();if(opened&&step===1)renderDemo();else if(opened&&step===0){clearTimers();cycleGreeting();}});
+  var replayButton=document.createElement('button');replayButton.type='button';replayButton.setAttribute('role','menuitem');replayButton.textContent='Meet AVA again';replayButton.onclick=function(){open({replay:true});};var home=document.getElementById('chpUserHome'),signOut=home&&home.querySelector('[data-chp-act="logout"]');if(signOut)home.insertBefore(replayButton,signOut.previousElementSibling);
+  var originalEnterGuest=window.enterAvaGuest;
+  window.enterAvaGuest=function(){
+    try{var route=new URL(location.href);if(['login','waitlist-success'].includes(route.searchParams.get('auth'))){route.searchParams.delete('auth');history.replaceState(history.state,'',route.pathname+route.search+route.hash);}}catch(e){}
+    if(typeof originalEnterGuest==='function')return originalEnterGuest.apply(this,arguments);
+    if(typeof doGuest==='function')return doGuest();
+  };
+  function applyRoute(){
+    var query=new URLSearchParams(location.search);
+    if(query.get('guest')==='1'){
+      try{var guestRoute=new URL(location.href);guestRoute.searchParams.delete('guest');history.replaceState(history.state,'',guestRoute.pathname+guestRoute.search+guestRoute.hash);}catch(e){}
+      if(typeof window._hideSplash==='function')window._hideSplash();window.enterAvaGuest();return;
+    }
+    if(query.get('welcome')==='preview'){if(typeof window._hideSplash==='function')window._hideSplash();open({preview:true});return;}
+    if(query.get('auth')==='login'){if(typeof window._hideSplash==='function')window._hideSplash();if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');return;}
+    maybeStart();
+    var staged='';try{staged=sessionStorage.getItem('synapses_ava_welcome_prompt')||'';sessionStorage.removeItem('synapses_ava_welcome_prompt');}catch(e){}if(staged&&user()&&!opened)stagePrompt(staged);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyRoute);else applyRoute();
+})();
+</script>
 
 </body>
