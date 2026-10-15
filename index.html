@@ -2810,7 +2810,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
    inline top/left on every move, and !important would silently override
    that (this previously broke vertical dragging, leaving only left/right).
    No grab/grabbing cursor here on purpose — the hand icon isn't wanted. */
-#avaAvatarBox.ava-popped{position:fixed!important;width:min(74vw,380px);height:min(74vw,380px);border-radius:22px;z-index:9999;box-shadow:0 12px 48px rgba(0,0,0,.55),0 0 32px rgba(124,106,247,.35);}
+#avaAvatarBox.ava-popped{position:fixed!important;width:min(74vw,380px);height:min(74vw,380px);border-radius:22px;z-index:9999;box-shadow:0 12px 48px rgba(0,0,0,.55);}
 #avaAvatarBox.ava-popped.ava-dragging{transition:none!important;}
 #avaAvatarBox.ava-pop-anim{transition:width .35s cubic-bezier(0.22,1,0.36,1),height .35s cubic-bezier(0.22,1,0.36,1),border-radius .35s cubic-bezier(0.22,1,0.36,1),top .35s cubic-bezier(0.22,1,0.36,1),left .35s cubic-bezier(0.22,1,0.36,1),box-shadow .35s ease;}
 /* Once popped, nudge the voice-toggle button up so it doesn't sit on top of
@@ -15616,7 +15616,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
       <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(99,102,241,.08) 0%,transparent 70%);pointer-events:none;"></div>
     </div>
     <!-- Ava LiveAvatar widget — hidden until enabled via right-click on the voice button -->
-    <div id="avaAvatarBox" style="position:absolute;top:14px;right:14px;width:160px;height:160px;border-radius:16px;overflow:hidden;background:#0a0a14;box-shadow:0 0 20px rgba(124,106,247,.3);border:1px solid rgba(124,106,247,0.25);z-index:15;display:none;">
+    <div id="avaAvatarBox" style="position:absolute;top:14px;right:14px;width:160px;height:160px;border-radius:16px;overflow:hidden;background:#000000;box-shadow:0 8px 24px rgba(0,0,0,.32);border:1px solid #303030;z-index:15;display:none;">
       <video id="avaAvatarVideo" autoplay playsinline disablePictureInPicture disableRemotePlayback x-webkit-airplay="deny" style="width:100%;height:100%;object-fit:cover;display:none;"></video>
       <div id="avaAvatarStatus" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.55);font-size:11px;font-family:'DM Sans',sans-serif;text-align:center;padding:8px;line-height:1.4;"></div>
       <button id="avaAvatarClose" onclick="disableAvaAvatar()" title="Turn off avatar" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:none;background:rgba(0,0,0,0.4);color:rgba(255,255,255,0.7);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">✕</button>
@@ -73380,7 +73380,7 @@ async function srcAgentContact(supplier) {
   transform:scale(0.15);
   transition:opacity .2s ease, transform .22s cubic-bezier(0.34,1.3,0.64,1);
 ">
-  <div style="background:linear-gradient(160deg,#1a1828 0%,#110f1e 100%);border:2px solid rgba(124,106,247,0.35);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.7),0 0 0 1px rgba(124,106,247,0.12),inset 0 1px 0 rgba(255,255,255,0.06);overflow:hidden;position:relative;">
+  <div style="background:#000000;border:2px solid #303030;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.06);overflow:hidden;position:relative;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px 5px;border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:flex;align-items:center;gap:6px;">
         <div style="width:7px;height:7px;border-radius:50%;background:#e85d96;box-shadow:0 0 5px #e85d96aa;animation:avaPulse 2s ease-in-out infinite;"></div>
@@ -92926,6 +92926,19 @@ if(typeof currentUser!=='undefined'&&currentUser)window.avaPreviewAfterLogin();
 
 <!-- Ava welcome · original Synapses onboarding, layered into the current app. -->
 <style id="avaWelcomeStyles">
+/* Neutral media frames only. Keep unrelated app accents and modal blur intact. */
+#avaRecordedPortrait,#avaAvatarBox{background:#000000!important;border-color:#303030!important;box-shadow:0 8px 24px rgba(0,0,0,.32)!important}
+#avaAvatarBox.ava-popped{background:#000000!important;border-color:#303030!important;box-shadow:0 12px 48px rgba(0,0,0,.55)!important}
+#avaRecordedPortrait video,#avaAvatarBox video{box-shadow:none!important;border:0!important}
+#avaTvPopup>div{background:#000000!important;border-color:#303030!important;box-shadow:0 8px 40px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06)!important}
+#avaTvPopup #avaTvActLabel{color:#999999!important}
+#avaTvPopup>div>div:first-child>div>div:first-child{background:#b0b0b0!important;box-shadow:none!important}
+.chat-ava-portrait,#ava-header-pic{border-color:#303030!important;box-shadow:0 3px 10px rgba(0,0,0,.28)!important}
+#synTourCard.st-video{background:#000000!important;border-color:#303030!important;box-shadow:0 12px 40px rgba(0,0,0,.5)!important}
+#synTourCard.st-video::before{background:#303030!important}
+#synTourVideoWrap,#synTourVideoWrap .st-vmedia,#synTourVideoWrap .st-vloader{background:#000000!important}
+#synTourVideoWrap .st-vloader::before{border-color:#555555!important;border-top-color:#bbbbbb!important;border-right-color:#888888!important;box-shadow:none!important}
+#synTourVideoWrap .st-vglow{box-shadow:inset 0 0 0 1px #303030,inset 0 -40px 70px rgba(0,0,0,.28)!important}
 #avaWelcome{--aw-bg:#0c0c0d;--aw-ink:#f4f2ec;--aw-muted:#96958f;--aw-line:#29292b;--aw-accent:#d2cdc1;position:fixed;inset:0;z-index:2147483000;background:var(--aw-bg);color:var(--aw-ink);font-family:'DM Sans',sans-serif;overflow:auto;overscroll-behavior:contain;isolation:isolate;color-scheme:dark}
 #avaWelcome[hidden]{display:none!important}
 #avaWelcome *{box-sizing:border-box}
@@ -93099,10 +93112,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
         <div class="aw-demo-tabs" aria-label="Example conversation">
           <button type="button" class="aw-demo-tab" data-aw-demo="0" aria-pressed="true">Make a plan</button>
           <button type="button" class="aw-demo-tab" data-aw-demo="1" aria-pressed="false">Find the words</button>
-          <button type="button" class="aw-demo-tab" data-aw-demo="2" aria-pressed="false">Untangle an idea</button>
+          <button type="button" class="aw-demo-tab" data-aw-demo="2" aria-pressed="false">Make a call</button>
         </div>
         <div class="aw-demo-stage" id="awDemoStage" aria-live="polite" aria-atomic="false"></div>
         <div class="aw-demo-controls"><span class="aw-demo-label">Example conversation</span><button type="button" class="aw-quiet" id="awReplayDemo">Replay</button><button type="button" class="aw-quiet" id="awPauseDemo" aria-pressed="false">Pause motion</button></div>
+        <div class="aw-subnote" id="awCallDemoNote" hidden style="margin:0 auto 15px;max-width:330px">No call is placed here. Calling requires eligible Pro access.</div>
         <button type="button" class="aw-primary" id="awDemoNext">I like the sound of that <span aria-hidden="true">→</span></button>
       </section>
       <section class="aw-screen aw-connections" data-aw-screen="2" hidden>
@@ -93127,7 +93141,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
         <div class="aw-starters">
           <button type="button" class="aw-starter" data-aw-prompt="Help me turn my busy week into a simple plan."><span>Help me make a little room in my week</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
           <button type="button" class="aw-starter" data-aw-prompt="I have a messy idea. Can you help me think it through?"><span>Think through an idea with me</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
-          <button type="button" class="aw-starter" data-aw-prompt="Help me draft a thoughtful email. Ask me who it is for and what I want to say."><span>Find the right words for an email</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+          <button type="button" class="aw-starter" id="awCallStarter"><span>Ask a barber about availability</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
         </div>
         <button type="button" class="aw-primary" id="awOpenApp">Make yourself at home <span aria-hidden="true">→</span></button>
         <div class="aw-subnote" id="awReadyNote">Choose an idea to edit before sending, or start your own.</div>
@@ -93147,7 +93161,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   var scenes=[
     {user:'My week is already a lot. Where do I even start?',reply:'Let\u2019s make it feel a little lighter. What are the three things you most need to get done?',items:['Start with what matters','Make the first step small']},
     {user:'Help me say no to a project, without sounding unkind.',reply:'Of course. Here\u2019s a starting point you can make your own:',items:['\u201cThank you for thinking of me. I\u2019m at capacity right now, so I won\u2019t be able to give this the attention it deserves.\u201d']},
-    {user:'I have an idea for a little business, but it\u2019s all over the place.',reply:'Messy is a perfectly good place to start. Tell me who it\u2019s for and the problem you want to solve.',items:['Who are you helping?','What would make their day easier?']}
+    {user:'Can you call my barber and ask about Thursday afternoon?',reply:'In Calls, add the number and what you\u2019d like me to ask. You review the details and start the call.',items:['A number with country code + a clear purpose','Summary and transcript when available']}
   ];
   function user(){try{return typeof currentUser!=='undefined'&&currentUser?currentUser:window.currentUser||null;}catch(e){return null;}}
   function clearTimers(){timers.forEach(clearTimeout);timers=[];clearInterval(cycle);cycle=0;generation++;}
@@ -93157,6 +93171,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   function renderDemo(){
     clearTimers();
     var stage=document.getElementById('awDemoStage'), data=scenes[scene];
+    document.getElementById('awCallDemoNote').hidden=scene!==2;
     stage.replaceChildren();
     var request=document.createElement('div');request.className='aw-demo-bubble aw-demo-user';request.textContent=data.user;request.setAttribute('aria-hidden','true');stage.appendChild(request);
     var typing=document.createElement('div');typing.id='awDemoTyping';typing.className='aw-demo-bubble aw-demo-ava';typing.setAttribute('aria-hidden','true');typing.innerHTML='<span class="aw-demo-name">Ava</span><span class="aw-typing"><i></i><i></i><i></i></span>';stage.appendChild(typing);
@@ -93204,15 +93219,28 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     if(typeof newChat==='function')newChat({forceAsk:true});
     setTimeout(function(){var input=document.getElementById('inputBox');if(!input)return;if('value' in input)input.value=text;else input.textContent=text;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();},150);
   }
-  function finish(prompt){
+  function openCallDraft(){
+    if(typeof setView==='function')setView('sec-chat');
+    var button=document.getElementById('csNewCallBtn');
+    if(!button){toast('Open Calls to add a number and review your call details.');return;}
+    // Existing private handler opens the real Calls form; it does not submit it.
+    button.click();
+    var name=document.getElementById('csNewName'),phone=document.getElementById('csNewPhone'),objective=document.getElementById('csNewObjective');
+    if(name)name.value='Barber';if(phone)phone.value='';
+    if(objective)objective.value='Ask whether they have a haircut appointment available Thursday afternoon and what it costs. Do not make a booking.';
+    var status=document.getElementById('csNewStatus'),guest=!user()||user().isGuest;
+    if(status)status.textContent=guest?'Guest preview. Sign in with eligible Pro access before placing a call.':'Add the barber\u2019s number with its country code. Review the details before starting the call.';
+    if(phone)phone.focus();
+  }
+  function finish(prompt,action){
     pendingPrompt=prompt||'';
     var wasPreview=preview, u=user();close({save:'complete',restoreFocus:false});
     if(wasPreview){window.__avaWelcomePreviewDismissed=true;try{var clean=new URL(location.href);clean.searchParams.delete('welcome');history.replaceState(history.state,'',clean.pathname+clean.search+clean.hash);}catch(e){}}
     if(!u){
       if(typeof doGuest==='function')doGuest();else if(typeof showAuthModal==='function')showAuthModal();
       // A preview is never a completion for a real account. Suppress only this guest transition.
-      if(pendingPrompt)setTimeout(function(){stagePrompt(pendingPrompt);},250);
-    }else{if(pendingPrompt)stagePrompt(pendingPrompt);else if(typeof setView==='function')setView('sec-chat');}
+      if(action==='call')setTimeout(openCallDraft,250);else if(pendingPrompt)setTimeout(function(){stagePrompt(pendingPrompt);},250);
+    }else{if(action==='call')openCallDraft();else if(pendingPrompt)stagePrompt(pendingPrompt);else if(typeof setView==='function')setView('sec-chat');}
     if(wasPreview&&pendingPrompt)toast('Example added to the composer. Nothing has been sent.');
   }
   async function refreshConnection(){
@@ -93252,6 +93280,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   document.getElementById('awConnectionsNext').onclick=function(){go(3);};document.getElementById('awConnectionsSkip').onclick=function(){go(3);};document.getElementById('awOpenApp').onclick=function(){finish();};document.getElementById('awConnectGoogle').onclick=connectGoogle;
   root.querySelectorAll('[data-aw-demo]').forEach(function(el){el.onclick=function(){scene=Number(el.dataset.awDemo);renderDemo();};});
   root.querySelectorAll('[data-aw-prompt]').forEach(function(el){el.onclick=function(){finish(el.dataset.awPrompt);};});
+  document.getElementById('awCallStarter').onclick=function(){finish('','call');};
   document.getElementById('awReplayDemo').onclick=renderDemo;
   document.getElementById('awPauseDemo').onclick=function(){demoPaused=!demoPaused;this.textContent=demoPaused?'Resume motion':'Pause motion';this.setAttribute('aria-pressed',demoPaused?'true':'false');root.style.setProperty('--aw-motion',demoPaused?'paused':'running');root.querySelectorAll('.aw-character,.aw-eye').forEach(function(el){el.style.animationPlayState=demoPaused?'paused':'running';});syncBrandMotion();renderDemo();};
   root.addEventListener('keydown',function(e){
