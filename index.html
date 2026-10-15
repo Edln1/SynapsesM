@@ -10420,6 +10420,39 @@ window.getWebAudioNode = getWebAudioNode;
 #avaTopSettingsBtn:hover{opacity:1;color:var(--text,#ededed);background:rgba(127,127,127,.09)}
 #avaTopSettingsBtn:focus-visible{opacity:1;outline:1px solid currentColor;outline-offset:2px}
 </style>
+<style id="avaNoteEditorStyles">
+#_noteEditModal{position:fixed;inset:0;z-index:999998;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.68);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+#_noteEditModal *{box-sizing:border-box}
+#_noteEditModal .ane-dialog{width:min(520px,100%);max-height:calc(100dvh - 40px);overflow:auto;padding:23px;background:#0a0a0e;border:1px solid #ffffff14;border-radius:18px;box-shadow:0 24px 80px #0009;color:#f2f2f5;font-family:'DM Sans',sans-serif}
+#_noteEditModal .ane-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+#_noteEditModal .ane-eyebrow{margin:0 0 5px;color:#9697a2;font:600 10px/1.3 'DM Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase}
+#_noteEditModal h2{margin:0;color:#f2f2f5;font:600 21px/1.2 'Syne',sans-serif;letter-spacing:-.03em}
+#_noteEditModal .ane-close{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0;background:#111116;border:1px solid #ffffff12;border-radius:10px;color:#a8a8b2;font:22px/1 'DM Sans',sans-serif;cursor:pointer}
+#_noteEditModal .ane-field{display:block;margin:0 0 15px}
+#_noteEditModal .ane-field>span,#_noteEditModal .ane-options-title{display:block;margin:0 0 8px;color:#b9bac3;font:500 11px/1.3 'DM Sans',sans-serif}
+#_noteEditModal input,#_noteEditModal textarea{display:block;width:100%;background:#0e0e12;border:1px solid #ffffff16;border-radius:11px;color:#f2f2f5;font:400 13px/1.5 'DM Sans',sans-serif;outline:0}
+#_noteEditModal input{height:43px;padding:0 13px}
+#_noteEditModal textarea{min-height:140px;max-height:42vh;resize:vertical;padding:12px 13px}
+#_noteEditModal input::placeholder,#_noteEditModal textarea::placeholder{color:#747581}
+#_noteEditModal input:focus,#_noteEditModal textarea:focus{border-color:#7d8190;box-shadow:0 0 0 3px #ffffff0d}
+#_noteEditModal .ane-options{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding:3px 0 18px;border-bottom:1px solid #ffffff10}
+#_noteEditModal .ane-options-title{margin-bottom:7px}
+#_noteEditModal .ane-swatches{display:flex;align-items:center;gap:7px}
+#_noteEditModal .ane-swatch{width:28px;height:28px;border:1px solid #ffffff26;border-radius:9px;background:var(--swatch);cursor:pointer;box-shadow:inset 0 1px #ffffff0d}
+#_noteEditModal .ane-swatch[aria-pressed="true"]{border-color:#f2f2f5;box-shadow:0 0 0 2px #0a0a0e,0 0 0 3px #c7c9d1}
+#_noteEditModal .ane-pin{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 11px;background:#111116;border:1px solid #ffffff16;border-radius:10px;color:#aeb0ba;font:500 11px 'DM Sans',sans-serif;cursor:pointer}
+#_noteEditModal .ane-pin svg{width:13px;height:13px}
+#_noteEditModal .ane-pin[aria-pressed="true"]{background:#1a1b21;border-color:#ffffff44;color:#f2f2f5}
+#_noteEditModal .ane-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+#_noteEditModal .ane-actions button{min-height:41px;padding:0 17px;border-radius:11px;font:600 12px 'DM Sans',sans-serif;cursor:pointer}
+#_noteEditModal .ane-cancel{background:transparent;border:1px solid #ffffff18;color:#b5b5be}
+#_noteEditModal .ane-save{background:#f2f2f5;border:1px solid #f2f2f5;color:#0a0a0e}
+#_noteEditModal button:hover{filter:brightness(1.13)}
+#_noteEditModal button:focus-visible{outline:2px solid #b5b5bf;outline-offset:3px}
+@media(max-width:560px){#_noteEditModal{padding:12px;align-items:end}#_noteEditModal .ane-dialog{max-height:calc(100dvh - 24px);padding:20px 17px;border-radius:18px}#_noteEditModal textarea{max-height:32vh}}
+@media(prefers-reduced-motion:reduce){#_noteEditModal *,#_noteEditModal *::before,#_noteEditModal *::after{animation:none!important;transition:none!important}}
+
+</style>
 </head>
 <body>
 <script>
@@ -27043,24 +27076,15 @@ function selectNoteColor(idx){
 }
 
 var _stickyColors = [
-  {bg:'rgba(0,217,168,0.12)',border:'rgba(0,217,168,0.50)',pin:'#00d9a8',glow:'rgba(0,217,168,0.30)',text:'#b0fff0',muted:'rgba(0,217,168,0.45)'},
-  {bg:'rgba(124,106,247,0.12)',border:'rgba(124,106,247,0.50)',pin:'#a78bfa',glow:'rgba(124,106,247,0.30)',text:'#ddd6fe',muted:'rgba(124,106,247,0.5)'},
-  {bg:'rgba(232,93,150,0.10)',border:'rgba(232,93,150,0.40)',pin:'#e85d96',glow:'rgba(232,93,150,0.24)',text:'#fbbfd7',muted:'rgba(232,93,150,0.4)'},
-  {bg:'rgba(99,102,241,0.12)',border:'rgba(99,102,241,0.44)',pin:'#6366f1',glow:'rgba(99,102,241,0.24)',text:'#c7d2fe',muted:'rgba(99,102,241,0.45)'},
-  {bg:'rgba(124,106,247,0.1)',border:'rgba(124,106,247,0.2)',pin:'#7c6af7',glow:'rgba(124,106,247,0.35)',text:'rgba(255,255,255,0.85)',muted:'rgba(255,255,255,0.4)',dark:true},
+  {bg:'#111216',border:'#ffffff1b',pin:'#aeb4bf',glow:'transparent',text:'#ececf0',muted:'#999aa5',dark:true},
+  {bg:'#17191e',border:'#ffffff25',pin:'#d4d6dc',glow:'transparent',text:'#f1f1f4',muted:'#a4a5ae',dark:true},
+  {bg:'#16141a',border:'#ffffff20',pin:'#beb8c4',glow:'transparent',text:'#eeebf0',muted:'#a19ba7',dark:true},
+  {bg:'#121720',border:'#b1bdd031',pin:'#bdc9db',glow:'transparent',text:'#edf0f5',muted:'#a0aab9',dark:true},
+  {bg:'#0e0e12',border:'#ffffff1c',pin:'#afb1bb',glow:'transparent',text:'#e8e8ed',muted:'#92939e',dark:true},
 ];
-
-// True Black (OLED) variant — swaps the purple-tinted slots for the same
-// monochrome white/grey palette used by the Deep Space Aurora moon menu,
-// so notes don't clash with the pure-black theme. Non-purple slots (teal,
-// pink, indigo) are left as-is since they already read fine on true black.
-var _stickyColorsTrueBlack = [
-  _stickyColors[0],
-  {bg:'rgba(255,255,255,0.06)',border:'rgba(62,62,62,0.55)',pin:'#e5e5ec',glow:'rgba(42,42,42,0.3)',text:'#f0f0f5',muted:'rgba(255,255,255,0.4)'},
-  _stickyColors[2],
-  _stickyColors[3],
-  {bg:'rgba(255,255,255,0.05)',border:'rgba(62,62,62,0.5)',pin:'#c8c8d2',glow:'rgba(42,42,42,0.35)',text:'rgba(245,245,250,0.9)',muted:'rgba(255,255,255,0.4)',dark:true},
-];
+// Every saved color index remains valid; the five shades now use the quiet
+// charcoal/silver range shared with the Ava and Calls surfaces.
+var _stickyColorsTrueBlack = _stickyColors;
 function _getStickyColorPalette(){
   return (typeof _isTrueBlackTheme === 'function' && _isTrueBlackTheme()) ? _stickyColorsTrueBlack : _stickyColors;
 }
@@ -28090,204 +28114,76 @@ function _startNoteOrb(){
 
 // ── NOTE EDIT MODAL ──────────────────────────────────────────────────────
 function _openNoteEdit(idx){
-  var note = userNotes[idx];
-  if(!note) return;
-  // Remove existing modal
-  var existing = document.getElementById('_noteEditModal');
-  if(existing) existing.remove();
-
-  var modal = document.createElement('div');
-  modal.id = '_noteEditModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:999998;background:transparent;display:flex;align-items:center;justify-content:center;';
-
-  var _tb = (typeof _isTrueBlackTheme === 'function' && _isTrueBlackTheme());
-  // Same accent used everywhere else: purple on the normal themes, the
-  // muted grey we already use for true-black sticky notes/borders on that
-  // theme — so this modal actually matches instead of always going purple.
-  var _accent   = _tb ? '62,62,62'  : '124,106,247';
-  var _accentBg = _tb ? '17,17,17' : '124,106,247'; // panel background base
-  var _glowRgb  = _tb ? '42,42,42' : '124,106,247';
-  // Purple Sun opacities restored to match the reference build exactly
-  // (panel 0.1/border 0.2/glow 0.2/input-border 0.18) — True Black keeps
-  // its own separately-tuned values untouched.
-  var _boxBgA    = _tb ? 0.2  : 0.1;
-  var _boxBorderA= _tb ? 0.28 : 0.2;
-  var _boxGlowA  = _tb ? 0.15 : 0.2;
-  var _inpBorderA= _tb ? 0.32 : 0.18;
-
-  var box = document.createElement('div');
-  box.style.cssText = 'background:rgba('+_accentBg+','+_boxBgA+')'+';border:1px solid rgba('+_accent+','+_boxBorderA+');border-radius:12px;padding:24px 22px 18px;width:560px;max-width:94vw;max-height:88vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 20px rgba('+_glowRgb+','+_boxGlowA+');overflow:hidden;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);';
-
-  var heading = document.createElement('div');
-  heading.textContent = 'Edit Note';
-  heading.style.cssText = 'font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);';
-
-  // These two boxes (title + body) were still using a flat white-tinted fill
-  // regardless of theme, which is exactly what read as solid light-grey
-  // panels sitting on top of the dark glass background. Match them to the
-  // same dark tone as the outer panel on true black instead — bumped to a
-  // much higher fill opacity so the blurred welcome-screen content behind
-  // the modal stops bleeding/patching through the text area (same rgb tone,
-  // just far less see-through).
-  var inpBg = _tb ? 'rgba(6,6,6,0.85)' : 'rgba(255,255,255,0.05)';
-  var inpStyle = 'width:100%;background:'+inpBg+';border:1px solid rgba('+_accent+','+_inpBorderA+');border-radius:9px;padding:10px 12px;color:rgba(255,255,255,0.85);font-family:DM Sans,sans-serif;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;transition:border-color .2s,box-shadow .2s;line-height:1.6;';
-
-  var titleInp = document.createElement('input');
-  titleInp.type = 'text';
-  titleInp.value = note.title || '';
-  titleInp.placeholder = 'Title…';
-  titleInp.style.cssText = inpStyle;
-
-  var bodyInp = document.createElement('textarea');
-  bodyInp.value = note.body || '';
-  bodyInp.placeholder = 'Note…';
-  bodyInp.rows = 14;
-  bodyInp.style.cssText = inpStyle;
-
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px;margin-top:4px;';
-
-  // PIN BUTTON
-  var isPinned = !!note.pinned;
-  var btnPin = document.createElement('button');
-  var _updatePinBtn = function(){
-    btnPin.innerHTML = _stickyPinSvg() + '<span>' + (isPinned ? 'Pinned' : 'Pin') + '</span>';
-    btnPin.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;font-family:DM Sans,sans-serif;font-size:12px;cursor:pointer;transition:all .2s;flex-shrink:0;' + (isPinned
-      ? (_tb
-        ? 'border:1px solid rgba(200,200,208,0.28);background:rgba(255,255,255,0.08);color:rgba(232,232,238,0.95);'
-        : 'border:1px solid rgba('+_accent+','+0.6+');background:rgba('+_accent+','+0.22+');color:rgba(190,180,255,0.95);')
-      : 'border:1px solid rgba(255,255,255,0.08);background:transparent;color:rgba(255,255,255,0.35);');
-  };
-  _updatePinBtn();
-  btnPin.title = 'Pinned notes stay visible when Quick Notes are hidden';
-  btnPin.onmouseenter = function(){
-    if(!isPinned){
-      if(_tb){ btnPin.style.background='rgba(255,255,255,0.07)'; btnPin.style.borderColor='rgba(200,200,208,0.28)'; btnPin.style.color='rgba(232,232,238,0.85)'; }
-      else { btnPin.style.background='rgba('+_accent+',0.1)'; btnPin.style.borderColor='rgba('+_accent+',0.3)'; btnPin.style.color='rgba(180,170,255,0.8)'; }
-    }
-  };
-  btnPin.onmouseleave = function(){ _updatePinBtn(); };
-  btnPin.onclick = function(){ isPinned = !isPinned; _updatePinBtn(); };
-
-  var btnSave = document.createElement('button');
-  btnSave.textContent = 'Save';
-  btnSave.style.cssText = 'flex:1;padding:9px;border-radius:10px;border:1px solid rgba('+_accent+','+(_tb?0.5:0.4)+');background:rgba('+_accent+','+(_tb?0.16:0.12)+');color:'+(_tb?'rgba(230,230,236,0.95)':'rgba(180,170,255,0.95)')+';font-family:Syne,sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:all .2s;';
-  btnSave.onmouseenter = function(){ btnSave.style.background=_tb?'rgba(80,80,90,0.24)':'rgba(150,140,220,0.18)'; btnSave.style.borderColor='rgba('+_accent+','+(_tb?0.7:0.6)+')'; };
-  btnSave.onmouseleave = function(){ btnSave.style.background='rgba('+_accent+','+(_tb?0.16:0.12)+')'; btnSave.style.borderColor='rgba('+_accent+','+(_tb?0.5:0.4)+')'; };
-  var colorNames = ['dark','#00d9a8','#7c6af7','#e85d96','#6366f1'];
-  var colorIdxMap = [4,0,1,2,3]; // maps picker position → _stickyColors index
-  var colorIdxMapRev = [1,2,3,4,0]; // reverse: _stickyColors index → picker position
-  var colorRow = document.createElement('div');
-  colorRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
-  var colorLabel = document.createElement('span');
-  colorLabel.textContent = 'Colour:';
-  colorLabel.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);font-family:DM Sans,sans-serif;';
-  colorRow.appendChild(colorLabel);
-  var currentColorIdx = note.colorIdx !== undefined ? note.colorIdx : 4;
-  // Find which picker position matches the note's colorIdx
-  var pickerPos = colorIdxMap.indexOf(currentColorIdx);
-  if(pickerPos === -1) pickerPos = 0;
-
-  function dotVisual(ci, isSelected){
-    var c = colorNames[ci];
-    if(c==='dark'){
-      var _darkDot   = _tb ? '#c8c8d2' : 'rgba(124,106,247,0.5)';
-      var _darkRing  = _tb ? 'rgba(92,92,92,0.6)' : 'rgba(124,106,247,0.6)';
-      return {bg:_darkDot, border:(isSelected?'rgba(255,255,255,0.6)':'transparent'), shadow:'0 0 0 1px '+_darkRing};
-    }
-    return {bg:c, border:(isSelected?c:'transparent'), shadow:'none'};
-  }
-
-  // Collapsed by default: only the currently-selected colour shows, and it
-  // doubles as the toggle — click it to slide the rest of the palette open,
-  // pick one (or click the open swatch again) to close it back down to just
-  // that single dot, instead of always showing all 5 bubbles at once.
-  var toggleDot = document.createElement('div');
-  function paintToggle(){
-    var v = dotVisual(pickerPos, true);
-    toggleDot.style.cssText = 'width:16px;height:16px;border-radius:50%;background:'+v.bg+';cursor:pointer;border:2px solid '+v.border+';box-shadow:'+v.shadow+';box-sizing:border-box;transform:scale(1.3);flex-shrink:0;';
-  }
-  paintToggle();
-
-  var swatchesWrap = document.createElement('div');
-  swatchesWrap.style.cssText = 'display:none;gap:8px;align-items:center;';
-  var _colorOpen = false;
-
-  colorNames.forEach(function(c, ci){
-    var dot = document.createElement('div');
-    var isSelected = ci === pickerPos;
-    var v = dotVisual(ci, isSelected);
-    dot.style.cssText='width:16px;height:16px;border-radius:50%;background:'+v.bg+';cursor:pointer;transition:transform .15s;border:2px solid '+v.border+';box-shadow:'+v.shadow+';box-sizing:border-box;transform:'+(isSelected?'scale(1.3)':'scale(1)')+';';
-    dot.onclick = function(){
-      pickerPos = ci;
-      currentColorIdx = colorIdxMap[ci];
-      swatchesWrap.querySelectorAll('div').forEach(function(d,di){
-        var dv = dotVisual(di, di===ci);
-        d.style.border = '2px solid '+dv.border;
-        d.style.transform = di===ci?'scale(1.3)':'scale(1)';
-      });
-      paintToggle();
-      // Picking a colour closes the palette back down to the single dot.
-      swatchesWrap.style.display = 'none';
-      toggleDot.style.display = 'block';
-      _colorOpen = false;
-    };
-    swatchesWrap.appendChild(dot);
+  var note=userNotes[idx];
+  if(!note)return;
+  var existing=document.getElementById('_noteEditModal');
+  if(existing)existing.remove();
+  var previousFocus=document.activeElement;
+  var overlay=document.createElement('div');
+  overlay.id='_noteEditModal';
+  overlay.innerHTML='<section class="ane-dialog" role="dialog" aria-modal="true" aria-labelledby="aneTitle">'
+    +'<div class="ane-head"><div><p class="ane-eyebrow">Quick note</p><h2 id="aneTitle">Edit note</h2></div><button type="button" class="ane-close" aria-label="Close note editor">×</button></div>'
+    +'<label class="ane-field"><span>Title</span><input id="aneNoteTitle" type="text" placeholder="Give it a name" autocomplete="off"></label>'
+    +'<label class="ane-field"><span>Note</span><textarea id="aneNoteBody" placeholder="Write what you want to keep"></textarea></label>'
+    +'<div class="ane-options"><div><span class="ane-options-title">Note shade</span><div class="ane-swatches" role="group" aria-label="Note shade"></div></div><button type="button" class="ane-pin" aria-pressed="false"></button></div>'
+    +'<div class="ane-actions"><button type="button" class="ane-cancel">Cancel</button><button type="button" class="ane-save">Save note</button></div></section>';
+  var title=overlay.querySelector('#aneNoteTitle'),body=overlay.querySelector('#aneNoteBody');
+  var pin=overlay.querySelector('.ane-pin'),swatches=overlay.querySelector('.ane-swatches');
+  title.value=note.title||'';
+  body.value=note.body||'';
+  body.rows=6;
+  var selected=note.colorIdx===undefined?4:Math.max(0,Math.min(4,Number(note.colorIdx)||0));
+  var pinned=!!note.pinned;
+  var shades=[
+    {name:'Graphite',color:'#34363c'},
+    {name:'Silver',color:'#595d67'},
+    {name:'Smoke',color:'#4a4650'},
+    {name:'Slate blue',color:'#495568'},
+    {name:'Midnight',color:'#222329'}
+  ];
+  function syncShade(){Array.from(swatches.children).forEach(function(button,i){button.setAttribute('aria-pressed',String(i===selected));});}
+  shades.forEach(function(shade,i){
+    var button=document.createElement('button');
+    button.type='button';button.className='ane-swatch';button.title=shade.name;
+    button.setAttribute('aria-label',shade.name+' note shade');
+    button.style.setProperty('--swatch',shade.color);
+    button.addEventListener('click',function(){selected=i;syncShade();});
+    swatches.appendChild(button);
   });
-
-  toggleDot.onclick = function(){
-    _colorOpen = !_colorOpen;
-    swatchesWrap.style.display = _colorOpen ? 'flex' : 'none';
-    toggleDot.style.display = _colorOpen ? 'none' : 'block';
-  };
-
-  colorRow.appendChild(toggleDot);
-  colorRow.appendChild(swatchesWrap);
-
-  btnSave.onclick = function(){
-    userNotes[idx].title = titleInp.value.trim() || 'Untitled';
-    userNotes[idx].body  = bodyInp.value.trim();
-    userNotes[idx].colorIdx = colorIdxMap[pickerPos];
-    userNotes[idx].pinned = isPinned;
-    if(isPinned){
-      window._stickyNotesOpen = true;
-      try{ localStorage.setItem('stickyNotesOpen', '1'); }catch(eP){}
-    }
-    try{ localStorage.setItem('synapses_notes', JSON.stringify(userNotes)); nlSave(true); }catch(e){}
-    modal.remove();
+  syncShade();
+  function syncPin(){pin.innerHTML=_stickyPinSvg()+'<span>'+(pinned?'Pinned':'Pin note')+'</span>';pin.setAttribute('aria-pressed',String(pinned));}
+  syncPin();
+  pin.title='Pinned notes stay visible when Quick Notes are hidden';
+  pin.addEventListener('click',function(){pinned=!pinned;syncPin();});
+  function close(){document.removeEventListener('keydown',onKeydown,true);overlay.remove();if(previousFocus&&previousFocus.isConnected&&typeof previousFocus.focus==='function')previousFocus.focus({preventScroll:true});}
+  function save(){
+    if(!userNotes.includes(note)){close();return;}
+    note.title=title.value.trim()||'Untitled';
+    note.body=body.value.trim();
+    note.colorIdx=selected;
+    note.pinned=pinned;
+    if(pinned){window._stickyNotesOpen=true;try{localStorage.setItem('stickyNotesOpen','1');}catch(e){}}
+    try{localStorage.setItem('synapses_notes',JSON.stringify(userNotes));nlSave(true);}catch(e){}
+    close();
     renderStickyNotes();
-  };
-
-  var btnCancel = document.createElement('button');
-  btnCancel.textContent = 'Cancel';
-  btnCancel.style.cssText = 'padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:transparent;color:rgba(255,255,255,0.3);font-family:DM Sans,sans-serif;font-size:12px;cursor:pointer;transition:all .2s;';
-  btnCancel.onmouseenter = function(){ btnCancel.style.color='rgba(255,255,255,0.6)'; btnCancel.style.borderColor='rgba(255,255,255,0.15)'; };
-  btnCancel.onmouseleave = function(){ btnCancel.style.color='rgba(255,255,255,0.3)'; btnCancel.style.borderColor='rgba(255,255,255,0.07)'; };
-  btnCancel.onclick = function(){ modal.remove(); };
-
-  btnRow.appendChild(btnPin);
-  btnRow.appendChild(btnSave);
-  btnRow.appendChild(btnCancel);
-  // Focus glow removed — title/body boxes no longer change border or show a
-  // ring when clicked into to type; they stay visually static on focus.
-  [titleInp, bodyInp].forEach(function(el){
-    el.style.outline = 'none';
-  });
-
-  box.appendChild(heading);
-  box.appendChild(titleInp);
-  box.appendChild(bodyInp);
-  box.appendChild(colorRow);
-  box.appendChild(btnRow);
-  modal.appendChild(box);
-
-  // Close on backdrop click
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
-  // Escape key
-  document.addEventListener('keydown', function esc(e){ if(e.key==='Escape'){ modal.remove(); document.removeEventListener('keydown',esc); } });
-
-  document.body.appendChild(modal);
-  setTimeout(function(){ titleInp.focus(); titleInp.select(); }, 50);
+    if(typeof renderNotes==='function')renderNotes();
+  }
+  function onKeydown(e){
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();save();return;}
+    if(e.key!=='Tab')return;
+    var controls=Array.from(overlay.querySelectorAll('button,input,textarea')).filter(function(el){return !el.disabled;});
+    var first=controls[0],last=controls[controls.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+  overlay.querySelector('.ane-close').addEventListener('click',close);
+  overlay.querySelector('.ane-cancel').addEventListener('click',close);
+  overlay.querySelector('.ane-save').addEventListener('click',save);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)close();});
+  document.addEventListener('keydown',onKeydown,true);
+  document.body.appendChild(overlay);
+  title.focus({preventScroll:true});
 }
 
 // ── HOME PAGE RECENT TOOLS ──────────────────────────────────────────────
@@ -93578,7 +93474,12 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#f2f2f5;isolation:isolate}
 #avaFloatingAssistant[hidden],#avaFloatPopover[hidden]{display:none!important}
 #avaFloatButton{display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:22px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
+#avaFloatButton[hidden],#avaFloatMini[hidden]{display:none!important}
 #avaFloatButton>svg{width:62px;height:62px;overflow:visible;display:block}
+#avaFloatMini{position:fixed;right:9px;bottom:112px;display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #ffffff25;border-radius:13px;background:#0a0a0e;box-shadow:0 8px 20px #0008;cursor:pointer;touch-action:manipulation}
+#avaFloatMini>svg{width:33px;height:33px;display:block;overflow:visible}
+#avaFloatMini:hover{background:#17171b;border-color:#ffffff44}
+#avaFloatMini:focus-visible{outline:2px solid #b5b5bf;outline-offset:3px}
 #avaFloatButton:focus-visible{outline:2px solid #b5b5bf;outline-offset:4px}
 #avaFloatButton .af-character{transform-origin:66px 66px}
 #avaFloatButton .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 7.3s infinite}
@@ -93589,7 +93490,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatingAssistant[data-frozen="true"] #avaFloatButton>svg{animation-play-state:paused}
 #avaFloatPopover{position:fixed;width:min(310px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;border:1px solid #ffffff0e;border-radius:22px;background:#0a0a0e;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.32);text-align:left;color-scheme:dark}
 #avaFloatPopover *{box-sizing:border-box}
-#avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 27px 10px 0;color:#f2f2f5}
+#avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 66px 10px 0;color:#f2f2f5}
 #avaFloatPopover p{font-size:12px;line-height:1.7;color:#92929b;margin:0 0 16px}
 #avaFloatIdentity{font:400 11px/1.5 'DM Sans',sans-serif;color:#aaabb3;margin:-3px 0 13px;overflow-wrap:anywhere}
 .af-account-actions{display:flex;gap:6px;border-top:1px solid #ffffff0d;padding-top:9px;margin-top:7px}
@@ -93597,6 +93498,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 .af-account-actions button:hover{background:#18181d;color:#f2f2f5}
 .af-account-actions [hidden]{display:none!important}
 #avaFloatClose{position:absolute;right:4px;top:3px;width:44px;height:44px;display:grid;place-items:center;border:0;background:none;color:#85858e;font:22px/1 sans-serif;cursor:pointer;border-radius:12px}
+#avaFloatMinimize{position:absolute;right:43px;top:5px;width:40px;height:40px;display:grid;place-items:center;border:0;background:none;color:#85858e;font:23px/1 sans-serif;cursor:pointer;border-radius:12px}
+#avaFloatClose:hover,#avaFloatMinimize:hover{background:#17171b;color:#f2f2f5}
 #avaFloatStart,#avaFloatStop{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:46px;border:1px solid #f2f2f5;border-radius:14px;background:#f2f2f5;color:#0a0a0e;font:600 12px 'DM Sans',sans-serif;cursor:pointer;padding:10px 16px}
 #avaFloatPopover button svg{display:block;width:18px;height:18px;flex-shrink:0}
 #avaFloatStop{background:#17171b;color:#d4d4da;border-color:#ffffff20}
@@ -93635,8 +93538,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 </style>
 <aside id="avaFloatingAssistant" aria-label="Ava assistant shortcuts" hidden>
  <button type="button" id="avaFloatButton" aria-label="Open Ava" aria-haspopup="dialog" aria-controls="avaFloatPopover" aria-expanded="false"><svg class="af-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="af-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="af-pupil" fill="#242420"><ellipse class="af-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="af-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="af-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></button>
+ <button type="button" id="avaFloatMini" aria-label="Restore Ava" title="Restore Ava" hidden></button>
  <section id="avaFloatPopover" role="dialog" aria-modal="false" aria-labelledby="avaFloatTitle" hidden>
   <button type="button" id="avaFloatClose" aria-label="Close Ava shortcuts">×</button>
+  <button type="button" id="avaFloatMinimize" aria-label="Minimize Ava to the edge" title="Minimize Ava">−</button>
   <h2 id="avaFloatTitle">Ava</h2>
   <div id="avaFloatIdentity"></div>
   <form id="avaFloatChatForm" hidden><input type="text" id="avaFloatDraft" aria-label="Message Ava" placeholder="Ask Ava…" autocomplete="off"/><button type="submit" id="avaFloatSend" aria-label="Send message to Ava">↑</button></form>
@@ -93668,8 +93573,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  'use strict';
  var root=document.getElementById('avaFloatingAssistant'),button=document.getElementById('avaFloatButton'),popover=document.getElementById('avaFloatPopover'),start=document.getElementById('avaFloatStart'),stop=document.getElementById('avaFloatStop'),status=document.getElementById('avaFloatStatus'),opened=false,refreshTimer=0,watched=new WeakSet();
  if(!root)return;
- var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
- try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';}catch(e){}
+ var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
+ try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
+ var mini=document.getElementById('avaFloatMini');mini.innerHTML=button.innerHTML;
+ function syncMinimized(){button.hidden=minimized;mini.hidden=!minimized;root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));}
  function clamp(n,min,max){return Math.max(min,Math.min(n,max));}
  function geometry(width,height,composer){
   var size=62,margin=width<600?13:22,maxX=Math.max(8,width-size-margin),minX=Math.max(8,maxX-84),baseY=clamp(height-(width<600?158:176),30,Math.max(30,height-size-12));
@@ -93682,8 +93589,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function near(rect,x,y){return x>=rect.left-104&&x<=rect.right+104&&y>=rect.top-92&&y<=rect.bottom+92;}
  function hopFrames(from,to,minY,maxY){var dx=to.x-from.x,lower=Number.isFinite(minY)?minY:-Infinity,upper=Number.isFinite(maxY)?maxY:Infinity,frames=[{x:from.x,y:from.y,offset:0},{x:from.x,y:from.y+2,offset:.14}];for(var i=0;i<=8;i++){var p=i/8;frames.push({x:from.x+dx*p,y:from.y+(to.y-from.y)*p-108*p*(1-p),offset:.2+p*.58});}frames.push({x:to.x,y:to.y+2.5,offset:.87},{x:to.x,y:to.y,offset:1});return frames.map(function(p){p.y=clamp(p.y,lower,upper);return p;});}
  function currentGeometry(){var input=document.getElementById('inputBox');return geometry(window.innerWidth,window.innerHeight,visible(input)?input.getBoundingClientRect():null);}
- function canRoam(){return roamEnabled&&!motion.matches&&!document.hidden&&!root.hidden&&!opened&&!window.__avaCompanionChatOpen&&!voiceActive()&&!editing()&&!hovered&&!blocked()&&!(root.contains(document.activeElement)&&document.activeElement.matches(':focus-visible'))&&Date.now()>=freezeUntil&&!(lastPointer&&near(root.getBoundingClientRect(),lastPointer.x,lastPointer.y));}
- function scheduleRoam(delay){clearTimeout(roamTimer);roamTimer=setTimeout(roamTick,delay||2800);}
+ function canRoam(){return roamEnabled&&!minimized&&!motion.matches&&!document.hidden&&!root.hidden&&!opened&&!window.__avaCompanionChatOpen&&!voiceActive()&&!editing()&&!hovered&&!blocked()&&!(root.contains(document.activeElement)&&document.activeElement.matches(':focus-visible'))&&Date.now()>=freezeUntil&&!(lastPointer&&near(root.getBoundingClientRect(),lastPointer.x,lastPointer.y));}
+ function scheduleRoam(delay){clearTimeout(roamTimer);roamTimer=0;if(!minimized)roamTimer=setTimeout(roamTick,delay||2800);}
  function freezeMotion(ms){
   clearTimeout(travelTimer);travelTimer=0;clearTimeout(roamTimer);roamTimer=0;
   var rect=positioned&&!root.hidden?root.getBoundingClientRect():null;
@@ -93726,10 +93633,12 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
   if(opened){var identityUser=user(),identityGuest=!identityUser||identityUser.isGuest;document.getElementById('avaFloatIdentity').textContent=identityGuest?'Guest preview':(identityUser.email||'Your account');document.getElementById('avaFloatAccount').textContent=identityGuest?'Sign in':'Account';document.getElementById('avaFloatLogout').hidden=identityGuest;}
   if(opened){var u=user(),guest=!u||u.isGuest,live=voiceActive();document.getElementById('avaFloatCopy').textContent=live?'Your voice conversation is active. Everything else is close by.':guest?'Explore a little. Sign in when you’re ready for live voice.':'Talk things through, or jump into something useful.';document.getElementById('avaFloatStartLabel').textContent=guest?'Sign in for live voice':'Talk with Ava';start.setAttribute('aria-label',guest?'Sign in for live speech-to-speech':'Start a speech-to-speech conversation with Ava');start.hidden=live;stop.hidden=!live;}
-  if(!roamTimer&&!traveling)scheduleRoam(2800);
+  if(!minimized&&!roamTimer&&!traveling)scheduleRoam(2800);
  }
  function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
  function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;popover.hidden=false;root.dataset.open='true';button.setAttribute('aria-expanded','true');status.textContent='';refresh();(start.hidden?stop:start).focus({preventScroll:true});}
+ function minimize(){minimized=true;close(false);freezeMotion(0);clearTimeout(roamTimer);roamTimer=0;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}mini.focus({preventScroll:true});}
+ function restore(){minimized=false;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();button.focus({preventScroll:true});scheduleRoam(2800);}
  // This is a gesture entry only. Keep the app's existing verification and S2S
  // functions responsible for permissions, microphone startup and access rules.
  window.avaFloatingStartVoice=function(){
@@ -93784,14 +93693,14 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  var roamControl=document.getElementById('avaFloatRoam');
  function syncRoam(){roamControl.textContent=roamEnabled?'Stay here':'Let Ava hop';roamControl.setAttribute('aria-pressed',String(!roamEnabled));}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
- button.onclick=function(){if(opened)close(false);else open();};document.getElementById('avaFloatClose').onclick=function(){close(true);};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
+ button.onclick=function(){if(opened)close(false);else open();};mini.onclick=restore;document.getElementById('avaFloatClose').onclick=function(){close(true);};document.getElementById('avaFloatMinimize').onclick=minimize;start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
- document.addEventListener('pointerdown',function(e){if(!root.hidden&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target))close(false);},true);
+ document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target))close(false);},true);
  document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target))close(false);schedule();});
  document.addEventListener('click',function(e){if(!root.contains(e.target))schedule();},true);
  document.addEventListener('transitionend',function(e){if(!root.contains(e.target)&&e.target.matches('#authModal,#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel,.modal-overlay,dialog,[role="dialog"][aria-modal="true"]'))refresh();},true);
  document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);
- document.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;lastPointer={x:e.clientX,y:e.clientY};if(!root.hidden&&!opened&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1300);},{passive:true});
+ document.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;lastPointer={x:e.clientX,y:e.clientY};if(!root.hidden&&!minimized&&!opened&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1300);},{passive:true});
  button.addEventListener('pointerenter',function(){hovered=true;freezeMotion(0);});button.addEventListener('pointerleave',function(){hovered=false;freezeUntil=Date.now()+900;scheduleRoam(2800);});button.addEventListener('focus',function(){freezeMotion(0);});
  motion.addEventListener('change',function(){freezeMotion(0);schedule();});
  var observer=new MutationObserver(schedule);
@@ -93799,7 +93708,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  watch();var bodyObserver=new MutationObserver(function(){watch();schedule();});bodyObserver.observe(document.body,{childList:true});
  setInterval(refresh,1500);window.addEventListener('synapses:intro-complete',schedule);window.addEventListener('ava:welcome-closed',schedule);
  window.addEventListener('ava:chat-ready',schedule);
- if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
+ syncMinimized();if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 })();
 </script>
 
@@ -93980,7 +93889,11 @@ var createAvaCompanionAdapter=function createAdapter(deps){
    var sys='This is Ava\'s private text conversation panel. Answer in text. If an action needs another Synapses workspace, explain the next step; do not claim you have performed it. Do not claim access to other conversation histories.\n\n'+deps.prompt(options.text);
    var result=await deps.complete(sys,messages,1200,function(fullText){if(valid()&&options.onChunk)options.onChunk(text(fullText));},controller.signal);
    if(!valid())return {status:'cancelled'};
-   if(result&&result.error)return {status:'error',message:text(result.error.message)||'Ava could not reply. Try again.'};
+   if(result&&result.error){
+    var failure=text(result.error.message||result.error);
+    if(/\b429\b|rate.?limit|too many requests/i.test(failure))return {status:'rate-limited',message:'Ava is busy right now. Your message is safe; try again shortly.'};
+    return {status:'error',message:failure||'Ava could not reply. Try again.'};
+   }
    var reply=result&&Array.isArray(result.content)?result.content.filter(function(c){return c&&c.type==='text';}).map(function(c){return text(c.text);}).join('\n'):'';
    return {status:'complete',text:reply};
   }catch(e){return !valid()||e&&e.name==='AbortError'?{status:'cancelled'}:{status:'error',message:'Ava could not reply. Please try again.'};}
@@ -94031,6 +93944,9 @@ var createAvaCompanionAdapter=function createAdapter(deps){
 .ac-top{height:71px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 19px 0 22px;border-bottom:1px solid var(--ac-line);background:#080808}.ac-title{display:flex;align-items:center;gap:9px;min-width:0}.ac-title>svg{width:39px;height:39px}.ac-title h2{font:600 24px/1.04 'Syne',sans-serif;letter-spacing:-.8px;margin:0}.ac-title small{display:block;font-size:9px;letter-spacing:.2px;color:#8c8c8c;margin-top:4px}.ac-top-actions{display:flex;align-items:center;gap:3px}.ac-icon{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:10px;background:none;flex-shrink:0}.ac-icon:hover{background:#191919}.ac-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.ac-top-actions .ac-icon{color:#8c8c8c!important}.ac-history-toggle{display:none}.ac-layout{display:grid;grid-template-columns:222px minmax(0,1fr);flex:1;min-height:0}.ac-rail{display:flex;flex-direction:column;background:#080808;border-right:1px solid #171717;min-height:0}.ac-rail-top{padding:19px 14px 16px}.ac-new{width:100%;border:1px solid #282828;background:#191919;border-radius:11px;min-height:42px;display:flex;align-items:center;justify-content:space-between;padding:10px 13px;font-size:11px!important;font-weight:500!important}.ac-new:hover{background:#191919}.ac-new span:last-child{font-size:19px;color:#8c8c8c;font-weight:400}.ac-search-wrap{position:relative;margin-top:17px}.ac-search-wrap svg{position:absolute;left:10px;top:12px;width:13px;height:13px;stroke:#8c8c8c;fill:none;stroke-width:1.5}.ac-search{width:100%;height:38px;padding:0 9px 0 32px;border:1px solid #282828;border-radius:9px;background:#111111;color:#e6e6e6;font-size:10.5px!important;outline:none}.ac-search::placeholder{color:#8c8c8c}.ac-rail-label{display:flex;justify-content:space-between;align-items:center;padding:0 19px 10px;color:#8c8c8c;font-size:9px;letter-spacing:1.2px;text-transform:uppercase}.ac-threads{flex:1;overflow:auto;padding:0 8px 14px;min-height:0;scrollbar-width:thin;scrollbar-color:#282828 transparent}.ac-thread{display:flex;align-items:center;border:1px solid transparent;border-radius:10px;margin-bottom:3px;min-width:0}.ac-thread:hover{background:#111111}.ac-thread[data-active="true"]{background:#191919;border-color:#282828}.ac-thread-open{flex:1;min-width:0;border:0;background:none;text-align:left;padding:12px 10px}.ac-thread-open strong{display:block;font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-thread-open small{display:block;margin-top:5px;font-size:9px;color:#8c8c8c}.ac-thread-delete{width:27px;height:32px;padding:0;border:0;background:none;color:#8c8c8c!important;opacity:0;margin-right:4px}.ac-thread:hover .ac-thread-delete,.ac-thread-delete:focus-visible{opacity:1}.ac-thread-delete svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.4}.ac-thread-empty{font-size:10.5px;line-height:1.8;color:#8c8c8c;margin:8px 11px}.ac-rail-foot{border-top:0;padding:13px 14px 12px}.ac-account{display:flex;align-items:center;gap:9px;width:100%;padding:8px 4px;background:none;border:0;text-align:left;min-width:0}.ac-account-initial{width:29px;height:29px;display:grid;place-items:center;flex-shrink:0;border:1px solid #282828;border-radius:50%;font-size:11px;color:#e6e6e6;background:#191919}.ac-account-name{display:block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#8c8c8c}.ac-device{font-size:8px;color:#8c8c8c;padding:7px 4px 0;line-height:1.6}.ac-account-links{display:flex;gap:12px;margin:5px 0 0 4px}.ac-account-links button{padding:5px 0;border:0;background:none;font-size:9px!important;color:#8c8c8c!important}.ac-account-links button:hover{color:#e6e6e6!important}
 .ac-main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative;background:radial-gradient(ellipse at 50% 0,#1818181f,transparent 70%),#000000}.ac-conversation-head{height:47px;flex-shrink:0;border-bottom:0;padding:0 23px;display:flex;align-items:center;justify-content:space-between;gap:14px}.ac-conversation-title{font-size:10.5px;color:#8c8c8c;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ac-main-link{background:none;border:0;padding:8px 0;color:#8c8c8c!important;font-size:9px!important;white-space:nowrap}.ac-main-link:hover{color:#e6e6e6!important}.ac-scroll{flex:1;min-height:0;overflow:auto;padding:27px 33px 17px;scrollbar-width:thin;scrollbar-color:#282828 transparent;overscroll-behavior:contain}.ac-welcome{min-height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:25px 0 35px}.ac-welcome-face{width:100px;height:100px;margin-bottom:18px}.ac-welcome-face>svg{width:100%;height:100%;overflow:visible}.ac-welcome h3{font:500 30px/1.18 'Syne',sans-serif;letter-spacing:-1px;margin:0 0 11px;color:#e6e6e6}.ac-welcome p{font-size:12px;color:#8c8c8c;max-width:300px;margin:0;line-height:1.8}.ac-prompts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:27px;max-width:440px}.ac-prompts button{min-height:36px;padding:8px 12px;border:1px solid #282828;border-radius:10px;background:#111111;color:#8c8c8c!important;font-size:10px!important}.ac-prompts button:hover{background:#191919;border-color:#282828}.ac-message{display:grid;grid-template-columns:27px minmax(0,1fr);column-gap:11px;margin-bottom:26px;max-width:740px}.ac-avatar{width:27px;height:27px;display:grid;place-items:center;font-size:9px;flex-shrink:0;color:#e6e6e6;border:1px solid #282828;border-radius:50%;background:#191919}.ac-avatar>svg{width:29px;height:29px;overflow:visible}.ac-message[data-role="assistant"] .ac-avatar{background:none;border:0}.ac-message-name{font-size:10px;font-weight:500;color:#8c8c8c;padding-top:4px;margin-bottom:8px}.ac-message[data-role="user"] .ac-message-name{color:#8c8c8c}.ac-message-body{font-size:13px;line-height:1.85;color:#e6e6e6;overflow-wrap:anywhere;min-width:0}.ac-message[data-role="user"] .ac-message-body{color:#e6e6e6;white-space:pre-wrap}.ac-message-body p{margin:0 0 13px}.ac-message-body p:last-child{margin-bottom:0}.ac-message-body h4{font-size:14px;line-height:1.5;margin:18px 0 9px;color:#e6e6e6}.ac-message-body h4:first-child{margin-top:0}.ac-message-body ul,.ac-message-body ol{padding-left:21px;margin:9px 0 15px}.ac-message-body li{padding-left:2px;margin:4px 0}.ac-message-body a{color:#d8d8d8;text-underline-offset:3px}.ac-message-body code{font:11px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;background:#191919;color:#d8d8d8;padding:2px 5px;border-radius:4px}.ac-code{border:1px solid #282828;border-radius:10px;background:#000000;overflow:hidden;margin:13px 0}.ac-code-head{display:flex;justify-content:space-between;align-items:center;padding:7px 11px;background:#111111;color:#8c8c8c;font-size:9px;line-height:1.5}.ac-code-head button{background:none;border:0;padding:2px 0;color:#8c8c8c!important;font-size:9px!important}.ac-code pre{margin:0;padding:13px 14px;overflow:auto;max-width:100%;line-height:1.75}.ac-code pre code{background:none;padding:0;font-size:11px}.ac-message-body blockquote{margin:12px 0;padding:1px 0 1px 13px;border-left:2px solid #282828;color:#8c8c8c}.ac-message-tools{display:flex;gap:12px;margin-top:8px}.ac-message-tools button{background:none;border:0;padding:6px 0;color:#8c8c8c!important;font-size:9px!important}.ac-message-tools button:hover{color:#e6e6e6!important}.ac-thinking{display:flex;align-items:center;gap:5px;padding:8px 0}.ac-thinking span{width:4px;height:4px;border-radius:50%;background:#d8d8d8;animation:ac-think 1.3s ease-in-out infinite}.ac-thinking span:nth-child(2){animation-delay:.17s}.ac-thinking span:nth-child(3){animation-delay:.34s}.ac-error{color:#e6e6e6;font-size:11px;padding-top:6px}.ac-interrupted{color:#8c8c8c;font-size:9px;margin-top:8px}.ac-bottom{flex-shrink:0;padding:5px 23px 15px}.ac-notice{min-height:20px;font-size:10px;line-height:1.6;color:#8c8c8c;padding:0 4px 7px}.ac-notice:empty{min-height:0;padding:0}.ac-compose{border:1px solid #202020;background:#111111;border-radius:17px;box-shadow:none;overflow:hidden;transition:border-color .2s}.ac-compose:focus-within{border-color:#3a3a3a}.ac-input{display:block;resize:none;width:100%;min-height:61px;max-height:150px;padding:16px 17px 9px;background:none;border:0!important;outline:none!important;color:#e6e6e6;font-size:12px!important;line-height:1.7;scrollbar-width:thin}.ac-input::placeholder{color:#8c8c8c}.ac-composer-foot{display:flex;justify-content:space-between;align-items:center;padding:0 10px 10px 13px;gap:8px}.ac-compose-label{font-size:9px;color:#8c8c8c;display:flex;align-items:center;gap:6px}.ac-compose-label svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:1.3}.ac-composer-actions{display:flex;gap:6px}.ac-voice{width:33px;height:33px;border:1px solid #282828;border-radius:10px;color:#8c8c8c!important;background:#111111;display:grid;place-items:center}.ac-voice:hover{background:#191919}.ac-voice svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}.ac-send{min-width:35px;height:33px;border:0;border-radius:10px;background:#d8d8d8;color:#111111!important;display:grid;place-items:center;font-size:11px!important;font-weight:600!important;padding:0 10px}.ac-send:hover{background:#d8d8d8}.ac-send svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ac-fine{font-size:8px;line-height:1.6;color:#8c8c8c;display:flex;justify-content:space-between;padding:9px 3px 0;gap:12px}.ac-fine span:last-child{white-space:nowrap}.ac-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.ac-confirm{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px;padding:9px 13px;border-bottom:1px solid #282828;background:#111111}.ac-confirm button{background:none;border:1px solid #282828;border-radius:6px;padding:5px 9px;font-size:9px!important}.ac-confirm>div{display:flex;gap:7px;flex-shrink:0}.ac-preview-note{background:#111111;color:#8c8c8c;font-size:10px;text-align:center;padding:6px 12px;border-bottom:1px solid #282828}.ac-eye{transform-box:fill-box;transform-origin:center;animation:ac-blink 7.3s infinite}.ac-character{transform-origin:66px 66px;animation:ac-breathe 6s ease-in-out infinite}
 #avaCompanionChat[data-compact="true"]{width:min(430px,calc(100vw - 32px));height:min(620px,calc(100dvh - 32px))}#avaCompanionChat[data-compact="true"] .ac-layout{grid-template-columns:minmax(0,1fr)}#avaCompanionChat[data-compact="true"] .ac-rail{display:none}#avaCompanionChat[data-compact="true"] .ac-history-toggle{display:inline-flex}#avaCompanionChat[data-compact="true"] .ac-scroll{padding:23px 22px 10px}#avaCompanionChat[data-compact="true"] .ac-bottom{padding:5px 17px 13px}#avaCompanionChat[data-compact="true"] .ac-welcome h3{font-size:27px}#avaCompanionChat[data-compact="true"] .ac-welcome-face{width:80px;height:80px}#avaCompanionChat[data-compact="true"] .ac-welcome{padding:15px 0 22px}#avaCompanionChat[data-compact="true"] .ac-fine span:last-child{display:none}#avaCompanionChat[data-compact="true"][data-history="true"] .ac-rail{position:absolute;left:0;top:71px;bottom:0;width:min(290px,calc(100% - 50px));z-index:3;display:flex;box-shadow:30px 0 60px #0008}#avaCompanionChat[data-history="true"] .ac-history-toggle{background:#191919;color:#e6e6e6!important}
+.ac-error{display:flex;align-items:center;gap:10px;color:#929292;font-size:10px;padding-top:8px}
+.ac-error button{border:1px solid #ffffff24;border-radius:7px;background:#111111;color:#d4d4d4!important;padding:4px 9px;font-size:10px!important}
+.ac-error button:hover{background:#1b1b1b}
 @keyframes ac-blink{0%,42%,45%,75%,78%,100%{transform:scaleY(1)}43%,44%,76%,77%{transform:scaleY(.12)}}@keyframes ac-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}@keyframes ac-think{0%,70%,100%{opacity:.3;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}
 @media(max-width:680px){#avaCompanionChat,#avaCompanionChat[data-compact="true"]{inset:0;width:100%;height:100%;height:100dvh;border-radius:0;border:0}.ac-top{height:68px;padding:0 12px 0 16px}.ac-top-actions{gap:0}.ac-title{gap:7px}.ac-title h2{font-size:23px}.ac-title>svg{width:34px;height:34px}.ac-top-actions #acSize{display:none}.ac-history-toggle{display:inline-flex}.ac-layout{grid-template-columns:minmax(0,1fr)}.ac-rail{display:none}.ac-conversation-head{padding:0 18px;height:43px}.ac-scroll,#avaCompanionChat[data-compact="true"] .ac-scroll{padding:23px 21px 12px}.ac-bottom,#avaCompanionChat[data-compact="true"] .ac-bottom{padding:5px 13px max(12px,env(safe-area-inset-bottom))}.ac-welcome h3{font-size:30px}.ac-message{grid-template-columns:25px minmax(0,1fr);gap:9px}.ac-message-body{font-size:13px}.ac-fine span:last-child{display:none}.ac-thread-delete{opacity:1}#avaCompanionChat[data-history="true"] .ac-rail,#avaCompanionChat[data-compact="true"][data-history="true"] .ac-rail{position:absolute;left:0;top:68px;bottom:0;width:min(300px,calc(100% - 45px));display:flex;z-index:3;box-shadow:30px 0 60px #0008}.ac-compose-label{font-size:8px}.ac-input{font-size:16px!important;min-height:66px;padding:14px 15px 7px}.ac-icon{width:40px;height:42px}.ac-input::placeholder{font-size:12px}.ac-new{min-height:44px}.ac-voice,.ac-send{min-height:38px;min-width:38px}.ac-prompts button{min-height:40px}}
 @media(prefers-reduced-motion:reduce){#avaCompanionChat *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -94047,7 +93963,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  'use strict';
  var root=document.getElementById('avaCompanionChat'),bridge=window.avaCompanionChatBridge;if(!root||!bridge)return;
  var input=document.getElementById('acInput'),scroll=document.getElementById('acScroll'),messagesNode=document.getElementById('acMessages'),threadsNode=document.getElementById('acThreads'),notice=document.getElementById('acNotice'),sendButton=document.getElementById('acSend');
- var state={owner:null,threads:[],active:null},opened=false,request=null,submitting=false,focusBefore=null,guestDraft='',search='',deleteId=null,lastUi=bridge.uiKey(),persistTimer=null,openVersion=0,mobileInert=[],bodyOverflow='';
+ var state={owner:null,threads:[],active:null},opened=false,request=null,submitting=false,cooldownUntil=0,focusBefore=null,guestDraft='',search='',deleteId=null,lastUi=bridge.uiKey(),persistTimer=null,openVersion=0,mobileInert=[],bodyOverflow='';
  window.__avaCompanionChatOpen=false;
  function text(v){return v==null?'':String(v);}
  function node(tag,cls,value){var el=document.createElement(tag);if(cls)el.className=cls;if(value!=null)el.textContent=value;return el;}
@@ -94117,10 +94033,15 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  function addAvatar(parent,role){var avatar=node('div','ac-avatar');if(role==='assistant'){var face=document.querySelector('.ac-title>svg');if(face)avatar.appendChild(face.cloneNode(true));}else avatar.textContent=state.owner?state.owner.email.charAt(0).toUpperCase():'You';parent.appendChild(avatar);}
  function renderMessages(keepScroll){
   var atBottom=scroll.scrollHeight-scroll.scrollTop-scroll.clientHeight<100,oldTop=scroll.scrollTop,t=current();messagesNode.replaceChildren();document.getElementById('acWelcome').hidden=!!(t&&t.messages.length);
-  if(t)t.messages.forEach(function(m){var row=node('article','ac-message');row.dataset.role=m.role;row.dataset.message=m.id;addAvatar(row,m.role);var content=node('div'),name=node('div','ac-message-name',m.role==='user'?'You':'Ava'),body=node('div','ac-message-body');content.appendChild(name);
+  if(t)t.messages.forEach(function(m,index){
+   // Older saved failures used an empty Ava message. Show one compact retry
+   // action by the user's words instead of a misleading assistant bubble.
+   if(m.role==='assistant'&&m.status==='error'&&!m.text)return;
+   var next=t.messages[index+1],failed=m.role==='user'&&(m.status==='error'||next&&next.role==='assistant'&&next.status==='error'&&!next.text);
+   var row=node('article','ac-message');row.dataset.role=m.role;row.dataset.message=m.id;addAvatar(row,m.role);var content=node('div'),name=node('div','ac-message-name',m.role==='user'?'You':'Ava'),body=node('div','ac-message-body');content.appendChild(name);
    if(m.role==='user')body.textContent=m.text;else if(m.text)markdown(body,m.text);else if(m.status==='streaming'){var thinking=node('div','ac-thinking');thinking.setAttribute('aria-label','Ava is thinking');for(var i=0;i<3;i++)thinking.appendChild(node('span'));body.appendChild(thinking);}
    content.appendChild(body);
-   if(m.status==='error')content.appendChild(node('div','ac-error','The reply could not be completed. Your message is still here.'));
+   if(failed){var error=node('div','ac-error'),label=node('span','','Ava could not reply.');var retry=node('button','','Retry');retry.type='button';retry.setAttribute('aria-label','Retry this message to Ava');retry.onclick=function(){submit(m.text,m.id);};error.appendChild(label);error.appendChild(retry);content.appendChild(error);}
    if(m.status==='stopped')content.appendChild(node('div','ac-interrupted','Response stopped'));
    if(m.role==='assistant'&&m.text&&m.status!=='streaming'){var tools=node('div','ac-message-tools'),copy=node('button','','Copy');copy.type='button';copy.onclick=function(){copyText(visibleText(m.text),copy);};tools.appendChild(copy);content.appendChild(tools);}
    row.appendChild(content);messagesNode.appendChild(row);
@@ -94134,9 +94055,10 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  function updateSendIcon(){sendButton.replaceChildren();if(request){var square=node('span','','■');square.setAttribute('aria-hidden','true');sendButton.appendChild(square);sendButton.title='Stop response';}else{var arrow=node('span','','↑');arrow.setAttribute('aria-hidden','true');arrow.style.fontSize='22px';arrow.style.lineHeight='1';sendButton.appendChild(arrow);sendButton.title='Send message';}autoSize();}
  function gate(status){if(status==='signin'||status==='limit'){close(false);bridge.gate(status);}return {status:status};}
  function stop(){if(!request)return;request.controller.abort();var thread=state.threads.find(function(t){return t.id===request.threadId;}),m=thread&&thread.messages.find(function(m){return m.id===request.messageId;});if(m)m.status='stopped';request=null;save();notify('Response stopped.');render();}
- async function submit(explicitMessage){
+ async function submit(explicitMessage,retryId){
   var value=text(explicitMessage==null?input.value:explicitMessage).trim();if(!value)return {status:'empty'};
   if(submitting||request){notify('Wait for this reply, or stop it first.');return {status:'busy'};}
+  if(Date.now()<cooldownUntil){notify('Ava is rate-limited right now. Try again in about '+Math.max(1,Math.ceil((cooldownUntil-Date.now())/1000))+' seconds.');return {status:'rate-limited'};}
   if(state.owner&&!bridge.isCurrent(state.owner)){accountCheck();notify('Your account changed. Please write your message again.');return {status:'cancelled'};}
   var entryUi=bridge.uiKey();input.value=value;rememberDraft();submitting=true;
   var access;try{access=await bridge.check();}finally{submitting=false;}
@@ -94145,6 +94067,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   if(access.status!=='ready'){if(access.status==='signin'){if(!state.owner){guestDraft=value;input.value=value;autoSize();}}else if(access.status==='busy')notify('Your main chat is replying. Try again when it finishes.');else if(access.status==='unavailable')notify('Chat is not available yet. Please reopen Ava in a moment.');else if(access.status==='limit')notify('Your message is saved as a draft.');return gate(access.status);}
   if(!state.owner||state.owner.id!==access.owner.id||!bridge.isCurrent(access.owner))return {status:'cancelled'};
   var t=current()||createThread(false);t.draft=value;input.value=value;
+  if(retryId){var retryAt=t.messages.findIndex(function(m){return m.id===retryId&&m.role==='user';});if(retryAt>=0){t.messages.splice(retryAt,1);if(t.messages[retryAt]&&t.messages[retryAt].role==='assistant'&&t.messages[retryAt].status==='error'&&!t.messages[retryAt].text)t.messages.splice(retryAt,1);}}
   var owner={id:access.owner.id,email:access.owner.email},controller=new AbortController(),human={id:id(),role:'user',text:value,status:'done'},assistant={id:id(),role:'assistant',text:'',status:'streaming'};
   var history=t.messages.filter(function(m){return m.status==='done'&&m.text;}).map(function(m){return {role:m.role,content:visibleText(m.text)};});history.push({role:'user',content:value});
   t.messages.push(human,assistant);t.messages=t.messages.slice(-100);if(t.title==='New conversation')t.title=value.replace(/\s+/g,' ').slice(0,55);t.updated=Date.now();t.draft='';input.value='';guestDraft='';request={controller:controller,threadId:t.id,messageId:assistant.id,owner:owner};var thisRequest=request;save();notify('');render();
@@ -94152,14 +94075,14 @@ var createAvaCompanionAdapter=function createAdapter(deps){
    if(request!==thisRequest||!bridge.isCurrent(owner)||!state.owner||state.owner.id!==owner.id)return;assistant.text=visibleText(full);if(current()&&current().id===t.id)renderMessages(true);
   }}).then(function(result){
    if(request!==thisRequest||!state.owner||state.owner.id!==owner.id||!bridge.isCurrent(owner))return;
-   if(result.status==='complete'){assistant.text=visibleText(result.text)||assistant.text;assistant.status=assistant.text?'done':'error';notify(assistant.text?'Ava replied.':'No reply came through. Please try again.');}
+   if(result.status==='complete'){assistant.text=visibleText(result.text)||assistant.text;if(assistant.text){assistant.status='done';notify('Ava replied.');}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';notify('No reply came through. Your message is still here.');}}
    else if(result.status==='cancelled'){assistant.status='stopped';notify('Response stopped.');}
    else if(['signin','limit','busy','unavailable'].includes(result.status)){
     // No model request was accepted. Keep the user's text as a draft, never queue a resend.
     t.messages=t.messages.filter(function(m){return m!==human&&m!==assistant;});t.draft=value;notify('Your message is saved as a draft.');
-   }else{assistant.status='error';notify(result.message||'Ava could not reply. Please try again.');}
+   }else{if(result.status==='rate-limited')cooldownUntil=Date.now()+60000;if(assistant.text){assistant.status='stopped';}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';}notify(result.message||'Ava could not reply. Try again shortly.');}
    request=null;save();render();if(result.status==='signin'||result.status==='limit')gate(result.status);
-  }).catch(function(){if(request===thisRequest&&bridge.isCurrent(owner)){assistant.status='error';request=null;save();render();notify('Ava could not reply. Please try again.');}});
+  }).catch(function(){if(request===thisRequest&&bridge.isCurrent(owner)){if(assistant.text){assistant.status='stopped';}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';}request=null;save();render();notify('Ava could not reply. Your message is still here.');}});
   return {status:'sending'};
  }
  function close(restore){rememberDraft();save();opened=false;window.__avaCompanionChatOpen=false;root.hidden=true;mobileFocusMode();closeHistory();if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});}
