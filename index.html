@@ -93575,11 +93575,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 
 <!-- Original Ava face · deliberate entry to the existing speech-to-speech flow. -->
 <style id="avaFloatingStyles">
-#avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#e8e5dd;isolation:isolate}
+#avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#f2f2f5;isolation:isolate}
 #avaFloatingAssistant[hidden],#avaFloatPopover[hidden]{display:none!important}
 #avaFloatButton{display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:22px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
 #avaFloatButton>svg{width:62px;height:62px;overflow:visible;display:block}
-#avaFloatButton:focus-visible{outline:2px solid #a8a69d;outline-offset:4px}
+#avaFloatButton:focus-visible{outline:2px solid #b5b5bf;outline-offset:4px}
 #avaFloatButton .af-character{transform-origin:66px 66px}
 #avaFloatButton .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 7.3s infinite}
 #avaFloatButton .af-pupil{transition:transform .4s ease}
@@ -93587,49 +93587,49 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatingAssistant[data-mood="voice"] .af-smile{stroke-width:3.4}
 #avaFloatButton:hover>svg,#avaFloatButton:focus-visible>svg,#avaFloatingAssistant[data-open="true"] #avaFloatButton>svg{animation-play-state:paused}
 #avaFloatingAssistant[data-frozen="true"] #avaFloatButton>svg{animation-play-state:paused}
-#avaFloatPopover{position:fixed;width:min(310px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;border:1px solid #373736;border-radius:22px;background:#101011;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.32);text-align:left;color-scheme:dark}
+#avaFloatPopover{position:fixed;width:min(310px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;border:1px solid #ffffff0e;border-radius:22px;background:#0a0a0e;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.32);text-align:left;color-scheme:dark}
 #avaFloatPopover *{box-sizing:border-box}
-#avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 27px 10px 0;color:#f1eee6}
-#avaFloatPopover p{font-size:12px;line-height:1.7;color:#96958e;margin:0 0 16px}
-#avaFloatIdentity{font:400 11px/1.5 'DM Sans',sans-serif;color:#aaa79e;margin:-3px 0 13px;overflow-wrap:anywhere}
-.af-account-actions{display:flex;gap:6px;border-top:1px solid #282828;padding-top:9px;margin-top:7px}
-.af-account-actions button{flex:1;min-height:40px;border:0;border-radius:10px;background:transparent;color:#aaa79e;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
-.af-account-actions button:hover{background:#202020;color:#eeeae1}
+#avaFloatPopover h2{font:600 18px/1.25 'Syne',sans-serif;letter-spacing:-.5px;margin:0 27px 10px 0;color:#f2f2f5}
+#avaFloatPopover p{font-size:12px;line-height:1.7;color:#92929b;margin:0 0 16px}
+#avaFloatIdentity{font:400 11px/1.5 'DM Sans',sans-serif;color:#aaabb3;margin:-3px 0 13px;overflow-wrap:anywhere}
+.af-account-actions{display:flex;gap:6px;border-top:1px solid #ffffff0d;padding-top:9px;margin-top:7px}
+.af-account-actions button{flex:1;min-height:40px;border:0;border-radius:10px;background:transparent;color:#aaabb3;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
+.af-account-actions button:hover{background:#18181d;color:#f2f2f5}
 .af-account-actions [hidden]{display:none!important}
-#avaFloatClose{position:absolute;right:4px;top:3px;width:44px;height:44px;display:grid;place-items:center;border:0;background:none;color:#85857f;font:22px/1 sans-serif;cursor:pointer;border-radius:12px}
-#avaFloatStart,#avaFloatStop{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:46px;border:1px solid #ded9ce;border-radius:14px;background:#eeeae1;color:#1b1b1b;font:600 12px 'DM Sans',sans-serif;cursor:pointer;padding:10px 16px}
+#avaFloatClose{position:absolute;right:4px;top:3px;width:44px;height:44px;display:grid;place-items:center;border:0;background:none;color:#85858e;font:22px/1 sans-serif;cursor:pointer;border-radius:12px}
+#avaFloatStart,#avaFloatStop{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:46px;border:1px solid #f2f2f5;border-radius:14px;background:#f2f2f5;color:#0a0a0e;font:600 12px 'DM Sans',sans-serif;cursor:pointer;padding:10px 16px}
 #avaFloatPopover button svg{display:block;width:18px;height:18px;flex-shrink:0}
-#avaFloatStop{background:#232323;color:#ddd9cf;border-color:#44443f}
+#avaFloatStop{background:#17171b;color:#d4d4da;border-color:#ffffff20}
 #avaFloatStart[hidden],#avaFloatStop[hidden]{display:none!important}
-#avaFloatPopover button:focus-visible{outline:2px solid #aaa69c;outline-offset:4px}
-#avaFloatStatus{font-size:10px!important;color:#8b8b85!important;line-height:1.6!important;margin:12px 0 0!important}
+#avaFloatPopover button:focus-visible{outline:2px solid #b5b5bf;outline-offset:4px}
+#avaFloatStatus{font-size:10px!important;color:#8b8b95!important;line-height:1.6!important;margin:12px 0 0!important}
 #avaFloatStatus:empty{display:none}
 #avaFloatCopy{display:none}
-#avaFloatChatForm{display:flex;align-items:center;gap:6px;min-height:44px;border:1px solid #383836;border-radius:13px;background:#191919;padding:3px 4px 3px 12px;margin:0}
+#avaFloatChatForm{display:flex;align-items:center;gap:6px;min-height:44px;border:1px solid #ffffff0d;border-radius:13px;background:#0e0e12;padding:3px 4px 3px 12px;margin:0}
 #avaFloatChatForm[hidden]{display:none!important}
-#avaFloatDraft{min-width:0;flex:1;border:0;background:transparent;color:#eeeae1;font:400 12px/1.4 'DM Sans',sans-serif;padding:7px 0;outline:none}
-#avaFloatDraft::placeholder{color:#84847e}
-#avaFloatSend{flex:0 0 36px;width:36px;height:36px;border:0;border-radius:10px;background:#e9e5db;color:#222;font:20px/1 sans-serif;cursor:pointer}
+#avaFloatDraft{min-width:0;flex:1;border:0;background:transparent;color:#f2f2f5;font:400 12px/1.4 'DM Sans',sans-serif;padding:7px 0;outline:none}
+#avaFloatDraft::placeholder{color:#85858e}
+#avaFloatSend{flex:0 0 36px;width:36px;height:36px;border:0;border-radius:10px;background:#f2f2f5;color:#0a0a0e;font:20px/1 sans-serif;cursor:pointer}
 #avaFloatSend:disabled{opacity:.5}
-#avaFloatOpenChat{display:block;margin:1px 0 7px auto;padding:5px 2px;min-height:30px;border:0;background:transparent;color:#96938a;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
+#avaFloatOpenChat{display:block;margin:1px 0 7px auto;padding:5px 2px;min-height:30px;border:0;background:transparent;color:#92929b;font:400 10.5px 'DM Sans',sans-serif;cursor:pointer}
 .af-actions button{min-height:44px}
-.af-actions #avaFloatTools{width:auto;min-height:44px;margin:0;padding:10px 12px;background:#19191a;border:1px solid #2c2c2c}
+.af-actions #avaFloatTools{width:auto;min-height:44px;margin:0;padding:10px 12px;background:#0e0e12;border:1px solid #ffffff0d}
 .af-actions #avaFloatTools svg:last-child{display:none}
 .af-account-actions #avaFloatRoam{width:auto;flex:1;min-height:40px;margin:0;padding:8px 2px;border:0;font-size:10px}
 .af-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:13px}
-.af-actions button,#avaFloatTools{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;background:#19191a;color:#bbb8af;border:1px solid #2c2c2c;border-radius:12px;padding:11px 12px;text-align:left;font:500 11.5px 'DM Sans',sans-serif;cursor:pointer}
-.af-actions button:hover,#avaFloatTools:hover{background:#232322;color:#eeeae1;border-color:#41413d}
-.af-actions button:active,#avaFloatTools:active{background:#292928}
-.af-call-split{display:flex;min-width:0;min-height:48px;border:1px solid #2c2c2c;border-radius:12px;background:#19191a;overflow:hidden}
+.af-actions button,#avaFloatTools{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;background:#0e0e12;color:#b8b8bf;border:1px solid #ffffff0d;border-radius:12px;padding:11px 12px;text-align:left;font:500 11.5px 'DM Sans',sans-serif;cursor:pointer}
+.af-actions button:hover,#avaFloatTools:hover{background:#17171b;color:#f2f2f5;border-color:#ffffff1c}
+.af-actions button:active,#avaFloatTools:active{background:#202025}
+.af-call-split{display:flex;min-width:0;min-height:48px;border:1px solid #ffffff0d;border-radius:12px;background:#0e0e12;overflow:hidden}
 .af-actions .af-call-split>button{border:0;border-radius:0;background:transparent;min-width:0;padding:10px;gap:6px}
 .af-actions .af-call-main{flex:1}.af-actions .af-call-main svg{width:16px!important;height:16px!important}
 .af-actions .af-call-records{flex:0 0 44px;width:44px;min-height:46px;display:grid;place-items:center;padding:0!important}
-.af-call-records>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid #474741;border-radius:50%;background:#252523;color:#c0bdb4;font:15px/1 sans-serif}
-.af-call-records:hover>span{border-color:#7b786d;background:#34332e;color:#f1eee6}
+.af-call-records>span{display:grid;place-items:center;width:28px;height:28px;border:1px solid #ffffff1c;border-radius:50%;background:#151519;color:#c6c6ce;font:15px/1 sans-serif}
+.af-call-records:hover>span{border-color:#92929b;background:#24242a;color:#f2f2f5}
 #avaFloatPopover .af-call-split>button:focus-visible{outline-offset:-3px}
-#avaFloatTools{width:100%;margin-top:8px;min-height:44px;color:#a5a39b;background:transparent;border-color:transparent;padding:9px 12px}
+#avaFloatTools{width:100%;margin-top:8px;min-height:44px;color:#a5a5ae;background:transparent;border-color:transparent;padding:9px 12px}
 #avaFloatTools svg:last-child{margin-left:auto;width:14px;height:14px}
-#avaFloatRoam{display:block;min-height:44px;width:100%;margin-top:3px;border:0;border-top:1px solid #262626;background:transparent;color:#7d7d77;font:400 10.5px 'DM Sans',sans-serif;text-align:center;cursor:pointer;padding:12px 8px 3px}
+#avaFloatRoam{display:block;min-height:44px;width:100%;margin-top:3px;border:0;border-top:1px solid #ffffff0d;background:transparent;color:#81818a;font:400 10.5px 'DM Sans',sans-serif;text-align:center;cursor:pointer;padding:12px 8px 3px}
 @keyframes af-blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
 @media(prefers-reduced-motion:reduce){#avaFloatButton>svg,#avaFloatButton .af-eye{animation:none!important}#avaFloatButton .af-pupil{transition:none!important}}
 </style>
