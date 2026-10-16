@@ -93989,7 +93989,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  if(deps.subscribeAuth)deps.subscribeAuth(authChanged);
  return {
   verify:verify,check:check,send:send,uiKey:uiKey,invalidate:invalidate,
-  startTask:function(goal){return taskRequest('POST','',{goal:goal});},
+  startTask:function(goal,type){return taskRequest('POST','',{goal:goal,type:type||'research'});},
   listTasks:function(){return taskRequest('GET','');},
   getTask:function(taskId){return taskRequest('GET','/'+encodeURIComponent(taskId));},
   current:function(){return matches(identity)?{id:identity.id,email:identity.email}:null;},
@@ -94105,7 +94105,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   if(!rows.length){threadsNode.appendChild(node('p','ac-thread-empty',state.owner?needle?'No conversations match your search.':'Your conversations will appear here.':'Sign in for your own Ava conversations.'));return;}
   rows.forEach(function(t){var row=node('div','ac-thread');row.dataset.active=String(t.id===state.active);var button=node('button','ac-thread-open');button.type='button';button.setAttribute('aria-current',String(t.id===state.active));button.appendChild(node('strong','',t.title));button.appendChild(node('small','',t.draft?'Draft · '+relativeTime(t.updated):relativeTime(t.updated)));button.onclick=function(){rememberDraft();state.active=t.id;save();closeHistory();render();input.focus();};row.appendChild(button);var del=node('button','ac-thread-delete','×');del.type='button';del.setAttribute('aria-label','Delete '+t.title);del.onclick=function(){deleteId=t.id;document.getElementById('acConfirm').hidden=false;document.getElementById('acDeleteCancel').focus();};row.appendChild(del);threadsNode.appendChild(row);});
  }
- function renderTasks(){var host=document.getElementById('acTasks');if(!host)return;host.replaceChildren();if(!state.owner){host.appendChild(node('p','ac-task-list-empty','Sign in to save Ava tasks.'));return;}if(!taskRows.length){host.appendChild(node('p','ac-task-list-empty','Saved research tasks appear here.'));return;}taskRows.slice(0,8).forEach(function(task){var button=node('button');button.type='button';button.appendChild(node('span','',text(task.goal).slice(0,62)));button.appendChild(node('small','',(task.status==='completed'?'Finished':task.status==='failed'?'Could not finish':task.stage||'Working')+' · '+relativeTime(Date.parse(task.createdAt)||Date.now())));button.onclick=function(){openTask(task);};host.appendChild(button);});}
+ function renderTasks(){var host=document.getElementById('acTasks');if(!host)return;host.replaceChildren();if(!state.owner){host.appendChild(node('p','ac-task-list-empty','Sign in to save Ava tasks.'));return;}if(!taskRows.length){host.appendChild(node('p','ac-task-list-empty','Saved Ava tasks appear here.'));return;}taskRows.slice(0,8).forEach(function(task){var button=node('button');button.type='button';button.appendChild(node('span','',text(task.goal).slice(0,62)));button.appendChild(node('small','',(task.status==='completed'?'Finished':task.status==='failed'?'Could not finish':task.stage||'Working')+' · '+relativeTime(Date.parse(task.createdAt)||Date.now())));button.onclick=function(){openTask(task);};host.appendChild(button);});}
  function openTask(task){if(!state.owner)return;rememberDraft();var found=state.threads.find(function(t){return t.messages.some(function(m){return m.taskId===task.id;});});if(!found){found=createThread(false);found.title=text(task.goal).slice(0,55);found.messages=[{id:id(),role:'user',text:task.goal,status:'done',mode:'task'},{id:id(),role:'assistant',text:'',status:'streaming',mode:'task',taskId:task.id,taskStage:task.stage,sources:[]}];}state.active=found.id;applyTask(task);save();closeHistory();render();}
  function applyTask(task){var changed=false;state.threads.forEach(function(thread){thread.messages.forEach(function(m){if(m.taskId!==task.id)return;var status=task.status==='completed'?'done':task.status==='failed'?'error':'streaming',body=status==='done'?visibleText(task.result&&task.result.answer):status==='error'?text(task.error||'This task could not finish.'):'';if(m.status!==status||m.text!==body||m.taskStage!==task.stage){m.status=status;m.text=body;m.taskStage=task.stage;m.sources=normalizeSources(task.result&&task.result.sources);thread.updated=Date.now();changed=true;}});});return changed;}
  async function syncTasks(){if(taskSyncing||!opened||!state.owner)return;taskSyncing=true;var owner=state.owner;try{var result=await bridge.listTasks();if(result.status!=='ok'||!bridge.isCurrent(owner)||!opened)return;taskRows=result.tasks||[];var changed=false;taskRows.forEach(function(task){if(applyTask(task))changed=true;});if(changed)save();renderTasks();if(changed)renderMessages(true);}finally{taskSyncing=false;}}
@@ -94195,10 +94195,11 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   return {status:'sending'};
  }
  async function submitTask(goal){
-  if(goal.length<8||goal.length>600){notify('Give Ava a research goal between 8 and 600 characters.');return {status:'invalid'};}
+  if(goal.length<8||goal.length>600){notify('Give Ava a goal between 8 and 600 characters.');return {status:'invalid'};}
   if(submitting)return {status:'busy'};submitting=true;notify('Saving this task…');var entryUi=bridge.uiKey();
   try{
-   var result=await bridge.startTask(goal);if(entryUi!==bridge.uiKey())return {status:'cancelled'};
+  var type=/\b(without|no|don't have)\s+(a\s+)?websites?\b/i.test(goal)?'businesses':'research';
+  var result=await bridge.startTask(goal,type);if(entryUi!==bridge.uiKey())return {status:'cancelled'};
    if(result.status==='signin'){notify('Sign in to save a task.');bridge.gate('signin');return result;}
    if(result.status!=='ok'){notify(result.message||'Could not start this task.');return result;}
    var t=current()||createThread(false),task=result.task;
