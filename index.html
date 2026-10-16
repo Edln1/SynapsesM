@@ -93965,6 +93965,18 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   }catch(e){return !valid()||e&&e.name==='AbortError'?{status:'cancelled'}:{status:'error',message:'Ava could not reply. Please try again.'};}
   finally{controllers.delete(controller);if(external)external.removeEventListener('abort',abort);}
  }
+ async function taskRequest(method,path,body){
+  var owner=await verify();if(!owner)return {status:'signin'};
+  var sessionResult=await deps.getSession(),session=sessionResult&&sessionResult.data&&sessionResult.data.session;
+  if(!session||!session.access_token||!matches(owner))return {status:'signin'};
+  try{
+   var response=await fetch(deps.taskBase().replace(/\/$/,'')+'/ava-agent/tasks'+path,{method:method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:body?JSON.stringify(body):undefined});
+   var data=await response.json();
+   if(!matches(owner))return {status:'cancelled'};
+   if(!response.ok)return {status:response.status===401?'signin':'error',message:data.error||'Ava could not load this task.'};
+   return {status:'ok',task:data.task||null,tasks:data.tasks||null};
+  }catch(e){return {status:'error',message:'Task service is unavailable. Try again shortly.'};}
+ }
  function invalidate(){verification++;update(null);}
  function authChanged(event,session){
   verification++;
@@ -93977,6 +93989,9 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  if(deps.subscribeAuth)deps.subscribeAuth(authChanged);
  return {
   verify:verify,check:check,send:send,uiKey:uiKey,invalidate:invalidate,
+  startTask:function(goal){return taskRequest('POST','',{goal:goal});},
+  listTasks:function(){return taskRequest('GET','');},
+  getTask:function(taskId){return taskRequest('GET','/'+encodeURIComponent(taskId));},
   current:function(){return matches(identity)?{id:identity.id,email:identity.email}:null;},
   isCurrent:function(owner){return matches(owner);},
   subscribe:function(fn){listeners.push(fn);return function(){listeners=listeners.filter(function(x){return x!==fn;});};},
@@ -93995,6 +94010,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   available:function(){return typeof callClaude==='function'&&typeof buildSmartSysPrompt==='function';},
   prompt:function(message){return buildSmartSysPrompt('ava',message);},
   complete:function(sys,messages,max,onChunk,signal){return callClaude(sys,messages,max,onChunk,signal);},
+  taskBase:function(){return (typeof GROQ_PROXY==='string'&&GROQ_PROXY?GROQ_PROXY:'https://synbot-whatsapp-2.onrender.com').replace(/\/$/,'');},
   signIn:function(){if(typeof showAuthModal==='function')showAuthModal();if(typeof authShowForms==='function')authShowForms('login');},
   paywall:function(){if(typeof showPaywall==='function')showPaywall();},
   voice:function(){return typeof window.avaFloatingStartVoice==='function'?window.avaFloatingStartVoice():'unavailable';},
@@ -94028,21 +94044,27 @@ var createAvaCompanionAdapter=function createAdapter(deps){
 #avaCompanionChat .ac-source-link:hover{background:#1b1b1b;border-color:#4b4b4b}
 #avaCompanionChat .ac-source-link span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #avaCompanionChat .ac-source-link span:last-child{color:#858585;font-size:9px;white-space:nowrap}
+#avaCompanionChat .ac-task-list{display:grid;gap:5px;padding:0 10px 10px;max-height:220px;overflow:auto}
+#avaCompanionChat .ac-task-list button{display:grid;gap:3px;width:100%;text-align:left;padding:9px 10px;border:1px solid #252525;border-radius:10px;background:#111;color:#ddd;font-size:11px}
+#avaCompanionChat .ac-task-list button:hover{background:#1b1b1b;border-color:#3a3a3a}
+#avaCompanionChat .ac-task-list small{color:#929292;font-size:10px}
+#avaCompanionChat .ac-task-list-empty{padding:0 14px 8px;color:#777;font-size:10px}
+#avaCompanionChat .ac-mode-pair{display:flex;gap:5px}
 @media(max-width:680px){#avaCompanionChat .ac-research{min-height:38px}}
 </style>
 <section id="avaCompanionChat" role="dialog" aria-modal="false" aria-labelledby="acTitle" data-compact="false" data-history="false" hidden>
  <header class="ac-top"><div class="ac-title"><svg class="ac-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="ac-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="ac-pupil" fill="#242420"><ellipse class="ac-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="ac-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="ac-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg><div><h2 id="acTitle">Ava</h2><small>Your own conversation</small></div></div><div class="ac-top-actions"><button class="ac-icon ac-history-toggle" id="acHistory" type="button" aria-label="Show conversations" aria-expanded="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M5.5 8h1M5.5 11h1"/></svg></button><button class="ac-icon" id="acNewTop" type="button" aria-label="New conversation" title="New conversation"><svg viewBox="0 0 24 24"><path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M15 4l5 5M10 14l1-5 7-7 5 5-7 7Z"/></svg></button><button class="ac-icon" id="acSize" type="button" aria-label="Use compact chat" title="Use compact chat"><svg viewBox="0 0 24 24"><path d="M8 3v5H3m13 13v-5h5M3 8l6-6m12 14-6 6"/></svg></button><button class="ac-icon" id="acClose" type="button" aria-label="Close Ava chat"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div></header>
  <div class="ac-preview-note" id="acPreview" hidden>Local preview · Sample replies. No live AI or microphone access.</div>
  <div class="ac-confirm" id="acConfirm" hidden><span>Delete this conversation from this device?</span><div><button type="button" id="acDeleteCancel">Keep</button><button type="button" id="acDeleteYes">Delete</button></div></div>
- <div class="ac-layout"><aside class="ac-rail" aria-label="Your Ava conversations"><div class="ac-rail-top"><button class="ac-new" id="acNew" type="button"><span>New conversation</span><span aria-hidden="true">＋</span></button><div class="ac-search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="m12 12 5 5"/></svg><label class="ac-sr" for="acSearch">Search your Ava conversations</label><input id="acSearch" class="ac-search" type="search" autocomplete="off" placeholder="Search conversations"></div></div><div class="ac-rail-label"><span>Conversations</span><span id="acCount">0</span></div><nav class="ac-threads" id="acThreads" aria-label="Recent Ava conversations"></nav><footer class="ac-rail-foot"><button type="button" class="ac-account" id="acAccount"><span class="ac-account-initial" id="acAccountInitial">A</span><span class="ac-account-name" id="acAccountName">Sign in</span></button><div class="ac-account-links"><button type="button" id="acSettings">Settings</button><button type="button" id="acLogout">Sign out</button></div><div class="ac-device" id="acDevice">Chat history is saved on this device.</div></footer></aside>
- <div class="ac-main"><div class="ac-conversation-head"><span class="ac-conversation-title" id="acConversationTitle">A fresh conversation</span><button type="button" class="ac-main-link" id="acMainChat">Open main chat ↗</button></div><div class="ac-scroll" id="acScroll" role="log" aria-label="Conversation messages" aria-live="off"><div class="ac-welcome" id="acWelcome"><div class="ac-welcome-face"><svg class="ac-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="ac-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="ac-pupil" fill="#242420"><ellipse class="ac-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="ac-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="ac-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></div><h3>A little room to think.</h3><p>Ask a question, untangle a thought,<br>or just start talking.</p><div class="ac-prompts"><button type="button" data-ac-prompt="Help me think through something.">Think it through</button><button type="button" data-ac-prompt="Help me put a thought into words.">Find the words</button><button type="button" data-ac-prompt="Help me make a plan for today.">Make a little plan</button></div></div><div id="acMessages"></div></div><div class="ac-bottom"><div class="ac-notice" id="acNotice" role="status" aria-live="polite"></div><form id="acForm" class="ac-compose"><label for="acInput" class="ac-sr">Message Ava</label><textarea id="acInput" class="ac-input" rows="2" maxlength="12000" placeholder="What's on your mind?" autocomplete="off"></textarea><div class="ac-composer-foot"><span class="ac-compose-label"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="6" width="8" height="6" rx="2"/><path d="M5 6V4a2 2 0 0 1 4 0v2"/></svg> Your Ava conversation</span><div class="ac-composer-actions"><button type="button" class="ac-research" id="acResearch" aria-pressed="false" title="Use web research for the next message">Research</button><button type="button" class="ac-voice" id="acVoice" aria-label="Start voice conversation" title="Start voice conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3M9 21h6"/></svg></button><button type="submit" class="ac-send" id="acSend" aria-label="Send message" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div></div></form><div class="ac-fine"><span>Ava can make mistakes. Check important details.</span><span>Enter to send · Shift + Enter for a new line</span></div></div></div></div>
+ <div class="ac-layout"><aside class="ac-rail" aria-label="Your Ava conversations"><div class="ac-rail-top"><button class="ac-new" id="acNew" type="button"><span>New conversation</span><span aria-hidden="true">＋</span></button><div class="ac-search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="m12 12 5 5"/></svg><label class="ac-sr" for="acSearch">Search your Ava conversations</label><input id="acSearch" class="ac-search" type="search" autocomplete="off" placeholder="Search conversations"></div></div><div class="ac-rail-label"><span>Conversations</span><span id="acCount">0</span></div><nav class="ac-threads" id="acThreads" aria-label="Recent Ava conversations"></nav><div class="ac-rail-label"><span>Research tasks</span></div><nav class="ac-task-list" id="acTasks" aria-label="Saved research tasks"></nav><footer class="ac-rail-foot"><button type="button" class="ac-account" id="acAccount"><span class="ac-account-initial" id="acAccountInitial">A</span><span class="ac-account-name" id="acAccountName">Sign in</span></button><div class="ac-account-links"><button type="button" id="acSettings">Settings</button><button type="button" id="acLogout">Sign out</button></div><div class="ac-device" id="acDevice">Chat history is saved on this device.</div></footer></aside>
+ <div class="ac-main"><div class="ac-conversation-head"><span class="ac-conversation-title" id="acConversationTitle">A fresh conversation</span><button type="button" class="ac-main-link" id="acMainChat">Open main chat ↗</button></div><div class="ac-scroll" id="acScroll" role="log" aria-label="Conversation messages" aria-live="off"><div class="ac-welcome" id="acWelcome"><div class="ac-welcome-face"><svg class="ac-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="ac-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="ac-pupil" fill="#242420"><ellipse class="ac-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="ac-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="ac-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></div><h3>A little room to think.</h3><p>Ask a question, untangle a thought,<br>or just start talking.</p><div class="ac-prompts"><button type="button" data-ac-prompt="Help me think through something.">Think it through</button><button type="button" data-ac-prompt="Help me put a thought into words.">Find the words</button><button type="button" data-ac-prompt="Help me make a plan for today.">Make a little plan</button></div></div><div id="acMessages"></div></div><div class="ac-bottom"><div class="ac-notice" id="acNotice" role="status" aria-live="polite"></div><form id="acForm" class="ac-compose"><label for="acInput" class="ac-sr">Message Ava</label><textarea id="acInput" class="ac-input" rows="2" maxlength="12000" placeholder="What's on your mind?" autocomplete="off"></textarea><div class="ac-composer-foot"><span class="ac-compose-label"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="6" width="8" height="6" rx="2"/><path d="M5 6V4a2 2 0 0 1 4 0v2"/></svg> Your Ava conversation</span><div class="ac-composer-actions"><button type="button" class="ac-research" id="acResearch" aria-pressed="false" title="Use web research for the next message">Research</button><button type="button" class="ac-research" id="acTaskMode" aria-pressed="false" title="Save a research task that keeps working when you leave">Task</button><button type="button" class="ac-voice" id="acVoice" aria-label="Start voice conversation" title="Start voice conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3M9 21h6"/></svg></button><button type="submit" class="ac-send" id="acSend" aria-label="Send message" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div></div></form><div class="ac-fine"><span>Ava can make mistakes. Check important details.</span><span>Enter to send · Shift + Enter for a new line</span></div></div></div></div>
 </section>
 <script id="avaCompanionChatScript">
 (function(){
  'use strict';
  var root=document.getElementById('avaCompanionChat'),bridge=window.avaCompanionChatBridge;if(!root||!bridge)return;
  var input=document.getElementById('acInput'),scroll=document.getElementById('acScroll'),messagesNode=document.getElementById('acMessages'),threadsNode=document.getElementById('acThreads'),notice=document.getElementById('acNotice'),sendButton=document.getElementById('acSend');
- var state={owner:null,threads:[],active:null},opened=false,request=null,submitting=false,cooldownUntil=0,focusBefore=null,guestDraft='',search='',deleteId=null,lastUi=bridge.uiKey(),persistTimer=null,openVersion=0,mobileInert=[],bodyOverflow='',researchNext=false;
+ var state={owner:null,threads:[],active:null},opened=false,request=null,submitting=false,cooldownUntil=0,focusBefore=null,guestDraft='',search='',deleteId=null,lastUi=bridge.uiKey(),persistTimer=null,openVersion=0,mobileInert=[],bodyOverflow='',researchNext=false,taskNext=false,taskRows=[],taskSyncing=false;
  window.__avaCompanionChatOpen=false;
  function text(v){return v==null?'':String(v);}
  function node(tag,cls,value){var el=document.createElement(tag);if(cls)el.className=cls;if(value!=null)el.textContent=value;return el;}
@@ -94050,7 +94072,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  function current(){return state.threads.find(function(t){return t.id===state.active;})||null;}
  function ownerValid(){return !!(state.owner&&bridge.isCurrent(state.owner));}
  function key(owner){return 'synapses_ava_companion_v1_'+encodeURIComponent(owner.id);}
- function cleanMessage(m){if(!m||typeof m.id!=='string'||(m.role!=='user'&&m.role!=='assistant')||typeof m.text!=='string')return null;var out={id:m.id,role:m.role,text:m.text.slice(0,32000),status:m.status==='error'?'error':m.status==='stopped'||m.status==='streaming'?'stopped':'done'};if(m.mode==='research')out.mode='research';if(Array.isArray(m.sources))out.sources=normalizeSources(m.sources);return out;}
+ function cleanMessage(m){if(!m||typeof m.id!=='string'||(m.role!=='user'&&m.role!=='assistant')||typeof m.text!=='string')return null;var isTask=m.mode==='task'&&typeof m.taskId==='string';var out={id:m.id,role:m.role,text:m.text.slice(0,32000),status:m.status==='error'?'error':m.status==='stopped'?'stopped':m.status==='streaming'?(isTask?'streaming':'stopped'):'done'};if(m.mode==='research'||m.mode==='task')out.mode=m.mode;if(isTask){out.taskId=m.taskId;out.taskStage=text(m.taskStage).slice(0,80);}if(Array.isArray(m.sources))out.sources=normalizeSources(m.sources);return out;}
  function cleanThread(t){if(!t||typeof t.id!=='string')return null;return{id:t.id,title:text(t.title).slice(0,100)||'New conversation',updated:Number(t.updated)||Date.now(),draft:text(t.draft).slice(0,12000),messages:Array.isArray(t.messages)?t.messages.map(cleanMessage).filter(Boolean).slice(-100):[]};}
  function save(){clearTimeout(persistTimer);persistTimer=null;if(!ownerValid())return;try{localStorage.setItem(key(state.owner),JSON.stringify({version:1,owner:state.owner.id,active:state.active,threads:state.threads.slice(0,30)}));}catch(e){notify('Device storage is unavailable. Keep a copy of anything you need.');}}
  function scheduleSave(){clearTimeout(persistTimer);persistTimer=setTimeout(save,250);}
@@ -94072,8 +94094,8 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   clearTimeout(persistTimer);persistTimer=null;
   // Never carry a signed-in account's draft into a different account or guest view.
   if(state.owner)guestDraft='';
-  load(owner);input.value=owner?current().draft:guestDraft;deleteId=null;document.getElementById('acConfirm').hidden=true;
-  notify(owner?'':opened?'Sign in to send a message. Your draft will stay here.':'');if(opened)render();
+  load(owner);taskRows=[];input.value=owner?current().draft:guestDraft;deleteId=null;document.getElementById('acConfirm').hidden=true;
+  notify(owner?'':opened?'Sign in to send a message. Your draft will stay here.':'');if(opened){render();syncTasks();}
  }
  bridge.subscribe(ownerChanged);
  function relativeTime(time){var age=Math.max(0,Date.now()-time);if(age<60000)return 'Just now';if(age<3600000)return Math.floor(age/60000)+' min ago';if(age<86400000)return Math.floor(age/3600000)+' hr ago';return new Date(time).toLocaleDateString(undefined,{month:'short',day:'numeric'});}
@@ -94083,6 +94105,10 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   if(!rows.length){threadsNode.appendChild(node('p','ac-thread-empty',state.owner?needle?'No conversations match your search.':'Your conversations will appear here.':'Sign in for your own Ava conversations.'));return;}
   rows.forEach(function(t){var row=node('div','ac-thread');row.dataset.active=String(t.id===state.active);var button=node('button','ac-thread-open');button.type='button';button.setAttribute('aria-current',String(t.id===state.active));button.appendChild(node('strong','',t.title));button.appendChild(node('small','',t.draft?'Draft · '+relativeTime(t.updated):relativeTime(t.updated)));button.onclick=function(){rememberDraft();state.active=t.id;save();closeHistory();render();input.focus();};row.appendChild(button);var del=node('button','ac-thread-delete','×');del.type='button';del.setAttribute('aria-label','Delete '+t.title);del.onclick=function(){deleteId=t.id;document.getElementById('acConfirm').hidden=false;document.getElementById('acDeleteCancel').focus();};row.appendChild(del);threadsNode.appendChild(row);});
  }
+ function renderTasks(){var host=document.getElementById('acTasks');if(!host)return;host.replaceChildren();if(!state.owner){host.appendChild(node('p','ac-task-list-empty','Sign in to save Ava tasks.'));return;}if(!taskRows.length){host.appendChild(node('p','ac-task-list-empty','Saved research tasks appear here.'));return;}taskRows.slice(0,8).forEach(function(task){var button=node('button');button.type='button';button.appendChild(node('span','',text(task.goal).slice(0,62)));button.appendChild(node('small','',(task.status==='completed'?'Finished':task.status==='failed'?'Could not finish':task.stage||'Working')+' · '+relativeTime(Date.parse(task.createdAt)||Date.now())));button.onclick=function(){openTask(task);};host.appendChild(button);});}
+ function openTask(task){if(!state.owner)return;rememberDraft();var found=state.threads.find(function(t){return t.messages.some(function(m){return m.taskId===task.id;});});if(!found){found=createThread(false);found.title=text(task.goal).slice(0,55);found.messages=[{id:id(),role:'user',text:task.goal,status:'done',mode:'task'},{id:id(),role:'assistant',text:'',status:'streaming',mode:'task',taskId:task.id,taskStage:task.stage,sources:[]}];}state.active=found.id;applyTask(task);save();closeHistory();render();}
+ function applyTask(task){var changed=false;state.threads.forEach(function(thread){thread.messages.forEach(function(m){if(m.taskId!==task.id)return;var status=task.status==='completed'?'done':task.status==='failed'?'error':'streaming',body=status==='done'?visibleText(task.result&&task.result.answer):status==='error'?text(task.error||'This task could not finish.'):'';if(m.status!==status||m.text!==body||m.taskStage!==task.stage){m.status=status;m.text=body;m.taskStage=task.stage;m.sources=normalizeSources(task.result&&task.result.sources);thread.updated=Date.now();changed=true;}});});return changed;}
+ async function syncTasks(){if(taskSyncing||!opened||!state.owner)return;taskSyncing=true;var owner=state.owner;try{var result=await bridge.listTasks();if(result.status!=='ok'||!bridge.isCurrent(owner)||!opened)return;taskRows=result.tasks||[];var changed=false;taskRows.forEach(function(task){if(applyTask(task))changed=true;});if(changed)save();renderTasks();if(changed)renderMessages(true);}finally{taskSyncing=false;}}
  function safeLink(url){try{var u=new URL(url);return /^(https?:|mailto:)$/.test(u.protocol)?u.href:null;}catch(e){return null;}}
  function normalizeSources(value){var out=[],seen=new Set();(Array.isArray(value)?value:[]).forEach(function(item){var rows=item&&item.result&&Array.isArray(item.result.results)?item.result.results:[item];rows.forEach(function(row){if(!row)return;var url=safeLink(row.url||row.link||row.href);if(!url||!/^https?:/i.test(url)||seen.has(url))return;seen.add(url);var title=text(row.title||row.name||new URL(url).hostname).slice(0,120);out.push({title:title,url:url});});});return out.slice(0,6);}
  function inline(parent,value){
@@ -94121,7 +94147,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
    var row=node('article','ac-message');row.dataset.role=m.role;row.dataset.message=m.id;addAvatar(row,m.role);var content=node('div'),name=node('div','ac-message-name',m.role==='user'?'You':'Ava'),body=node('div','ac-message-body');content.appendChild(name);
    if(m.role==='user')body.textContent=m.text;else if(m.text)markdown(body,m.text);else if(m.status==='streaming'){var thinking=node('div','ac-thinking');thinking.setAttribute('aria-label','Ava is thinking');for(var i=0;i<3;i++)thinking.appendChild(node('span'));body.appendChild(thinking);}
    content.appendChild(body);
-   if(m.role==='assistant'&&m.mode==='research'){if(m.status==='streaming'){content.appendChild(node('div','ac-task-state','Looking into this…'));}else if(m.sources&&m.sources.length){var sourceBox=node('div','ac-sources');sourceBox.appendChild(node('div','ac-sources-title','Sources checked'));m.sources.forEach(function(source){var a=node('a','ac-source-link');a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.appendChild(node('span','',source.title));a.appendChild(node('span','',new URL(source.url).hostname));sourceBox.appendChild(a);});content.appendChild(sourceBox);}else if(m.status==='done'){content.appendChild(node('div','ac-task-state','No sources returned. Check this answer before relying on it.'));}}
+   if(m.role==='assistant'&&(m.mode==='research'||m.mode==='task')){if(m.status==='streaming'){content.appendChild(node('div','ac-task-state',m.mode==='task'?(m.taskStage||'Working in the background…'):'Looking into this…'));}else if(m.sources&&m.sources.length){var sourceBox=node('div','ac-sources');sourceBox.appendChild(node('div','ac-sources-title','Sources checked'));m.sources.forEach(function(source){var a=node('a','ac-source-link');a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';a.appendChild(node('span','',source.title));a.appendChild(node('span','',new URL(source.url).hostname));sourceBox.appendChild(a);});content.appendChild(sourceBox);}else if(m.status==='done'){content.appendChild(node('div','ac-task-state','No sources returned. Check this answer before relying on it.'));}}
    if(failed){var error=node('div','ac-error'),label=node('span','','Ava could not reply.');var retry=node('button','','Retry');retry.type='button';retry.setAttribute('aria-label','Retry this message to Ava');retry.onclick=function(){submit(m.text,m.id,m.mode);};error.appendChild(label);error.appendChild(retry);content.appendChild(error);}
    if(m.status==='stopped')content.appendChild(node('div','ac-interrupted','Response stopped'));
    if(m.role==='assistant'&&m.text&&m.status!=='streaming'){var tools=node('div','ac-message-tools'),copy=node('button','','Copy');copy.type='button';copy.onclick=function(){copyText(visibleText(m.text),copy);};tools.appendChild(copy);content.appendChild(tools);}
@@ -94131,15 +94157,16 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  }
  function render(){
   var t=current();document.getElementById('acConversationTitle').textContent=t&&t.messages.length?t.title:'A fresh conversation';document.getElementById('acAccountName').textContent=state.owner?state.owner.email:'Sign in';document.getElementById('acAccountInitial').textContent=state.owner?state.owner.email.charAt(0).toUpperCase():'A';document.getElementById('acLogout').hidden=!state.owner;document.getElementById('acDevice').textContent=state.owner?'Chat history is saved on this device.':'Drafts stay here until you send.';
-  input.value=state.owner?t&&t.draft||'':guestDraft;document.getElementById('acVoice').disabled=!!request;renderThreads();renderMessages(false);autoSize();updateSendIcon();updateResearchButton();
+  input.value=state.owner?t&&t.draft||'':guestDraft;document.getElementById('acVoice').disabled=!!request;renderThreads();renderTasks();renderMessages(false);autoSize();updateSendIcon();updateResearchButton();
  }
  function updateSendIcon(){sendButton.replaceChildren();if(request){var square=node('span','','■');square.setAttribute('aria-hidden','true');sendButton.appendChild(square);sendButton.title='Stop response';}else{var arrow=node('span','','↑');arrow.setAttribute('aria-hidden','true');arrow.style.fontSize='22px';arrow.style.lineHeight='1';sendButton.appendChild(arrow);sendButton.title='Send message';}autoSize();}
- function updateResearchButton(){var b=document.getElementById('acResearch');b.setAttribute('aria-pressed',String(researchNext));b.textContent=researchNext?'Research on':'Research';b.title=researchNext?'Turn off research for the next message':'Use web research for the next message';}
+ function updateResearchButton(){var b=document.getElementById('acResearch');b.setAttribute('aria-pressed',String(researchNext));b.textContent=researchNext?'Research on':'Research';b.title=researchNext?'Turn off research for the next message':'Use web research for the next message';var task=document.getElementById('acTaskMode');task.setAttribute('aria-pressed',String(taskNext));task.textContent=taskNext?'Task on':'Task';}
  function gate(status){if(status==='signin'||status==='limit'){close(false);bridge.gate(status);}return {status:status};}
  function stop(){if(!request)return;request.controller.abort();var thread=state.threads.find(function(t){return t.id===request.threadId;}),m=thread&&thread.messages.find(function(m){return m.id===request.messageId;});if(m)m.status='stopped';request=null;save();notify('Response stopped.');render();}
  async function submit(explicitMessage,retryId,forcedMode){
-  var value=text(explicitMessage==null?input.value:explicitMessage).trim();if(!value)return {status:'empty'};var mode=forcedMode==='research'?'research':forcedMode==='chat'?'chat':researchNext?'research':'chat';
+  var value=text(explicitMessage==null?input.value:explicitMessage).trim();if(!value)return {status:'empty'};var mode=forcedMode==='task'?'task':forcedMode==='research'?'research':forcedMode==='chat'?'chat':taskNext?'task':researchNext?'research':'chat';
   if(submitting||request){notify('Wait for this reply, or stop it first.');return {status:'busy'};}
+  if(mode==='task')return submitTask(value);
   if(Date.now()<cooldownUntil){notify('Ava is rate-limited right now. Try again in about '+Math.max(1,Math.ceil((cooldownUntil-Date.now())/1000))+' seconds.');return {status:'rate-limited'};}
   if(state.owner&&!bridge.isCurrent(state.owner)){accountCheck();notify('Your account changed. Please write your message again.');return {status:'cancelled'};}
   var entryUi=bridge.uiKey();input.value=value;rememberDraft();submitting=true;
@@ -94167,7 +94194,19 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   }).catch(function(){if(request===thisRequest&&bridge.isCurrent(owner)){if(assistant.text){assistant.status='stopped';}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';}request=null;save();render();notify('Ava could not reply. Your message is still here.');}});
   return {status:'sending'};
  }
- function close(restore){rememberDraft();save();researchNext=false;updateResearchButton();opened=false;window.__avaCompanionChatOpen=false;root.hidden=true;mobileFocusMode();closeHistory();if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});}
+ async function submitTask(goal){
+  if(goal.length<8||goal.length>600){notify('Give Ava a research goal between 8 and 600 characters.');return {status:'invalid'};}
+  if(submitting)return {status:'busy'};submitting=true;notify('Saving this task…');var entryUi=bridge.uiKey();
+  try{
+   var result=await bridge.startTask(goal);if(entryUi!==bridge.uiKey())return {status:'cancelled'};
+   if(result.status==='signin'){notify('Sign in to save a task.');bridge.gate('signin');return result;}
+   if(result.status!=='ok'){notify(result.message||'Could not start this task.');return result;}
+   var t=current()||createThread(false),task=result.task;
+   t.messages.push({id:id(),role:'user',text:goal,status:'done',mode:'task'},{id:id(),role:'assistant',text:'',status:'streaming',mode:'task',taskId:task.id,taskStage:task.stage,sources:[]});
+   t.messages=t.messages.slice(-100);if(t.title==='New conversation')t.title=goal.slice(0,55);t.updated=Date.now();t.draft='';input.value='';taskNext=false;taskRows.unshift(task);save();notify('Ava is working. You can close this page and return later.');if(opened)render();syncTasks();return {status:'started',taskId:task.id};
+  }finally{submitting=false;}
+ }
+ function close(restore){rememberDraft();save();researchNext=false;taskNext=false;updateResearchButton();opened=false;window.__avaCompanionChatOpen=false;root.hidden=true;mobileFocusMode();closeHistory();if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});}
  window.avaCompanionChatClose=close;
  window.avaCompanionChatOpen=async function(options){
   options=options&&typeof options==='object'?options:{};var version=++openVersion,provided=typeof options.message==='string'?options.message.slice(0,12000):null;
@@ -94176,8 +94215,8 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   await bridge.verify();if(version!==openVersion||!opened)return {status:'cancelled'};
   var owner=bridge.current();if((state.owner&&state.owner.id||'')!==(owner&&owner.id||''))ownerChanged(owner);if(!current())createThread(false);
   if(provided!==null){input.value=provided;if(state.owner){current().draft=provided;save();}else guestDraft=provided;}
-  render();requestAnimationFrame(function(){input.focus({preventScroll:true});});
-  if(options.send===true&&provided!==null)return submit(provided,null,options.mode==='research'?'research':'chat');
+  render();syncTasks();requestAnimationFrame(function(){input.focus({preventScroll:true});});
+  if(options.send===true&&provided!==null)return submit(provided,null,options.mode==='task'?'task':options.mode==='research'?'research':'chat');
   return {status:'opened'};
  };
  document.getElementById('acForm').addEventListener('submit',function(e){e.preventDefault();if(request)stop();else submit();});
@@ -94188,7 +94227,8 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  document.getElementById('acSearch').oninput=function(){search=this.value;renderThreads();};
  document.getElementById('acHistory').onclick=function(){var show=root.dataset.history!=='true';root.dataset.history=String(show);this.setAttribute('aria-expanded',String(show));if(show)document.getElementById('acSearch').focus();};
  document.getElementById('acSize').onclick=function(){var compact=root.dataset.compact!=='true';root.dataset.compact=String(compact);this.setAttribute('aria-label',compact?'Expand chat':'Use compact chat');this.title=compact?'Expand chat':'Use compact chat';closeHistory();};
- document.getElementById('acResearch').onclick=function(){if(request)return;researchNext=!researchNext;updateResearchButton();input.focus();};
+ document.getElementById('acResearch').onclick=function(){if(request)return;researchNext=!researchNext;if(researchNext)taskNext=false;updateResearchButton();input.focus();};
+ document.getElementById('acTaskMode').onclick=function(){if(request)return;taskNext=!taskNext;if(taskNext)researchNext=false;updateResearchButton();input.focus();};
  document.getElementById('acVoice').onclick=function(){if(request)return;rememberDraft();close(false);var result=bridge.voice();if(result==='unavailable'){window.avaCompanionChatOpen();notify('Voice is not available yet. You can keep typing here.');}};
  document.getElementById('acMainChat').onclick=function(){close(false);bridge.openMain();};
  document.querySelectorAll('[data-ac-prompt]').forEach(function(button){button.onclick=function(){input.value=button.getAttribute('data-ac-prompt');rememberDraft();autoSize();input.focus();};});
@@ -94203,7 +94243,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
  window.addEventListener('resize',function(){if(opened)mobileFocusMode();});
  // No page-wide DOM observer: only the existing auth subscription plus a small identity check.
  function accountCheck(){var next=bridge.uiKey();if(next!==lastUi){lastUi=next;bridge.invalidate();bridge.verify();}else if(state.owner&&!bridge.isCurrent(state.owner))ownerChanged(null);}
- setInterval(function(){if(opened||request)accountCheck();},1000);window.addEventListener('focus',function(){accountCheck();if(opened)bridge.verify();});
+ setInterval(function(){if(opened||request)accountCheck();},1000);setInterval(syncTasks,5000);window.addEventListener('focus',function(){accountCheck();if(opened){bridge.verify();syncTasks();}});
  window.addEventListener('storage',function(e){if(state.owner&&e.key===key(state.owner)&&!request){load(state.owner);if(opened)render();}});
  window.addEventListener('pagehide',function(){rememberDraft();save();if(request)request.controller.abort();});
  load(null);render();window.dispatchEvent(new Event('ava:chat-ready'));
