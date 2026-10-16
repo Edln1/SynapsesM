@@ -93424,7 +93424,6 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
       // A preview is never a completion for a real account. Suppress only this guest transition.
       if(action==='call')setTimeout(openCallDraft,250);else if(pendingPrompt)setTimeout(function(){stagePrompt(pendingPrompt);},250);
     }else{if(action==='call')openCallDraft();else if(pendingPrompt)stagePrompt(pendingPrompt);else if(typeof setView==='function')setView('sec-chat');}
-    if(wasPreview&&pendingPrompt)toast('Example added to the composer. Nothing has been sent.');
   }
   async function refreshConnection(){
     var button=document.getElementById('awConnectGoogle'), status=document.getElementById('awConnectStatus');
