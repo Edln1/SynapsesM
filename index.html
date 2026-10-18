@@ -1267,11 +1267,11 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-tile .bnav-cc-tile-label{font-size:10.5px;color:rgba(255,255,255,0.75);}
 .bnav-cc-td-pill{
   display:inline-flex;align-items:center;justify-content:center;
-  width:36px;max-width:100%;height:36px;min-height:36px;flex:0 0 auto;
+  width:auto;max-width:100%;height:36px;min-height:36px;flex:0 0 auto;
   margin-top:12px;padding:0;border:none;border-radius:10px;background:transparent;color:#c2c2ca;cursor:grab;
-  line-height:1;touch-action:none;
+  line-height:0;touch-action:none;
 }
-.bnav-cc-td-pill .bnav-cc-td-mark{width:36px;height:36px;display:block;pointer-events:none;}
+.bnav-cc-td-pill .bnav-cc-td-mark{width:auto;max-width:100%;height:36px;display:block;object-fit:contain;pointer-events:none;}
 .bnav-cc-td-pill:hover{opacity:0.88;}
 .bnav-cc-td-ghost{
   z-index:10002; pointer-events:none; opacity:0.94;
@@ -1292,7 +1292,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   min-width:0; max-width:100%;
 }
 .bnav-cc-td-widget-hero .bnav-cc-td-mark{
-  width:32px;height:32px;display:block;flex-shrink:0;color:#c2c2ca;
+  width:auto;max-width:100px;height:28px;display:block;flex-shrink:0;object-fit:contain;
 }
 .bnav-cc-td-widget-hero > div{flex:1 1 auto; min-width:0; overflow:hidden;}
 .bnav-cc-td-widget-hero .bnav-cc-widget-stat-num{
@@ -12142,7 +12142,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     return null;
   }
   function _ccTdIconHtml(){
-    return '<svg class="bnav-cc-td-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="34" height="34" rx="10" fill="currentColor" fill-opacity=".04" stroke="currentColor" stroke-opacity=".16"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12v13m8-17v14m8-11v15"/><rect x="7.8" y="15" width="4.4" height="6" rx=".8" fill="#0e0e10"/><rect x="15.8" y="11" width="4.4" height="7" rx=".8" fill="currentColor" fill-opacity=".24"/><rect x="23.8" y="16" width="4.4" height="6" rx=".8" fill="#0e0e10"/></g></svg>';
+    return '<img class="bnav-cc-td-mark" src="tradedesk.png?v=055efb85" width="121" height="39" alt="Trade Desk" draggable="false">';
   }
   function _ccDockTdToGreeting(card){
     if(card){
@@ -89665,8 +89665,7 @@ var SYN_GUIDE_STEPS = {
         }, 900);
         return;
       }
-      if(typeof window.goNotes==='function') window.goNotes();
-      setTimeout(function(){ try{ _synGuideNotesSubDemo(); }catch(_nd){} }, 900);
+      _synGuideStartNotesWalkthrough();
     }
   },
   imagegen: {
@@ -89773,20 +89772,39 @@ function _synGuideSeedDemoNotesIfEmpty(){
    toggle, so calling it again while sec-notes is active does exactly that
    and returns to wherever the guide found them), then fly the Sticky Notes
    layer in on Home so both forms of Notes get shown, not just the page. */
+function _synGuideStartNotesWalkthrough(){
+  if(window._synGuideNotesWalkthroughState) _synGuideFinishStickyDemo();
+  var run = { stickyVisible: !!window._stickyNotesVisible, stickyOpen: !!window._stickyNotesOpen, seeded: [] };
+  try{ run.visiblePref = localStorage.getItem('notesVisible'); run.openPref = localStorage.getItem('stickyNotesOpen'); }catch(e){}
+  window._synGuideNotesWalkthroughState = run;
+  if(typeof userNotes !== 'undefined' && userNotes && !userNotes.length){
+    _synGuideSeedDemoNotesIfEmpty();
+    run.seeded = userNotes.slice();
+  }
+  // Selecting module 04 is a walkthrough, even when Notes is already open.
+  // Show the current notebook/page, then continue into the sticky-note demo.
+  if(typeof window.goNotes==='function' && _currentViewId !== 'sec-notes') window.goNotes();
+  setTimeout(function(){
+    if(window._synGuideNotesWalkthroughState !== run) return;
+    var page = _synGuidePick([document.getElementById('notesPageTitle'), document.getElementById('notesEditorWrap'), document.getElementById('nbNotebookList')]);
+    function continueDemo(){ if(window._synGuideNotesWalkthroughState === run) _synGuideNotesSubDemo(); }
+    if(page) synGuideFlyTo([{ get: function(){ return page; }, caption: 'Your notebooks and pages →' }], continueDemo);
+    else continueDemo();
+  }, 900);
+}
 function _synGuideNotesSubDemo(){
   // Runs in the manual guide AND the Play-showcase 04 Notes beat (the
   // showcase schedules it after the saved note is visible). The note pin/
   // drag state it touches is demo-notes-only there and gets restored by
   // _synGuideFinishStickyDemo / _synShowRestoreNotes on stop.
   if(typeof window.goNotes==='function' && _currentViewId === 'sec-notes') window.goNotes();
-  if(window.__synShowcaseActive){
+  {
     // The showcase saved the note from the demo chat page — leave that
     // conversation behind and land on the neural-interface home (sec-chat
     // empty state, the "Welcome, Traveler" page), the same surface the
-    // manual guide flies the stickies in over. The sticky layer lives
-    // inside #chatEmptyState, so it only renders here — sec-welcome (the
-    // old AI Tools Hub page) has no sticky layer at all. _restoreEmptyChatHome
-    // also strips the demo chat conversation.
+    // manual guide must use as well. The sticky layer lives inside
+    // #chatEmptyState: returning to an old conversation or the Tools Hub
+    // hides it, which used to end the module-04 demo after opening Notes.
     try{
       if(typeof window._restoreEmptyChatHome==='function') window._restoreEmptyChatHome(false, { silent: true });
       else if(typeof goHome==='function') goHome();
@@ -89803,7 +89821,13 @@ function _synGuideNotesSubDemo(){
   setTimeout(function(){
     try{ _synGuideSeedDemoNotesIfEmpty(); }catch(_sd){}
     var btn = _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]);
-    if(!_synGuideVisible(btn)) return;
+    if(!_synGuideVisible(btn)){
+      // Sidebar layouts may intentionally hide the bottom Notes shortcut.
+      // Its absence must not cancel the rest of the module walkthrough.
+      if(typeof window.openStickyNotesFly==='function') window.openStickyNotesFly();
+      setTimeout(function(){ try{ _synGuidePinSubDemo(); }catch(_pd){} }, 1500);
+      return;
+    }
     synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Hold/right-click → Notes menu' }], function(){
       // Open the REAL right-click context menu instead of silently toggling
       // the stickies on from behind the scenes — then fly the cursor onto
@@ -89854,8 +89878,10 @@ function _synGuidePinSubDemo(){
   var wrapper = layer && layer.querySelector('[data-note-idx]');
   if(!wrapper){ _synGuideFinishStickyDemo(); return; }
   var idx = parseInt(wrapper.dataset.noteIdx, 10);
-  var orig = userNotes[idx] ? { pinned: !!userNotes[idx].pinned, _left: userNotes[idx]._left, _top: userNotes[idx]._top } : null;
-  window._synGuideStickyDemoState = { idx: idx, orig: orig };
+  var note = userNotes[idx], orig = note ? {} : null;
+  var demoKeys = ['title','body','colorIdx','pinned','_left','_top'];
+  if(note) demoKeys.forEach(function(key){if(Object.prototype.hasOwnProperty.call(note,key)) orig[key]=note[key];});
+  window._synGuideStickyDemoState = { idx: idx, note: note, orig: orig };
   synGuideFlyTo([{ get: function(){ return wrapper; }, caption: 'Drag a note anywhere →' }], function(){
     var lRect = layer.getBoundingClientRect();
     var destLeft = Math.max(24, lRect.width * 0.14);
@@ -89925,7 +89951,11 @@ function _synGuidePinSubDemo(){
 }
 function _synGuideTurnOffStickyDemo(){
   var btn = _synGuidePick([document.getElementById('bnavNotesBtn'), document.getElementById('nav-notes')]);
-  if(!_synGuideVisible(btn)){ _synGuideFinishStickyDemo(); return; }
+  if(!_synGuideVisible(btn)){
+    if(window._stickyNotesVisible && typeof toggleStickyNotes==='function') toggleStickyNotes();
+    setTimeout(_synGuideFinishStickyDemo, 900);
+    return;
+  }
   synGuideFlyTo([{ get: function(){ return btn; }, caption: 'Hold/right-click → Show Sticky Notes' }], function(){
     // Beat-ending toggle: this menu only flashes open to flip Sticky Notes
     // back off, then the beat is done. Telling the menu to hide the "04
@@ -89952,12 +89982,14 @@ function _synGuideFinishStickyDemo(){
   // with Sticky Notes instead of being left stuck on screen.
   var st = window._synGuideStickyDemoState;
   window._synGuideStickyDemoState = null;
-  if(st && userNotes[st.idx]){
-    var n = userNotes[st.idx];
+  var noteIndex = st && st.note ? userNotes.indexOf(st.note) : st ? st.idx : -1;
+  if(st && noteIndex >= 0 && userNotes[noteIndex]){
+    var n = userNotes[noteIndex];
     if(st.orig){
-      n.pinned = st.orig.pinned;
-      if(st.orig._left){ n._left = st.orig._left; } else { delete n._left; }
-      if(st.orig._top){ n._top = st.orig._top; } else { delete n._top; }
+      ['title','body','colorIdx','pinned','_left','_top'].forEach(function(key){
+        if(Object.prototype.hasOwnProperty.call(st.orig,key)) n[key] = st.orig[key];
+        else delete n[key];
+      });
     } else {
       n.pinned = false;
       delete n._left;
@@ -89968,10 +90000,24 @@ function _synGuideFinishStickyDemo(){
   // Sticky Notes is already toggled off at this point — this just makes
   // sure nothing (the just-restored note, the layer itself) is still
   // sitting visible on screen after the demo ends.
-  window._stickyNotesVisible = false;
-  try{ localStorage.setItem('notesVisible', '0'); }catch(_ve){}
+  var run = window._synGuideNotesWalkthroughState;
+  window._synGuideNotesWalkthroughState = null;
+  if(run){
+    run.seeded.forEach(function(note){var index=userNotes.indexOf(note);if(index>=0)userNotes.splice(index,1);});
+    window._stickyNotesVisible = run.stickyVisible;
+    window._stickyNotesOpen = run.stickyOpen;
+    try{
+      localStorage.setItem('synapses_notes',JSON.stringify(userNotes));
+      if(run.visiblePref == null) localStorage.removeItem('notesVisible'); else localStorage.setItem('notesVisible',run.visiblePref);
+      if(run.openPref == null) localStorage.removeItem('stickyNotesOpen'); else localStorage.setItem('stickyNotesOpen',run.openPref);
+    }catch(_ve){}
+  } else {
+    window._stickyNotesVisible = false;
+    try{ localStorage.setItem('notesVisible', '0'); }catch(_ve){}
+  }
   if(typeof renderStickyNotes === 'function') renderStickyNotes(false);
   else if(typeof _applyStickyHiddenState === 'function') _applyStickyHiddenState();
+  if(run && typeof nlSave === 'function') nlSave(true);
 }
 /* Themes step sub-demo: sun/moon flip, then (Night only) the moon's
    right-click menu for Deep Space Aurora / Warp Speed. Simulated via the
