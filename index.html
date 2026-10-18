@@ -11326,6 +11326,8 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     <button class="new-chat-btn" onclick="newChat({forceAsk:true})">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Chat
     </button>
+    <button type="button" class="cat-btn" id="avaFullRestore" aria-label="Open Ava shortcuts" title="Open Ava" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg> Ava
+    </button>
     <div class="cat-nav">
       <div class="sidebar-section" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding-right:14px;user-select:none;" onclick="toggleSideSection('navItems','navArrow')">
         <span>Navigate</span><span id="navArrow" style="font-size:9px;transition:transform .3s;">▼</span>
@@ -11407,6 +11409,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     <div id="iconRailCollapsible" style="overflow:hidden;transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.3s ease;max-height:400px;opacity:1;">
       <div id="iconRailDynamic"></div>
     </div>
+    <button type="button" class="icon-rail-btn" id="avaRailRestore" aria-label="Open Ava shortcuts" title="Open Ava" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg><span class="rail-tooltip">Ava</span></button>
     <div id="railCollapseHandle" onclick="toggleRailIcons()" title="Show/hide nav icons" style="width:28px;height:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin:3px 0;opacity:0.3;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity=window._railIconsHidden?'1':'0.3'">
       <div style="width:28px;height:1px;background:var(--border);border-radius:1px;transition:background .15s;"></div>
     </div>
@@ -93529,17 +93532,24 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 #avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#f2f2f5;isolation:isolate}
 #avaFloatingAssistant[hidden],#avaFloatPopover[hidden]{display:none!important}
 #avaFloatButton{display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:22px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
-#avaFloatButton[hidden],#avaFloatMini[hidden]{display:none!important}
+#avaFloatButton[hidden],#avaFloatMini[hidden],#avaRailRestore[hidden],#avaFullRestore[hidden]{display:none!important}
+#avaRailRestore{color:rgba(255,255,255,.55);flex-shrink:0}
+#avaRailRestore:hover,#avaRailRestore:focus-visible{color:rgba(255,255,255,.86)}
+#avaFullRestore{display:flex;align-items:center;gap:10px;color:var(--muted)}
+#avaFullRestore svg{flex-shrink:0}
+.af-dock-flight{position:fixed;z-index:100000;display:block;pointer-events:none;transform-origin:top left;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
+.af-dock-flight svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.af-dock-flight .af-dock-outline{color:#96969e}
 #avaFloatButton>svg{width:62px;height:62px;overflow:visible;display:block}
 #avaFloatMini{position:fixed;right:9px;bottom:112px;display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid #ffffff25;border-radius:13px;background:#0a0a0e;box-shadow:0 8px 20px #0008;cursor:pointer;touch-action:manipulation}
-#avaFloatMini>svg{width:33px;height:33px;display:block;overflow:visible}
+#avaFloatMini>svg{width:19px;height:19px;display:block;overflow:visible;color:#96969e}
 #avaFloatMini:hover{background:#17171b;border-color:#ffffff44}
 #avaFloatMini:focus-visible{outline:2px solid #b5b5bf;outline-offset:3px}
 #avaFloatButton:focus-visible{outline:2px solid #b5b5bf;outline-offset:4px}
-#avaFloatButton .af-character,#avaFloatMini .af-character{transform-origin:66px 66px;animation:af-breathe 4.2s ease-in-out infinite}
-#avaFloatButton .af-eye,#avaFloatMini .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 4.6s infinite}
-#avaFloatButton .af-pupil,#avaFloatMini .af-pupil{animation:af-look 7.2s ease-in-out infinite}
-#avaFloatButton .af-smile,#avaFloatMini .af-smile{transform-box:fill-box;transform-origin:center;animation:af-smile 6.8s ease-in-out infinite}
+#avaFloatButton .af-character{transform-origin:66px 66px;animation:af-breathe 4.2s ease-in-out infinite}
+#avaFloatButton .af-eye{transform-box:fill-box;transform-origin:center;animation:af-blink 4.6s infinite}
+#avaFloatButton .af-pupil{animation:af-look 7.2s ease-in-out infinite}
+#avaFloatButton .af-smile{transform-box:fill-box;transform-origin:center;animation:af-smile 6.8s ease-in-out infinite}
 #avaFloatingAssistant[data-mood="curious"] .af-pupil{transform:translate(1px,-1px)}
 #avaFloatingAssistant[data-mood="voice"] .af-smile{stroke-width:3.4}
 #avaFloatButton:hover>svg,#avaFloatButton:focus-visible>svg,#avaFloatingAssistant[data-open="true"] #avaFloatButton>svg{animation-play-state:paused}
@@ -93593,14 +93603,14 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 @keyframes af-blink{0%,19%,25%,29%,33%,72%,78%,100%{transform:scaleY(1)}22%,31%,75%{transform:scaleY(.06)}}
 @keyframes af-look{0%,37%,100%{transform:translate(0,0)}45%,55%{transform:translate(2px,-1px)}65%,76%{transform:translate(-1.5px,0)}}
 @keyframes af-smile{0%,42%,62%,100%{transform:translateY(0) scaleX(1)}51%{transform:translateY(-.9px) scaleX(1.18)}}
-@media(prefers-reduced-motion:reduce){#avaFloatButton .af-character,#avaFloatButton .af-eye,#avaFloatButton .af-pupil,#avaFloatButton .af-smile,#avaFloatMini .af-character,#avaFloatMini .af-eye,#avaFloatMini .af-pupil,#avaFloatMini .af-smile{animation:none!important}}
+@media(prefers-reduced-motion:reduce){#avaFloatButton .af-character,#avaFloatButton .af-eye,#avaFloatButton .af-pupil,#avaFloatButton .af-smile{animation:none!important}.af-dock-flight{display:none!important}}
 </style>
 <aside id="avaFloatingAssistant" aria-label="Ava assistant shortcuts" hidden>
  <button type="button" id="avaFloatButton" aria-label="Open Ava" aria-haspopup="dialog" aria-controls="avaFloatPopover" aria-expanded="false"><svg class="af-mascot" viewBox="24 18 88 88" fill="none" aria-hidden="true"><g class="af-character"><path d="M34 57c0-18 11-29 29-29h8c18 0 30 12 30 30v7c0 17-12 29-30 29h-8C46 94 34 82 34 65Z" fill="#f2eee5"/><g class="af-pupil" fill="#242420"><ellipse class="af-eye" cx="55" cy="58" rx="3.6" ry="5.5"/><ellipse class="af-eye" cx="79" cy="58" rx="3.6" ry="5.5"/></g><path class="af-smile" d="M59 73c4 5 12 5 16-1" stroke="#242420" stroke-width="2.8" stroke-linecap="round"/></g></svg></button>
- <button type="button" id="avaFloatMini" aria-label="Restore Ava" title="Restore Ava" hidden></button>
+ <button type="button" id="avaFloatMini" aria-label="Open Ava shortcuts" title="Open Ava" hidden></button>
  <section id="avaFloatPopover" role="dialog" aria-modal="false" aria-labelledby="avaFloatTitle" hidden>
   <button type="button" id="avaFloatClose" aria-label="Close Ava shortcuts">×</button>
-  <button type="button" id="avaFloatMinimize" aria-label="Minimize Ava to the edge" title="Minimize Ava">−</button>
+  <button type="button" id="avaFloatMinimize" aria-label="Minimize Ava to the sidebar" title="Minimize Ava">−</button>
   <h2 id="avaFloatTitle">Ava</h2>
   <div id="avaFloatIdentity"></div>
   <form id="avaFloatChatForm" hidden><input type="text" id="avaFloatDraft" aria-label="Message Ava" placeholder="Ask Ava…" autocomplete="off"/><button type="submit" id="avaFloatSend" aria-label="Send message to Ava">↑</button></form>
@@ -93634,8 +93644,21 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  if(!root)return;
  var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
- var mini=document.getElementById('avaFloatMini');mini.innerHTML=button.innerHTML;
- function syncMinimized(){button.hidden=minimized;mini.hidden=!minimized;root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));}
+ var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
+ function dockTarget(){var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
+ function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
+ function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
+ function animateDockFace(from,to,towardDock,done){
+  if(motion.matches||document.hidden||!from||!to||!from.width||!to.width||typeof document.body.animate!=='function'){done();return;}
+  var flight=document.createElement('span');flight.className='af-dock-flight';flight.style.left=from.left+'px';flight.style.top=from.top+'px';flight.style.width=from.width+'px';flight.style.height=from.height+'px';
+  var face=button.querySelector('svg').cloneNode(true),outline=railDock.querySelector('svg').cloneNode(true);face.classList.add('af-dock-face');outline.classList.add('af-dock-outline');flight.appendChild(face);flight.appendChild(outline);document.body.appendChild(flight);
+  var duration=480,ease='cubic-bezier(.22,.7,.18,1)',dx=to.left-from.left,dy=to.top-from.top,sx=to.width/from.width,sy=to.height/from.height;
+  face.animate([{opacity:towardDock?1:0},{opacity:towardDock?0:1}],{duration:duration,easing:'ease-in-out',fill:'forwards'});
+  outline.animate([{opacity:towardDock?0:1},{opacity:towardDock?1:0}],{duration:duration,easing:'ease-in-out',fill:'forwards'});
+  var travel=flight.animate([{transform:'translate(0px,0px) scale(1)'},{transform:'translate('+dx+'px,'+dy+'px) scale('+sx+','+sy+')'}],{duration:duration,easing:ease,fill:'forwards'}),finished=false;
+  function finish(){if(finished)return;finished=true;flight.remove();done();}
+  travel.finished.then(finish,finish);setTimeout(finish,duration+120);
+ }
  function clamp(n,min,max){return Math.max(min,Math.min(n,max));}
  function geometry(width,height,composer){
   var size=62,margin=width<600?13:22,maxX=Math.max(8,width-size-margin),minX=Math.max(8,maxX-84),baseY=clamp(height-(width<600?158:176),30,Math.max(30,height-size-12));
@@ -93674,7 +93697,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function voiceActive(){return !!window._topNavVoiceActive;}
  function editing(){var active=document.activeElement;return !!(active&&active.matches('input,textarea,[contenteditable="true"]')&&!root.contains(active));}
  function visible(el){if(!el||el.hidden)return false;var css=getComputedStyle(el),rect=el.getBoundingClientRect();return css.display!=='none'&&css.visibility!=='hidden'&&Number(css.opacity)!==0&&rect.width>0&&rect.height>0;}
- function close(restore){opened=false;popover.hidden=true;root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';if(restore&&!root.hidden)button.focus({preventScroll:true});scheduleRoam(2800);}
+ function close(restore){opened=false;popover.hidden=true;root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';syncMinimized(root.hidden);if(restore&&!root.hidden)(minimized?dockTarget():button).focus({preventScroll:true});scheduleRoam(2800);}
  function blocked(){
   if(!user()||document.hidden||window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())||document.documentElement.classList.contains('synapses-welcome-pending'))return true;
   if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay'))||(document.getElementById('bnavCCPanel')?.classList.contains('bnav-cc-open')&&visible(document.getElementById('bnavCCPanel'))))return true;
@@ -93685,10 +93708,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(!positioned){root.style.left=g.baseX+'px';root.style.top=g.baseY+'px';positioned=true;lastWidth=width;lastHeight=height;}
   else if(width!==lastWidth||height!==lastHeight){freezeMotion(800);root.style.left=g.baseX+'px';root.style.top=g.baseY+'px';lastWidth=width;lastHeight=height;}
   else if(!traveling&&!opened){var current=root.getBoundingClientRect();if(current.left<g.minX||current.left>g.maxX||current.top<g.minY||current.top>g.maxY){root.style.transition='none';root.style.left=clamp(current.left,g.minX,g.maxX)+'px';root.style.top=clamp(current.top,g.minY,g.maxY)+'px';}}
-  if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.getBoundingClientRect().height||470,anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
+  if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.getBoundingClientRect().height||470,anchor;if(minimized){var dockRect=dockTarget().getBoundingClientRect();anchor={x:clamp(dockRect.right+12,16,Math.max(16,width-pw-16)),y:clamp(dockRect.top-4,16,Math.max(16,height-ph-16))};}else anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
  }
  function refresh(){
-  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false);if(hide){if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
+  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false);syncMinimized(hide);if(hide){if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
   if(voiceActive()||editing()||window.__avaCompanionChatOpen){if(traveling)freezeMotion(0);root.dataset.frozen='true';}
   root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
   if(opened){var identityUser=user(),identityGuest=!identityUser||identityUser.isGuest;document.getElementById('avaFloatIdentity').textContent=identityGuest?'Guest preview':(identityUser.email||'Your account');document.getElementById('avaFloatAccount').textContent=identityGuest?'Sign in':'Account';document.getElementById('avaFloatLogout').hidden=identityGuest;}
@@ -93696,9 +93719,9 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(!minimized&&!roamTimer&&!traveling)scheduleRoam(2800);
  }
  function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
- function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;popover.hidden=false;root.dataset.open='true';button.setAttribute('aria-expanded','true');status.textContent='';refresh();(start.hidden?stop:start).focus({preventScroll:true});}
- function minimize(){minimized=true;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}mini.focus({preventScroll:true});}
- function restore(event){var keyboard=!!(event&&event.detail===0);minimized=false;hovered=false;lastPointer=null;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();if(keyboard)button.focus({preventScroll:true});else{mini.blur();var g=currentGeometry();root.style.left=g.minX+'px';root.style.top=g.baseY+'px';}scheduleRoam(900);}
+ function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;popover.hidden=false;root.dataset.open='true';status.textContent='';syncMinimized();refresh();(start.hidden?stop:start).focus({preventScroll:true});}
+ function minimize(){if(minimized)return;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;var from=button.getBoundingClientRect();minimized=true;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}var target=dockTarget(),to=(target.querySelector('svg')||target).getBoundingClientRect();target.style.visibility='hidden';animateDockFace(from,to,true,function(){target.style.visibility='';if(!root.hidden)target.focus({preventScroll:true});});}
+ function restore(){if(!minimized)return;var source=dockTarget(),from=(source.querySelector('svg')||source).getBoundingClientRect();close(false);minimized=false;hovered=false;lastPointer=null;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();var to=button.getBoundingClientRect();button.style.visibility='hidden';source.blur();animateDockFace(from,to,false,function(){button.style.visibility='';if(!root.hidden)button.focus({preventScroll:true});scheduleRoam(900);});}
  // This is a gesture entry only. Keep the app's existing verification and S2S
  // functions responsible for permissions, microphone startup and access rules.
  window.avaFloatingStartVoice=function(){
@@ -93753,10 +93776,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  var roamControl=document.getElementById('avaFloatRoam');
  function syncRoam(){roamControl.textContent=roamEnabled?'Stay here':'Let Ava hop';roamControl.setAttribute('aria-pressed',String(!roamEnabled));}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
- button.onclick=function(){if(opened)close(false);else open();};mini.onclick=restore;document.getElementById('avaFloatClose').onclick=function(){close(true);};document.getElementById('avaFloatMinimize').onclick=minimize;start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
+ button.onclick=function(){if(opened)close(false);else open();};[mini,railDock,fullDock].forEach(function(control){control.onclick=function(){if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
- document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target))close(false);},true);
- document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target))close(false);schedule();});
+ document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);},true);
+ document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);schedule();});
  document.addEventListener('click',function(e){if(!root.contains(e.target))schedule();},true);
  document.addEventListener('transitionend',function(e){if(!root.contains(e.target)&&e.target.matches('#authModal,#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel,.modal-overlay,dialog,[role="dialog"][aria-modal="true"]'))refresh();},true);
  document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);
@@ -93764,11 +93787,11 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  button.addEventListener('pointerenter',function(){hovered=true;freezeMotion(0);});button.addEventListener('pointerleave',function(){hovered=false;freezeUntil=Date.now()+900;scheduleRoam(2800);});button.addEventListener('focus',function(){freezeMotion(0);});
  motion.addEventListener('change',function(){freezeMotion(0);schedule();});
  var observer=new MutationObserver(schedule);
- function watch(){[document.body,document.documentElement].concat(Array.from(document.querySelectorAll('.modal-overlay,dialog,[role="dialog"][aria-modal="true"],#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel'))).forEach(function(el){if(el&&!watched.has(el)){watched.add(el);observer.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});}});}
+ function watch(){[document.body,document.documentElement,document.getElementById('sidebar')].concat(Array.from(document.querySelectorAll('.modal-overlay,dialog,[role="dialog"][aria-modal="true"],#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel'))).forEach(function(el){if(el&&!watched.has(el)){watched.add(el);observer.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});}});}
  watch();var bodyObserver=new MutationObserver(function(){watch();schedule();});bodyObserver.observe(document.body,{childList:true});
  setInterval(refresh,1500);window.addEventListener('synapses:intro-complete',schedule);window.addEventListener('ava:welcome-closed',schedule);
  window.addEventListener('ava:chat-ready',schedule);
- syncMinimized();if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
+ syncMinimized(true);if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 })();
 </script>
 
