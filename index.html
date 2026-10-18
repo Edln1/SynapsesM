@@ -2909,7 +2909,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);
 }
 .chp-rail-apps,.chp-rail-ava{margin-top:auto;color:rgba(200,195,225,0.18);}
-.chp-rail:has(.chp-rail-ava:not([hidden])) .chp-rail-apps{margin-top:0;}
+.chp-rail-ava{position:absolute;left:11px;bottom:50px;margin:0;}
 .chp-rail-apps svg{width:12px;height:12px;}
 .ava-sidebar-footer{display:flex;align-items:center;gap:10px;flex:0 0 36px;margin:6px 8px 10px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:rgba(200,195,225,.4);font:400 12px 'DM Sans',sans-serif;text-align:left;cursor:pointer;}
 .ava-sidebar-footer svg{width:16px;height:16px;flex-shrink:0;}
@@ -3245,6 +3245,7 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
   }
   html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps,
   html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava{justify-content:center;padding:0 4px 0 0;}
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava{left:6px;}
   html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps:hover,
   html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava:hover{
     color:rgba(200,195,225,0.28);
@@ -3305,7 +3306,11 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
     clip-path:inset(0 0 48px 0);
     padding-bottom:0;
   }
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.chp-no-bottom-flash:not(.open):not(.fade-open) .chp-rail:has(.chp-rail-ava:not([hidden])){padding-bottom:50px;}
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava{
+    right:10px;width:auto;max-width:none;justify-content:flex-start;padding:0 8px 0 6px;
+  }
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava .chp-rail-label{color:inherit;}
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open):has(.chp-rail-ava:not([hidden])):not(:has(#chpUserDock.open)):not(:has(.chp-header.chp-head-open)) #chpSidebarInner{padding-bottom:92px;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open #chpSidebarInner,
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.fade-open #chpSidebarInner{overflow:visible;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open .chp-header,
@@ -93732,7 +93737,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,menuAnimation=null,menuTimer=0,menuVersion=0,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
  var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatFooter=document.getElementById('avaChatFooter'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
- function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatSidebar&&chatSidebar.getBoundingClientRect().width>0){if(chatSidebar.classList.contains('open')||chatSidebar.classList.contains('fade-open'))return chatFooter;if(chatRail&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0)return chatDock;}var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
+ function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatSidebar&&chatSidebar.getBoundingClientRect().width>0){if(chatRail&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0)return chatDock;if(chatSidebar.classList.contains('open')||chatSidebar.classList.contains('fade-open'))return chatFooter;}var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
  function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaChatFooter,#avaChatRailRestore,#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
  function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;chatFooter.hidden=!minimized||!!hide||target!==chatFooter;chatDock.hidden=!minimized||!!hide||target!==chatDock;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;if(chatRail)chatRail.setAttribute('aria-hidden',String(!minimized||!!hide||target!==chatDock));root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[chatFooter,chatDock,railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
  function animateDockFace(from,to,towardDock,dockControl,done){
