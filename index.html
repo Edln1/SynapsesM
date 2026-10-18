@@ -3287,6 +3287,11 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.chp-no-bottom-flash .chp-rail-apps{
     display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
   }
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava{
+    position:absolute;top:0;right:10px;width:32px;max-width:32px;height:32px;padding:0;justify-content:center;
+  }
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava .chp-rail-label{display:none;}
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) #chpRailAskToggle{margin-right:40px;max-width:none;}
   /* Clip the last 48px of the thin rail while open/expanding so that
      bottom slot cannot paint anything during the width animation. */
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open .chp-rail,
@@ -93646,7 +93651,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  'use strict';
  var root=document.getElementById('avaFloatingAssistant'),button=document.getElementById('avaFloatButton'),popover=document.getElementById('avaFloatPopover'),start=document.getElementById('avaFloatStart'),stop=document.getElementById('avaFloatStop'),status=document.getElementById('avaFloatStatus'),opened=false,refreshTimer=0,watched=new WeakSet();
  if(!root)return;
- var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
+ var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,menuAnimation=null,menuTimer=0,menuVersion=0,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
  var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
  function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatRail&&chatSidebar&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0&&chatSidebar.getBoundingClientRect().width>0)return chatDock;var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
@@ -93701,7 +93706,17 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function voiceActive(){return !!window._topNavVoiceActive;}
  function editing(){var active=document.activeElement;return !!(active&&active.matches('input,textarea,[contenteditable="true"]')&&!root.contains(active));}
  function visible(el){if(!el||el.hidden)return false;var css=getComputedStyle(el),rect=el.getBoundingClientRect();return css.display!=='none'&&css.visibility!=='hidden'&&Number(css.opacity)!==0&&rect.width>0&&rect.height>0;}
- function close(restore){opened=false;popover.hidden=true;root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';syncMinimized(root.hidden);if(restore&&!root.hidden)(minimized?dockTarget():button).focus({preventScroll:true});scheduleRoam(2800);}
+ function animateMenu(show,immediate){
+  var wasHidden=popover.hidden,current=!wasHidden&&menuAnimation?getComputedStyle(popover):null,from=current?{opacity:current.opacity,transform:current.transform}:null,version=++menuVersion;
+  clearTimeout(menuTimer);menuTimer=0;if(menuAnimation){menuAnimation.onfinish=null;menuAnimation.cancel();menuAnimation=null;}
+  popover.inert=!show;popover.setAttribute('aria-hidden',String(!show));if(show){popover.hidden=false;place();}
+  if(immediate||motion.matches||document.hidden||typeof popover.animate!=='function'||(!show&&wasHidden)){popover.hidden=!show;return;}
+  var dockLeft=minimized&&dockTarget().getBoundingClientRect().left<window.innerWidth/2,rest={opacity:1,transform:'translate(0px,0px) scale(1)'},away={opacity:0,transform:minimized?'translateX('+(dockLeft?'-4px':'4px')+') scale(.985)':'translateY(4px) scale(.985)'},duration=show?180:130;
+  var animation=popover.animate([from||(show?away:rest),show?rest:away],{duration:duration,easing:show?'cubic-bezier(.2,.8,.2,1)':'cubic-bezier(.4,0,1,1)',fill:'both'});menuAnimation=animation;
+  function finish(){if(version!==menuVersion)return;clearTimeout(menuTimer);menuTimer=0;popover.hidden=!show;animation.onfinish=null;animation.cancel();menuAnimation=null;}
+  animation.onfinish=finish;menuTimer=setTimeout(finish,duration+100);
+ }
+ function close(restore,immediate){opened=false;animateMenu(false,immediate);root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';syncMinimized(root.hidden);if(restore&&!root.hidden)(minimized?dockTarget():button).focus({preventScroll:true});scheduleRoam(2800);}
  function blocked(){
   if(!user()||document.hidden||window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())||document.documentElement.classList.contains('synapses-welcome-pending'))return true;
   if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay'))||(document.getElementById('bnavCCPanel')?.classList.contains('bnav-cc-open')&&visible(document.getElementById('bnavCCPanel'))))return true;
@@ -93712,10 +93727,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(!positioned){root.style.left=g.baseX+'px';root.style.top=g.baseY+'px';positioned=true;lastWidth=width;lastHeight=height;}
   else if(width!==lastWidth||height!==lastHeight){freezeMotion(800);root.style.left=g.baseX+'px';root.style.top=g.baseY+'px';lastWidth=width;lastHeight=height;}
   else if(!traveling&&!opened){var current=root.getBoundingClientRect();if(current.left<g.minX||current.left>g.maxX||current.top<g.minY||current.top>g.maxY){root.style.transition='none';root.style.left=clamp(current.left,g.minX,g.maxX)+'px';root.style.top=clamp(current.top,g.minY,g.maxY)+'px';}}
-  if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.getBoundingClientRect().height||470,anchor;if(minimized){var dockRect=dockTarget().getBoundingClientRect();anchor={x:clamp(dockRect.right+12,16,Math.max(16,width-pw-16)),y:clamp(dockRect.top-4,16,Math.max(16,height-ph-16))};}else anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
+  if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.offsetHeight||470,anchor;if(minimized){var dockRect=dockTarget().getBoundingClientRect();anchor={x:clamp(dockRect.right+12,16,Math.max(16,width-pw-16)),y:clamp(dockRect.top-4,16,Math.max(16,height-ph-16))};popover.style.transformOrigin=(dockRect.left<width/2?'0':'100%')+' '+clamp(dockRect.top+dockRect.height/2-anchor.y,0,ph)+'px';}else{anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.transformOrigin='100% 100%';}popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
  }
  function refresh(){
-  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false);syncMinimized(hide);if(hide){if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
+  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false,true);syncMinimized(hide);if(hide){animateMenu(false,true);if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
   if(voiceActive()||editing()||window.__avaCompanionChatOpen){if(traveling)freezeMotion(0);root.dataset.frozen='true';}
   root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
   if(opened){var identityUser=user(),identityGuest=!identityUser||identityUser.isGuest;document.getElementById('avaFloatIdentity').textContent=identityGuest?'Guest preview':(identityUser.email||'Your account');document.getElementById('avaFloatAccount').textContent=identityGuest?'Sign in':'Account';document.getElementById('avaFloatLogout').hidden=identityGuest;}
@@ -93723,7 +93738,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(!minimized&&!roamTimer&&!traveling)scheduleRoam(2800);
  }
  function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
- function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;popover.hidden=false;root.dataset.open='true';status.textContent='';syncMinimized();refresh();(start.hidden?stop:start).focus({preventScroll:true});}
+ function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;root.dataset.open='true';status.textContent='';syncMinimized();refresh();animateMenu(true);(start.hidden?stop:start).focus({preventScroll:true});}
  function minimize(){if(minimized)return;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;var from=button.getBoundingClientRect();minimized=true;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}var target=dockTarget(),to=(target.querySelector('svg')||target).getBoundingClientRect();target.style.visibility='hidden';animateDockFace(from,to,true,function(){target.style.visibility='';if(!root.hidden)target.focus({preventScroll:true});});}
  function restore(){if(!minimized)return;var source=dockTarget(),from=(source.querySelector('svg')||source).getBoundingClientRect();close(false);minimized=false;hovered=false;lastPointer=null;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();var to=button.getBoundingClientRect();button.style.visibility='hidden';source.blur();animateDockFace(from,to,false,function(){button.style.visibility='';if(!root.hidden)button.focus({preventScroll:true});scheduleRoam(900);});}
  // This is a gesture entry only. Keep the app's existing verification and S2S
@@ -93789,7 +93804,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);
  document.addEventListener('pointermove',function(e){if(e.pointerType==='touch')return;lastPointer={x:e.clientX,y:e.clientY};if(!root.hidden&&!minimized&&!opened&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1300);},{passive:true});
  button.addEventListener('pointerenter',function(){hovered=true;freezeMotion(0);});button.addEventListener('pointerleave',function(){hovered=false;freezeUntil=Date.now()+900;scheduleRoam(2800);});button.addEventListener('focus',function(){freezeMotion(0);});
- motion.addEventListener('change',function(){freezeMotion(0);schedule();});
+ motion.addEventListener('change',function(){animateMenu(opened,true);freezeMotion(0);schedule();});
  var observer=new MutationObserver(schedule);
  function watch(){[document.body,document.documentElement,document.getElementById('sidebar'),document.getElementById('chpSidebar'),document.getElementById('sec-chat')].concat(Array.from(document.querySelectorAll('.modal-overlay,dialog,[role="dialog"][aria-modal="true"],#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel'))).forEach(function(el){if(el&&!watched.has(el)){watched.add(el);observer.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});}});}
  watch();var bodyObserver=new MutationObserver(function(){watch();schedule();});bodyObserver.observe(document.body,{childList:true});
