@@ -2908,14 +2908,10 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .chp-rail-apps .chp-rail-label{
   font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);
 }
-.chp-rail-apps,.chp-rail-ava{margin-top:auto;color:rgba(200,195,225,0.18);}
-.chp-rail-ava{position:absolute;left:11px;bottom:50px;margin:0;}
+.chp-rail-apps{margin-top:auto;color:rgba(200,195,225,0.18);}
+.chp-rail-ava{margin:0;}
+#chpSidebar:is(.open,.fade-open) #avaChatRailRestore{display:none!important;}
 .chp-rail-apps svg{width:12px;height:12px;}
-.ava-sidebar-footer{display:flex;align-items:center;gap:10px;flex:0 0 36px;margin:6px 8px 10px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:rgba(200,195,225,.4);font:400 12px 'DM Sans',sans-serif;text-align:left;cursor:pointer;}
-.ava-sidebar-footer svg{width:16px;height:16px;flex-shrink:0;}
-.ava-sidebar-footer:hover{background:rgba(255,255,255,.025);}
-.ava-sidebar-footer:focus-visible{outline:1px solid #ffffff30;outline-offset:2px;}
-.ava-sidebar-footer[hidden],#chpSidebar:has(#chpUserDock.open) .ava-sidebar-footer,#chpSidebar:has(.chp-header.chp-head-open) .ava-sidebar-footer{display:none!important;}
 .chp-rail-pop{
   position:fixed;z-index:100180;width:280px;max-height:min(420px,70vh);
   display:none;flex-direction:column;
@@ -2940,7 +2936,6 @@ html[data-theme="light"] .chp-rail-pop-h{color:rgba(0,0,0,0.4);}
 html[data-theme="light"] .chp-rail-pop .chp-item-label{color:#111;}
 html[data-theme="light"] .chp-rail-pop .chp-item:hover{background:rgba(0,0,0,0.05);}
 html.chp-apps-board .chp-rail-apps,
-html.chp-apps-board .chp-rail-ava,
 html.chp-apps-board .chp-apps-dock{color:rgba(200,195,225,0.34);}
 .chp-apps-dock{
   display:none;align-items:center;gap:10px;flex-shrink:0;
@@ -3243,11 +3238,8 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.fade-open .chp-rail-apps{
     width:32px;max-width:32px;
   }
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps,
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava{justify-content:center;padding:0 4px 0 0;}
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava{left:6px;}
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps:hover,
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava:hover{
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps{justify-content:center;padding:0 4px 0 0;}
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps:hover{
     color:rgba(200,195,225,0.28);
   }
   /* Collapsed thin: apps stays at the bottom of the rail. Open hides it. */
@@ -3306,11 +3298,6 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
     clip-path:inset(0 0 48px 0);
     padding-bottom:0;
   }
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava{
-    right:10px;width:auto;max-width:none;justify-content:flex-start;padding:0 8px 0 6px;
-  }
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava .chp-rail-label{color:inherit;}
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open):has(.chp-rail-ava:not([hidden])):not(:has(#chpUserDock.open)):not(:has(.chp-header.chp-head-open)) #chpSidebarInner{padding-bottom:92px;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open #chpSidebarInner,
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.fade-open #chpSidebarInner{overflow:visible;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open .chp-header,
@@ -15767,8 +15754,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           <span class="chp-rail-label" id="chpRailWelcomeLabel">Welcome</span>
         </button>
         <button type="button" class="chp-rail-btn chp-rail-ava" id="avaChatRailRestore" data-hint="Ava" aria-label="Open Ava shortcuts" title="Open Ava" hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg>
-          <span class="chp-rail-label">Ava</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg>
         </button>
         <button type="button" class="chp-rail-btn chp-rail-apps" data-hint="Apps" aria-label="Toggle apps board" aria-pressed="false" onclick="event.stopPropagation();if(typeof _chpToggleAppsBoard==='function')_chpToggleAppsBoard();">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="1.15"/><circle cx="12" cy="6" r="1.15"/><circle cx="18" cy="6" r="1.15"/><circle cx="6" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18" cy="12" r="1.15"/><circle cx="6" cy="18" r="1.15"/><circle cx="12" cy="18" r="1.15"/><circle cx="18" cy="18" r="1.15"/></svg>
@@ -15807,7 +15793,6 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           </div>
         </div>
         <div class="chp-list" id="chpList"></div>
-        <button type="button" class="ava-sidebar-footer" id="avaChatFooter" aria-label="Open Ava shortcuts" title="Open Ava" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg><span>Ava</span></button>
         <button type="button" class="chp-apps-dock" aria-label="Toggle apps board" aria-pressed="false" onclick="if(typeof _chpToggleAppsBoard==='function')_chpToggleAppsBoard();">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="1.15"/><circle cx="12" cy="6" r="1.15"/><circle cx="18" cy="6" r="1.15"/><circle cx="6" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18" cy="12" r="1.15"/><circle cx="6" cy="18" r="1.15"/><circle cx="12" cy="18" r="1.15"/><circle cx="18" cy="18" r="1.15"/></svg>
           <span>Apps</span>
@@ -22954,7 +22939,7 @@ _loginAnimStarted=false;window._loginDone=false;requestAnimationFrame(function()
 function getRoles(u){return u?u.roles||['personal']:[];}
 function canSeek(u){return getRoles(u).includes('seeker');}
 function canRecruit(u){return getRoles(u).includes('recruiter');}
-function getRoleLabel(u){var r=getRoles(u);return r.includes('personal')&&r.includes('team')?'🙋 Personal & 🏢 Team':r.includes('team')?'🏢 Team / Business':'🙋 Personal';}
+function getRoleLabel(u){var r=getRoles(u);return r.includes('personal')&&r.includes('team')?'Personal & 🏢 Team':r.includes('team')?'🏢 Team / Business':'Personal';}
 // ── Auto morning/afternoon brief after a stretch of inactivity ─────────────
 // Tracks the last time the user actually touched the app (not just had a tab
 // open). If they come back after >=5h away and local time falls in the
@@ -88710,7 +88695,7 @@ body.syn-showcase-on .syn-guide-ring{
 .syn-guide-caption .syn-guide-cursor-glyph{opacity:0.85;}
 </style>
 
-<button type="button" id="synGuideBtn" onclick="openSynGuide()" title="How to use Synapses" aria-label="Open app guide">
+<button type="button" id="synGuideBtn" class="syn-guide-mini" onclick="openSynGuide()" title="How to use Synapses" aria-label="Open app guide">
   <span class="syn-guide-btn-toggle" onclick="event.stopPropagation(); synGuideCornerHandle();" title="Close guide" aria-label="Close guide"><svg class="syn-guide-x" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2.4 2.4l5.2 5.2"/><path d="M7.6 2.4L2.4 7.6"/></svg></span>
   <svg class="syn-guide-full-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
   <span class="syn-guide-label">Guide</span>
@@ -88847,22 +88832,41 @@ body.syn-showcase-on .syn-guide-ring{
 
 <script>
 var SYN_GUIDE_BTN_MINI_KEY = 'synapses_guide_btn_mini_v1';
+var _synGuideCompactTimer = 0;
+function _synGuideCompactButton(){
+  clearTimeout(_synGuideCompactTimer);_synGuideCompactTimer = 0;
+  try{ if(typeof window._stopGuideWag==='function') window._stopGuideWag(); }catch(e){}
+  var btn = document.getElementById('synGuideBtn');
+  if(!btn) return;
+  btn.classList.add('syn-guide-mini','syn-guide-linger');
+  btn.classList.remove('syn-guide-nudge');
+  btn.style.removeProperty('opacity');
+  try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '1'); }catch(e){}
+  var h = btn.querySelector('.syn-guide-btn-toggle');
+  if(h){ h.title = 'Expand guide'; h.setAttribute('aria-label', 'Expand guide'); }
+}
+function _synGuideScheduleCompact(delay){
+  clearTimeout(_synGuideCompactTimer);
+  _synGuideCompactTimer = setTimeout(function(){
+    _synGuideCompactTimer = 0;
+    var btn = document.getElementById('synGuideBtn');
+    if(!btn || btn.classList.contains('syn-guide-mini')) return;
+    var focus = document.activeElement;
+    if(!document.hidden && (btn.matches(':hover') || (btn.contains(focus) && focus.matches(':focus-visible')))){
+      _synGuideScheduleCompact(1000);return;
+    }
+    _synGuideCompactButton();
+  }, delay == null ? 6000 : delay);
+}
 function synGuideToggleMini(){
   var btn = document.getElementById('synGuideBtn');
   if(!btn) return;
-  var mini = btn.classList.toggle('syn-guide-mini');
-  try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, mini ? '1' : '0'); }catch(e){}
+  if(btn.classList.contains('syn-guide-mini')) synGuideCornerHandle();
+  else _synGuideCompactButton();
 }
 function synGuideCloseOut(){
   try{ closeSynGuide(); }catch(e){}
-  var btn = document.getElementById('synGuideBtn');
-  if(!btn) return;
-  if(!btn.classList.contains('syn-guide-mini')){
-    btn.classList.add('syn-guide-mini');
-    try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '1'); }catch(e2){}
-  }
-  var h = btn.querySelector('.syn-guide-btn-toggle');
-  if(h){ h.title = 'Expand guide'; h.setAttribute('aria-label', 'Expand guide'); }
+  _synGuideCompactButton();
 }
 function synGuideCornerHandle(){
   var btn = document.getElementById('synGuideBtn');
@@ -88872,40 +88876,32 @@ function synGuideCornerHandle(){
     btn.classList.remove('syn-guide-mini');
     btn.classList.remove('syn-guide-linger');
     btn.classList.remove('syn-guide-nudge');
-    try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '0'); }catch(e){}
+    // Expanding is temporary; a reload should always return to the quiet icon.
+    try{ localStorage.setItem(SYN_GUIDE_BTN_MINI_KEY, '1'); }catch(e){}
     var h = btn.querySelector('.syn-guide-btn-toggle');
     if(h){ h.title = 'Close guide'; h.setAttribute('aria-label', 'Close guide'); }
+    _synGuideScheduleCompact();
     return;
   }
   synGuideCloseOut();
 }
 (function _synGuideRestoreMiniState(){
-  try{
-    /* Default = minimized: the small "?" bubble sits in the bottom-right
-       corner on first load (no stored choice yet) and whenever the user
-       last left it collapsed ('1'). Only an explicit expand stores '0',
-       which brings back the full pill on the next load. */
-    if(localStorage.getItem(SYN_GUIDE_BTN_MINI_KEY) === '0') return;
-    function apply(){
-      var btn = document.getElementById('synGuideBtn');
-      if(!btn) return;
-      btn.classList.add('syn-guide-mini');
-      /* Genuine first run (key never set): keep the "?" faintly present so
-         the entry is discoverable, not fully invisible until a hover. */
-      try{
-        if(localStorage.getItem(SYN_GUIDE_BTN_MINI_KEY) === null){
-          btn.classList.add('syn-guide-linger');
-        }
-      }catch(_f){}
-      var h = btn.querySelector('.syn-guide-btn-toggle');
-      if(h){ h.title = 'Expand guide'; h.setAttribute('aria-label', 'Expand guide'); }
-    }
-    if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', apply); } else { apply(); }
-  }catch(e){}
+  function apply(){
+    var btn = document.getElementById('synGuideBtn');
+    if(!btn) return;
+    // Also migrates the old persisted expanded ('0') state, which otherwise
+    // left the full Guide pill on screen indefinitely after reopening a tab.
+    _synGuideCompactButton();
+    btn.addEventListener('pointerleave',function(){if(!btn.classList.contains('syn-guide-mini')) _synGuideScheduleCompact(900);});
+    btn.addEventListener('focusout',function(){if(!btn.classList.contains('syn-guide-mini')) _synGuideScheduleCompact(900);});
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', apply); } else { apply(); }
+  document.addEventListener('visibilitychange',function(){if(document.hidden) _synGuideCompactButton();});
 })();
 
 function openSynGuide(){
   try{ if(typeof window._synGuideMarkUsed==='function') window._synGuideMarkUsed(); }catch(_u){}
+  _synGuideCompactButton();
   var m = document.getElementById('synGuideModal');
   if(m){
     m.style.display = 'flex';
@@ -89864,15 +89860,24 @@ function _synGuidePinSubDemo(){
     setTimeout(function(){
       var wrapper3 = layer.querySelector('[data-note-idx="'+idx+'"]') || wrapper2 || wrapper;
       synGuideFlyTo([{ get: function(){ return wrapper3; }, caption: 'Pin it →' }], function(){
-        if(typeof window._openNoteEdit==='function') window._openNoteEdit(idx);
+        var editTrigger = wrapper3 && wrapper3.querySelector('[title="Click to edit"]');
+        if(editTrigger) editTrigger.click();
+        else if(typeof window._openNoteEdit==='function') window._openNoteEdit(idx);
         else if(typeof _openNoteEdit==='function') _openNoteEdit(idx);
+        var modal = document.getElementById('_noteEditModal');
         setTimeout(function(){
-          var modal = document.getElementById('_noteEditModal');
-          var btns = modal ? modal.querySelectorAll('button') : [];
-          var pinBtn = btns[0], saveBtn = btns[1];
-          if(pinBtn) pinBtn.click();
+          if(!modal || document.getElementById('_noteEditModal') !== modal){ _synGuideFinishStickyDemo(); return; }
+          var pinBtn = modal && modal.querySelector('.ane-pin');
+          var saveBtn = modal && modal.querySelector('.ane-save');
+          if(!pinBtn || !saveBtn){ _synGuideFinishStickyDemo(); return; }
+          // The redesigned editor starts with Close and shade controls.
+          // Use its named actions, and leave an already-pinned note pinned.
+          if(pinBtn.getAttribute('aria-pressed') !== 'true') pinBtn.click();
           setTimeout(function(){
-            if(saveBtn) saveBtn.click(); else if(modal) modal.remove();
+            // A person can dismiss the editor during the walkthrough. Never
+            // save a stale detached editor or activate a replacement modal.
+            if(document.getElementById('_noteEditModal') !== modal){ _synGuideFinishStickyDemo(); return; }
+            saveBtn.click();
             setTimeout(_synGuideTurnOffStickyDemo, 500);
           }, 500);
         }, 160);
@@ -93736,10 +93741,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  if(!root)return;
  var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,menuAnimation=null,menuTimer=0,menuVersion=0,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
- var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatFooter=document.getElementById('avaChatFooter'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
- function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatSidebar&&chatSidebar.getBoundingClientRect().width>0){if(chatRail&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0)return chatDock;if(chatSidebar.classList.contains('open')||chatSidebar.classList.contains('fade-open'))return chatFooter;}var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
- function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaChatFooter,#avaChatRailRestore,#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
- function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;chatFooter.hidden=!minimized||!!hide||target!==chatFooter;chatDock.hidden=!minimized||!!hide||target!==chatDock;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;if(chatRail)chatRail.setAttribute('aria-hidden',String(!minimized||!!hide||target!==chatDock));root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[chatFooter,chatDock,railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
+ var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
+ function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(window.innerWidth>768&&document.documentElement.classList.contains('chp-sidebar-mode')&&chatSidebar&&chatSidebar.getBoundingClientRect().width>0)return chatDock;var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
+ function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaChatRailRestore,#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
+ function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;chatDock.hidden=!minimized||!!hide||target!==chatDock;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;if(chatRail)chatRail.setAttribute('aria-hidden',String(!minimized||!!hide||target!==chatDock));root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[chatDock,railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
  function animateDockFace(from,to,towardDock,dockControl,done){
   if(motion.matches||document.hidden||!from||!to||!from.width||!to.width||typeof document.body.animate!=='function'){done();return;}
   var flight=document.createElement('span');flight.className='af-dock-flight';flight.style.left=from.left+'px';flight.style.top=from.top+'px';flight.style.width=from.width+'px';flight.style.height=from.height+'px';
@@ -93813,7 +93818,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   if(opened){popover.style.maxHeight=Math.max(150,height-32)+'px';var pw=Math.min(310,width-32),ph=popover.offsetHeight||470,anchor;if(minimized){var dockRect=dockTarget().getBoundingClientRect();anchor={x:clamp(dockRect.right+12,16,Math.max(16,width-pw-16)),y:clamp(dockRect.top-4,16,Math.max(16,height-ph-16))};popover.style.transformOrigin=(dockRect.left<width/2?'0':'100%')+' '+clamp(dockRect.top+dockRect.height/2-anchor.y,0,ph)+'px';}else{anchor=menuAnchor(root.getBoundingClientRect(),width,height,pw,ph);popover.style.transformOrigin='100% 100%';}popover.style.left=anchor.x+'px';popover.style.top=anchor.y+'px';}
  }
  function refresh(){
-  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false,true);syncMinimized(hide);if(hide){animateMenu(false,true);if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
+  refreshTimer=0;document.getElementById('avaFloatChatForm').hidden=typeof window.avaCompanionChatOpen!=='function';var hide=blocked();if(hide&&opened)close(false,true);syncMinimized(hide);if(opened&&minimized&&!visible(dockTarget()))close(false,true);if(hide){animateMenu(false,true);if(!root.hidden)freezeMotion(0);root.hidden=true;return;}root.hidden=false;
   if(voiceActive()||editing()||window.__avaCompanionChatOpen){if(traveling)freezeMotion(0);root.dataset.frozen='true';}
   root.dataset.mood=opened?'curious':voiceActive()?'voice':'';place();
   if(opened){var identityUser=user(),identityGuest=!identityUser||identityUser.isGuest;document.getElementById('avaFloatIdentity').textContent=identityGuest?'Guest preview':(identityUser.email||'Your account');document.getElementById('avaFloatAccount').textContent=identityGuest?'Sign in':'Account';document.getElementById('avaFloatLogout').hidden=identityGuest;}
@@ -93822,7 +93827,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  }
  function schedule(){if(!refreshTimer)refreshTimer=setTimeout(refresh,40);}
  function open(){refresh();if(root.hidden)return;freezeMotion(0);opened=true;root.dataset.open='true';status.textContent='';syncMinimized();refresh();animateMenu(true);(start.hidden?stop:start).focus({preventScroll:true});}
- function minimize(){if(minimized)return;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;var from=button.getBoundingClientRect();minimized=true;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}var target=dockTarget(),to=(target.querySelector('svg')||target).getBoundingClientRect();target.style.visibility='hidden';animateDockFace(from,to,true,target,function(){target.style.visibility='';if(!root.hidden)target.focus({preventScroll:true});});}
+ function minimize(){if(minimized)return;close(false);freezeMotion(0);hovered=false;lastPointer=null;clearTimeout(roamTimer);roamTimer=0;var from=button.getBoundingClientRect(),chatSidebar=document.getElementById('chpSidebar');if(document.documentElement.classList.contains('chp-sidebar-mode')&&window.innerWidth>768&&chatSidebar&&(chatSidebar.classList.contains('open')||chatSidebar.classList.contains('fade-open'))&&typeof closeChatHistoryPanel==='function')closeChatHistoryPanel();minimized=true;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','1');}catch(e){}var target=dockTarget(),to=(target.querySelector('svg')||target).getBoundingClientRect();target.style.visibility='hidden';animateDockFace(from,to,true,target,function(){target.style.visibility='';if(!root.hidden&&visible(target))target.focus({preventScroll:true});});}
  function restore(){if(!minimized)return;var source=dockTarget(),from=(source.querySelector('svg')||source).getBoundingClientRect();close(false);minimized=false;hovered=false;lastPointer=null;syncMinimized();try{localStorage.setItem('synapses_ava_minimized_v1','0');}catch(e){}place();var to=button.getBoundingClientRect();button.style.visibility='hidden';source.blur();animateDockFace(from,to,false,source,function(){button.style.visibility='';if(!root.hidden)button.focus({preventScroll:true});scheduleRoam(900);});}
  // This is a gesture entry only. Keep the app's existing verification and S2S
  // functions responsible for permissions, microphone startup and access rules.
@@ -93878,7 +93883,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  var roamControl=document.getElementById('avaFloatRoam');
  function syncRoam(){roamControl.textContent=roamEnabled?'Stay here':'Let Ava hop';roamControl.setAttribute('aria-pressed',String(!roamEnabled));}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
- button.onclick=function(){if(opened)close(false);else open();};[mini,chatFooter,chatDock,railDock,fullDock].forEach(function(control){control.onclick=function(e){e.stopPropagation();if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
+ button.onclick=function(){if(opened)close(false);else open();};[mini,chatDock,railDock,fullDock].forEach(function(control){control.onclick=function(e){e.stopPropagation();if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
  document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);},true);
  document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);schedule();});
