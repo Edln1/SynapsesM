@@ -826,9 +826,9 @@ html[data-theme="deepsea"] #globalBeamsCanvas{filter:hue-rotate(30deg) blur(38px
 #bottomNavBar.bnav-cloud-collapsed .bnav-orb-wrap{opacity:1;pointer-events:auto;}
 .bnav-orb-wrap{display:none!important;opacity:0!important;pointer-events:none!important;} /* orb reserved for later — never show, incl. first launch */
 .bnav-orb-wrap.bnav-charging .bnav-orb{animation-name:bnavPuddleSwirl,none,bnavOrbMorph,none;transition:filter var(--bnav-hold-ms,1800ms) ease,box-shadow var(--bnav-hold-ms,1800ms) ease;filter:brightness(1.5) saturate(1.4);box-shadow:0 0 10px 2px rgba(124,106,247,0.55),0 0 26px 8px rgba(124,106,247,0.4),0 0 12px 3px rgba(0,217,168,0.16),inset 0 0 18px rgba(255,255,255,0.7);}
-.bnav-cc-backdrop{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;background:transparent;z-index:9998;opacity:0;pointer-events:none;transition:opacity .35s ease,top .2s ease,left .2s ease;}
+.bnav-cc-backdrop{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:var(--cc-bottom,0px);background:transparent;z-index:9998;opacity:0;pointer-events:none;transition:opacity .35s ease,top .2s ease,left .2s ease;}
 .bnav-cc-backdrop.bnav-cc-open{opacity:1;pointer-events:auto;}
-.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:0;transform:none;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr;grid-template-areas:"left center right";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
+.bnav-cc-panel{position:fixed;top:var(--cc-top,0px);left:var(--cc-left,0px);right:0;bottom:var(--cc-bottom,0px);transform:none;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:none;border-radius:0;box-shadow:none;z-index:9999;opacity:0;filter:blur(8px);pointer-events:none;transition:opacity .4s cubic-bezier(.2,.8,.2,1),filter .4s ease,top .2s ease,left .2s ease;display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:minmax(0,1fr);grid-template-areas:"left center right";gap:16px;padding:18px 24px;overflow:hidden;font-family:'DM Sans',sans-serif;}
 .bnav-cc-panel.bnav-cc-open{opacity:1;filter:blur(0);pointer-events:auto;}
 /* CC panel background is transparent (aurora shows through) — but the
    chat empty-state's whole greeting header (orb, time-based greeting,
@@ -1267,10 +1267,11 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
 .bnav-cc-tile .bnav-cc-tile-label{font-size:10.5px;color:rgba(255,255,255,0.75);}
 .bnav-cc-td-pill{
   display:inline-flex;align-items:center;justify-content:center;
-  margin-top:12px;padding:0;border:none;background:transparent;cursor:grab;
-  line-height:0; touch-action:none;
+  width:36px;max-width:100%;height:36px;min-height:36px;flex:0 0 auto;
+  margin-top:12px;padding:0;border:none;border-radius:10px;background:transparent;color:#c2c2ca;cursor:grab;
+  line-height:1;touch-action:none;
 }
-.bnav-cc-td-pill img{height:36px;width:auto;display:block;pointer-events:none;}
+.bnav-cc-td-pill .bnav-cc-td-mark{width:36px;height:36px;display:block;pointer-events:none;}
 .bnav-cc-td-pill:hover{opacity:0.88;}
 .bnav-cc-td-ghost{
   z-index:10002; pointer-events:none; opacity:0.94;
@@ -1290,9 +1291,8 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
   display:flex; align-items:center; gap:10px; margin-bottom:4px;
   min-width:0; max-width:100%;
 }
-.bnav-cc-td-widget-hero img{
-  height:28px; width:auto; max-width:64px; display:block; flex-shrink:0;
-  object-fit:contain; object-position:left center;
+.bnav-cc-td-widget-hero .bnav-cc-td-mark{
+  width:32px;height:32px;display:block;flex-shrink:0;color:#c2c2ca;
 }
 .bnav-cc-td-widget-hero > div{flex:1 1 auto; min-width:0; overflow:hidden;}
 .bnav-cc-td-widget-hero .bnav-cc-widget-stat-num{
@@ -1365,7 +1365,7 @@ html[data-theme="trueblack"] .bnav-cc-right::-webkit-scrollbar-thumb:hover{backg
     top:var(--cc-top,0px);
     left:0;
     right:0;
-    bottom:52px; /* clear the fixed bottom nav / bottom-left icon row instead of floating in a smaller box above it */
+    bottom:var(--cc-bottom,52px); /* clear only the bottom navigation that is actually visible */
     overflow-x:hidden;
     overflow-y:auto;
     padding:12px 10px calc(12px + env(safe-area-inset-bottom));
@@ -12141,6 +12141,9 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     }
     return null;
   }
+  function _ccTdIconHtml(){
+    return '<svg class="bnav-cc-td-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="34" height="34" rx="10" fill="currentColor" fill-opacity=".04" stroke="currentColor" stroke-opacity=".16"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12v13m8-17v14m8-11v15"/><rect x="7.8" y="15" width="4.4" height="6" rx=".8" fill="#0e0e10"/><rect x="15.8" y="11" width="4.4" height="7" rx=".8" fill="currentColor" fill-opacity=".24"/><rect x="23.8" y="16" width="4.4" height="6" rx=".8" fill="#0e0e10"/></g></svg>';
+  }
   function _ccDockTdToGreeting(card){
     if(card){
       _ccUnnestCard(null, card);
@@ -12155,7 +12158,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     pill.className = 'bnav-cc-td-pill';
     pill.title = 'Trade Desk';
     pill.setAttribute('aria-label','Open Trade Desk');
-    pill.innerHTML = '<img src="tradedesk.png" alt="Trade Desk">';
+    pill.innerHTML = _ccTdIconHtml();
     greet.appendChild(pill);
     _ccWireTdPill(pill);
   }
@@ -12541,7 +12544,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     return '<div class="bnav-cc-card bnav-cc-widget cc-placeholder" data-cc-id="tradedesk" style="--cc-delay:80ms">'+
       '<div class="bnav-cc-widget-head"><div class="bnav-cc-card-title" style="margin-bottom:0;">Trade Desk</div><div class="bnav-cc-widget-add" data-open-td="1" title="Open desk">↗</div></div>'+
       '<div class="bnav-cc-td-widget-hero">'+
-        '<img src="tradedesk.png" alt="">'+
+        _ccTdIconHtml()+
         '<div><div class="bnav-cc-widget-stat-num" id="ccTdEquity">'+_ccTdEquityText()+'</div><div class="bnav-cc-widget-stat-label">Paper equity</div></div>'+
       '</div>'+
       '<div class="bnav-cc-card-title" style="margin:12px 0 6px">Rippers · Bubbles</div>'+
@@ -12903,7 +12906,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           '<div class="syn-welcome-greeting" id="bnavCCGreeting">'+esc(_welcomeGreeting())+'</div>'+
           '<div class="syn-welcome-sub">Here\u2019s what\u2019s new</div>'+
           (canSeeTradeDesk() && _ccTdDock().home==='greeting'
-            ? '<button type="button" class="bnav-cc-td-pill" id="bnavCCTradeDesk" title="Trade Desk" aria-label="Open Trade Desk"><img src="tradedesk.png" alt="Trade Desk"></button>'
+            ? '<button type="button" class="bnav-cc-td-pill" id="bnavCCTradeDesk" title="Trade Desk" aria-label="Open Trade Desk">'+_ccTdIconHtml()+'</button>'
             : '')+
         '</div>'+
         '<div class="bnav-cc-card cc-placeholder" data-cc-id="session"><div class="bnav-cc-card-title">Session</div><div class="bnav-cc-gauges">'+
@@ -12983,6 +12986,11 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
 
     document.body.appendChild(backdrop);
     document.body.appendChild(panel);
+    // The fixed window strip is global chrome. Move it out of .main's
+    // stacking context so its existing z-index keeps the toolbar toggle
+    // clickable when the board reaches the top edge.
+    var windowStrip = document.getElementById('winStrip');
+    if(windowStrip && windowStrip.parentElement !== document.body) document.body.appendChild(windowStrip);
 
     // Widgets are draggable to reorder, but stay locked to their column's
     // grid slots (left column vs right column) — same drag feel as sticky
@@ -13847,11 +13855,14 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
   // Checks BOTH left-nav systems: the classic #sidebar and the newer
   // chp-sidebar-mode #chpSidebar rail (chat-view only) — see below.
   function _ccApplyInsets(){
-    var topH = 0, leftW = 0;
+    var topH = 0, leftW = 0, bottomH = 0;
     var topbarEl = document.querySelector('.top-bar');
-    if(topbarEl && getComputedStyle(topbarEl).display !== 'none'){
+    // Desktop keeps the hidden bar's box so the logo/rail never jump. The
+    // board should reclaim that otherwise empty strip until icons return.
+    var topbarHidden = document.body.classList.contains('topbar-hidden') || (topbarEl && topbarEl.classList.contains('hidden'));
+    if(!topbarHidden && topbarEl && getComputedStyle(topbarEl).display !== 'none'){
       var tRect = topbarEl.getBoundingClientRect();
-      if(tRect.height > 0) topH = tRect.bottom;
+      if(tRect.height > 0) topH = Math.max(0, tRect.bottom);
     }
     var sidebarEl = document.getElementById('sidebar');
     if(sidebarEl && getComputedStyle(sidebarEl).display !== 'none'){
@@ -13872,12 +13883,47 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
         if(cRect.width > 0) leftW = Math.max(leftW, cRect.right);
       }
     }
+    ['bnavBLRow','bottomNavBar'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      var css = getComputedStyle(el), rect = el.getBoundingClientRect();
+      if(css.display !== 'none' && css.visibility !== 'hidden' && Number(css.opacity) !== 0 && rect.width > 0 && rect.height > 0 && rect.bottom > window.innerHeight - 2){
+        bottomH = Math.max(bottomH, Math.max(0, window.innerHeight - rect.top));
+      }
+    });
     document.documentElement.style.setProperty('--cc-top', topH+'px');
     document.documentElement.style.setProperty('--cc-left', leftW+'px');
+    document.documentElement.style.setProperty('--cc-bottom', bottomH+'px');
   }
   window.addEventListener('resize', function(){
     if(document.getElementById('bnavCCPanel') && document.getElementById('bnavCCPanel').classList.contains('bnav-cc-open')) _ccApplyInsets();
   });
+  // Restore/toggle paths also change chrome without a window resize.
+  // Re-measure after those state changes and once any width/height tween ends.
+  var _ccInsetFrame = 0;
+  function _ccScheduleInsets(){
+    if(_ccInsetFrame) return;
+    _ccInsetFrame = requestAnimationFrame(function(){
+      _ccInsetFrame = 0;
+      var panel = document.getElementById('bnavCCPanel');
+      if(panel && panel.classList.contains('bnav-cc-open')) _ccApplyInsets();
+    });
+  }
+  var _ccInsetObserver = new MutationObserver(_ccScheduleInsets);
+  _ccInsetObserver.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+  _ccInsetObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+  function _ccWatchInsetChrome(){
+    ['.top-bar','#sidebar','#chpSidebar','#bnavBLRow','#bottomNavBar'].forEach(function(selector){
+      var el = document.querySelector(selector);
+      if(el) _ccInsetObserver.observe(el,{attributes:true,attributeFilter:['class','style','hidden'],subtree:selector === '#bnavBLRow',childList:selector === '#bnavBLRow'});
+    });
+    _ccScheduleInsets();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',_ccWatchInsetChrome,{once:true});
+  else _ccWatchInsetChrome();
+  document.addEventListener('transitionend',function(e){
+    if(e.target && e.target.matches('.top-bar,#sidebar,#chpSidebar,#bnavBLRow,#bottomNavBar')) _ccScheduleInsets();
+  },true);
   function openControlCentre(){
     // Classic mode: the past-chats hamburger drawer (#chpSidebar.open) sits
     // underneath the Control Centre panel, so opening CC on top of it used
@@ -13913,7 +13959,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
             pill.className = 'bnav-cc-td-pill';
             pill.title = 'Trade Desk';
             pill.setAttribute('aria-label','Open Trade Desk');
-            pill.innerHTML = '<img src="tradedesk.png" alt="Trade Desk">';
+            pill.innerHTML = _ccTdIconHtml();
             greet.appendChild(pill);
             _ccWireTdPill(pill);
           }
@@ -13947,6 +13993,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     // could still be scrolled out of view on reopen no matter how the
     // widgets were ordered. Force it back to the top on every open.
     panel.scrollTop = 0;
+    panel.querySelectorAll('.bnav-cc-left,.bnav-cc-center,.bnav-cc-right').forEach(function(col){col.scrollTop = 0;});
 
     // refresh Activity bars + Session gauges — these reflect live app state, not just first-open values
     var _actCats2 = [
@@ -58621,21 +58668,12 @@ function toggleTopBar(){
     }
   }
   if(typeof _chpSyncStripScroll === 'function') _chpSyncStripScroll();
-  // If Control Centre is open, let it reclaim (or give back) the strip of
-  // screen the top bar just freed/re-occupied. .top-bar's own collapse is a
-  // .25s max-height/padding transition (see its CSS), so the bar's true
-  // final box isn't there yet the instant classes flip — wait for that to
-  // settle before re-measuring, otherwise --cc-top gets set mid-collapse and
-  // the panel's own top .2s transition races the bar's, causing a jump/gap.
-  // Both bnavCCPanel's `top` and .top-bar's collapse animate on their own
-  // timers, so this reads as two back-to-back smooth motions rather than
-  // a single combined one — good enough, and far better than the panel not
-  // moving at all.
+  // Move the board with the toolbar toggle, without a second delayed slide.
+  // Hidden desktop chrome retains its box; _ccApplyInsets deliberately
+  // ignores that box. A transition-end check settles any mobile resize.
   var ccPanelForInset = document.getElementById('bnavCCPanel');
   if(ccPanelForInset && ccPanelForInset.classList.contains('bnav-cc-open')){
-    setTimeout(function(){
-      if(typeof _ccApplyInsets === 'function') _ccApplyInsets();
-    }, 260);
+    if(typeof _ccApplyInsets === 'function') _ccApplyInsets();
   }
 }
 
@@ -93628,6 +93666,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
 <!-- Original Ava face · deliberate entry to the existing speech-to-speech flow. -->
 <style id="avaFloatingStyles">
 #avaFloatingAssistant{position:fixed;width:62px;height:62px;left:20px;top:180px;z-index:8000;font-family:'DM Sans',sans-serif;color:#f2f2f5;isolation:isolate}
+body:has(#bnavCCPanel.bnav-cc-open) #avaFloatingAssistant{z-index:10001;}
 #avaFloatingAssistant[hidden],#avaFloatPopover[hidden]{display:none!important}
 #avaFloatButton{display:grid;place-items:center;width:62px;height:62px;padding:0;border:0;border-radius:22px;background:transparent;color:inherit;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
 #avaFloatButton[hidden],#avaFloatMini[hidden],#avaRailRestore[hidden],#avaFullRestore[hidden]{display:none!important}
@@ -93807,7 +93846,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  function close(restore,immediate){opened=false;animateMenu(false,immediate);root.dataset.open='false';button.setAttribute('aria-expanded','false');root.dataset.mood=voiceActive()?'voice':'';syncMinimized(root.hidden);if(restore&&!root.hidden)(minimized?dockTarget():button).focus({preventScroll:true});scheduleRoam(2800);}
  function blocked(){
   if(!user()||document.hidden||window.__avaWelcomeActive||window.__avaWelcomePending||(window.avaWelcomePaintHeld&&window.avaWelcomePaintHeld())||document.documentElement.classList.contains('synapses-welcome-pending'))return true;
-  if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay'))||(document.getElementById('bnavCCPanel')?.classList.contains('bnav-cc-open')&&visible(document.getElementById('bnavCCPanel'))))return true;
+  if(visible(document.getElementById('authModal'))||visible(document.getElementById('avaRecordedPortrait'))||visible(document.getElementById('avaAvatarBox'))||visible(document.getElementById('avaTvPopup'))||visible(document.getElementById('callSuccessOverlay')))return true;
   return Array.from(document.querySelectorAll('.modal-overlay,dialog[open],[role="dialog"][aria-modal="true"]')).some(function(el){return !root.contains(el)&&visible(el);});
  }
  function place(){
