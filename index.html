@@ -2908,8 +2908,7 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
 .chp-rail-apps .chp-rail-label{
   font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);
 }
-.chp-rail-apps{margin-top:auto;color:rgba(200,195,225,0.18);}
-.chp-rail-ava{margin-top:auto;}
+.chp-rail-apps,.chp-rail-ava{margin-top:auto;color:rgba(200,195,225,0.18);}
 .chp-rail:has(.chp-rail-ava:not([hidden])) .chp-rail-apps{margin-top:0;}
 .chp-rail-apps svg{width:12px;height:12px;}
 .ava-sidebar-footer{display:flex;align-items:center;gap:10px;flex:0 0 36px;margin:6px 8px 10px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:rgba(200,195,225,.4);font:400 12px 'DM Sans',sans-serif;text-align:left;cursor:pointer;}
@@ -2941,6 +2940,7 @@ html[data-theme="light"] .chp-rail-pop-h{color:rgba(0,0,0,0.4);}
 html[data-theme="light"] .chp-rail-pop .chp-item-label{color:#111;}
 html[data-theme="light"] .chp-rail-pop .chp-item:hover{background:rgba(0,0,0,0.05);}
 html.chp-apps-board .chp-rail-apps,
+html.chp-apps-board .chp-rail-ava,
 html.chp-apps-board .chp-apps-dock{color:rgba(200,195,225,0.34);}
 .chp-apps-dock{
   display:none;align-items:center;gap:10px;flex-shrink:0;
@@ -3243,7 +3243,10 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.fade-open .chp-rail-apps{
     width:32px;max-width:32px;
   }
-  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps:hover{
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps,
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava{justify-content:center;padding:0 4px 0 0;}
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-apps:hover,
+  html.chp-sidebar-mode.chp-sidebar-thin .chp-rail-ava:hover{
     color:rgba(200,195,225,0.28);
   }
   /* Collapsed thin: apps stays at the bottom of the rail. Open hides it. */
