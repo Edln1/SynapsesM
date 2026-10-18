@@ -2909,7 +2909,14 @@ body.syn-bg .hc-node,body.syn-bg .hc-orb-core{animation-play-state:paused!import
   font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);
 }
 .chp-rail-apps{margin-top:auto;color:rgba(200,195,225,0.18);}
+.chp-rail-ava{margin-top:auto;}
+.chp-rail:has(.chp-rail-ava:not([hidden])) .chp-rail-apps{margin-top:0;}
 .chp-rail-apps svg{width:12px;height:12px;}
+.ava-sidebar-footer{display:flex;align-items:center;gap:10px;flex:0 0 36px;margin:6px 8px 10px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:rgba(200,195,225,.4);font:400 12px 'DM Sans',sans-serif;text-align:left;cursor:pointer;}
+.ava-sidebar-footer svg{width:16px;height:16px;flex-shrink:0;}
+.ava-sidebar-footer:hover{background:rgba(255,255,255,.025);}
+.ava-sidebar-footer:focus-visible{outline:1px solid #ffffff30;outline-offset:2px;}
+.ava-sidebar-footer[hidden],#chpSidebar:has(#chpUserDock.open) .ava-sidebar-footer,#chpSidebar:has(.chp-header.chp-head-open) .ava-sidebar-footer{display:none!important;}
 .chp-rail-pop{
   position:fixed;z-index:100180;width:280px;max-height:min(420px,70vh);
   display:none;flex-direction:column;
@@ -3287,11 +3294,6 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.chp-no-bottom-flash .chp-rail-apps{
     display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;
   }
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava{
-    position:absolute;top:0;right:4px;width:32px;max-width:32px;height:32px;padding:0;justify-content:center;
-  }
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) .chp-rail-ava .chp-rail-label{display:none;}
-  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar:is(.open,.fade-open) #chpRailAskToggle{margin-right:40px;max-width:none;}
   /* Clip the last 48px of the thin rail while open/expanding so that
      bottom slot cannot paint anything during the width animation. */
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open .chp-rail,
@@ -3300,6 +3302,7 @@ html.chp-sidebar-mode #chpSidebar.fade-open .chp-apps-dock span{display:none;}
     clip-path:inset(0 0 48px 0);
     padding-bottom:0;
   }
+  html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.chp-no-bottom-flash:not(.open):not(.fade-open) .chp-rail:has(.chp-rail-ava:not([hidden])){padding-bottom:50px;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open #chpSidebarInner,
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.fade-open #chpSidebarInner{overflow:visible;}
   html.chp-sidebar-mode.chp-sidebar-thin #chpSidebar.open .chp-header,
@@ -15796,6 +15799,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
           </div>
         </div>
         <div class="chp-list" id="chpList"></div>
+        <button type="button" class="ava-sidebar-footer" id="avaChatFooter" aria-label="Open Ava shortcuts" title="Open Ava" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.2 10.5c0-4.2 2.5-6.7 6.6-6.7h2.4c4.1 0 6.6 2.5 6.6 6.7v2.8c0 4.2-2.5 6.7-6.6 6.7h-2.4c-4.1 0-6.6-2.5-6.6-6.7z"/><circle cx="9" cy="11.3" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="11.3" r=".8" fill="currentColor" stroke="none"/><path d="M9.2 15.1c1.6 1.8 4 1.8 5.6 0"/></svg><span>Ava</span></button>
         <button type="button" class="chp-apps-dock" aria-label="Toggle apps board" aria-pressed="false" onclick="if(typeof _chpToggleAppsBoard==='function')_chpToggleAppsBoard();">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="1.15"/><circle cx="12" cy="6" r="1.15"/><circle cx="18" cy="6" r="1.15"/><circle cx="6" cy="12" r="1.15"/><circle cx="12" cy="12" r="1.15"/><circle cx="18" cy="12" r="1.15"/><circle cx="6" cy="18" r="1.15"/><circle cx="12" cy="18" r="1.15"/><circle cx="18" cy="18" r="1.15"/></svg>
           <span>Apps</span>
@@ -93724,10 +93728,10 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  if(!root)return;
  var motion=window.matchMedia('(prefers-reduced-motion: reduce)'),roamEnabled=true,minimized=false,roamTimer=0,travelTimer=0,hopAnimation=null,poseAnimation=null,menuAnimation=null,menuTimer=0,menuVersion=0,positioned=false,traveling=false,freezeUntil=0,perchIndex=0,lastWidth=0,lastHeight=0,lastPointer=null,hovered=false;
  try{roamEnabled=localStorage.getItem('synapses_ava_roam_v1')!=='stay';minimized=localStorage.getItem('synapses_ava_minimized_v1')==='1';}catch(e){}
- var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
- function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatRail&&chatSidebar&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0&&chatSidebar.getBoundingClientRect().width>0)return chatDock;var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
- function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaChatRailRestore,#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
- function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;chatDock.hidden=!minimized||!!hide||target!==chatDock;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;if(chatRail)chatRail.setAttribute('aria-hidden',String(!minimized||!!hide||target!==chatDock));root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[chatDock,railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
+ var mini=document.getElementById('avaFloatMini'),railDock=document.getElementById('avaRailRestore'),fullDock=document.getElementById('avaFullRestore'),chatDock=document.getElementById('avaChatRailRestore'),chatFooter=document.getElementById('avaChatFooter'),chatRail=document.getElementById('chpRail'),sizeControl=document.getElementById('avaFloatMinimize');mini.innerHTML=railDock.querySelector('svg').outerHTML;
+ function dockTarget(){var chatSidebar=document.getElementById('chpSidebar');if(chatSidebar&&chatSidebar.getBoundingClientRect().width>0){if(chatSidebar.classList.contains('open')||chatSidebar.classList.contains('fade-open'))return chatFooter;if(chatRail&&getComputedStyle(chatRail).display!=='none'&&chatRail.getBoundingClientRect().height>0)return chatDock;}var sidebar=document.getElementById('sidebar');if(!sidebar||document.body.classList.contains('bottom-nav')||!sidebar.getBoundingClientRect().width)return mini;return sidebar.classList.contains('collapsed')?railDock:fullDock;}
+ function isDockControl(el){return !!(el&&el.closest&&el.closest('#avaChatFooter,#avaChatRailRestore,#avaRailRestore,#avaFullRestore,#avaFloatMini'));}
+ function syncMinimized(hide){var target=dockTarget();button.hidden=minimized;chatFooter.hidden=!minimized||!!hide||target!==chatFooter;chatDock.hidden=!minimized||!!hide||target!==chatDock;railDock.hidden=!minimized||!!hide||target!==railDock;fullDock.hidden=!minimized||!!hide||target!==fullDock;mini.hidden=!minimized||!!hide||target!==mini;if(chatRail)chatRail.setAttribute('aria-hidden',String(!minimized||!!hide||target!==chatDock));root.dataset.minimized=String(minimized);button.setAttribute('aria-expanded',String(opened&&!minimized));[chatFooter,chatDock,railDock,fullDock,mini].forEach(function(el){el.setAttribute('aria-haspopup','dialog');el.setAttribute('aria-controls','avaFloatPopover');el.setAttribute('aria-expanded',String(opened&&minimized&&target===el));el.setAttribute('aria-label',opened&&minimized&&target===el?'Close Ava shortcuts':'Open Ava shortcuts');});sizeControl.textContent=minimized?'↗':'−';sizeControl.setAttribute('aria-label',minimized?'Restore floating Ava':'Minimize Ava to the sidebar');sizeControl.title=minimized?'Restore floating Ava':'Minimize Ava';}
  function animateDockFace(from,to,towardDock,dockControl,done){
   if(motion.matches||document.hidden||!from||!to||!from.width||!to.width||typeof document.body.animate!=='function'){done();return;}
   var flight=document.createElement('span');flight.className='af-dock-flight';flight.style.left=from.left+'px';flight.style.top=from.top+'px';flight.style.width=from.width+'px';flight.style.height=from.height+'px';
@@ -93866,7 +93870,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
  var roamControl=document.getElementById('avaFloatRoam');
  function syncRoam(){roamControl.textContent=roamEnabled?'Stay here':'Let Ava hop';roamControl.setAttribute('aria-pressed',String(!roamEnabled));}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
- button.onclick=function(){if(opened)close(false);else open();};[mini,chatDock,railDock,fullDock].forEach(function(control){control.onclick=function(e){e.stopPropagation();if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
+ button.onclick=function(){if(opened)close(false);else open();};[mini,chatFooter,chatDock,railDock,fullDock].forEach(function(control){control.onclick=function(e){e.stopPropagation();if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
  document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);},true);
  document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);schedule();});
