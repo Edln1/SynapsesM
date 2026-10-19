@@ -6321,6 +6321,9 @@ body.topbar-hidden .hub-panel.active{padding-top:12px;}
 .syn-greet-skip-btn:hover,.syn-greet-skip-btn:focus-visible{color:rgba(255,255,255,0.55);outline:none;}
 .syn-greet-skip-btn:active svg{transform:scale(0.85);}
 .syn-sub{font-size:12px;color:rgba(255,255,255,0.3);text-align:center;font-family:'Syne',sans-serif;margin-bottom:28px;animation-name:chatEmptyIn;animation-duration:var(--ds-restart-duration,.6s);animation-timing-function:ease-out;animation-delay:.25s;animation-fill-mode:both;letter-spacing:.08em;text-transform:uppercase;}
+/* Subtitle-free home preview; remove the class to restore the original label. */
+#chatEmptyState.syn-home-no-subtitle .syn-sub{display:none!important;}
+#chatEmptyState.syn-home-no-subtitle .syn-greeting-row{margin-bottom:36px;}
 /* ── Fingerprint unlock — hold-to-scan (real sensor feel) ── */
 @keyframes fpScan{0%{top:16%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:80%;opacity:0}}
 @keyframes fpShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
@@ -15867,7 +15870,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
       <div id="avaAvatarResizeE" class="ava-resize-edge"></div>
     </div>
 
-    <div id="chatEmptyState">
+    <div id="chatEmptyState" class="syn-home-no-subtitle">
       
       <!-- Ambient glyphs -->
       <div class="syn-glyph" style="top:8%;left:5%;--gd:7s;">01001110</div>
