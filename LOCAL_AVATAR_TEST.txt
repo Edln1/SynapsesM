@@ -13,9 +13,11 @@ The existing _ttsRestFetch helper keeps the selected voice/provider. Only
 the portrait animation runs locally. API keys stay in the parent app;
 the local service receives a decoded PCM16 WAV, not API credentials.
 
-Type a short message, or Start and use Microphone. Test voice speaks the
-typed line directly without asking the language model. Voice only is an
-explicit option with a still portrait when the GPU is unavailable.
+Type a short message, or press Microphone directly. Test voice speaks the
+typed line without asking the language model. Voice with idle is the default:
+API voice plays without waiting for offline rendering, alongside the silent
+prepared portrait loop. This preview does not provide live lip sync.
+Uncheck Voice with idle only to run the slow lip-sync experiment.
 End stops recording, cancels provider requests and cancels the render.
 
 Experimental limits: 240-character spoken replies and 20-second audio.
