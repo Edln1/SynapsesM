@@ -1,0 +1,30 @@
+AVA LOCAL VIDEO CALL — TEST OPTION
+
+Open Ava's menu and choose Local video call · TEST. The same option is in
+the voice context menu. The original Anam option is still available.
+
+This option connects only to http://127.0.0.1:8816 on your own computer.
+For this development setup, run work/ava-avatar-lab/start-local-call.ps1.
+It prints the separate Synapses preview URL:
+  http://127.0.0.1:8817/?ava-local=1
+
+Voice and conversation use the providers already configured in Synapses.
+The existing _ttsRestFetch helper keeps the selected voice/provider. Only
+the portrait animation runs locally. API keys stay in the parent app;
+the local service receives a decoded PCM16 WAV, not API credentials.
+
+Type a short message, or Start and use Microphone. Test voice speaks the
+typed line directly without asking the language model. Voice only is an
+explicit option with a still portrait when the GPU is unavailable.
+End stops recording, cancels provider requests and cancels the render.
+
+Experimental limits: 240-character spoken replies and 20-second audio.
+Rendering is offline and can take much longer than the resulting video.
+The complete matching API utterance is used; it is never cut to a prefix.
+Mouth-opening and source-eye controls are included, but their final video
+quality is not yet approved and synthetic teeth remain an unresolved issue.
+No claim of Anam-equivalent or real-time performance is made.
+
+Recovery: this feature is isolated to ava-local-call.js/.css and two load
+tags at the end of index.html. Removing those tags disables the feature.
+The source checkout and local avatar lab each retain Git checkpoints.
