@@ -6,14 +6,16 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 function extract(start, end) { const a=html.indexOf(start),b=html.indexOf(end,a);assert.ok(a>=0&&b>a,start);return html.slice(a,b); }
 const current = extract('  function _micSessionCurrent(generation)', '  function _stopMicTracks');
 const failure = extract('  function _desktopVoiceSpeechError(reasonCode,message){', '  window.__synapsesDesktopVoiceHookVersion');
+const routeTrace = extract('  var _pcSpeechRouteCount = 0;', '  window.__synapsesDesktopVoiceHookVersion');
 const fallback = extract('  function _desktopVoiceFluxFallback(generation,reasonCode){', '  function _desktopVoiceSpeechError(reasonCode,message){');
 const recording = extract('  function record() {', '  // ── Barge-in:');
 const ask = extract('  async function ask(text, speech)', '    // DESKTOP_VOICE_COMMAND_HOOK_END') + '\n normal++;\n}';
-function fixture(client) {
+function fixture(client,{native=false}={}) {
   const spoken=[],timers=[];
   const context=vm.createContext({window:{synapsesDesktopVoiceClient:client},_on:true,_micSessionGeneration:4,_voiceTurnId:0,_bargeNeedsDirectAnswer:false,_bargeTurnActive:false,_ttsBusy:false,_busy:true,_busySince:100,normal:0,
     speak:value=>spoken.push(value),toast:value=>spoken.push(value),record(){context.records++;},records:0,setTimeout:fn=>{timers.push(fn);}});
-  vm.runInContext(current+'\n'+ask,context);return{context,spoken,timers};
+  if(native)context.window.synapsesDesktopVoice={getState(){},runCommand(){}};
+  vm.runInContext(current+'\n'+routeTrace+'\n'+ask,context);return{context,spoken,timers};
 }
 test('only tagged current accepted Whisper/Flux finals reach native PC consumption',async()=>{
   let calls=0;const client={enabled:()=>true,consume:async()=>{calls++;return{handled:true,ok:true,message:'Opening example.com.'};}};
@@ -33,6 +35,28 @@ test('stale ASR generations and results arriving after Stop never execute or spe
 });
 test('native rejected/unsupported commands and IPC failures cannot fall through to a model success claim',async()=>{
   for(const consume of [async()=>({handled:true,ok:false,message:'Only public HTTPS websites are supported.'}),async()=>{throw Error('IPC unavailable');}]){const f=fixture({enabled:()=>true,consume});await f.context.ask('Ava, open file:///secret',{acceptedSpeech:true,provider:'whisper',generation:4});assert.equal(f.context.normal,0);assert.equal(f.spoken.length,1);assert.doesNotMatch(f.spoken[0],/^Opening/);}
+});
+function assertPrivateRoute(route){
+  assert.deepEqual(Object.keys(route).sort(),['version','at','count','phase','provider','on','acceptedSpeech','generationCurrent','clientPresent','clientEnabled','handled','ok'].sort());
+  assert.ok(Object.isFrozen(route));assert.ok(Number.isFinite(route.at));assert.ok(Number.isSafeInteger(route.count));
+  assert.doesNotMatch(JSON.stringify(route),/private-user|private-reply|private@example|secret-session|youtube|https:/i);
+}
+test('ASR hop trace is absent without native capability and rejects missing speech metadata without storing words',async()=>{
+  const web=fixture();await web.context.ask('private-user');assert.equal(web.context.window.__synapsesPcSpeechRoute,undefined);
+  let consumed=0;const f=fixture({enabled:()=>true,consume:async()=>{consumed++;}},{native:true});f.context.window.currentUser={email:'private@example.test',id:'secret-session'};
+  await f.context.ask('private-user');const route=f.context.window.__synapsesPcSpeechRoute;assertPrivateRoute(route);assert.equal(route.phase,'rejected-metadata');assert.equal(route.provider,'other');assert.equal(route.acceptedSpeech,false);assert.equal(route.generationCurrent,false);assert.equal(consumed,0);assert.equal(f.context.normal,1);
+});
+test('ASR hop trace distinguishes a disabled client from rejected metadata while preserving normal routing',async()=>{
+  const f=fixture({enabled:()=>false},{native:true});await f.context.ask('private-user',{acceptedSpeech:true,provider:'whisper',generation:4});
+  const route=f.context.window.__synapsesPcSpeechRoute;assertPrivateRoute(route);assert.equal(route.phase,'unhandled');assert.equal(route.provider,'whisper');assert.equal(route.on,true);assert.equal(route.acceptedSpeech,true);assert.equal(route.generationCurrent,true);assert.equal(route.clientPresent,true);assert.equal(route.clientEnabled,false);assert.equal(route.handled,false);assert.equal(f.context.normal,1);
+});
+test('ASR hop trace records native awaiting, handled and stale outcomes using only fixed flags',async()=>{
+  for(const stale of [false,true]){
+    let resolve;const f=fixture({enabled:()=>true,consume:()=>new Promise(yes=>{resolve=yes;})},{native:true});
+    const pending=f.context.ask('private-user',{acceptedSpeech:true,provider:'flux',generation:4});assert.equal(f.context.window.__synapsesPcSpeechRoute.phase,'await-native');assertPrivateRoute(f.context.window.__synapsesPcSpeechRoute);
+    if(stale){f.context._on=false;f.context._micSessionGeneration++;}
+    resolve({handled:true,ok:true,message:'private-reply'});await pending;const route=f.context.window.__synapsesPcSpeechRoute;assertPrivateRoute(route);assert.equal(route.phase,stale?'stale':'handled');assert.equal(route.handled,true);assert.equal(route.ok,true);assert.equal(route.generationCurrent,!stale);assert.equal(f.context.normal,0);assert.equal(f.spoken.length,stale?0:1);
+  }
 });
 
 const fluxSource=extract('function _fluxHandleEvent(msg, speech)', 'function _wsClose()');

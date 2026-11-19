@@ -70331,9 +70331,23 @@ function speakVoiceReply(text) {
     }
     return false;
   }
+  var _pcSpeechRouteCount = 0;
+  function _traceDesktopSpeechRoute(phase,speech,result){
+    var native=window.synapsesDesktopVoice;
+    if(!native||typeof native.getState!=='function'||typeof native.runCommand!=='function')return;
+    var client=window.synapsesDesktopVoiceClient,clientEnabled=false;
+    try{clientEnabled=!!(client&&typeof client.enabled==='function'&&client.enabled());}catch(error){}
+    window.__synapsesPcSpeechRoute=Object.freeze({version:1,at:Date.now(),count:++_pcSpeechRouteCount,phase:phase,
+      provider:speech&&(speech.provider==='whisper'||speech.provider==='flux')?speech.provider:'other',on:!!_on,
+      acceptedSpeech:!!(speech&&speech.acceptedSpeech===true),generationCurrent:!!(speech&&speech.generation===_micSessionGeneration),
+      clientPresent:!!client,clientEnabled:clientEnabled,handled:!!(result&&result.handled===true),ok:!!(result&&result.ok===true)});
+  }
   window.__synapsesDesktopVoiceHookVersion = 1;
   async function ask(text, speech) {
-    if(speech&&speech.acceptedSpeech===true&&!_micSessionCurrent(speech.generation))return;
+    _traceDesktopSpeechRoute('entered',speech);
+    if(speech&&speech.acceptedSpeech===true&&!_micSessionCurrent(speech.generation)){_traceDesktopSpeechRoute('stale',speech);return;}
+    var desktopSpeechMetadata=!!(speech&&speech.acceptedSpeech===true&&(speech.provider==='whisper'||speech.provider==='flux')&&speech.generation===_micSessionGeneration);
+    if(!desktopSpeechMetadata)_traceDesktopSpeechRoute('rejected-metadata',speech);
     // A real turn is now taking over — stop blocking record() on the barge
     // pipeline's account, speak(reply)'s own natural completion re-arms the
     // mic from here on (same as any normal, non-interrupted turn).
@@ -70354,9 +70368,11 @@ function speakVoiceReply(text) {
     var desktopVoice = window.synapsesDesktopVoiceClient;
     if (_on && speech && speech.acceptedSpeech === true && (speech.provider === 'whisper' || speech.provider === 'flux') && speech.generation === _micSessionGeneration && desktopVoice && typeof desktopVoice.enabled === 'function' && desktopVoice.enabled() && typeof desktopVoice.consume === 'function') {
       var desktopGeneration = speech.generation, desktopResult;
+      _traceDesktopSpeechRoute('await-native',speech);
       try { desktopResult = await desktopVoice.consume(text); }
       catch(error) { desktopResult = { handled: true, message: 'PC voice control could not confirm that command.' }; }
-      if (!_on || desktopGeneration !== _micSessionGeneration || _myTurn !== _voiceTurnId) return;
+      if (!_on || desktopGeneration !== _micSessionGeneration || _myTurn !== _voiceTurnId) {_traceDesktopSpeechRoute('stale',speech,desktopResult);return;}
+      _traceDesktopSpeechRoute(desktopResult&&desktopResult.handled?'handled':'unhandled',speech,desktopResult);
       if (desktopResult && desktopResult.handled) {
         var desktopReply = String(desktopResult.message || (desktopResult.ok ? 'PC voice command finished.' : 'PC voice control could not complete that command.')).slice(0,500);
         try { speak(desktopReply); } catch(error) { toast(desktopReply); }
@@ -70364,7 +70380,7 @@ function speakVoiceReply(text) {
         setTimeout(function() { if (_on && desktopGeneration === _micSessionGeneration && _myTurn === _voiceTurnId) record(); }, 800);
         return;
       }
-    }
+    }else if(desktopSpeechMetadata)_traceDesktopSpeechRoute('unhandled',speech);
     // DESKTOP_VOICE_COMMAND_HOOK_END
     // ── Voice App Commands ────────────────────────────────────────────────────
     var _vcHandled = false;
