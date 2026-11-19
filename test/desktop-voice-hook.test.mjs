@@ -9,6 +9,7 @@ const failure = extract('  function _desktopVoiceSpeechError(reasonCode,message)
 const routeTrace = extract('  var _pcSpeechRouteCount = 0;', '  window.__synapsesDesktopVoiceHookVersion');
 const fallback = extract('  function _desktopVoiceFluxFallback(generation,reasonCode){', '  function _desktopVoiceSpeechError(reasonCode,message){');
 const recording = extract('  function record() {', '  // ── Barge-in:');
+const speaking = extract('  function speak(text, forTurn)', '  function _desktopVoiceFluxFallback(generation,reasonCode){');
 const ask = extract('  async function ask(text, speech)', '    // DESKTOP_VOICE_COMMAND_HOOK_END') + '\n normal++;\n}';
 function fixture(client,{native=false}={}) {
   const spoken=[],timers=[];
@@ -19,7 +20,7 @@ function fixture(client,{native=false}={}) {
 }
 test('only tagged current accepted Whisper/Flux finals reach native PC consumption',async()=>{
   let calls=0;const client={enabled:()=>true,consume:async()=>{calls++;return{handled:true,ok:true,message:'Opening example.com.'};}};
-  for(const provider of ['whisper','flux']){const f=fixture(client);await f.context.ask('Ava, open example.com',{acceptedSpeech:true,provider,generation:4});assert.equal(f.context.normal,0);assert.deepEqual(f.spoken,['Opening example.com.']);f.timers[0]();assert.equal(f.context.records,1);}
+  for(const provider of ['whisper','flux']){const f=fixture(client);await f.context.ask('Ava, open example.com',{acceptedSpeech:true,provider,generation:4});assert.equal(f.context.normal,0);assert.deepEqual(f.spoken,['Opening example.com.']);assert.equal(f.timers.length,0);assert.equal(f.context.records,0);}
   assert.equal(calls,2);
   for(const speech of [undefined,{acceptedSpeech:false,provider:'whisper',generation:4},{acceptedSpeech:true,provider:'tool',generation:4}]){const f=fixture(client);await f.context.ask('Ava, open example.com',speech);assert.equal(f.context.normal,1);}
   assert.equal(calls,2);
@@ -35,6 +36,16 @@ test('stale ASR generations and results arriving after Stop never execute or spe
 });
 test('native rejected/unsupported commands and IPC failures cannot fall through to a model success claim',async()=>{
   for(const consume of [async()=>({handled:true,ok:false,message:'Only public HTTPS websites are supported.'}),async()=>{throw Error('IPC unavailable');}]){const f=fixture({enabled:()=>true,consume});await f.context.ask('Ava, open file:///secret',{acceptedSpeech:true,provider:'whisper',generation:4});assert.equal(f.context.normal,0);assert.equal(f.spoken.length,1);assert.doesNotMatch(f.spoken[0],/^Opening/);}
+});
+test('a PC result uses real TTS ownership without opening a listener over its own spoken reply',async()=>{
+  const f=fixture({enabled:()=>true,consume:async()=>({handled:true,ok:true,message:'Opening example.com.'})});
+  f.context.window._elevenSelected=true;f.context._vmGenId=1;f.context._speakIsStale=()=>false;f.context._avatarLive=()=>false;f.context.btnState=()=>{};f.context._bargeForceToast=false;
+  const played=[];let ended,requests=0;f.context._registerTurnAbort=()=>{};f.context._elevenFetchFile=async()=>{requests++;return{};};f.context.URL={createObjectURL:()=> 'blob:test',revokeObjectURL(){}};f.context.Audio=class{};f.context.toastHide=()=>{};f.context._playAudio=(audio,complete,gen,turn)=>{ended=complete;played.push({gen,turn});};
+  vm.runInContext(speaking,f.context);
+  await f.context.ask('open example.com',{acceptedSpeech:true,provider:'whisper',generation:4});
+  await settle();assert.equal(requests,1);assert.equal(played.length,1);assert.equal(played[0].turn,1);assert.equal(f.context._ttsBusy,true);assert.equal(f.context._busy,true);
+  f.timers.splice(0).forEach(fn=>fn());assert.equal(f.context.records,0);
+  ended();assert.equal(f.context._ttsBusy,false);assert.equal(f.timers.length,1);f.timers.shift()();assert.equal(f.context.records,1);
 });
 function assertPrivateRoute(route){
   assert.deepEqual(Object.keys(route).sort(),['version','at','count','phase','provider','on','acceptedSpeech','generationCurrent','clientPresent','clientEnabled','handled','ok'].sort());
@@ -74,7 +85,7 @@ function fluxFixture({failCapture=false,failSocket=false,failRecording=false,pc=
   vm.runInContext(fluxSource,context);
   // The real callback object is evaluated in a separate private scope. None of
   // the STS private identifiers are placed in the global Flux script's scope.
-  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false,_busy=false,_busySince=0,_ttsBusy=false,_bargingIn=false,_bargeTurnActive=false,_stream=window._stream,_recorder=null;'+current+failure+fallback+recording+'function _micTrackDead(){return false;}function _ensureBargeAnalyser(){}function toast(){}function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
+  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false,_busy=false,_busySince=0,_ttsBusy=false,_bargingIn=false,_bargeTurnActive=false,_stream=window._stream,_recorder=null;'+current+failure+fallback+recording+'function _micTrackDead(){return false;}function _ensureBargeAnalyser(){}function toast(){}function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',record:record,setSpeaking:function(value){_ttsBusy=value;},stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
   return{context,events,errors,sockets,timers};
 }
 test('actual global Flux code uses private callbacks without missing-private-global errors',()=>{
@@ -89,6 +100,12 @@ test('actual global Flux code uses private callbacks without missing-private-glo
 test('Flux setup failure keeps its existing legacy fallback rather than revoking working voice',()=>{
   const f=fluxFixture({failCapture:true});assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),false);assert.equal(f.context._flux.ws,null);assert.equal(f.errors.length,1);
   const socket=fluxFixture({failSocket:true,pc:true});assert.equal(socket.context.window._fluxSessionStart(socket.context.privateSpeech.speech),false);assert.equal(socket.context._flux.ws,null);assert.equal(socket.events.some(e=>e.error),false);assert.equal(socket.timers.size,0);
+});
+test('PC legacy recording waits for its current TTS and never duplicates a healthy Flux microphone owner',()=>{
+  const f=fluxFixture({pc:true});f.context.window._fluxSessionStart(f.context.privateSpeech.speech);f.context.privateSpeech.record();assert.equal(f.events.filter(e=>e.recording).length,0);
+  f.context.window._fluxSessionStop();f.context.privateSpeech.setSpeaking(true);f.context.privateSpeech.record();assert.equal(f.events.filter(e=>e.recording).length,0);
+  f.context.privateSpeech.setSpeaking(false);f.context.privateSpeech.record();assert.equal(f.events.filter(e=>e.recording).length,1);
+  const ordinary=fluxFixture();ordinary.context.window._fluxSessionStart(ordinary.context.privateSpeech.speech);ordinary.context.privateSpeech.record();assert.equal(ordinary.events.filter(e=>e.recording).length,1);
 });
 test('Flux errors, rejected/closed sockets and stalled connection start real legacy recording without changing normal reconnect',()=>{
   for(const kind of ['error','close','timeout']){
