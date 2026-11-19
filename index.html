@@ -67514,17 +67514,9 @@ window._setSttProvider = _setSttProvider;
 // time voice mode is on; Flux replies with turn-boundary + transcript
 // events instead of us guessing silence length ourselves.
 //
-// NOTE ON THE ENDPOINT: Deepgram's SDKs expose this as "listen v2"
-// (client.listen.v2.connect(model:"flux-general-en", ...)) but the raw
-// wss:// path they resolve to isn't published outside the SDK source, so
-// this uses the same /v1/listen host Nova already connects to on this page
-// with model=flux-general-en appended — if Flux actually lives at a
-// distinct /v2/listen path, this will fail the connection and log it
-// clearly below (400/404 on open, or a clean refusal), and the fix is a
-// one-line swap of FLUX_PATH beneath this comment. It will NOT silently
-// misbehave — on any connect failure it logs and leaves you able to flip
-// _sttProvider back to 'legacy' and keep talking.
-var FLUX_PATH = '/v1/listen';
+// Flux requires /v2/listen with flux-general-en. The Nova /v1/listen
+// endpoint rejects this model. See Deepgram's Flux quickstart.
+var FLUX_PATH = '/v2/listen';
 var _flux = {
   ws: null,
   ctx: null,
@@ -67606,6 +67598,10 @@ function _fluxConnect(initialSetup) {
   var speech = _flux.speech;
   if(!speech || !speech.current()) return false;
   var key = window._dgKey || '';
+  if (!key) {
+    if (!initialSetup && typeof speech.error === 'function') speech.error('asr_error');
+    return false;
+  }
   var url = 'wss://api.deepgram.com' + FLUX_PATH +
     '?model=flux-general-en&encoding=linear16&sample_rate=16000&eager_eot_threshold=0.5';
   var sock;
@@ -67613,13 +67609,13 @@ function _fluxConnect(initialSetup) {
     sock = new WebSocket(url, ['token', key]);
   } catch (eC) {
     console.error('[Flux] failed to open socket', eC);
-    if (!initialSetup && typeof speech.error === 'function') speech.error();
+    if (!initialSetup && typeof speech.error === 'function') speech.error('asr_error');
     return false;
   }
   if (_flux.connectTimer) clearTimeout(_flux.connectTimer);
   _flux.connectTimer = setTimeout(function () {
     _flux.connectTimer = null;
-    if (_flux.ws === sock && speech.current() && !_flux.connected && typeof speech.error === 'function') speech.error();
+    if (_flux.ws === sock && speech.current() && !_flux.connected && typeof speech.error === 'function') speech.error('asr_timeout');
   }, 10000);
   sock.binaryType = 'arraybuffer';
   sock.onopen = function () {
@@ -67637,7 +67633,7 @@ function _fluxConnect(initialSetup) {
   sock.onerror = function (eE) {
     if (_flux.ws !== sock || !speech.current()) return;
     console.error('[Flux] socket error — check FLUX_PATH if this persists (see comment above _fluxConnect)', eE);
-    if (typeof speech.error === 'function') speech.error();
+    if (typeof speech.error === 'function') speech.error('asr_error');
   };
   sock.onclose = function (ev) {
     if (_flux.ws !== sock || !speech.current()) return;
@@ -67645,7 +67641,8 @@ function _fluxConnect(initialSetup) {
     _flux.connected = false;
     // Native PC listening must not outlive a failed ASR connection. This
     // callback is a no-op outside explicit PC mode; normal reconnect stays.
-    if (typeof speech.error === 'function') speech.error();
+    if (typeof speech.error === 'function') speech.error('asr_closed');
+    if (_flux.speech !== speech || !speech.current()) return;
     // Auto-reconnect while voice mode is still on and Flux is still the
     // chosen provider — a dropped connection shouldn't end the session.
     if (_flux.reconnectTimer) clearTimeout(_flux.reconnectTimer);
@@ -68595,25 +68592,27 @@ function speakVoiceReply(text) {
   function _micCaptureFailed(error, generation) {
     if (!_micSessionCurrent(generation)) return;
     console.error('Mic capture error:', error && error.name, error && error.message);
-    var message = 'Could not start the microphone. Try again.';
+    var message = 'Could not start the microphone. Try again.', reasonCode = 'capture_error';
     if (error) {
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') message = 'Mic blocked — allow microphone access for this site in your browser settings';
-      else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') message = 'No microphone found on this device';
-      else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') message = 'Could not start microphone capture. Check device microphone access and try again.';
-      else if (error.name === 'SecurityError') message = 'Mic blocked — this page must be loaded over HTTPS';
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') { message = 'Mic blocked — allow microphone access for this site in your browser settings'; reasonCode = 'capture_denied'; }
+      else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') { message = 'No microphone found on this device'; reasonCode = 'capture_missing'; }
+      else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') { message = 'Could not start microphone capture. Check device microphone access and try again.'; reasonCode = 'capture_unreadable'; }
+      else if (error.name === 'SecurityError') { message = 'Mic blocked — this page must be loaded over HTTPS'; reasonCode = 'capture_security'; }
     }
+    var desktopStopped = typeof _desktopVoiceSpeechError === 'function' && _desktopVoiceSpeechError(reasonCode, message);
     stopAll();
     toast(message);
-    try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
+    if (!desktopStopped) try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
   }
   function _runMicReady(generation, ready) {
     if (!_micSessionCurrent(generation)) return;
     try { ready(); }
     catch(error) {
       console.error('Voice initialization error:', error && error.name, error && error.message);
+      var desktopStopped = typeof _desktopVoiceSpeechError === 'function' && _desktopVoiceSpeechError('voice_init_error', 'Microphone opened, but voice could not start. Try again.');
       stopAll();
       toast('Microphone opened, but voice could not start. Try again.');
-      try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
+      if (!desktopStopped) try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
     }
   }
   // AVA_MIC_LIFECYCLE_END
@@ -70304,9 +70303,33 @@ function speakVoiceReply(text) {
     });
   }
 
-  function _desktopVoiceSpeechError(){
+  function _desktopVoiceFluxFallback(generation,reasonCode){
     var client=window.synapsesDesktopVoiceClient;
-    if(client&&typeof client.active==='function'&&client.active()&&typeof client.stop==='function')Promise.resolve(client.stop('Speech recognition failed. Start PC voice control again to retry.')).catch(function(){});
+    if(!_micSessionCurrent(generation)||!client||typeof client.active!=='function'||!client.active()||typeof client.isCurrentAccount!=='function'||!client.isCurrentAccount())return false;
+    if(typeof window._fluxSessionStop==='function')window._fluxSessionStop();
+    var deadline=Date.now()+30000;
+    function resumeLegacy(){
+      if(!_micSessionCurrent(generation)||!client.isCurrentAccount())return;
+      if(_recorder&&_recorder.state==='recording'){if(typeof client.noteFallback==='function')client.noteFallback(reasonCode);return;}
+      if(_busy||_ttsBusy||_bargingIn||_bargeTurnActive){
+        if(Date.now()<deadline){setTimeout(resumeLegacy,250);return;}
+        _desktopVoiceSpeechError('voice_init_error','Speech recognition could not restart. Start PC voice control again to retry.');return;
+      }
+      try{
+        _ensureBargeAnalyser();record();
+        if(!_recorder||_recorder.state!=='recording')throw new Error('Legacy microphone recording did not start');
+        if(typeof client.noteFallback==='function')client.noteFallback(reasonCode);
+      }catch(error){_desktopVoiceSpeechError('voice_init_error','Microphone opened, but speech recognition could not start. Try again.');}
+    }
+    resumeLegacy();return true;
+  }
+  function _desktopVoiceSpeechError(reasonCode,message){
+    var client=window.synapsesDesktopVoiceClient;
+    if(client&&typeof client.active==='function'&&client.active()&&typeof client.stop==='function'){
+      Promise.resolve(client.stop(message||'Speech recognition failed. Start PC voice control again to retry.',reasonCode||'asr_error')).catch(function(){});
+      return true;
+    }
+    return false;
   }
   window.__synapsesDesktopVoiceHookVersion = 1;
   async function ask(text, speech) {
@@ -71592,9 +71615,10 @@ function speakVoiceReply(text) {
       method: 'POST',
       body: fd,
       signal: _sttCtrl ? _sttCtrl.signal : undefined
-    }).then(function(r) { return r.json(); }).then(function(d) {
+    }).then(function(r) { if(r.ok===false)throw new Error('Speech recognition request failed');return r.json(); }).then(function(d) {
       clearTimeout(_sttTimer);
       if(!_micSessionCurrent(sttGeneration))return;
+      if(d&&d.error)throw new Error('Speech recognition provider rejected the request');
       console.log('[Voice] Whisper: ' + (Date.now()-_tw0) + 'ms');
       var _rawWhisper = d.text ? d.text.trim() : '';
       var text = _rawWhisper;
@@ -72829,12 +72853,14 @@ function speakVoiceReply(text) {
             current:function(){return _micSessionCurrent(micGeneration);},
             accept:function(text,interrupted){if(!_micSessionCurrent(micGeneration))return;if(interrupted){_bargeNeedsDirectAnswer=true;_bargeForceToast=true;}ask(text,{acceptedSpeech:true,provider:'flux',generation:micGeneration});},
             listening:function(){if(_micSessionCurrent(micGeneration)){btnState('listen');if(window.avaTvSetState)window.avaTvSetState('listen');}},
-            error:function(){if(_micSessionCurrent(micGeneration))_desktopVoiceSpeechError();},
+            error:function(reasonCode){if(_micSessionCurrent(micGeneration)&&!_desktopVoiceFluxFallback(micGeneration,reasonCode))_desktopVoiceSpeechError(reasonCode);},
             barge:function(){if(_micSessionCurrent(micGeneration)&&typeof _commitInterruptedReply==='function')_commitInterruptedReply();}
           })) {
             // Fell back — behave exactly like legacy mode for this session.
-            try { _ensureBargeAnalyser(); } catch (eAn) {}
-            record();
+            if(!_desktopVoiceFluxFallback(micGeneration,'asr_error')){
+              try { _ensureBargeAnalyser(); } catch (eAn) {}
+              record();
+            }
           }
           return;
         }
@@ -72850,6 +72876,7 @@ function speakVoiceReply(text) {
         // navigator.mediaDevices on insecure http:// pages, which is what
         // makes this look like an instant "denied" with no real prompt.
         toast(location.protocol === 'https:' ? 'Mic not supported in this browser' : 'Mic needs HTTPS — open this page with https:// to use voice');
+        _desktopVoiceSpeechError('capture_unsupported', 'This browser cannot start microphone capture.');
         _on = false;
         _setTopNavVoiceActive(false);
       } else if (window.__synShowcaseActive || window._synShowcaseMicSuppressed || window._synShowcaseMicSimulation) {

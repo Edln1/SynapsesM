@@ -5,7 +5,9 @@ import vm from 'node:vm';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 function extract(start, end) { const a=html.indexOf(start),b=html.indexOf(end,a);assert.ok(a>=0&&b>a,start);return html.slice(a,b); }
 const current = extract('  function _micSessionCurrent(generation)', '  function _stopMicTracks');
-const failure = extract('  function _desktopVoiceSpeechError(){', '  window.__synapsesDesktopVoiceHookVersion');
+const failure = extract('  function _desktopVoiceSpeechError(reasonCode,message){', '  window.__synapsesDesktopVoiceHookVersion');
+const fallback = extract('  function _desktopVoiceFluxFallback(generation,reasonCode){', '  function _desktopVoiceSpeechError(reasonCode,message){');
+const recording = extract('  function record() {', '  // ── Barge-in:');
 const ask = extract('  async function ask(text, speech)', '    // DESKTOP_VOICE_COMMAND_HOOK_END') + '\n normal++;\n}';
 function fixture(client) {
   const spoken=[],timers=[];
@@ -33,24 +35,27 @@ test('native rejected/unsupported commands and IPC failures cannot fall through 
   for(const consume of [async()=>({handled:true,ok:false,message:'Only public HTTPS websites are supported.'}),async()=>{throw Error('IPC unavailable');}]){const f=fixture({enabled:()=>true,consume});await f.context.ask('Ava, open file:///secret',{acceptedSpeech:true,provider:'whisper',generation:4});assert.equal(f.context.normal,0);assert.equal(f.spoken.length,1);assert.doesNotMatch(f.spoken[0],/^Opening/);}
 });
 
-const fluxSource=extract('function _fluxHandleEvent(msg, speech)', 'window._fluxSessionStop = _fluxSessionStop;');
+const fluxSource=extract('function _fluxHandleEvent(msg, speech)', 'function _wsClose()');
+const fluxEndpoint=html.match(/var FLUX_PATH = '([^']+)';/)?.[1];assert.ok(fluxEndpoint);
 const handoff=html.match(/window\._fluxSessionStart\((\{[\s\S]*?\n\s*\})\)\)/)?.[1];assert.ok(handoff);
-function fluxFixture({failCapture=false,failSocket=false,pc=false}={}) {
+function fluxFixture({failCapture=false,failSocket=false,failRecording=false,pc=false}={}) {
   const events=[],errors=[],sockets=[],timers=new Map();let nextTimer=0;
   const node=()=>({connect(){},disconnect(){}});
   class Context{constructor(){this.state='running';this.sampleRate=48000;this.destination={};}createMediaStreamSource(){if(failCapture)throw Error('capture failed');return node();}createScriptProcessor(){return node();}createGain(){return{...node(),gain:{value:1}};}close(){this.state='closed';}resume(){}}
-  class Socket{static OPEN=1;static CONNECTING=0;constructor(){if(failSocket)throw Error('socket failed');this.readyState=0;sockets.push(this);}close(){this.readyState=3;}send(){}}
-  const context=vm.createContext({window:{_stream:{},AudioContext:Context},_flux:{},_sttProvider:'flux',FLUX_PATH:'/test',WebSocket:Socket,_vmSpeaking:true,
+  class Socket{static OPEN=1;static CONNECTING=0;constructor(url){if(failSocket)throw Error('socket failed');this.url=url;this.readyState=0;sockets.push(this);}close(){this.readyState=3;}send(){}}
+  class Recorder{static isTypeSupported(){return true;}constructor(){if(failRecording)throw Error('recording failed');this.state='inactive';}start(){this.state='recording';events.push({recording:true});}}
+  const context=vm.createContext({window:{_stream:{},_dgKey:'test-api-key',AudioContext:Context},_flux:{},_sttProvider:'flux',FLUX_PATH:fluxEndpoint,WebSocket:Socket,MediaRecorder:Recorder,_vmSpeaking:true,
     console:{log(){},warn(){},error:(...args)=>errors.push(args)},setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),events});
-  context.window.synapsesDesktopVoiceClient={active:()=>pc,stop:()=>{events.push({error:true});context.privateSpeech.stop();}};
+  context.window.synapsesDesktopVoiceClient={active:()=>pc,isCurrentAccount:()=>pc,stop:(message,reasonCode)=>{events.push({error:true,reasonCode});context.privateSpeech.stop();},noteFallback:reasonCode=>events.push({fallback:reasonCode})};
   vm.runInContext(fluxSource,context);
   // The real callback object is evaluated in a separate private scope. None of
   // the STS private identifiers are placed in the global Flux script's scope.
-  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false;'+current+failure+'function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
+  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false,_busy=false,_busySince=0,_ttsBusy=false,_bargingIn=false,_bargeTurnActive=false,_stream=window._stream,_recorder=null;'+current+failure+fallback+recording+'function _micTrackDead(){return false;}function _ensureBargeAnalyser(){}function toast(){}function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
   return{context,events,errors,sockets,timers};
 }
 test('actual global Flux code uses private callbacks without missing-private-global errors',()=>{
   const f=fluxFixture();assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);assert.equal(f.errors.length,0);
+  const url=new URL(f.sockets[0].url);assert.equal(url.origin,'wss://api.deepgram.com');assert.equal(url.pathname,'/v2/listen');assert.equal(url.searchParams.get('model'),'flux-general-en');
   assert.deepEqual(f.events.map(e=>e.state).filter(Boolean),['listen']);
   f.sockets[0].onmessage({data:JSON.stringify({event:'StartOfTurn'})});f.sockets[0].onmessage({data:JSON.stringify({event:'EndOfTurn',transcript:'Ava, open YouTube'})});
   const accepted=f.events.find(e=>e.text);assert.equal(accepted.speech.provider,'flux');assert.equal(accepted.speech.generation,4);assert.equal(accepted.speech.acceptedSpeech,true);
@@ -61,18 +66,20 @@ test('Flux setup failure keeps its existing legacy fallback rather than revoking
   const f=fluxFixture({failCapture:true});assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),false);assert.equal(f.context._flux.ws,null);assert.equal(f.errors.length,1);
   const socket=fluxFixture({failSocket:true,pc:true});assert.equal(socket.context.window._fluxSessionStart(socket.context.privateSpeech.speech),false);assert.equal(socket.context._flux.ws,null);assert.equal(socket.events.some(e=>e.error),false);assert.equal(socket.timers.size,0);
 });
-test('Flux errors, rejected/closed sockets and stalled connection revoke PC mode without changing normal reconnect',()=>{
+test('Flux errors, rejected/closed sockets and stalled connection start real legacy recording without changing normal reconnect',()=>{
   for(const kind of ['error','close','timeout']){
     const f=fluxFixture({pc:true});assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);
     if(kind==='error')f.sockets[0].onerror(Error('ASR unavailable'));
     else if(kind==='close')f.sockets[0].onclose({code:1008});
     else [...f.timers.values()].find(t=>t.ms===10000).fn();
-    assert.equal(f.events.filter(e=>e.error).length,1,kind);
+    assert.equal(f.events.filter(e=>e.error).length,0,kind);assert.equal(f.events.filter(e=>e.recording).length,1,kind);assert.equal(f.context._flux.ws,null,kind);
+    assert.ok(f.events.some(e=>e.fallback===({error:'asr_error',close:'asr_closed',timeout:'asr_timeout'}[kind])));
     const count=f.events.length;f.sockets[0].onerror(Error('stale error'));assert.equal(f.events.length,count);
   }
   const ordinary=fluxFixture();ordinary.context.window._fluxSessionStart(ordinary.context.privateSpeech.speech);ordinary.sockets[0].onerror(Error('temporary'));ordinary.sockets[0].onclose({code:1006});
   assert.equal(ordinary.events.some(e=>e.error),false);assert.ok([...ordinary.timers.values()].some(t=>t.ms===1200));
   const connected=fluxFixture({pc:true});connected.context.window._fluxSessionStart(connected.context.privateSpeech.speech);connected.sockets[0].onopen();assert.equal([...connected.timers.values()].some(t=>t.ms===10000),false);
+  const terminal=fluxFixture({pc:true,failRecording:true});terminal.context.window._fluxSessionStart(terminal.context.privateSpeech.speech);terminal.sockets[0].onerror(Error('ASR unavailable'));assert.equal(terminal.events.filter(e=>e.error).length,1);assert.equal(terminal.events.find(e=>e.error).reasonCode,'voice_init_error');
 });
 
 const transcribe=extract('  function transcribe(blob)', '  function record()');
@@ -83,7 +90,7 @@ function whisperFixture() {
     FormData:Data,AbortController,GROQ_PROXY:'https://voice.invalid',_registerTurnAbort(){},setTimeout:()=>1,clearTimeout(){},fetch:()=>new Promise((yes,no)=>{resolve=yes;reject=no;}),
     console:{log(){},warn(){}},ask:(text,speech)=>accepted.push({text,speech}),record(){},toast(){},toastHide(){},_bargeHoldToast:false});
   vm.runInContext(current+'\n'+failure+'\n'+transcribe,context);context.transcribe({type:'audio/webm'});
-  return{context,accepted,resolve:text=>resolve({json:async()=>({text})}),reject};
+  return{context,accepted,resolve:text=>resolve({json:async()=>({text})}),resolveResponse:resolve,reject};
 }
 async function settle(){for(let i=0;i<15;i++)await Promise.resolve();}
 test('actual Whisper delivery tags the generation captured before its network request',async()=>{
@@ -93,4 +100,7 @@ test('actual Whisper delivery tags the generation captured before its network re
 test('terminal Whisper errors revoke an active PC controller while ordinary browser errors keep existing recovery',async()=>{
   const f=whisperFixture();let stopped=0;f.context.window.synapsesDesktopVoiceClient={active:()=>true,stop:()=>{stopped++;}};f.reject(Error('transcription unavailable'));await settle();assert.equal(stopped,1);
   const ordinary=whisperFixture();ordinary.reject(Error('transcription unavailable'));await settle();assert.equal(ordinary.accepted.length,0);
+  for(const response of [{ok:false,json:async()=>({})},{ok:true,json:async()=>({error:'provider rejected'})}]){
+    const http=whisperFixture();let stopped=0;http.context.window.synapsesDesktopVoiceClient={active:()=>true,stop:(message,code)=>{stopped++;assert.equal(code,'asr_error');}};http.resolveResponse(response);await settle();assert.equal(stopped,1);assert.equal(http.accepted.length,0);
+  }
 });
