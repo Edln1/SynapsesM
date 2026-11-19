@@ -1,5 +1,11 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.8 website and search routing
+
+The installed 0.1.7 diagnostic showed a successful planner HTTP response followed by `invalid_target` on step 2. The preceding action was `list_apps`. Local fixtures reproduced that trace with both a website domain without a scheme and a display name used as an app ID. The original rejected argument was not recorded.
+
+All **131 desktop tests pass**. Regressions cover direct public website navigation and search without a model or app catalog, browser-only continuation for a site-scoped search, failure when navigation cannot be verified, and correction after a successful HTTP response produces invalid arguments. The direct route uses the same verified browser executor as planned tasks. Live speech and external website interaction still require validation in the installed app.
+
 ## 0.1.7 planner provider repair
 
 The full desktop suite passes **127 tests with zero failures or skips**; independent review reran **29 planner/diagnostic tests**. A public, action-free request reproduced **HTTP 400 `output_parse_failed`** from `openai/gpt-oss-20b`. The existing service returned a valid strict-schema action from `openai/gpt-oss-120b`. These calls used public test wording without account identifiers, UI control or native actions.

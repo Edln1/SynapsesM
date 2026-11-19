@@ -33,6 +33,84 @@ test('current Chrome page task observes the foreground window and uses only supp
   }});
   assert.equal((await runner.run('Click Game of Wings on this page.')).ok,true);assert.deepEqual(calls,[['list_windows',{}],['read_window',{target:'window:chrome'}],['click_control',{target:'window:chrome',secondary:'control:wings'}],['read_window',{target:'window:chrome'}]]);
 });
+
+test('clear web navigation and Google searches run through the browser without the planner or app catalog', async () => {
+  const cases = [
+    ['Ava, could you open Door Dash for me?', 'https://www.doordash.com/'],
+    ['Search for Google.', 'https://www.google.com/search?q=Google'],
+    ['Open Google and search for McDonald’s.', 'https://www.google.com/search?q=McDonald%E2%80%99s'],
+    ['Search Google for McDonalds.', 'https://www.google.com/search?q=McDonalds'],
+    ['Search for music on YouTube.', 'https://www.youtube.com/results?search_query=music'],
+    ['Visit example.com/a.', 'https://example.com/a']
+  ];
+  const urls = [];
+  let plannerCalls = 0, catalogCalls = 0;
+  const runner = createPcTaskRunner({
+    assertActive: () => true,
+    complete: async () => { plannerCalls++; throw Error('Planner unavailable'); },
+    tools: {
+      open_url: async ({target}) => { urls.push(target); return success('Page loaded.'); },
+      list_apps: async () => { catalogCalls++; return {ok:true,apps:[]}; }
+    }
+  });
+  for (const [request] of cases) assert.equal((await runner.run(request)).ok, true, request);
+  assert.deepEqual(urls, cases.map(([, url]) => url));
+  assert.equal(plannerCalls, 0);
+  assert.equal(catalogCalls, 0);
+});
+
+test('a DoorDash search starts on its site and needs another verified action before reporting success', async () => {
+  const calls = [], requests = [];
+  const runner = createPcTaskRunner({
+    assertActive: () => true,
+    complete: planner([done('I searched on DoorDash.')], requests),
+    tools: {
+      open_url: async ({target}) => { calls.push(target); return success('DoorDash loaded.'); },
+      list_apps: async () => { throw new Error('App lookup is unavailable for a site search'); }
+    }
+  });
+  const result = await runner.run('Open DoorDash and search for McDonald’s.');
+  assert.equal(result.ok, false);
+  assert.deepEqual(calls, ['https://www.doordash.com/']);
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].messages[1].content, /DoorDash loaded/);
+  assert.ok(!requests[0].response_format.json_schema.schema.properties.action.enum.includes('list_apps'));
+});
+
+test('a direct navigation reports failure when the browser cannot verify the destination', async () => {
+  const runner = createPcTaskRunner({
+    assertActive: () => true,
+    complete: async () => { throw Error('Direct navigation must not use the planner'); },
+    tools: {open_url: async () => ({ok:true,verified:false})}
+  });
+  const result = await runner.run('Open DoorDash.');
+  assert.equal(result.ok, false);
+  assert.match(result.message, /verify that the website opened/);
+});
+
+test('the HTTP planner repairs invalid arguments after app discovery and accepts a bare public domain', async () => {
+  const replies = [step('list_apps',{value:'DoorDash'}),step('open_app',{target:'DoorDash App'}),step('open_url',{target:'www.doordash.com'}),done('DoorDash opened.')];
+  const bodies = [], events = [], urls = [];
+  const complete = createGroqComplete({fetch: async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return {ok:true,status:200,json:async () => ({choices:[{message:{content:JSON.stringify(replies.shift())}}]})};
+  }});
+  const runner = createPcTaskRunner({
+    assertActive: () => true,
+    complete,
+    onProgress: event => events.push(event),
+    tools: {
+      list_apps: async () => ({ok:true,apps:[]}),
+      open_app: async () => { throw new Error('An invalid app reference must not reach the executor'); },
+      open_url: async ({target}) => { urls.push(target); return success('Page loaded.'); }
+    }
+  });
+  assert.equal((await runner.run('Could you get DoorDash going for me?')).ok, true);
+  assert.deepEqual(urls, ['https://www.doordash.com/']);
+  assert.equal(bodies.length, 4);
+  assert.match(bodies[2].messages[0].content, /action arguments were invalid/);
+  assert.ok(events.some(event => event.providerCode === 'invalid_action_arguments' && event.httpStatus === 200));
+});
 test('all supported tool types receive fixed normalized arguments rather than model message or extra fields',async()=>{
   const cases=[
     [step('list_apps'),{}],[step('list_apps',{value:'Codex'}),{value:'Codex'}],[step('list_windows'),{}],[step('open_app',{target:'app:browser'}),{target:'app:browser'}],
