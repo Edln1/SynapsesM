@@ -1,5 +1,11 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.10 verified voice replies
+
+The user confirmed that 0.1.9 reached the restaurant and reported a later target-resolution error. The updated route recognizes additional wording variants and confirms a matched destination as soon as it is verified. If a broader request opens the restaurant before a later plan fails, the reply reports the successful opening and the unverified remainder.
+
+Page descriptions can now complete with content from a successful page or visible-window read. Read-only requests cannot invoke write tools. Tests exercise the focused Ava browser, the native-window fallback, empty discovery that cannot count as content, and a later planner failure that must preserve an earlier navigation result. All **142 desktop tests pass**.
+
 ## 0.1.9 DoorDash restaurant navigation
 
 The requested command searches within DoorDash, follows a matching storefront link observed in the search results, and verifies the destination. The verified public DoorDash McDonald’s brand listing is available when a local branch is absent. The restaurant flow uses the existing browser executor and does not rely on generated plans. A challenge page stops the flow and is left visible for the user.

@@ -5,7 +5,7 @@ const { publicWebUrl, publicAddress } = require('./desktop-voice-policy.cjs');
 
 const WORLD = 1041;
 const TOOLS = Object.freeze({
-  open_url: ['url'], read_page: [], click: ['ref'], type: ['ref', 'text'],
+  open_url: ['url'], read_page: ['foregroundOnly'], click: ['ref'], type: ['ref', 'text'],
   press: ['ref', 'key'], scroll: ['direction', 'amount'], back: [], media_play: ['ref']
 });
 const KEYS = new Set(['Enter', 'Escape', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Backspace']);
@@ -202,6 +202,8 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
     try {
       active(ticket);
       detached = false;
+      if (tool === 'read_page' && (!win || win.isDestroyed())) return {ok:false,error:'no_public_page',message:'No page is open in the Ava browser.'};
+      if (tool === 'read_page' && args.foregroundOnly === true && !win.isFocused()) return {ok:false,error:'no_public_page',message:'The Ava browser is not the foreground window.'};
       let target;
       if (tool === 'open_url') target = await publicTarget(args.url, ticket);
       ensureWindow(ticket);

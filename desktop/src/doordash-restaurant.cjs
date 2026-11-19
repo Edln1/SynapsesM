@@ -55,4 +55,9 @@ function verifyDoorDashRestaurant(value,expectedUrl){
   return !!(actual&&expected&&actual.kind===expected.kind&&(!actual.name||!expected.name||actual.name===expected.name)&&actual.id===expected.id);
 }
 
-module.exports={doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,doorDashBlocked};
+function isDoorDashRestaurant(value,query){
+  const page=snapshot(value),listing=restaurant(page.url);
+  return !!listing&&!doorDashBlocked(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
+}
+
+module.exports={doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,doorDashBlocked};

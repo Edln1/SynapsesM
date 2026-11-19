@@ -1,7 +1,7 @@
 {
   "name": "synapses-desktop",
   "productName": "Synapses",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "The full Synapses experience in a dedicated Windows desktop app.",
   "author": "Synapses",
   "private": true,

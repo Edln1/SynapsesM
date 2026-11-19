@@ -53,6 +53,7 @@ function fixture(t, options = {}) {
   class BrowserWindow extends EventEmitter {
     constructor(config) { super(); this.config = config; this.webContents = new Contents(); state.windows.push(this); }
     isDestroyed() { return this.closed === true; }
+    isFocused() { return state.focused === true; }
     destroy() { this.closed = true; this.webContents.emit('destroyed'); this.emit('closed'); }
   }
   const driver = createBrowserActions({ BrowserWindow, assertActive: options.assertActive || (() => { state.checks++; return state.active; }), lookupHost: options.lookupHost || (async () => [{ address: '8.8.8.8' }]), pause: options.pause || (async () => {}), makeToken: (() => { let i = 0; return () => 'observed-' + (++i); })(), dnsTimeoutMs: 25 });
@@ -70,6 +71,16 @@ test('the controlled browser is a dedicated visible sandbox with no privileged p
   assert.equal(f.state.permissionCheck(), false); assert.equal(f.state.devicePermission(), false);
   let permission; f.state.permission({}, 'media', value => { permission = value; }); assert.equal(permission, false);
   assert.ok(f.state.scripts.every(call => call.world === 1041));
+});
+
+test('foreground page inspection never creates a blank window or reads a background tab', async t => {
+  const f = fixture(t);
+  assert.equal((await f.driver.perform('read_page',{foregroundOnly:true})).error,'no_public_page');
+  assert.equal(f.state.windows.length,0);
+  await f.driver.perform('open_url',{url:'https://example.org/'});
+  assert.equal((await f.driver.perform('read_page',{foregroundOnly:true})).error,'no_public_page');
+  f.state.focused=true;
+  assert.equal((await f.driver.perform('read_page',{foregroundOnly:true})).page.title,'Example');
 });
 
 test('real isolated snapshot references drive input and reject selectors, scripts, stale or forged references', async t => {

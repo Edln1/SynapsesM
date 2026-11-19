@@ -39,7 +39,7 @@ function createPcTaskTools({windows,browser,assertActive,authorizeAction=async()
     press_key:native('press_key',(args,approval)=>windows.pressKey({windowId:args.target,key:args.value},approval)),
     scroll_window:native('scroll_window',(args,approval)=>windows.scrollWindow({windowId:args.target,direction:args.direction,amount:args.amount},approval)),
     open_url:web('open_url','open_url',args=>({url:args.target})),
-    read_page:web('read_page','read_page',()=>({})),
+    read_page:web('read_page','read_page',args=>args.foregroundOnly===true?{foregroundOnly:true}:{}),
     click:web('click','click',args=>({ref:args.target})),
     type:web('type','type',args=>({ref:args.target,text:args.value})),
     press:web('press','press',args=>({key:args.value,...(args.target?{ref:args.target}:{})})),

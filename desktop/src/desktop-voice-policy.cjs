@@ -35,16 +35,22 @@ function knownSite(value) {
   return Object.hasOwn(sites, name) ? sites[name] : null;
 }
 
+function isPageReadRequest(text) {
+  if (typeof text !== 'string') return false;
+  const command = normalizeVoiceCommand(text).replace(/[\s,]+(?:for me(?: please)?|please)[.!?]*$/i, '').replace(/[.!?]+$/, '').trim();
+  return /^(?:(?:what(?:['’]s| is) (?:on|in)|what do you see (?:on|in)|what can you see (?:on|in)|tell me what(?:['’]s| is) (?:on|in)|can you see what(?:['’]s| is) (?:on|in)) (?:this|the(?: current)?) (?:page|screen|window)|(?:read|describe|summarize) (?:this|the(?: current)?) (?:page|screen|window)|what do you see here)$/i.test(command);
+}
+
 function directWebPlan(text) {
   if (typeof text !== 'string' || text.length > 500 || /[\u0000-\u001f\u007f]/.test(text)) return null;
   const command = normalizeVoiceCommand(text).replace(/\s+(?:for me(?: please)?|please)[.!?]*$/i, '').replace(/[.!?]+$/, '').trim();
   const sequence = /(?:\bthen\b|\band\s+(?:also\s+)?(?:open|go to|search|find|look|click|play|show|order|add|select|pick|read|type|buy|log|sign)\b|[;,]\s*(?:open|search|find|click|play|order)\b)/i;
-  const restaurantCommand = command.replace(/[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:go there|open it|open the (?:restaurant|listing|store))$/i, '');
-  const scopedRestaurant = /^(?:search(?:\s+for)?|look up|find|open|go to)\s+(.+?)\s+(?:on|in|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?$/i.exec(restaurantCommand);
-  const doorDashFirst = /^(?:(?:open|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+(?:and(?:\s+then)?|then)\s+(?:search(?:\s+for)?|find|look up)|search\s+(?:on\s+)?(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+for)\s+(.+)$/i.exec(restaurantCommand);
+  const restaurantCommand = command.replace(/[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:go (?:there|to it|to (?:its|their) page)|take me there|(?:open|click(?: on)?) (?:it|the (?:restaurant|listing|store|(?:first )?result)))$/i, '');
+  const scopedRestaurant = /^(?:search(?:\s+(?:for|up))?|look (?:up|for)|find|open|go to|take me to|bring up|pull up)\s+(.+?)\s+(?:on|in|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?(?:\s+please)?$/i.exec(restaurantCommand);
+  const doorDashFirst = /^(?:(?:open|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:search(?:\s+(?:for|up))?|find|look (?:up|for))|search\s+(?:on\s+)?(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+for)\s+(.+)$/i.exec(restaurantCommand);
   const restaurant = (scopedRestaurant || doorDashFirst)?.[1].trim();
   if (restaurant && restaurant.length <= 100 && !sequence.test(restaurant)) {
-    const openListing = restaurantCommand !== command || /^(?:open|go to)\s+/i.test(scopedRestaurant?.[0] || '');
+    const openListing = restaurantCommand !== command || /^(?:open|go to|take me to|bring up|pull up)\s+/i.test(scopedRestaurant?.[0] || '');
     return {doorDashRestaurant:{query:restaurant,openListing}};
   }
   if (/^search\s+(?:on\s+)?google$/i.test(command)) return {url:sites.google,message:'Opened Google.'};
@@ -98,4 +104,4 @@ function captureAllowed({freshInput,visible,minimized,lease,startedAt,now,hidden
 function captureApprovalCurrent(before,current,allowed) {
   return !!allowed&&before.generation===current.generation&&before.sessionId===current.sessionId&&before.frame===current.frame;
 }
-module.exports={parseVoiceCommand,directWebPlan,explicitWebUrl,publicWebUrl,publicAddress,captureAllowed,captureApprovalCurrent};
+module.exports={parseVoiceCommand,directWebPlan,isPageReadRequest,explicitWebUrl,publicWebUrl,publicAddress,captureAllowed,captureApprovalCurrent};

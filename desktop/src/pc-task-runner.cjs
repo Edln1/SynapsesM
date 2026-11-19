@@ -1,7 +1,7 @@
 'use strict';
 
-const {directWebPlan,explicitWebUrl}=require('./desktop-voice-policy.cjs');
-const {doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,doorDashBlocked}=require('./doordash-restaurant.cjs');
+const {directWebPlan,isPageReadRequest,explicitWebUrl}=require('./desktop-voice-policy.cjs');
+const {doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,doorDashBlocked}=require('./doordash-restaurant.cjs');
 
 const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window','read_window','click_control','type_control','press_key','scroll_window','open_url','read_page','click','type','press','scroll','back','media_play','finish','chat','clarify']);
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
@@ -27,7 +27,7 @@ Use reasonable defaults for reversible requests. If the user asks to search for 
 To find a YouTube video, first open its results URL with the requested search_query. Never invent or recall a watch URL/video ID. Select a video using an actual observed result reference; media_play must verify playback before a success reply.
 When the user refers to this page, this window, here or it, use list_windows and its foreground flag, then read_window and actual control refs. Work in the user's existing Chrome/page instead of opening another browser. Never invent refs or assume the user's active window is the app itself.
 Only select actions included in available_tools. For an unfamiliar website, search by navigating to a public search-results URL rather than inventing its domain. Read observations after each action and adapt. Stop for ambiguity or required user confirmation.
-finish means the observations VERIFY EVERY requested outcome; a tool invocation alone is not proof. An unrelated successful step or a discovery/read operation does not establish that the task is complete. Check each part of the original request against verified action results and the latest observations. Report only the verified subset; if something remains incomplete, continue or clarify. Never claim playback, purchases or messages happened unless verified. Use clarify with one short question if necessary. Use chat immediately, without tools, for ordinary conversation/questions that do not request a PC action; its reply is handled by the existing Ava conversation.
+finish means the observations VERIFY EVERY requested outcome; a tool invocation alone is not proof. If the request asks what is on a page or screen, use a successful page or window read and state what you observed. If it asks to do something, a read or unrelated change does not prove it happened. Once the requested destination has visibly loaded, confirm it without interacting with extra controls. Report only what you observed. Never claim playback, purchases or messages happened unless verified. Use clarify with one short question if necessary. Use chat immediately, without tools, for ordinary conversation/questions that do not request a PC action; its reply is handled by the existing Ava conversation.
 Set unused common fields to null. message is a short user-facing result for finish/clarify, otherwise an empty string.`;
 
 class TaskError extends Error {constructor(code,message){super(message);this.code=code;}}
@@ -235,6 +235,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     const search=await perform(context,1,'open_url',{target:searchUrl});
     let page=search?.page;
     if(doorDashBlocked(page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
+    if(search?.ok===true&&search.verified===true&&isDoorDashRestaurant(page,query)){
+      progress('complete',1,'finish');
+      return {handled:true,ok:true,message:`Opened ${query} on DoorDash.`};
+    }
     let listing=selectDoorDashRestaurant(page,query);
     let step=1;
     if(!listing&&available.includes('read_page')&&maxSteps>=3){
@@ -271,14 +275,18 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     await guard(context);
     const direct=available.includes('open_url') ? directWebPlan(context.text) : null;
     if(direct?.doorDashRestaurant)return openDoorDashRestaurant(context,direct.doorDashRestaurant);
+    const allowed=context.readOnly ? available.filter(action=>['read_page','list_windows','read_window'].includes(action)) : available;
     for(let step=1;step<=maxSteps;step++){
       await guard(context);progress('planning',step);await guard(context);
       let plan;
       const startingNavigation=step===1 ? direct : null;
+      const initialRead=step===1&&context.readOnly&&allowed.includes('read_page');
       if(startingNavigation){
         plan={action:'open_url',args:{target:startingNavigation.url}};
+      }else if(initialRead){
+        plan={action:'read_page',args:{foregroundOnly:true}};
       }else{
-        const raw=await complete(request(context,available),{signal:context.controller.signal,onTransport:value=>progress('transport',step,undefined,undefined,value)});
+        const raw=await complete(request(context,allowed),{signal:context.controller.signal,onTransport:value=>progress('transport',step,undefined,undefined,value)});
         await guard(context);
         plan=parseStep(raw);
       }
@@ -288,9 +296,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       }
       if(plan.action==='clarify')return {handled:true,ok:false,message:plan.message};
       if(plan.action==='finish'){
-        if(!context.verified||context.failures.size)throw fail('unverified','I could not verify that the task was completed.');
+        if((context.readOnly ? !context.readEvidence : !context.verified)||context.failures.size)throw fail('unverified','I could not verify that the task was completed.');
         progress('complete',step,'finish');return {handled:true,ok:true,message:plan.message};
       }
+      if(!allowed.includes(plan.action))throw fail('unsupported','That action is not available for this PC task.');
       const result=await perform(context,step,plan.action,plan.args);
       if(result&&(result.confirmationRequired===true||result.requiresConfirmation===true||result.confirmationNeeded===true))return {handled:true,ok:false,message:shortMessage(result.message,'I need your confirmation before continuing.')};
       const verified=!!(result&&result.ok===true&&result.verified===true);
@@ -300,9 +309,15 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         return {handled:true,ok:true,message:startingNavigation.message};
       }
       if(READ_ACTIONS.includes(plan.action)){
-        if(!result||result.ok!==true)context.failures.add(plan.action);
-        else context.failures.delete(plan.action);
-      }else if(verified){context.verified++;context.failures.delete(plan.action);}else context.failures.add(plan.action);
+        if(result?.ok===true){
+          context.failures.delete(plan.action);
+          if((plan.action==='read_page'&&!!(result.page?.title||result.page?.text||result.page?.controls?.length))||
+              (plan.action==='read_window'&&result.controls?.some(control=>!!control.name?.trim())))context.readEvidence=true;
+        }else if(!initialRead)context.failures.add(plan.action);
+      }else if(verified){
+        context.verified++;context.failures.delete(plan.action);
+        if(['open_url','click'].includes(plan.action)&&isDoorDashRestaurant(result.page))context.openedDoorDashListing=true;
+      }else context.failures.add(plan.action);
       context.history.push({action:plan.action,observation:observation(result)});
       progress('observing',step,plan.action,verified?undefined:'unverified_step');
     }
@@ -312,7 +327,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     cancel();
     if(typeof text!=='string'||!text.trim())return {handled:false,ok:false,message:''};
     if(text.trim().length>3000)return {handled:true,ok:false,message:'Please ask for a shorter PC task.'};
-    const context={id:++sequence,text:text.trim(),userId,controller:new AbortController(),reason:null,history:[],verified:0,executed:0,failures:new Set()};active=context;
+    const context={id:++sequence,text:text.trim(),userId,controller:new AbortController(),reason:null,history:[],verified:0,executed:0,failures:new Set(),readOnly:isPageReadRequest(text),readEvidence:false,openedDoorDashListing:false};active=context;
     const external=()=>{context.reason='cancelled';context.controller.abort();};
     if(signal?.aborted)external();else signal?.addEventListener('abort',external,{once:true});
     let timeout,aborted;
@@ -325,6 +340,9 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     catch(error){
       const code=error instanceof TaskError?error.code:'planner_failed';
       progress(code==='cancelled'||code==='inactive'?'cancelled':'failed',0,undefined,code);
+      if(context.openedDoorDashListing&&['planner_format','invalid_plan','invalid_target','unverified','step_limit'].includes(code)){
+        return {handled:true,ok:false,message:'The DoorDash restaurant page opened. I couldn’t verify the rest of the request.'};
+      }
       return {handled:true,ok:false,message:error instanceof TaskError?error.message:'The task planner could not complete this request. Please try again.'};
     }finally{
       clearTimeout(timeout);signal?.removeEventListener('abort',external);context.controller.signal.removeEventListener('abort',aborted);if(active===context)active=null;
