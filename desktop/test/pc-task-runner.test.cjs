@@ -130,3 +130,47 @@ test('a provider format rejection gets one JSON-only retry without retrying rate
   let attempts=0;const limited=createGroqComplete({fetch:async()=>{attempts++;return{ok:false,status:429,json:async()=>({error:'limit_reached'})};}});
   assert.equal((await createPcTaskRunner({assertActive:()=>true,complete:limited}).run('Hello.')).ok,false);assert.equal(attempts,1);
 });
+test('actual output_parse_failed is retried once on 20B then falls back once to strict 120B',async()=>{
+  const requests=[],events=[],owner='owner-verified-1';
+  const complete=createGroqComplete({fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));const count=requests.length;return count<3?{ok:false,status:400,json:async()=>({error:{code:count===1?'output_parse_failed':'tool_use_failed',message:'private-provider-error',failed_generation:'private-generated-output'}})}:{ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify(step('chat'))}}]})};}});
+  const result=await createPcTaskRunner({assertActive:()=>true,complete,onProgress:event=>events.push(event)}).run('Hello private request.',{userId:owner});
+  assert.equal(result.handled,false);assert.deepEqual(requests.map(value=>value.model),['openai/gpt-oss-20b','openai/gpt-oss-20b','openai/gpt-oss-120b']);assert.ok(requests.every(value=>value.userId===owner));
+  assert.ok(requests.every(value=>value.response_format.type==='json_schema'&&value.response_format.json_schema.strict===true));assert.deepEqual(requests[2].response_format,requests[0].response_format);assert.match(requests[1].messages[0].content,/prior response was rejected/);assert.doesNotMatch(JSON.stringify(requests),/private-provider-error|private-generated-output/);
+  const responses=events.filter(value=>value.phase==='transport'&&value.httpStatus>0);assert.deepEqual(responses.map(value=>[value.httpStatus,value.providerCode,value.attempt,value.model]),[[400,'output_parse_failed',1,'openai/gpt-oss-20b'],[400,'tool_use_failed',2,'openai/gpt-oss-20b'],[200,'none',3,'openai/gpt-oss-120b']]);assert.ok(responses.every(value=>value.accountReferencePresent===true));assert.doesNotMatch(JSON.stringify(events),/owner-verified|private request|private-provider|private-generated/);
+});
+test('all failed format attempts terminate at three with a precise reason instead of looping',async()=>{
+  let calls=0;const events=[];const complete=createGroqComplete({fetch:async()=>{calls++;return{ok:false,status:400,json:async()=>({error:{code:'output_parse_failed'}})};}});
+  const result=await createPcTaskRunner({assertActive:()=>true,complete,onProgress:event=>events.push(event)}).run('Open a website.');assert.equal(result.ok,false);assert.equal(calls,3);assert.equal(events.at(-1).reasonCode,'planner_format');assert.match(result.message,/usable action/);
+});
+test('guest limits, rate limits, authentication, server outages and network errors fail once with distinct safe codes',async()=>{
+  const cases=[
+    [async()=>({ok:false,status:429,json:async()=>({error:'limit_reached'})}),'planner_guest_limit','limit_reached'],
+    [async()=>({ok:false,status:429,json:async()=>({error:{code:'rate_limit_exceeded'}})}),'planner_rate_limited','rate_limit_exceeded'],
+    [async()=>({ok:false,status:401,json:async()=>({error:{code:'invalid_api_key',message:'secret-api-key'}})}),'planner_auth','invalid_api_key'],
+    [async()=>({ok:false,status:403,json:async()=>({error:{message:'secret-permissions'}})}),'planner_auth','authentication_error'],
+    [async()=>({ok:false,status:503,json:async()=>{throw new SyntaxError('private HTML response');}}),'planner_server','server_error'],
+    [async()=>({ok:false,status:500,json:async()=>({error:{code:'internal_server_error'}})}),'planner_server','internal_server_error'],
+    [async()=>{throw new TypeError('secret-network-details');},'planner_network','network_error']
+  ];
+  for(const [respond,reason,provider]of cases){let calls=0;const events=[];const complete=createGroqComplete({fetch:async()=>{calls++;return respond();}});const result=await createPcTaskRunner({assertActive:()=>true,complete,onProgress:event=>events.push(event)}).run('Open DoorDash.');assert.equal(result.ok,false,reason);assert.equal(calls,1,reason);assert.equal(events.at(-1).reasonCode,reason);assert.equal(events.filter(value=>value.phase==='transport').at(-1).providerCode,provider);assert.doesNotMatch(JSON.stringify(events)+result.message,/secret-|private HTML/);}
+});
+test('an unavailable 20B model switches once to 120B and never changes identity or schema',async()=>{
+  const requests=[],events=[];const complete=createGroqComplete({fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));return{ok:false,status:404,json:async()=>({error:{code:'model_not_found'}})};}});
+  const result=await createPcTaskRunner({assertActive:()=>true,complete,onProgress:event=>events.push(event)}).run('Open DoorDash.',{userId:'verified-owner'});assert.equal(result.ok,false);assert.equal(requests.length,2);assert.deepEqual(requests.map(value=>value.model),['openai/gpt-oss-20b','openai/gpt-oss-120b']);assert.equal(requests[1].userId,'verified-owner');assert.deepEqual(requests[1].response_format,requests[0].response_format);assert.equal(events.at(-1).reasonCode,'planner_model_unavailable');
+});
+test('abort after response JSON or a transport callback prevents every late retry and fallback',async()=>{
+  for(const stage of ['before-fetch','after-json','response-callback']){
+    const controller=new AbortController();let calls=0;
+    const complete=createGroqComplete({fetch:async()=>{calls++;return{ok:false,status:400,json:async()=>{if(stage==='after-json')controller.abort();return{error:{code:'output_parse_failed'}};}};}});
+    const request={model:'openai/gpt-oss-20b',messages:[{role:'system',content:'JSON action only.'}],response_format:{type:'json_schema',json_schema:{strict:true,schema:STEP_SCHEMA}}};
+    await assert.rejects(complete(request,{signal:controller.signal,onTransport:event=>{if(stage==='before-fetch'&&event.httpStatus===0||stage==='response-callback'&&event.httpStatus===400)controller.abort();}}),error=>error.code==='cancelled');assert.equal(calls,stage==='before-fetch'?0:1,stage);
+  }
+});
+test('a 200 response with malformed action JSON uses the same finite format fallback',async()=>{
+  let calls=0;const events=[];const complete=createGroqComplete({fetch:async()=>{calls++;return{ok:true,status:200,json:async()=>({choices:[{message:{content:'not an action object'}}]})};}});
+  const result=await createPcTaskRunner({assertActive:()=>true,complete,onProgress:event=>events.push(event)}).run('Open DoorDash.');assert.equal(result.ok,false);assert.equal(calls,3);assert.equal(events.at(-1).reasonCode,'planner_format');
+});
+test('transport metadata from an injected planner is reduced to fixed enums and numbers',async()=>{
+  const events=[];const runner=createPcTaskRunner({assertActive:()=>true,onProgress:event=>events.push(event),complete:async(_request,{onTransport})=>{onTransport({httpStatus:9999,providerCode:'private-provider-code',model:'private-model',attempt:999,accountReferencePresent:'private-account',text:'private-transcript'});return step('chat');}});
+  assert.equal((await runner.run('Hello.')).handled,false);const transport=events.find(value=>value.phase==='transport');assert.deepEqual(transport,{phase:'transport',step:1,httpStatus:0,providerCode:'unknown',model:'unknown',attempt:0,accountReferencePresent:false});assert.doesNotMatch(JSON.stringify(events),/private-/);
+});

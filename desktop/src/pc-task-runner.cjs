@@ -8,6 +8,9 @@ const DIRECTIONS=Object.freeze(['up','down','left','right']);
 const READ_ACTIONS=Object.freeze(['list_apps','list_windows','read_window','read_page']);
 const MAX_CONTEXT=20000;
 const MAX_OBSERVATION=10000;
+const PLANNER_MODELS=Object.freeze(['openai/gpt-oss-20b','openai/gpt-oss-120b']);
+const PROVIDER_CODES=Object.freeze(['none','unknown','output_parse_failed','tool_use_failed','json_validate_failed','limit_reached','rate_limit_exceeded','model_not_found','model_decommissioned','invalid_api_key','authentication_error','server_error','internal_server_error','network_error']);
+const FORMAT_CODES=new Set(['tool_use_failed','json_validate_failed','output_parse_failed']);
 const STEP_SCHEMA=Object.freeze({type:'object',additionalProperties:false,properties:{
   action:{type:'string',enum:ACTIONS},target:{type:['string','null']},value:{type:['string','null']},secondary:{type:['string','null']},
   direction:{type:['string','null'],enum:[...DIRECTIONS,null]},amount:{type:['number','null']},message:{type:'string'}
@@ -119,23 +122,58 @@ function observation(result){
   for(const factor of [.75,.5,.25,.1]){const value=build(12,factor);if(JSON.stringify(value).length<=MAX_OBSERVATION)return value;}
   return {ok:result?.ok===true,verified:result?.verified===true,truncated:true,message:'Tool output was too large. Request a narrower view.'};
 }
+function transportFields(value){
+  return {httpStatus:Number.isInteger(value?.httpStatus)&&value.httpStatus>=0&&value.httpStatus<=599?value.httpStatus:0,
+    providerCode:PROVIDER_CODES.includes(value?.providerCode)?value.providerCode:'unknown',model:PLANNER_MODELS.includes(value?.model)?value.model:'unknown',
+    attempt:Number.isInteger(value?.attempt)&&value.attempt>=1&&value.attempt<=3?value.attempt:0,accountReferencePresent:value?.accountReferencePresent===true};
+}
+function plannerError(status,data,invalidResponse=false){
+  const error=data?.error;
+  const raw=typeof error==='string'?error:error?.code||error?.error?.code||data?.code||'';
+  const message=typeof error==='string'?error:typeof error?.message==='string'?error.message:'';
+  let providerCode=invalidResponse?'output_parse_failed':PROVIDER_CODES.includes(raw)?raw:raw==='json_schema_validation_failed'?'json_validate_failed':'unknown';
+  if(status===429&&raw==='limit_reached')return {providerCode:'limit_reached',error:fail('planner_guest_limit','The task planner has reached its guest usage limit. Sign in to Synapses and try again.')};
+  if(status===429)return {providerCode:providerCode==='unknown'?'rate_limit_exceeded':providerCode,error:fail('planner_rate_limited','The task planner is rate limited. Please try again shortly.')};
+  if(status===401||status===403)return {providerCode:providerCode==='invalid_api_key'?'invalid_api_key':'authentication_error',error:fail('planner_auth','The task planner is unavailable. Please try again later.')};
+  if(status>=500)return {providerCode:providerCode==='internal_server_error'?'internal_server_error':'server_error',error:fail('planner_server','The task planner could not respond. Please try again later.')};
+  if(['model_not_found','model_decommissioned','model_unavailable'].includes(raw)||status===404&&/\bmodel\b/i.test(message))return {providerCode:PROVIDER_CODES.includes(raw)?raw:'model_not_found',error:fail('planner_model_unavailable','The task planner model is unavailable. Please try again later.')};
+  if(FORMAT_CODES.has(providerCode)||status===400&&/json|response.format|function.call|tool.call/i.test(message))return {providerCode:providerCode==='unknown'?'output_parse_failed':providerCode,error:fail('planner_format','The planner could not produce a usable action. Please try again.')};
+  return {providerCode,error:fail('planner_server','The task planner could not respond. Please try again later.')};
+}
 function createGroqComplete({fetch:fetcher=globalThis.fetch,endpoint='https://synbot-whatsapp-2.onrender.com/groq-chat'}={}){
-  return async function complete(request,{signal}={}){
-    if(typeof fetcher!=='function')throw fail('planner_unavailable','The task planner is unavailable.');
-    let body=request;
-    for(let attempt=0;attempt<2;attempt++){
-      if(signal?.aborted)throw fail('cancelled','The PC task was stopped.');
-      const response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
-      const data=await response.json();
-      if(response?.ok&&!data?.error)return data;
-      const error=data?.error,code=error&&typeof error==='object'?(error.code||error.error?.code):null;
-      if(attempt===0&&response.status===400&&['tool_use_failed','json_validate_failed'].includes(code)){
-        body={...request,messages:request.messages.map(message=>message.role==='system'?{...message,content:message.content+'\nThe prior response was rejected because its output format was invalid. Emit only a JSON object matching the schema, not a function call or tool call.'}:message)};
-        continue;
-      }
-      throw fail('planner_unavailable','The task planner could not respond. Please try again.');
+  return async function complete(request,{signal,onTransport=()=>{}}={}){
+    const current=()=>{if(signal?.aborted)throw fail('cancelled','The PC task was stopped.');};
+    const base={...request,model:PLANNER_MODELS.includes(request?.model)?request.model:PLANNER_MODELS[0]};
+    if(!accountId(base.userId))delete base.userId;
+    let body=base,formatRetried=false,fallbackUsed=body.model===PLANNER_MODELS[1],lastFailure;
+    function emit(httpStatus,providerCode,attempt){
+      const safe=Object.freeze(transportFields({httpStatus,providerCode,attempt,model:body.model,accountReferencePresent:accountId(body.userId)}));
+      try{const value=onTransport(safe);if(value&&typeof value.catch==='function')value.catch(()=>{});}catch{}
+      current();
     }
-    throw fail('planner_unavailable','The task planner could not respond. Please try again.');
+    if(typeof fetcher!=='function')throw fail('planner_network','The task planner cannot connect right now. Please try again.');
+    for(let attempt=1;attempt<=3;attempt++){
+      current();emit(0,'none',attempt);
+      let response,data,invalidResponse=false;
+      try{response=await fetcher(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});current();}
+      catch(error){current();emit(0,'network_error',attempt);throw fail('planner_network','The task planner could not connect. Check your connection and try again.');}
+      try{data=await response.json();current();}catch(error){current();invalidResponse=true;}
+      if(response?.ok&&!data?.error&&!invalidResponse){
+        try{parseStep(data);}
+        catch(error){if(error instanceof TaskError&&error.code==='invalid_plan')invalidResponse=true;}
+        if(!invalidResponse){emit(response.status||200,'none',attempt);return data;}
+      }
+      const failure=plannerError(response?.status||0,data,invalidResponse);lastFailure=failure.error;
+      emit(response?.status||0,failure.providerCode,attempt);
+      // Only provider output-format failures get a corrective retry. A guest,
+      // authentication, quota, network or server error is never retried here.
+      if(failure.error.code==='planner_format'&&!formatRetried&&!fallbackUsed&&attempt<3){
+        formatRetried=true;body={...base,messages:base.messages.map(message=>message.role==='system'?{...message,content:message.content+'\nThe prior response was rejected because its output format was invalid. Emit only a JSON object matching the schema, not a function call or tool call.'}:message)};continue;
+      }
+      if(['planner_format','planner_model_unavailable'].includes(failure.error.code)&&!fallbackUsed&&attempt<3){fallbackUsed=true;body={...body,model:PLANNER_MODELS[1]};continue;}
+      throw failure.error;
+    }
+    throw lastFailure||fail('planner_format','The planner could not produce a usable action. Please try again.');
   };
 }
 function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},complete=createGroqComplete(),maxSteps=8,timeoutMs=60000}={}){
@@ -143,8 +181,8 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
   if(!Number.isInteger(maxSteps)||maxSteps<1||maxSteps>20||!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>120000)throw new TypeError('Task limits are invalid.');
   let active=null,sequence=0;
   const available=ACTIONS.filter(action=>!['finish','chat','clarify'].includes(action)&&typeof tools[action]==='function');
-  function progress(phase,step,action,reasonCode){
-    try{const value={phase,step};if(ACTIONS.includes(action))value.action=action;if(reasonCode)value.reasonCode=reasonCode;const result=onProgress(Object.freeze(value));if(result&&typeof result.catch==='function')result.catch(()=>{});}catch{}
+  function progress(phase,step,action,reasonCode,transport){
+    try{const value={phase,step};if(ACTIONS.includes(action))value.action=action;if(reasonCode)value.reasonCode=reasonCode;if(phase==='transport')Object.assign(value,transportFields(transport));const result=onProgress(Object.freeze(value));if(result&&typeof result.catch==='function')result.catch(()=>{});}catch{}
   }
   function cancel(){if(active){active.reason='cancelled';active.controller.abort();}}
   async function guard(context){
@@ -163,15 +201,15 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       if(accountId(context.userId))body.userId=context.userId;return body;
     }
     let body=build();
-    while(JSON.stringify(body).length>MAX_CONTEXT&&history.length>1){history.shift();body=build();}
-    if(JSON.stringify(body).length>MAX_CONTEXT)throw fail('context_limit','The task context is too large. Please ask for a smaller task.');
+    while(JSON.stringify(body).length>MAX_CONTEXT-256&&history.length>1){history.shift();body=build();}
+    if(JSON.stringify(body).length>MAX_CONTEXT-256)throw fail('context_limit','The task context is too large. Please ask for a smaller task.');
     return body;
   }
   async function work(context){
     await guard(context);
     for(let step=1;step<=maxSteps;step++){
       await guard(context);progress('planning',step);await guard(context);
-      const raw=await complete(request(context),{signal:context.controller.signal});await guard(context);
+      const raw=await complete(request(context),{signal:context.controller.signal,onTransport:value=>progress('transport',step,undefined,undefined,value)});await guard(context);
       const plan=parseStep(raw);
       if(plan.action==='chat'){
         if(context.executed)throw fail('partial','I completed part of that, but could not verify the whole request.');
@@ -225,4 +263,4 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
   return Object.freeze({run,cancel});
 }
 
-module.exports={createPcTaskRunner,createGroqComplete,STEP_SCHEMA};
+module.exports={createPcTaskRunner,createGroqComplete,STEP_SCHEMA,PLANNER_MODELS,PROVIDER_CODES};

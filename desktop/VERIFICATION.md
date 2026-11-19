@@ -1,5 +1,13 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.7 planner provider repair
+
+The full desktop suite passes **127 tests with zero failures or skips**; independent review reran **29 planner/diagnostic tests**. A public, action-free request reproduced **HTTP 400 `output_parse_failed`** from `openai/gpt-oss-20b`. The existing service returned a valid strict-schema action from `openai/gpt-oss-120b`. These calls used public test wording without account identifiers, UI control or native actions.
+
+The repaired client handles known format failures with one corrective 20B retry followed by one 120B strict-schema fallback, at most three attempts. Guest limits, upstream quotas, authentication, network and server errors are separately classified without retries. Caller attribution, cancellation, schema and all executor boundaries remain unchanged. Content-free diagnostics retain bounded HTTP status, fixed provider/model codes, attempt number and only a boolean for whether an account reference was present. Tests verify identity preservation, finite attempts, abort freshness, 5xx/HTML classification and privacy.
+
+The local artifact is **319,332 bytes**, SHA-256 **E40DE21A05DA45D017B68F4CCDEBE95C1D360F6815219A9B8C7352BC2101EE5C**. The matching executable is **0.1.7.0**, SHA-256 **1CCA14B8E9D8A055832686EC414F95B37BC98A5FAB152142E20FFE2CC138A291**. All **23 runtime source files** match. Fresh-profile packaged smoke and the actual ASAR-to-hash-materialized-PS1 non-GUI self-test passed; PS1 is unchanged from 0.1.6. No own test processes remain. Evidence is `.preview/pc-agent-0.1.7-packaged/smoke.json` and `.preview/packaged-driver-selftest-result.json`. CI publishes its own installer checksum. Installed-user validation of this repair is still pending at packaging time.
+
 ## 0.1.6 model-planned PC tasks
 
 The full desktop suite passes **119 tests with zero failures or skips**. Coverage includes the existing accepted-speech/native lease path plus structured planning, fixed tool argument mapping, observed-reference boundaries, native confirmations, cancellation races, unresolved failures, coherent bounded observations, Windows app/window/control fixtures and the isolated browser driver. The web suite remains at **134 passing tests** for the separately published voice/resize changes.
@@ -13,6 +21,8 @@ The local 0.1.6 unpacked artifact is `dist/win-unpacked/resources/app.asar`: **3
 All **23 packaged runtime source files** matched byte-for-byte, including the PowerShell script. The fresh-profile packaged shell smoke passed native controls, same-document visibility, tray/Quit and the read-only second-instance report. Actual packaged-ASAR require, hash materialization and the non-GUI driver self-test also passed; the 25,066-byte PS1 hash is **079890753BFE56A242BC337312E948C77D316C8CECF803C6F29216E8B6230CF5**. No unpacked runtime files are required, and no own test processes remain. Evidence is `.preview/pc-agent-0.1.6-packaged/smoke.json` and `.preview/packaged-driver-selftest-result.json`.
 
 Physical microphone capture, reliable controls in arbitrary target apps, actual YouTube playback and DoorDash checkout have not been established by these fixture/model/build checks. Accessibility limits, custom canvases, elevated apps, provider limits and external-site changes remain material limitations. A successful native action requires observed readback; input delivery alone does not establish task completion.
+
+After installing the frozen 0.1.6 build in the user's F: installation, the user reported that the requested flow worked. Its actual content-free diagnostic then recorded `complete`, step 3, `finish`, reason `none`; native voice recorded `command-complete` while enabled/listening stayed true. This is a real-user outcome in addition to the fixtures. No independent screen observation was performed, and this does not establish DoorDash checkout or reliable behavior in every application. The first installed attempt had a planner-service failure before a subsequent attempt completed, so provider reliability remains a limitation.
 
 ## 0.1.5 startup diagnostics
 

@@ -16,6 +16,8 @@ Microphone requests require trusted top-level Synapses content, audio-only acces
 
 ## PC voice
 
+Version 0.1.7 fixes a reproduced planner-provider failure: the smaller model can return `output_parse_failed` while producing a structured action. Format failures get one bounded retry and then a strict-JSON fallback to the existing larger model. Account attribution, cancellation and tool permissions remain in force. Quota, format, authentication and network failures have separate diagnostics; raw provider responses and user data are not logged.
+
 Version 0.1.6 adds an LLM task loop to the explicit Windows PC voice session. Natural requests are planned through the existing Groq proxy, executed with fixed local tools, and checked against observed results. The model cannot supply executable JavaScript, PowerShell, paths, selectors or arbitrary shell commands. App/window/control references come from native discovery. Ordinary speech-to-speech and mobile remain separate.
 
 Examples include opening installed apps such as Codex, Steam or Dota 2; moving a discovered window to another display; selecting a named visible control in the current browser; and searching then playing a YouTube video in the controlled browser. These are requests, not required exact phrases. Codex's Windows display name can be ChatGPT; its package identity supplies the Codex alias.

@@ -1,4 +1,7 @@
-Synapses Desktop 0.1.6 preview adds natural-language PC tasks to the Windows voice session.
+Synapses Desktop 0.1.7 preview repairs the planner connection used by natural-language PC tasks.
+
+- Handles the reproduced smaller-model `output_parse_failed` error with a bounded retry and a larger-model fallback through the existing service.
+- Distinguishes model format, rate limit, account, authentication and network failures. Diagnostic metadata contains no requests, page text, account IDs or tokens.
 
 - Turn on **Start PC voice** in the tray or Ava menu. Normal speech-to-speech remains separate.
 - Ask naturally to open an installed app, move a window to another monitor, or select a named visible control in your current app.
