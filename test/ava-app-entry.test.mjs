@@ -28,10 +28,18 @@ class FakeElement extends EventTarget {
   get nextSibling() { return this.parentNode?.children[this.parentNode.children.indexOf(this) + 1] || null; }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter(value => value !== this); this.document.nodes.delete(this.id); }
   getClientRects() { return this.hidden || this.style.display === 'none' ? [] : [{}]; }
+  getBoundingClientRect() { return { x: 234, y: 12, left: 234, right: 262, top: 12, bottom: 40, width: 28, height: 28 }; }
   showModal() { this.open = true; }
   close() { this.open = false; this.dispatchEvent(new Event('close')); }
   click() { this.dispatchEvent(new Event('click')); }
-  closest(name) { return name === 'button' && this.tagName === 'button' ? this : null; }
+  closest(selector) {
+    const matches = node => selector.split(',').some(part => {
+      const value = part.trim();
+      return value.startsWith('#') ? node.id === value.slice(1) : node.tagName === value;
+    });
+    for (let node = this; node; node = node.parentNode) if (matches(node)) return node;
+    return null;
+  }
 }
 function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome = false, chatReady = true } = {}) {
   const document = new EventTarget(); document.nodes = new Map();
@@ -70,6 +78,41 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
     get opens() { return opens; }, get closes() { return closes; } };
 }
 async function settle(f, ms = 250) { f.advance(ms); for (let i = 0; i < 8; i++) await Promise.resolve(); }
+
+function voiceMenuFixture(f) {
+  const menu = f.document.createElement('div');
+  menu.id = 'avaStsCtxMenu';
+  menu.style.display = 'none';
+  menu.inert = true;
+  const originalNext = f.document.createElement('div');
+  f.document.body.append(menu, originalNext);
+  const opens = [];
+  f.window._tnvOpenVoiceMenu = (x, y) => {
+    assert.equal(f.chat.contains(menu), true, 'the menu must be inside the active chat before opening');
+    assert.equal(menu.inert, false, 'the menu must accept taps after leaving the inert background');
+    opens.push({ x, y });
+    menu.style.display = 'block';
+  };
+  f.window._tnvCloseVoiceMenu = () => { menu.style.display = 'none'; };
+  return { menu, originalNext, opens };
+}
+
+function dispatchControlEvent(f, type, target, properties = {}) {
+  const event = new Event(type, { cancelable: true });
+  for (const [key, value] of Object.entries({ target, ...properties })) {
+    Object.defineProperty(event, key, { value });
+  }
+  f.document.dispatchEvent(event);
+  if (type === 'click' && !event.defaultPrevented) target.click();
+  return event;
+}
+
+function dispatchTouch(f, type, target, properties = {}) {
+  return dispatchControlEvent(f, type, target, {
+    pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 248, clientY: 26,
+    ...properties
+  });
+}
 
 test('ordinary site and non-exact flags do not initialize app mode', () => {
   for (const search of ['', '?ava-app=0', '?ava-app=true', '?not-ava-app=1']) {
@@ -290,6 +333,76 @@ test('one header slot holds the talk mic when idle and the original animated mic
   f.window._topNavVoiceActive = true; f.window.avaAppEntry.refresh();
   assert.equal(talk.hidden, true); assert.equal(animated.parentNode, dock); assert.equal(animated.inert, false);
   f.window.avaAppEntry.destroy(); assert.equal(talk.parentNode, f.document.body); assert.equal(talk.hidden, false);
+});
+
+test('holding either mobile mic opens the existing caption menu without starting or stopping voice', async () => {
+  for (const active of [false, true]) {
+    const f = setup(); await settle(f);
+    const { menu, opens } = voiceMenuFixture(f);
+    const talk = f.document.getElementById('acVoice');
+    const mic = f.document.getElementById('topNavVoiceBtn');
+    const target = active ? f.document.getElementById('tnvWaveIcon') : talk;
+    const button = active ? mic : talk;
+    let starts = 0, stops = 0;
+    talk.addEventListener('click', () => { starts++; });
+    f.window.stopTopNavVoice = () => { stops++; };
+    f.window._topNavVoiceActive = active;
+    f.window.avaAppEntry.refresh();
+
+    dispatchTouch(f, 'pointerdown', target);
+    f.advance(499);
+    assert.equal(opens.length, 0, 'a tap does not open the long-press menu');
+    f.advance(1);
+    assert.equal(opens.length, 1);
+    assert.equal(menu.style.display, 'block');
+    dispatchTouch(f, 'pointerup', target);
+    assert.equal(dispatchControlEvent(f, 'click', button, { detail: 1 }).defaultPrevented, true);
+    assert.equal(starts, 0);
+    assert.equal(stops, 0);
+    assert.equal(menu.style.display, 'block', 'the synthesized click must leave the menu available');
+
+    f.window.avaAppEntry.closeVoiceMenu();
+    dispatchTouch(f, 'pointerdown', target, { pointerId: 2 });
+    dispatchTouch(f, 'pointerup', target, { pointerId: 2 });
+    dispatchControlEvent(f, 'click', button, { detail: 1 });
+    assert.equal(starts, active ? 0 : 1, 'a fresh tap still starts an idle mic');
+    assert.equal(stops, active ? 1 : 0, 'a fresh tap still stops a live session');
+  }
+});
+
+test('right-click opens the real voice menu and closing it restores the inert background node', async () => {
+  const f = setup(); await settle(f);
+  const { menu, originalNext, opens } = voiceMenuFixture(f);
+  const talk = f.document.getElementById('acVoice');
+
+  assert.equal(dispatchControlEvent(f, 'contextmenu', talk, { clientX: 248, clientY: 26 }).defaultPrevented, true);
+  assert.deepEqual(opens, [{ x: 248, y: 26 }]);
+  assert.equal(menu.style.display, 'block');
+  assert.equal(dispatchControlEvent(f, 'keydown', talk, { key: 'Escape' }).defaultPrevented, true);
+  assert.equal(menu.style.display, 'none');
+  assert.equal(f.document.getElementById('avaAppMenu'), null, 'Escape closes the voice menu first');
+
+  dispatchControlEvent(f, 'contextmenu', talk, { clientX: 248, clientY: 26 });
+  assert.equal(opens.length, 2);
+  f.authNode.hidden = false;
+  f.window.avaAppEntry.refresh();
+  assert.equal(menu.style.display, 'none');
+  assert.equal(menu.parentNode, f.document.body);
+  assert.equal(menu.nextSibling, originalNext);
+});
+
+test('dragging or canceling a mobile mic hold does not open the caption menu', async () => {
+  const f = setup(); await settle(f);
+  const { opens } = voiceMenuFixture(f);
+  const talk = f.document.getElementById('acVoice');
+  dispatchTouch(f, 'pointerdown', talk);
+  dispatchTouch(f, 'pointermove', talk, { clientX: 288 });
+  f.advance(500);
+  assert.equal(opens.length, 0);
+  dispatchTouch(f, 'pointerdown', talk);
+  dispatchTouch(f, 'pointercancel', talk);
+  f.advance(500);
+  assert.equal(opens.length, 0);
 });
 
 test('Back to Ava Home closes Calls through its real cleanup handlers and preserves draft/live call state', async () => {

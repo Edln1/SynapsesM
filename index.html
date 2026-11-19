@@ -14,7 +14,7 @@
 </script>
 <link rel="stylesheet" href="ava-app-entry.css?v=20261119-mobile-motion3">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-voice6" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-voice7" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -74233,6 +74233,7 @@ async function srcAgentContact(supplier) {
     ctxMenu.style.left = Math.min(clientX, window.innerWidth - 240) + 'px';
     ctxMenu.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
   }
+  window._tnvOpenVoiceMenu = _cxShowMenu;
   btn.addEventListener('contextmenu', function(e){
     e.preventDefault();
     _cxShowMenu(e.clientX, e.clientY);
@@ -74240,6 +74241,7 @@ async function srcAgentContact(supplier) {
   document.addEventListener('click', function(){ ctxMenu.style.display='none'; });
 
   btn.addEventListener('touchstart', function(e){
+    if (btn.closest('#avaAppVoiceDock')) return;
     var touch = e.touches && e.touches[0];
     holdTimer = setTimeout(function(){
       var cx = touch ? touch.clientX : (btn.getBoundingClientRect().left);

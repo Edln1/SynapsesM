@@ -26,6 +26,7 @@
   // The original SVGs are absolutely centered inside this button.
   var voiceDockStyles = { position: 'relative', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
+  var voiceMenuHome = null, voiceHold = null, suppressVoiceTap = false;
 
   function emit(name, detail) {
     try { window.dispatchEvent(new window.CustomEvent(name, { detail: detail })); } catch (_) {}
@@ -53,6 +54,7 @@
   }
   function setStage(next, reason) {
     var changed = state.stage !== next;
+    if (next !== 'chat' && changed) restoreVoiceMenu();
     state.stage = next; state.lastReason = reason || next;
     html.setAttribute('data-ava-app-stage', next);
     syncVoiceControl();
@@ -82,6 +84,65 @@
   }
   function closeOwnMenu() {
     if (menu && menu.open) menu.close();
+  }
+  function clearVoiceHold() {
+    if (!voiceHold) return;
+    clearTimeout(voiceHold.timer);
+    voiceHold = null;
+  }
+  function closeVoiceMenu() {
+    if (!voiceMenuHome || voiceMenuHome.node.style.display === 'none') return false;
+    voiceMenuHome.node.style.display = 'none';
+    return true;
+  }
+  function restoreVoiceMenu() {
+    clearVoiceHold();
+    suppressVoiceTap = false;
+    if (!voiceMenuHome) return;
+    closeVoiceMenu();
+    var saved = voiceMenuHome;
+    voiceMenuHome = null;
+    saved.parent.insertBefore(saved.node, saved.next && saved.next.parentNode === saved.parent ? saved.next : null);
+    saved.node.inert = saved.inert && chatVisible();
+  }
+  function openVoiceMenu(x, y) {
+    var chat = document.getElementById('avaCompanionChat'), voiceMenu = document.getElementById('avaStsCtxMenu');
+    if (state.stage !== 'chat' || !visible(chat) || !voiceMenu || !voiceMenu.parentNode ||
+        typeof window._tnvOpenVoiceMenu !== 'function') return false;
+    if (!voiceMenuHome) {
+      voiceMenuHome = { node: voiceMenu, parent: voiceMenu.parentNode, next: voiceMenu.nextSibling, inert: voiceMenu.inert };
+      chat.appendChild(voiceMenu);
+      voiceMenu.inert = false;
+    }
+    window._tnvOpenVoiceMenu(x, y);
+    return true;
+  }
+  function inVoiceDock(target) { return state.stage === 'chat' && voiceDock && target && voiceDock.contains(target); }
+  function armVoiceHold(event) {
+    if (!inVoiceDock(event.target) || event.isPrimary === false || event.button !== 0) return;
+    clearVoiceHold();
+    suppressVoiceTap = false;
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    var hold = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    hold.timer = setTimeout(function () {
+      if (voiceHold !== hold) return;
+      voiceHold = null;
+      suppressVoiceTap = openVoiceMenu(hold.x, hold.y);
+    }, 500);
+    voiceHold = hold;
+  }
+  function endVoiceHold(event) {
+    if (!voiceHold || voiceHold.id !== event.pointerId) return;
+    if (event.type === 'pointermove' && Math.hypot(event.clientX - voiceHold.x, event.clientY - voiceHold.y) <= 10) return;
+    clearVoiceHold();
+  }
+  function captureVoiceContext(event) {
+    if (!inVoiceDock(event.target)) return;
+    clearVoiceHold();
+    if (!openVoiceMenu(event.clientX, event.clientY)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    suppressVoiceTap = true;
   }
   function stopVoice() {
     if (typeof window.stopTopNavVoice === 'function') window.stopTopNavVoice({ skipAway: true });
@@ -151,6 +212,7 @@
       !mic.classList.contains('tnv-on') && !mic.classList.contains('tnv-speak')));
   }
   function closeChat() {
+    restoreVoiceMenu();
     // Undock before chat releases its saved sibling-inert state. Restoring the
     // post-isolation value afterward would make the legacy mic untappable again.
     restoreVoiceControl();
@@ -175,6 +237,7 @@
   function openMenu() {
     if (state.destroyed) return false;
     if (authVisible() || welcomeVisible()) return false;
+    closeVoiceMenu();
     state.initial = false;
     state.force = false; state.suspension = 'tools'; state.failed = false;
     setStage(chatVisible() ? 'chat' : 'tools', 'ava-menu');
@@ -335,6 +398,12 @@
     return true;
   }
   function captureClick(event) {
+    if (suppressVoiceTap && event.detail !== 0 && inVoiceDock(event.target)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      suppressVoiceTap = false;
+      return;
+    }
     var target = event.target && event.target.closest ? event.target.closest('button') : null;
     if (!target) return;
     if (target.id === 'topNavVoiceBtn' && dockedVoice && voiceActive()) { event.preventDefault(); event.stopImmediatePropagation(); stopVoice(); }
@@ -353,6 +422,7 @@
   }
   function captureKey(event) {
     if (event.key !== 'Escape' || !chatVisible()) return;
+    if (closeVoiceMenu()) { event.preventDefault(); event.stopImmediatePropagation(); return; }
     var root = document.getElementById('avaCompanionChat');
     // Preserve the existing dismiss-history/delete behavior inside Ava.
     if (root.dataset.history === 'true' || visible(document.getElementById('acConfirm')) ||
@@ -371,6 +441,9 @@
       schedule('surface-changed');
     }); watch();
     listen(document, 'click', captureClick, true); listen(document, 'keydown', captureKey, true);
+    listen(document, 'contextmenu', captureVoiceContext, true);
+    listen(document, 'pointerdown', armVoiceHold, true);
+    ['pointermove', 'pointerup', 'pointercancel'].forEach(function (name) { listen(document, name, endVoiceHold, true); });
     listen(window, 'ava:voice-error', showVoiceIssue);
     ['ava:chat-ready', 'ava:welcome-closed', 'synapses:intro-complete', 'focus', 'pageshow'].forEach(function (name) { listen(window, name, function () { schedule(name, 100); }); });
     listen(document, 'visibilitychange', function () { if (!document.hidden) schedule('visible', 100); });
@@ -394,6 +467,7 @@
     if (state.destroyed) return;
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
+    restoreVoiceMenu();
     restoreVoiceControl();
     if (idleVoice) {
       var savedTalk = idleVoice, talk = savedTalk.node;
@@ -419,7 +493,7 @@
     if (beforeIntro.skipped === undefined) delete window._synSkipDailyIntro; else window._synSkipDailyIntro = beforeIntro.skipped;
     delete window.avaAppEntry; delete window.avaMobileEntry; delete window.__avaMobileEntryReady;
   }
-  var api = { version: 1, refresh: refresh, showChat: showChat, open: showHome, home: showHome, openMenu: openMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
+  var api = { version: 1, refresh: refresh, showChat: showChat, open: showHome, home: showHome, openMenu: openMenu, closeVoiceMenu: closeVoiceMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
     action: function (name) { return ['settings', 'account', 'logout', 'notes', 'calls', 'call-records'].indexOf(name) === -1 ? 'unavailable' : action(name); },
     get stage() { return state.stage; } };
   window.avaAppEntry = window.avaMobileEntry = api;
