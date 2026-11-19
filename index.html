@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <script>(function(){try{if(new URLSearchParams(location.search).get('ava-app')==='1'){window._synSkipDailyIntro=true;document.documentElement.classList.add('ava-app-mode','synapses-intro-skipped');document.documentElement.setAttribute('data-ava-app-stage','waiting');}}catch(_){}})();</script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261118-ava2">
-<link rel="stylesheet" href="star-news.css?v=20261118-desktop2">
-<script src="ava-app-entry.js?v=20261118-ava2" defer></script>
+<link rel="stylesheet" href="ava-app-entry.css?v=20261118-ava4">
+<link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
+<script src="ava-app-entry.js?v=20261118-ava4" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -68477,29 +68477,110 @@ function speakVoiceReply(text) {
   // starting. From the outside this looked exactly like "stopped working,
   // need to reload the whole app" since only a full reload created a fresh
   // getUserMedia stream. Re-request the mic automatically instead.
+  // AVA_MIC_LIFECYCLE_START — shared by initial capture and watchdog recovery.
+  var _micSessionGeneration = 0;
+  var _micAcquirePending = null;
+  function _micSessionCurrent(generation) {
+    return _on && generation === _micSessionGeneration && !window.__synShowcaseActive && !window._synShowcaseMicSuppressed && !window._synShowcaseMicSimulation;
+  }
+  function _stopMicTracks(stream) {
+    try { if (stream) stream.getTracks().forEach(function(track) { try { track.stop(); } catch(e) {} }); } catch(e) {}
+  }
+  function _invalidateMicCapture() {
+    _micSessionGeneration++;
+    var previous = _stream;
+    _stream = null; window._stream = null;
+    _stopMicTracks(previous);
+    // getUserMedia cannot be cancelled. Keep its pending lease until it settles,
+    // so a deliberate restart waits instead of opening a second capture request.
+  }
   function _micTrackDead() {
     if (!_stream) return false;
     var tracks = _stream.getAudioTracks ? _stream.getAudioTracks() : [];
     if (!tracks.length) return true;
     return tracks.every(function(t) { return t.readyState === 'ended' || !t.enabled; });
   }
+  function _acquireMic() {
+    var generation = _micSessionGeneration;
+    if (!_micSessionCurrent(generation)) return Promise.resolve(null);
+    if (_stream && !_micTrackDead()) return Promise.resolve(_stream);
+    if (_micAcquirePending) {
+      if (_micAcquirePending.generation === generation) return _micAcquirePending.promise;
+      return _micAcquirePending.promise.then(function() {}, function() {}).then(function() {
+        return _micSessionCurrent(generation) ? _acquireMic() : null;
+      });
+    }
+    // A disabled/ended stream is no longer usable; release it before asking the
+    // device for a replacement, rather than competing with our own old tracks.
+    var previous = _stream;
+    _stream = null; window._stream = null;
+    _stopMicTracks(previous);
+    var attempt = { generation: generation, promise: null }, requested;
+    try {
+      requested = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    } catch(error) { requested = Promise.reject(error); }
+    attempt.promise = Promise.resolve(requested).then(function(stream) {
+      if (!_micSessionCurrent(generation)) { _stopMicTracks(stream); return null; }
+      if (_stream !== stream) _stopMicTracks(_stream);
+      _stream = stream; window._stream = stream;
+      return stream;
+    }).then(function(stream) {
+      if (_micAcquirePending === attempt) _micAcquirePending = null;
+      return stream;
+    }, function(error) {
+      if (_micAcquirePending === attempt) _micAcquirePending = null;
+      if (!_micSessionCurrent(generation)) return null;
+      throw error;
+    });
+    _micAcquirePending = attempt;
+    return attempt.promise;
+  }
+  function _micCaptureFailed(error, generation) {
+    if (!_micSessionCurrent(generation)) return;
+    console.error('Mic capture error:', error && error.name, error && error.message);
+    var message = 'Could not start the microphone. Try again.';
+    if (error) {
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') message = 'Mic blocked — allow microphone access for this site in your browser settings';
+      else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') message = 'No microphone found on this device';
+      else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') message = 'Could not start microphone capture. Check device microphone access and try again.';
+      else if (error.name === 'SecurityError') message = 'Mic blocked — this page must be loaded over HTTPS';
+    }
+    stopAll();
+    toast(message);
+    try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
+  }
+  function _runMicReady(generation, ready) {
+    if (!_micSessionCurrent(generation)) return;
+    try { ready(); }
+    catch(error) {
+      console.error('Voice initialization error:', error && error.name, error && error.message);
+      stopAll();
+      toast('Microphone opened, but voice could not start. Try again.');
+      try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
+    }
+  }
+  // AVA_MIC_LIFECYCLE_END
   var _reacquiringMic = false;
   function _reacquireMic() {
     if (window.__synShowcaseActive || window._synShowcaseMicSuppressed || window._synShowcaseMicSimulation) return;
     if (_reacquiringMic) return;
+    // Initial startup already owns its ready/intro callback. Recovery must not
+    // attach a second record callback to that same pending acquisition.
+    if (_micAcquirePending && _micAcquirePending.generation === _micSessionGeneration) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
     _reacquiringMic = true;
     console.warn('[Watchdog] mic track dead — reacquiring stream');
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }).then(function(s) {
-      _stream = s; window._stream = s;
+    var generation = _micSessionGeneration;
+    _acquireMic().then(function(s) {
       _reacquiringMic = false;
+      if (!s || !_micSessionCurrent(generation)) return;
       _busy = false; _busySince = 0; _ttsBusy = false;
       _bargeTurnActive = false;
       _voiceTurnId++; // abandon whatever turn was in flight
-      if (_on) setTimeout(record, 300);
-    }).catch(function(e) {
+      setTimeout(function() { if (_micSessionCurrent(generation)) record(); }, 300);
+    }, function(e) {
       _reacquiringMic = false;
-      console.error('[Watchdog] mic reacquire failed:', e && e.message);
+      _micCaptureFailed(e, generation);
     });
   }
   setInterval(function() {
@@ -72450,13 +72531,8 @@ function speakVoiceReply(text) {
     if (_recordTimer) { clearTimeout(_recordTimer); _recordTimer = null; }
     if (_recorder && _recorder.state === 'recording') { try { _recorder.stop(); } catch(e){} }
     _recorder = null;
-    /* Drop mic tracks so no residual capture feeds the next session */
-    try {
-      if (_stream) {
-        _stream.getTracks().forEach(function(t){ try { t.stop(); } catch(eT){} });
-      }
-    } catch(eStr){}
-    _stream = null; window._stream = null;
+    /* Invalidate pending capture too: a late permission result must not reopen it. */
+    _invalidateMicCapture();
     _busy = false; _busySince = 0;
     _chunks = [];
     btnState('off');
@@ -72649,6 +72725,7 @@ function speakVoiceReply(text) {
       if (!window._avaLifePromptFragment && typeof refreshAvaLife === 'function') {
         try { refreshAvaLife(false); } catch (eRal) {}
       }
+      var micGeneration = _micSessionGeneration;
       function _afterMicReady() {
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
         /* Showcase Notes-beat flourish: Ava announces the live save instead
@@ -72673,8 +72750,8 @@ function speakVoiceReply(text) {
         try { if (_bargeCtx && _bargeCtx.state === 'suspended') _bargeCtx.resume(); } catch (eBr) {}
         record();
       }
-      if (_stream) {
-        _afterMicReady();
+      if (_stream && !_micTrackDead()) {
+        _runMicReady(micGeneration, _afterMicReady);
       } else if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         // No getUserMedia at all — almost always means the page isn't on
         // a secure origin (https:// or localhost). Browsers silently strip
@@ -72686,8 +72763,8 @@ function speakVoiceReply(text) {
       } else if (window.__synShowcaseActive || window._synShowcaseMicSuppressed || window._synShowcaseMicSimulation) {
         return;
       } else {
-        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }).then(function(s) {
-          _stream = s; window._stream = s;
+        _acquireMic().then(function(s) {
+          if (!s || !_micSessionCurrent(micGeneration)) return;
           // Keep mic stream alive when tab is backgrounded
           document.addEventListener('visibilitychange', function() {
             if (_stream) {
@@ -72697,25 +72774,9 @@ function speakVoiceReply(text) {
               });
             }
           });
-          _afterMicReady();
-        }).catch(function(err) {
-          console.error('Mic getUserMedia error:', err && err.name, err && err.message);
-          var msg = 'Mic access denied';
-          if (err) {
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-              msg = 'Mic blocked — allow microphone access for this site in your browser settings';
-            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-              msg = 'No microphone found on this device';
-            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-              msg = 'Mic is busy in another app — close it and try again';
-            } else if (err.name === 'SecurityError') {
-              msg = 'Mic blocked — this page must be loaded over HTTPS';
-            }
-          }
-          toast(msg);
-          _on = false;
-          _setTopNavVoiceActive(false);
-          try{ if(typeof window._tnvSendAway === 'function') window._tnvSendAway(); }catch(eOff){}
+          _runMicReady(micGeneration, _afterMicReady);
+        }, function(err) {
+          _micCaptureFailed(err, micGeneration);
         });
       }
     } else {
@@ -94458,7 +94519,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
   await bridge.verify();if(version!==openVersion||!opened)return {status:'cancelled'};
   var owner=bridge.current();if((state.owner&&state.owner.id||'')!==(owner&&owner.id||''))ownerChanged(owner);if(!current())createThread(false);
   if(provided!==null){input.value=provided;if(state.owner){current().draft=provided;save();}else guestDraft=provided;}
-  render();syncTasks();requestAnimationFrame(function(){input.focus({preventScroll:true});});
+  render();syncTasks();requestAnimationFrame(function(){if(options.focus===true||(options.focus!==false&&!document.documentElement.classList.contains('ava-app-mode')))input.focus({preventScroll:true});});
   if(options.send===true&&provided!==null)return submit(provided,null,options.mode==='task'?'task':options.mode==='research'?'research':'chat');
   return {status:'opened'};
  };
@@ -94493,7 +94554,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
 })();
 </script>
 
-<script src="star-news.js?v=20261118-desktop2"></script>
+<script src="star-news.js?v=20261118-desktop3"></script>
 <script>(function(){
 var deepSpacePoints=window.synapsesStarNewsPoints;
 window.synapsesStarNewsPoints=function(){var deep=typeof deepSpacePoints==='function'?deepSpacePoints():[];if(deep.length)return deep;var all=[];Object.keys(window._synStarNewsParticleGetters||{}).forEach(function(key){try{all=all.concat(window._synStarNewsParticleGetters[key]());}catch(_){}});return all;};

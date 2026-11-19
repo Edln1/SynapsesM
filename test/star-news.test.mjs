@@ -123,7 +123,7 @@ test('marked stars are sparse, spatially separated, stable by actual ID and neve
   assert.equal(ui.markedPoints([{id:'bad',x:NaN,y:100},{id:'edge',x:5,y:5}],[],1280,720).length,0);
 });
 
-test('silver ring markers track actual star coordinates at a capped rate and pause while hidden',()=>{
+test('soft silver glow markers track actual star coordinates at a capped rate and pause while hidden',()=>{
   const f=desktopFixture(),moving=[{id:'moving',x:100,y:100}],api=ui.init({window:f.win,snapshot:desktopSnapshot,getPoints:()=>moving}),marks=f.doc.body.children[2],ring=marks.children[0];
   assert.equal(marks.attributes.get('aria-hidden'),'true');assert.equal(ring.attributes.get('data-star-id'),'moving');assert.equal(ring.style.transform,'translate3d(100.00px,100.00px,0)');assert.equal(f.frames.size,1);
   f.stepFrame(0);moving[0].x=140;f.stepFrame(20);assert.equal(ring.style.transform,'translate3d(100.00px,100.00px,0)');f.stepFrame(80);assert.equal(ring.style.transform,'translate3d(140.00px,100.00px,0)');
@@ -136,4 +136,13 @@ test('stars covered by app controls are neither marked nor clickable',()=>{
   const f=desktopFixture(),control={closest:()=>true};f.doc.elementFromPoint=()=>control;
   const api=ui.init({window:f.win,snapshot:desktopSnapshot,getPoints:starPoints}),card=f.doc.body.children[1],marks=f.doc.body.children[2];assert.equal(marks.children.length,0);assert.equal(marks.hidden,true);
   f.win.emit('pointerup',{pointerType:'mouse',button:0,clientX:100,clientY:100,target:control});assert.equal(card.hidden,true);api.open();assert.equal(card.hidden,true);api.destroy();
+});
+
+test('news cards expose the official source, publication date and working plain-label links without interpreting headline markup',()=>{
+  const f=desktopFixture(),items=[{...desktopSnapshot.items[0],title:'<img src=x onerror=alert(1)> is a literal headline'},{...desktopSnapshot.items[0],id:'second-update',title:'A second official update',url:'https://blogs.nvidia.com/blog/second-update/'}];
+  const api=ui.init({window:f.win,snapshot:{...desktopSnapshot,items},getPoints:starPoints});api.open();const card=f.doc.body.children[1];
+  assert.equal(card.children[0].children[0].textContent,'NVIDIA');assert.equal(card.children[2].dateTime,items[0].publishedAt);assert.match(card.children[4].textContent,/^Checked /);
+  const first=card.children[1].textContent;assert.ok(items.some(i=>i.title===first));assert.equal(card.children[1].children.length,0);assert.equal(card.children[1].rel,'noopener noreferrer');
+  const footer=card.children[3];assert.equal(footer.children[0].textContent,'Read update');assert.equal(footer.children[1].textContent,'Next update');assert.equal(footer.children[0].target,'_blank');assert.equal(footer.children[0].rel,'noopener noreferrer');
+  footer.children[1].click();assert.notEqual(card.children[1].textContent,first);assert.equal(card.children[1].children.length,0);assert.ok(items.some(i=>i.url===card.children[1].href));api.destroy();
 });

@@ -22,7 +22,8 @@
   var state = { stage: 'waiting', destroyed: false, opening: false, initial: true,
     suspension: null, force: false, failed: false, ready: false, userKey: null,
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null };
-  var observer = null, menu = null, returnBar = null, statusNode = null, voiceBar = null;
+  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null;
+  var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map();
 
   function emit(name, detail) {
@@ -81,21 +82,51 @@
   function closeOwnMenu() {
     if (menu && menu.open) menu.close();
   }
+  function stopVoice() {
+    if (typeof window.stopTopNavVoice === 'function') window.stopTopNavVoice({ skipAway: true });
+    schedule('voice-stopped', 0);
+  }
+  function restoreVoiceControl() {
+    if (!dockedVoice) return;
+    var saved = dockedVoice, mic = saved.node; dockedVoice = null;
+    if (mic.parentNode === voiceDock && saved.parent) saved.parent.insertBefore(mic, saved.next && saved.next.parentNode === saved.parent ? saved.next : null);
+    Object.keys(voiceDockStyles).forEach(function (name) {
+      if (mic.style.getPropertyValue(name) !== voiceDockStyles[name]) return;
+      var before = saved.styles[name];
+      if (before.value) mic.style.setProperty(name, before.value, before.priority); else mic.style.removeProperty(name);
+    });
+    mic.inert = saved.inert && chatVisible();
+    if (saved.label === null) mic.removeAttribute('aria-label'); else mic.setAttribute('aria-label', saved.label);
+    if (saved.title === null) mic.removeAttribute('title'); else mic.setAttribute('title', saved.title);
+  }
   function syncVoiceControl() {
-    var chat = document.getElementById('avaCompanionChat');
-    if (!voiceBar && chat) {
-      voiceBar = document.createElement('div'); voiceBar.id = 'avaAppVoiceBar';
-      var stop = button('Voice on · Stop', function () {
-        if (typeof window.stopTopNavVoice === 'function') window.stopTopNavVoice();
-        schedule('voice-stopped', 0);
-      });
-      stop.id = 'avaAppVoiceStop'; stop.setAttribute('aria-label', 'Stop voice conversation');
-      voiceBar.appendChild(stop);
-      // Keep the live control inside chat's focus boundary. Body-level controls
-      // become inert while mobile chat is open, even if they remain visible.
-      chat.insertBefore(voiceBar, document.getElementById('acPreview'));
+    var chat = document.getElementById('avaCompanionChat'), anchor = document.getElementById('acHistory'), mic = document.getElementById('topNavVoiceBtn');
+    if (!voiceDock && chat && anchor && chat.contains(anchor)) {
+      voiceDock = document.createElement('span'); voiceDock.id = 'avaAppVoiceDock';
+      voiceDock.addEventListener('click', function (event) { if (event.target === voiceDock && voiceActive()) stopVoice(); });
+      anchor.parentNode.insertBefore(voiceDock, anchor);
     }
-    if (voiceBar) voiceBar.hidden = state.stage !== 'chat' || !voiceActive();
+    var active = state.stage === 'chat' && voiceActive() && voiceDock && mic;
+    if (!active) restoreVoiceControl();
+    else {
+      if (!dockedVoice) {
+        dockedVoice = { node: mic, parent: mic.parentNode, next: mic.nextSibling, inert: mic.inert, label: mic.getAttribute('aria-label'), title: mic.getAttribute('title'), styles: {} };
+        Object.keys(voiceDockStyles).forEach(function (name) { dockedVoice.styles[name] = { value: mic.style.getPropertyValue(name), priority: mic.style.getPropertyPriority(name) }; });
+      }
+      // Move the original animated control into chat's existing top margin,
+      // retaining its waveform/analyser and escaping the inert body siblings.
+      if (mic.parentNode !== voiceDock) voiceDock.appendChild(mic);
+      if (mic.inert) mic.inert = false;
+      mic.setAttribute('aria-label', 'Stop voice conversation'); mic.setAttribute('title', 'Stop voice');
+      Object.keys(voiceDockStyles).forEach(function (name) { if (mic.style.getPropertyValue(name) !== voiceDockStyles[name] || mic.style.getPropertyPriority(name) !== 'important') mic.style.setProperty(name, voiceDockStyles[name], 'important'); });
+    }
+    if (voiceDock && voiceDock.hidden !== !active) voiceDock.hidden = !active;
+  }
+  function closeChat() {
+    // Undock before chat releases its saved sibling-inert state. Restoring the
+    // post-isolation value afterward would make the legacy mic untappable again.
+    restoreVoiceControl();
+    if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
   }
   function suspend(kind) {
     state.initial = false; state.force = false; state.suspension = kind; state.failed = false;
@@ -104,7 +135,7 @@
   function action(name) {
     closeOwnMenu();
     suspend(name === 'logout' ? 'auth' : 'tools');
-    if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+    closeChat();
     var result = typeof window.avaFloatingOpenAction === 'function' ? window.avaFloatingOpenAction(name) : 'unavailable';
     if (result === 'unavailable') {
       setStage('tools', 'tool-unavailable');
@@ -117,8 +148,8 @@
     if (state.destroyed) return false;
     if (authVisible() || welcomeVisible()) return false;
     state.initial = false;
-    if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
-    suspend('tools');
+    state.force = false; state.suspension = 'tools'; state.failed = false;
+    setStage(chatVisible() ? 'chat' : 'tools', 'ava-menu');
     if (!menu) {
       menu = document.createElement('dialog');
       menu.id = 'avaAppMenu'; menu.className = 'ava-app-menu';
@@ -128,14 +159,15 @@
       var close = button('×', function () { closeOwnMenu(); showChat(); }, 'ava-app-menu-close');
       close.setAttribute('aria-label', 'Back to Ava'); top.append(title, close); menu.appendChild(top);
       var account = document.createElement('p'); account.id = 'avaAppMenuAccount'; menu.appendChild(account);
-      menu.append(button('Back to chat', showChat), button('Calls', function () { action('call-records'); }),
+      menu.append(button('Calls', function () { action('call-records'); }),
         button('Notes', function () { action('notes'); }), button('Introduction & setup', showIntroduction), button('Settings', function () { action('settings'); }),
         button('Your account', function () { action('account'); }), button('Sign out', function () { action('logout'); }));
       document.body.appendChild(menu);
       listen(menu, 'cancel', function (event) { event.preventDefault(); closeOwnMenu(); showChat(); });
+      listen(menu, 'click', function (event) { if (event.target === menu) { closeOwnMenu(); showChat(); } });
     }
     var current = user();
-    document.getElementById('avaAppMenuAccount').textContent = current && !current.isGuest ? current.email : 'Your Ava conversation';
+    document.getElementById('avaAppMenuAccount').textContent = current && !current.isGuest ? current.email : '';
     if (!menu.open) menu.showModal();
     if (returnBar) returnBar.hidden = true;
     return true;
@@ -143,7 +175,7 @@
   function showIntroduction() {
     if (state.destroyed || authVisible() || !user() || typeof window.openAvaWelcome !== 'function') return false;
     closeOwnMenu();
-    if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+    closeChat();
     state.initial = true; state.force = false; state.suspension = null; state.failed = false;
     window.openAvaWelcome({ replay: true });
     setStage('welcome', 'user-opened-introduction');
@@ -169,19 +201,20 @@
     return refresh('user-returned-to-ava');
   }
   function patchControls() {
-    ['acClose', 'acMainChat'].forEach(function (id) {
+    ['acClose', 'acMainChat', 'acNewTop'].forEach(function (id) {
       var control = document.getElementById(id);
       if (!control || patched.has(control)) return;
       patched.set(control, { label: control.getAttribute('aria-label'), title: control.getAttribute('title'), html: control.innerHTML });
-      control.setAttribute('aria-label', 'Open Ava menu'); control.setAttribute('title', 'Ava menu');
-      if (id === 'acClose') control.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
+      control.setAttribute('aria-label', id === 'acNewTop' ? 'Open Calls' : 'Open Ava menu'); control.setAttribute('title', id === 'acNewTop' ? 'Calls' : 'Ava menu');
+      if (id === 'acNewTop') control.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M7.2 3.8 4.5 5.2c-1.7 1.1.2 5.6 3.7 9.1s8 5.4 9.1 3.7l1.4-2.7-4-2-1.5 1.4c-1.8-.8-3.1-2.1-3.9-3.9l1.4-1.5-2-4Z" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      else if (id === 'acClose') control.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
       else control.textContent = 'Menu';
     });
   }
   function watch() {
     if (!observer || !document.body) return;
-    [document.body, document.getElementById('authModal'), document.getElementById('avaWelcome'), document.getElementById('avaCompanionChat')].forEach(function (node) {
-      if (node && !observed.has(node)) { observed.add(node); observer.observe(node, { attributes: true, attributeFilter: ['class', 'style', 'hidden'] }); }
+    [document.body, document.getElementById('authModal'), document.getElementById('avaWelcome'), document.getElementById('avaCompanionChat'), voiceDock, document.getElementById('topNavVoiceBtn')].forEach(function (node) {
+      if (node && !observed.has(node)) { observed.add(node); observer.observe(node, { attributes: true, childList: node === document.body || node === voiceDock, attributeFilter: ['class', 'style', 'hidden', 'inert'] }); }
     });
   }
   function refresh(reason) {
@@ -190,12 +223,12 @@
     if (authVisible()) {
       // Existing mobile chat inerts its siblings. Release that before an auth gate
       // takes over, otherwise a visible sign-in modal could remain untouchable.
-      if (chatVisible() && typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+      if (chatVisible()) closeChat();
       state.initial = true; state.suspension = null;
       setStage('auth', reason || 'signin-visible'); return false;
     }
     if (welcomeVisible()) {
-      if (chatVisible() && typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+      if (chatVisible()) closeChat();
       state.initial = true; state.suspension = null;
       setStage(visible(document.getElementById('avaWelcome')) ? 'welcome' : 'waiting', reason || 'welcome-pending'); return false;
     }
@@ -207,7 +240,7 @@
     // Prepare the real setup before opening chat, including an account that
     // becomes ready after the legacy onboarding bootstrap's first attempt.
     if (current && state.initial && typeof window.avaWelcomeShouldStart === 'function' && window.avaWelcomeShouldStart()) {
-      if (chatVisible() && typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+      if (chatVisible()) closeChat();
       if (typeof window.avaWelcomeMaybeStart === 'function') window.avaWelcomeMaybeStart();
       setStage(visible(document.getElementById('avaWelcome')) ? 'welcome' : 'waiting', 'preparing-introduction');
       return false;
@@ -220,7 +253,7 @@
     if (Date.now() < state.settledAt) { schedule('startup-settled', state.settledAt - Date.now() + 10); return false; }
     state.opening = true; state.force = false;
     var draft = state.draft;
-    Promise.resolve().then(function () { return window.avaCompanionChatOpen(draft === null ? undefined : { message: draft, send: false }); }).then(function () {
+    Promise.resolve().then(function () { return window.avaCompanionChatOpen(draft === null ? { focus: false } : { message: draft, send: false, focus: false }); }).then(function () {
       if (state.destroyed) return;
       state.initial = false;
       if (chatVisible()) { if (state.draft === draft) state.draft = null; setStage('chat', 'ava-opened'); }
@@ -231,7 +264,9 @@
   function captureClick(event) {
     var target = event.target && event.target.closest ? event.target.closest('button') : null;
     if (!target) return;
-    if (target.id === 'acClose' || target.id === 'acMainChat') { event.preventDefault(); event.stopImmediatePropagation(); openMenu(); }
+    if (target.id === 'topNavVoiceBtn' && dockedVoice && voiceActive()) { event.preventDefault(); event.stopImmediatePropagation(); stopVoice(); }
+    else if (target.id === 'acNewTop') { event.preventDefault(); event.stopImmediatePropagation(); action('call-records'); }
+    else if (target.id === 'acClose' || target.id === 'acMainChat') { event.preventDefault(); event.stopImmediatePropagation(); openMenu(); }
     else if (target.id === 'acVoice') suspend('voice');
     else if (target.id === 'acAccount' || target.id === 'acSettings') suspend('tools');
     else if (target.id === 'acLogout') { state.initial = true; state.suspension = null; }
@@ -274,7 +309,7 @@
     if (state.destroyed) return;
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
-    closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceBar) voiceBar.remove();
+    restoreVoiceControl(); closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);
       if (before.title == null) node.removeAttribute('title'); else node.setAttribute('title', before.title);

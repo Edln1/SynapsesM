@@ -71,24 +71,28 @@ html.ava-app-mode #avaCompanionChat[data-history="true"] .ac-rail {
 }
 html.ava-app-mode #avaCompanionChat .ac-input { font-size:16px!important; }
 html.ava-app-mode #avaCompanionChat .ac-bottom { padding-bottom:max(12px,env(safe-area-inset-bottom,0px)); }
-html.ava-app-mode #avaAppVoiceBar { display:flex; justify-content:flex-end; flex-shrink:0; padding:0 14px 8px; background:#000; }
-html.ava-app-mode #avaAppVoiceBar[hidden] { display:none!important; }
-html.ava-app-mode #avaAppVoiceStop { display:flex; align-items:center; gap:9px; min-height:44px; padding:9px 14px; border:1px solid #173b30; border-radius:24px; background:#071b13; color:#67d6a4; font:14px/1.4 'DM Sans',sans-serif; cursor:pointer; touch-action:manipulation; }
-html.ava-app-mode #avaAppVoiceStop::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
-html.ava-app-mode #avaAppVoiceStop:focus-visible { outline:2px solid #9ee4c4; outline-offset:3px; }
+html.ava-app-mode #avaAppVoiceDock { display:flex; align-items:center; justify-content:center; flex:0 0 36px; height:44px; cursor:pointer; touch-action:manipulation; }
+html.ava-app-mode #avaAppVoiceDock[hidden] { display:none!important; }
+/* Keep the original circle, waveform, colours and analyser. Only its location changes. */
+html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #topNavVoiceBtn { width:28px!important; height:28px!important; min-width:28px!important; min-height:28px!important; flex:0 0 28px!important; }
 
 html.ava-app-mode #avaAppReturn { position:fixed; z-index:94000; bottom:max(14px,env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:7px 8px 7px 13px; max-width:calc(100% - 28px); background:#0d0e11; border:1px solid #292c33; border-radius:12px; color:#a7abb5; font:12px/1.5 'DM Sans',sans-serif; }
 html.ava-app-mode #avaAppReturn[hidden] { display:none!important; }
 html.ava-app-mode #avaAppStatus:empty { display:none; }
 html.ava-app-mode #avaAppReturn button { border:1px solid #373a43; border-radius:8px; min-height:38px; padding:8px 13px; background:#191b20; color:#e0e2e7; font:inherit; white-space:nowrap; }
-html.ava-app-mode #avaAppMenu { position:fixed; inset:auto 12px max(14px,env(safe-area-inset-bottom,0px)); width:calc(100% - 24px); max-width:390px; margin:0 auto; padding:20px; color:#dedfe5; background:#0b0c0f; border:1px solid #272a31; border-radius:16px; font:13px/1.5 'DM Sans',sans-serif; box-sizing:border-box; }
-html.ava-app-mode #avaAppMenu::backdrop { background:#0009; }
-html.ava-app-mode #avaAppMenu .ava-app-menu-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-html.ava-app-mode #avaAppMenu h2 { margin:0; font-size:20px; font-weight:500; }
-html.ava-app-mode #avaAppMenu p { margin:0 0 17px; color:#858b99; font-size:11px; overflow-wrap:anywhere; }
-html.ava-app-mode #avaAppMenu > button { display:block; width:100%; min-height:43px; margin-top:8px; border:1px solid #292d35; border-radius:8px; padding:10px 13px; color:#c7cbd5; background:#14161b; text-align:left; font:inherit; }
-html.ava-app-mode #avaAppMenu .ava-app-menu-close { width:34px; height:34px; border:1px solid #282c34; border-radius:8px; background:#121419; color:#9ea5b4; font:20px/1 sans-serif; }
+html.ava-app-mode #avaAppMenu { position:fixed; inset:calc(58px + env(safe-area-inset-top,0px)) 12px auto auto; width:min(272px,calc(100% - 24px)); max-width:none; margin:0; padding:8px; color:#d4d4d8; background:#09090b; border:1px solid #ffffff0f; border-radius:14px; box-shadow:0 12px 36px #0006; font:14px/1.5 'DM Sans',sans-serif; box-sizing:border-box; }
+html.ava-app-mode #avaAppMenu::backdrop { background:#0004; }
+html.ava-app-mode #avaAppMenu .ava-app-menu-heading { display:flex; justify-content:space-between; align-items:center; padding:0 3px 0 9px; margin-bottom:0; }
+html.ava-app-mode #avaAppMenu h2 { margin:0; font-size:13px; font-weight:500; color:#a4a4ab; }
+html.ava-app-mode #avaAppMenu p { margin:0 0 5px; padding:0 9px 8px; color:#73737d; font-size:12px; overflow-wrap:anywhere; border-bottom:1px solid #ffffff08; }
+html.ava-app-mode #avaAppMenu > button { display:block; width:100%; min-height:40px; margin:0; border:0; border-radius:8px; padding:9px 11px; color:#c7c7ce; background:transparent; text-align:left; font:inherit; }
+html.ava-app-mode #avaAppMenu .ava-app-menu-close { width:32px; height:32px; border:0; border-radius:8px; background:transparent; color:#85858f; font:20px/1 sans-serif; }
 html.ava-app-mode #avaAppMenu button { cursor:pointer; touch-action:manipulation; }
 html.ava-app-mode #avaAppMenu button:focus-visible,
 html.ava-app-mode #avaAppReturn button:focus-visible { outline:2px solid #8692aa; outline-offset:3px; }
 @media(prefers-reduced-motion:reduce) { html.ava-app-mode #avaAppMenu,html.ava-app-mode #avaAppReturn { animation:none!important; transition:none!important; } }
+
+html.ava-app-mode #avaAppMenu p:empty { display:none; }
+html.ava-app-mode #avaAppMenu > button:hover,html.ava-app-mode #avaAppMenu .ava-app-menu-close:hover { background:#ffffff08; color:#eeeeef; }
+html.ava-app-mode #avaCallsWorkspace { inset:0!important; width:100%!important; max-width:none!important; height:100dvh!important; max-height:none!important; margin:0!important; border:0!important; border-radius:0!important; }
+html.ava-app-mode #avaCompanionChat .ac-top { min-height:calc(56px + env(safe-area-inset-top,0px)); }
