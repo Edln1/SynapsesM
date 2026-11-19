@@ -113,6 +113,8 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
        that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
        particles/beams only; moon fades beams out over 1.4s to stay true black. */
     html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
+    html:not(.ava-app-mode)[data-theme="purple"],html:not(.ava-app-mode)[data-theme="purple"] body,
+    html:not(.ava-app-mode)[data-theme="easyview"],html:not(.ava-app-mode)[data-theme="easyview"] body{background:#0c0c17!important;background-color:#0c0c17!important;}
     html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
@@ -9295,13 +9297,19 @@ html.chp-sidebar-mode.chp-apps-board body.bottom-nav #bottomNavBar{
 html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCanvas,html[data-theme="easyview"] #jobsFlowCanvas,html[data-theme="easyview"] #roomFlowCanvas{opacity:1;}
 /* Moon: beams fade out over 1.4s (black base already). Sun: original beam strength. */
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
-html[data-theme="purple"] #globalBeamsCanvas,html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
+html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
+html:not(.ava-app-mode)[data-theme="purple"] #globalBeamsCanvas{opacity:0.7;}
 html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
 /* Mobile sun aurora: same beam strength as desktop, hue locked to 212107 indigo */
 @media (max-width:900px){
   #globalBeamsCanvas{opacity:0.7;filter:blur(38px);}
   html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
   #chatBeamsWrap,#chatBeamsCanvas{opacity:0.7;}
+}
+/* A compact desktop window keeps the original beam strength; phone tuning stays intact. */
+@media (hover:hover) and (pointer:fine){
+  html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsCanvas,
+  html:not(.ava-app-mode)[data-theme="easyview"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="easyview"] #chatBeamsCanvas{opacity:1;}
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
@@ -49697,9 +49705,19 @@ function _sunAuroraMobile(){
     return !!(window.matchMedia && (window.matchMedia('(max-width:900px)').matches || window.matchMedia('(pointer:coarse)').matches));
   }catch(e){ return false; }
 }
+function _sunAuroraSurface(){
+  var root=document.documentElement,theme=root.getAttribute('data-theme');
+  return !root.classList.contains('ava-app-mode')&&(theme==='purple'||theme==='easyview');
+}
+function _sunAuroraFullPalette(){
+  try{return _sunAuroraSurface()&&!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);}catch(e){return false;}
+}
 function _sunAuroraHue(i, n){
-  if(_sunAuroraMobile()) return 228 + ((i % 8) * 1.5);
+  if(!_sunAuroraFullPalette()&&_sunAuroraMobile()) return 228 + ((i % 8) * 1.5);
   return 190 + (i * 70) / Math.max(1, n);
+}
+function _sunAuroraInitialHue(){
+  return _sunAuroraFullPalette()?190+Math.random()*70:_sunAuroraHue(Math.floor(Math.random()*8),8);
 }
 (function(){
   var vis=[], views={};
@@ -49708,7 +49726,7 @@ function _sunAuroraHue(i, n){
     dpr:function(){var d=window.devicePixelRatio||1;return this.mobile?1:Math.min(d,2);},
     scale:function(){return this.mobile?0.5:1;},
     gap:function(){return this.mobile?50:32;},
-    beamsOn:function(){var t=document.documentElement.getAttribute('data-theme');return t!=='trueblack'&&t!=='purple'&&t!=='pitchblack';},
+    beamsOn:function(){var root=document.documentElement,t=root.getAttribute('data-theme');return !root.classList.contains('ava-app-mode')&&t!=='trueblack'&&t!=='pitchblack';},
     onVis:function(fn){vis.push(fn);},
     onView:function(id,fn){(views[id]||(views[id]=[])).push(fn);},
     view:function(id){var q=views[id];if(!q||!q.length)return;views[id]=[];for(var i=0;i<q.length;i++)try{q[i]();}catch(e){}}
@@ -49733,20 +49751,25 @@ function _sunAuroraPaint(hue, a){
   var ctx=canvas.getContext('2d');
   var beams=[];
   var BEAM_COUNT=32;
+  var viewWidth=0,viewHeight=0,fullPalette=null;
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:35+Math.random()*65,length:h*2.5,angle:angle,speed:0.5+Math.random()*1.0,opacity:0.10+Math.random()*0.13,hue:_sunAuroraInitialHue(),pulse:Math.random()*Math.PI*2,pulseSpeed:0.018+Math.random()*0.025};}
 
-  function resize(){
+  function resize(preserve){
     var dpr=(window._synPwr&&window._synPwr.dpr())||Math.min(window.devicePixelRatio||1,2);
     var sc=(window._synPwr&&window._synPwr.scale())||1;
     var s=dpr*sc;
     var w=window.innerWidth,h=window.innerHeight;
+    var oldWidth=viewWidth,oldHeight=viewHeight;
+    if(preserve&&w===oldWidth&&h===oldHeight&&canvas.width===Math.max(1,Math.floor(w*s))&&canvas.height===Math.max(1,Math.floor(h*s)))return;
     canvas.width=Math.max(1,w*s);canvas.height=Math.max(1,h*s);
     canvas.style.width=w+'px';canvas.style.height=h+'px';
     ctx.setTransform(s,0,0,s,0,0);
-    beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});
+    if(preserve&&beams.length&&oldWidth>0&&oldHeight>0){beams.forEach(function(beam){beam.x*=w/oldWidth;beam.y*=h/oldHeight;beam.length=h*2.5;});}
+    else{beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});fullPalette=_sunAuroraFullPalette();}
+    viewWidth=w;viewHeight=h;
   }
 
   function resetBeam(beam,i,total){
@@ -49792,6 +49815,8 @@ function _sunAuroraPaint(hue, a){
     if(ts-_beamLast<gap){requestAnimationFrame(animate);return;}
     _beamLast=ts;
     var w=window.innerWidth,h=window.innerHeight;
+    if(_sunAuroraSurface()&&(w!==viewWidth||h!==viewHeight))resize(true);
+    var nextPalette=_sunAuroraFullPalette();if(nextPalette!==fullPalette){fullPalette=nextPalette;beams.forEach(function(beam){beam.hue=_sunAuroraInitialHue();});}
     ctx.clearRect(0,0,w,h);
     var total=beams.length;
     beams.forEach(function(beam,i){
@@ -49805,6 +49830,7 @@ function _sunAuroraPaint(hue, a){
   resize();
   animate();
   window.addEventListener('resize',function(){
+    if(_sunAuroraSurface()){resize(true);return;}
     canvas.style.width=window.innerWidth+'px';
     canvas.style.height=window.innerHeight+'px';
   });
@@ -49825,12 +49851,13 @@ function _sunAuroraPaint(hue, a){
   var beams=[];
   var animId=null;
   var BEAM_COUNT=22;
+  var viewWidth=0,viewHeight=0,fullPalette=null;
 
   function createBeam(w,h){
     var angle=-35+Math.random()*10;
-    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:_sunAuroraHue(Math.floor(Math.random()*8),8),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
+    return{x:Math.random()*w*1.5-w*0.25,y:Math.random()*h*1.5-h*0.25,width:30+Math.random()*60,length:h*2.5,angle:angle,speed:0.6+Math.random()*1.2,opacity:0.12+Math.random()*0.16,hue:_sunAuroraInitialHue(),pulse:Math.random()*Math.PI*2,pulseSpeed:0.02+Math.random()*0.03};}
 
-  function resize(){
+  function resize(preserve){
     var sec=document.getElementById('sec-chat');
     if(!sec)return;
     var dpr=(window._synPwr&&window._synPwr.dpr())||Math.min(window.devicePixelRatio||1,2);
@@ -49838,10 +49865,14 @@ function _sunAuroraPaint(hue, a){
     var s=dpr*sc;
     var w=sec.offsetWidth,h=sec.offsetHeight;
     if(!w||!h)return;
+    var oldWidth=viewWidth,oldHeight=viewHeight;
+    if(preserve&&w===oldWidth&&h===oldHeight&&canvas.width===Math.max(1,Math.floor(w*s))&&canvas.height===Math.max(1,Math.floor(h*s)))return;
     canvas.width=Math.max(1,w*s);canvas.height=Math.max(1,h*s);
     canvas.style.width=w+'px';canvas.style.height=h+'px';
     ctx.setTransform(s,0,0,s,0,0);
-    beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});
+    if(preserve&&beams.length&&oldWidth>0&&oldHeight>0){beams.forEach(function(beam){beam.x*=w/oldWidth;beam.y*=h/oldHeight;beam.length=h*2.5;});}
+    else{beams=Array.from({length:BEAM_COUNT},function(){return createBeam(w,h);});fullPalette=_sunAuroraFullPalette();}
+    viewWidth=w;viewHeight=h;
   }
 
   function resetBeam(beam,i,total,w,h){
@@ -49884,6 +49915,8 @@ function _sunAuroraPaint(hue, a){
     if(ts-_chatBeamLast<gap){animId=requestAnimationFrame(animate);return;}
     _chatBeamLast=ts;
     var w=sec.offsetWidth,h=sec.offsetHeight;
+    if(_sunAuroraSurface()&&(w!==viewWidth||h!==viewHeight))resize(true);
+    var nextPalette=_sunAuroraFullPalette();if(nextPalette!==fullPalette){fullPalette=nextPalette;beams.forEach(function(beam){beam.hue=_sunAuroraInitialHue();});}
     ctx.clearRect(0,0,w,h);
     ctx.filter=(window._synPwr&&window._synPwr.mobile)?'blur(18px)':'blur(35px)';
     var total=beams.length;
@@ -50008,6 +50041,7 @@ function _sunAuroraPaint(hue, a){
   window.addEventListener('resize',function(){
     var sec=document.getElementById('sec-chat');
     if(!sec)return;
+    if(_sunAuroraSurface()){resize(true);return;}
     canvas.style.width=sec.offsetWidth+'px';
     canvas.style.height=sec.offsetHeight+'px';
   });
@@ -61552,10 +61586,9 @@ function _openNeutralinoWebview(url){
 
   function applyTheme(t){
     if(!THEMES.find(function(x){return x.id===t;})) t='trueblack';
-    // Sun + moon share pure black page chrome. Only light theme is different.
-    // (Never force easyview to #0d0c15 — that painted a purple wash over the app.)
+    // Sun and Void retain the original navy aurora field. Night stays pure black.
     try{
-      var bgMap = { purple:'#000000', trueblack:'#000000', easyview:'#000000', ios:'#000000', light:'#f2f2f7' };
+      var bgMap = { purple:'#0c0c17', trueblack:'#000000', easyview:'#0c0c17', ios:'#000000', light:'#f2f2f7' };
       var toBg = bgMap[t] || '#000000';
       document.documentElement.setAttribute('data-theme', t);
       // Clear any leftover inline washes from older builds
