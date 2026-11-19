@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <script>(function(){try{if(new URLSearchParams(location.search).get('ava-app')==='1'){window._synSkipDailyIntro=true;document.documentElement.classList.add('ava-app-mode','synapses-intro-skipped');document.documentElement.setAttribute('data-ava-app-stage','waiting');}}catch(_){}})();</script>
-<link rel="stylesheet" href="ava-app-entry.css">
-<link rel="stylesheet" href="star-news.css">
-<script src="ava-app-entry.js" defer></script>
+<link rel="stylesheet" href="ava-app-entry.css?v=20261118-ava2">
+<link rel="stylesheet" href="star-news.css?v=20261118-desktop2">
+<script src="ava-app-entry.js?v=20261118-ava2" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -44,7 +44,7 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
     },{once:true});
   }
   window.__avaWelcomeActive=false;
-  window.avaWelcomeStorageKey=function(){var u=null;try{u=typeof currentUser!=='undefined'?currentUser:window.currentUser;}catch(e){}return 'synapses_ava_welcome_v1_'+(!u||u.isGuest?'guest':String(u.id||u.email||'member').toLowerCase());};
+  window.avaWelcomeStorageKey=function(){var u=null;try{u=typeof currentUser!=='undefined'?currentUser:window.currentUser;}catch(e){}return (new URLSearchParams(location.search).get('ava-app')==='1'?'synapses_ava_app_welcome_v1_':'synapses_ava_welcome_v1_')+(!u||u.isGuest?'guest':String(u.id||u.email||'member').toLowerCase());};
   window.avaWelcomeShouldStart=function(){try{if(window.__avaWelcomePreviewDismissedKey===window.avaWelcomeStorageKey())return false;if(new URLSearchParams(location.search).get('welcome')==='preview')return true;var u=typeof currentUser!=='undefined'?currentUser:window.currentUser;if(!u)return false;return !localStorage.getItem(window.avaWelcomeStorageKey());}catch(e){return true;}};
   function startWhenReady(){
     if(!window.__avaWelcomePending)return;
@@ -93601,6 +93601,7 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
   }
   function toast(text){var el=document.createElement('div');el.className='aw-preview-toast';el.setAttribute('role','status');el.textContent=text;document.body.appendChild(el);setTimeout(function(){el.remove();},5000);}
   function stagePrompt(text){
+    if(window.avaAppEntry&&typeof window.avaAppEntry.stagePrompt==='function'){window.avaAppEntry.stagePrompt(text);return;}
     if(typeof setView==='function')setView('sec-chat');
     if(typeof newChat==='function')newChat({forceAsk:true});
     setTimeout(function(){var input=document.getElementById('inputBox');if(!input)return;if('value' in input)input.value=text;else input.textContent=text;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();},150);
@@ -93609,8 +93610,8 @@ body.ava-welcome-active #avaRecordedPortrait,body.ava-welcome-active #synTourRoo
     if(typeof setView==='function')setView('sec-chat');
     var button=document.getElementById('csNewCallBtn');
     if(!button){toast('Open Calls to add a number and review your call details.');return;}
-    // Existing private handler opens the real Calls form; it does not submit it.
-    button.click();
+    // Existing private handler opens a reviewable draft; it never submits a call.
+    if(window.avaAppEntry)window.avaAppEntry.action('calls');else button.click();
     var name=document.getElementById('csNewName'),phone=document.getElementById('csNewPhone'),objective=document.getElementById('csNewObjective');
     if(name)name.value='Barber';if(phone)phone.value='';
     if(objective)objective.value='Ask whether they have a haircut appointment available Thursday afternoon and what it costs. Do not make a booking.';
@@ -94492,7 +94493,7 @@ var createAvaCompanionAdapter=function createAdapter(deps){
 })();
 </script>
 
-<script src="star-news.js"></script>
+<script src="star-news.js?v=20261118-desktop2"></script>
 <script>(function(){
 var deepSpacePoints=window.synapsesStarNewsPoints;
 window.synapsesStarNewsPoints=function(){var deep=typeof deepSpacePoints==='function'?deepSpacePoints():[];if(deep.length)return deep;var all=[];Object.keys(window._synStarNewsParticleGetters||{}).forEach(function(key){try{all=all.concat(window._synStarNewsParticleGetters[key]());}catch(_){}});return all;};

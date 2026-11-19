@@ -24,6 +24,15 @@ html.ava-app-mode #appSplash,
 html.ava-app-mode #globalBeamsCanvas,
 html.ava-app-mode #deepSpaceCanvas { display:none!important; }
 
+/* Outrank legacy fixed-logo rules, which explicitly reveal hidden top bars.
+   These are desktop widgets, separate from the actual Ava setup and chat. */
+html.ava-app-mode:not(#ava-legacy-chrome) :is(#bnavLogoMark,#tnvLogoCenterBtn,#chpLogoFlyer,#sidebarIconRail,#robotTooltip,#tinyBotCanvas,#synBotZone,#synBotChat,#synBotRephrasePopup,#cyberGreeting,#avaRecordedPortrait) {
+  display:none!important; visibility:hidden!important; pointer-events:none!important;
+}
+html.ava-app-mode:not(#ava-legacy-chrome):is([data-ava-app-stage="chat"],[data-ava-app-stage="auth"],[data-ava-app-stage="welcome"]) #topNavVoiceBtn {
+  display:none!important; visibility:hidden!important; pointer-events:none!important;
+}
+
 /* Keep the legacy DOM mounted. display:none on main/body would break its voice,
    verification and account surfaces; targeted descendants can remain visible. */
 html.ava-app-mode main.main { margin:0!important; padding:0!important; width:100%!important; visibility:hidden; pointer-events:none; }
@@ -62,6 +71,11 @@ html.ava-app-mode #avaCompanionChat[data-history="true"] .ac-rail {
 }
 html.ava-app-mode #avaCompanionChat .ac-input { font-size:16px!important; }
 html.ava-app-mode #avaCompanionChat .ac-bottom { padding-bottom:max(12px,env(safe-area-inset-bottom,0px)); }
+html.ava-app-mode #avaAppVoiceBar { display:flex; justify-content:flex-end; flex-shrink:0; padding:0 14px 8px; background:#000; }
+html.ava-app-mode #avaAppVoiceBar[hidden] { display:none!important; }
+html.ava-app-mode #avaAppVoiceStop { display:flex; align-items:center; gap:9px; min-height:44px; padding:9px 14px; border:1px solid #173b30; border-radius:24px; background:#071b13; color:#67d6a4; font:14px/1.4 'DM Sans',sans-serif; cursor:pointer; touch-action:manipulation; }
+html.ava-app-mode #avaAppVoiceStop::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+html.ava-app-mode #avaAppVoiceStop:focus-visible { outline:2px solid #9ee4c4; outline-offset:3px; }
 
 html.ava-app-mode #avaAppReturn { position:fixed; z-index:94000; bottom:max(14px,env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:7px 8px 7px 13px; max-width:calc(100% - 28px); background:#0d0e11; border:1px solid #292c33; border-radius:12px; color:#a7abb5; font:12px/1.5 'DM Sans',sans-serif; }
 html.ava-app-mode #avaAppReturn[hidden] { display:none!important; }

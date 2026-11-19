@@ -21,8 +21,8 @@
   html.classList.add('synapses-intro-skipped');
   var state = { stage: 'waiting', destroyed: false, opening: false, initial: true,
     suspension: null, force: false, failed: false, ready: false, userKey: null,
-    settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial' };
-  var observer = null, menu = null, returnBar = null, statusNode = null;
+    settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null };
+  var observer = null, menu = null, returnBar = null, statusNode = null, voiceBar = null;
   var listeners = [], observed = new Set(), patched = new Map();
 
   function emit(name, detail) {
@@ -53,6 +53,7 @@
     var changed = state.stage !== next;
     state.stage = next; state.lastReason = reason || next;
     html.setAttribute('data-ava-app-stage', next);
+    syncVoiceControl();
     if (returnBar) returnBar.hidden = next === 'chat' || next === 'auth' || next === 'welcome' || Boolean(menu && menu.open);
     if (statusNode) statusNode.textContent = state.failed ? 'Ava could not open. Try again.' : next === 'waiting' ? 'Opening Ava…' : '';
     if (changed) emit('ava:app-stage-change', { stage: next, reason: state.lastReason });
@@ -79,6 +80,22 @@
   }
   function closeOwnMenu() {
     if (menu && menu.open) menu.close();
+  }
+  function syncVoiceControl() {
+    var chat = document.getElementById('avaCompanionChat');
+    if (!voiceBar && chat) {
+      voiceBar = document.createElement('div'); voiceBar.id = 'avaAppVoiceBar';
+      var stop = button('Voice on · Stop', function () {
+        if (typeof window.stopTopNavVoice === 'function') window.stopTopNavVoice();
+        schedule('voice-stopped', 0);
+      });
+      stop.id = 'avaAppVoiceStop'; stop.setAttribute('aria-label', 'Stop voice conversation');
+      voiceBar.appendChild(stop);
+      // Keep the live control inside chat's focus boundary. Body-level controls
+      // become inert while mobile chat is open, even if they remain visible.
+      chat.insertBefore(voiceBar, document.getElementById('acPreview'));
+    }
+    if (voiceBar) voiceBar.hidden = state.stage !== 'chat' || !voiceActive();
   }
   function suspend(kind) {
     state.initial = false; state.force = false; state.suspension = kind; state.failed = false;
@@ -111,7 +128,8 @@
       var close = button('×', function () { closeOwnMenu(); showChat(); }, 'ava-app-menu-close');
       close.setAttribute('aria-label', 'Back to Ava'); top.append(title, close); menu.appendChild(top);
       var account = document.createElement('p'); account.id = 'avaAppMenuAccount'; menu.appendChild(account);
-      menu.append(button('Back to chat', showChat), button('Settings', function () { action('settings'); }),
+      menu.append(button('Back to chat', showChat), button('Calls', function () { action('call-records'); }),
+        button('Notes', function () { action('notes'); }), button('Introduction & setup', showIntroduction), button('Settings', function () { action('settings'); }),
         button('Your account', function () { action('account'); }), button('Sign out', function () { action('logout'); }));
       document.body.appendChild(menu);
       listen(menu, 'cancel', function (event) { event.preventDefault(); closeOwnMenu(); showChat(); });
@@ -121,6 +139,20 @@
     if (!menu.open) menu.showModal();
     if (returnBar) returnBar.hidden = true;
     return true;
+  }
+  function showIntroduction() {
+    if (state.destroyed || authVisible() || !user() || typeof window.openAvaWelcome !== 'function') return false;
+    closeOwnMenu();
+    if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+    state.initial = true; state.force = false; state.suspension = null; state.failed = false;
+    window.openAvaWelcome({ replay: true });
+    setStage('welcome', 'user-opened-introduction');
+    return true;
+  }
+  function stagePrompt(text) {
+    if (typeof text !== 'string' || !text.trim()) return false;
+    state.draft = text.slice(0, 12000);
+    return showChat();
   }
   function closeKnownSettings() {
     if (document.body && document.body.classList.contains('chp-mobile-settings-open')) {
@@ -172,17 +204,26 @@
       state.userKey = key; state.settledAt = Date.now() + 180;
       if (current) { state.initial = true; state.suspension = null; }
     }
-    if (chatVisible()) { state.initial = false; state.force = false; setStage('chat', reason || 'chat-visible'); return true; }
+    // Prepare the real setup before opening chat, including an account that
+    // becomes ready after the legacy onboarding bootstrap's first attempt.
+    if (current && state.initial && typeof window.avaWelcomeShouldStart === 'function' && window.avaWelcomeShouldStart()) {
+      if (chatVisible() && typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);
+      if (typeof window.avaWelcomeMaybeStart === 'function') window.avaWelcomeMaybeStart();
+      setStage(visible(document.getElementById('avaWelcome')) ? 'welcome' : 'waiting', 'preparing-introduction');
+      return false;
+    }
+    if (chatVisible() && state.draft === null) { state.initial = false; state.force = false; setStage('chat', reason || 'chat-visible'); return true; }
     if ((voiceActive() || state.suspension === 'voice') && !state.force) { setStage('voice', reason || 'voice-handoff'); return false; }
     if (state.suspension === 'tools' || menu && menu.open) { setStage('tools', reason || 'tools-handoff'); return false; }
     if (!current || typeof window.avaCompanionChatOpen !== 'function') { setStage('waiting', reason || 'waiting-for-account'); return false; }
     if (!(state.initial || state.force) || state.opening || state.failed) { setStage('waiting', reason || 'awaiting-user-return'); return false; }
     if (Date.now() < state.settledAt) { schedule('startup-settled', state.settledAt - Date.now() + 10); return false; }
     state.opening = true; state.force = false;
-    Promise.resolve().then(function () { return window.avaCompanionChatOpen(); }).then(function () {
+    var draft = state.draft;
+    Promise.resolve().then(function () { return window.avaCompanionChatOpen(draft === null ? undefined : { message: draft, send: false }); }).then(function () {
       if (state.destroyed) return;
       state.initial = false;
-      if (chatVisible()) setStage('chat', 'ava-opened');
+      if (chatVisible()) { if (state.draft === draft) state.draft = null; setStage('chat', 'ava-opened'); }
       else { state.failed = true; setStage('waiting', 'chat-did-not-open'); }
     }, function () { if (!state.destroyed) { state.failed = true; setStage('waiting', 'chat-open-failed'); } }).finally(function () { state.opening = false; });
     return true;
@@ -233,7 +274,7 @@
     if (state.destroyed) return;
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
-    closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove();
+    closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceBar) voiceBar.remove();
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);
       if (before.title == null) node.removeAttribute('title'); else node.setAttribute('title', before.title);
@@ -245,7 +286,7 @@
     if (beforeIntro.skipped === undefined) delete window._synSkipDailyIntro; else window._synSkipDailyIntro = beforeIntro.skipped;
     delete window.avaAppEntry; delete window.avaMobileEntry; delete window.__avaMobileEntryReady;
   }
-  var api = { version: 1, refresh: refresh, showChat: showChat, open: showChat, openMenu: openMenu, destroy: destroy,
+  var api = { version: 1, refresh: refresh, showChat: showChat, open: showChat, openMenu: openMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
     action: function (name) { return ['settings', 'account', 'logout', 'notes', 'calls', 'call-records'].indexOf(name) === -1 ? 'unavailable' : action(name); },
     get stage() { return state.stage; } };
   window.avaAppEntry = window.avaMobileEntry = api;

@@ -18,6 +18,7 @@ class FakeElement extends EventTarget {
   removeAttribute(name) { this.attrs.delete(name); }
   append(...values) { values.forEach(value => { this.children.push(value); value.parentNode = this; }); }
   appendChild(value) { this.append(value); return value; }
+  insertBefore(value, reference) { const i = this.children.indexOf(reference); if (i < 0) return this.appendChild(value); this.children.splice(i, 0, value); value.parentNode = this; return value; }
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter(value => value !== this); this.document.nodes.delete(this.id); }
   getClientRects() { return this.hidden || this.style.display === 'none' ? [] : [{}]; }
   showModal() { this.open = true; }
@@ -45,7 +46,8 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   window.getComputedStyle = node => ({ display: node.style.display || 'block', visibility: node.style.visibility || 'visible' });
   window.currentUser = signedIn ? { id: 'real-owner', email: 'owner@example.test', isGuest: false } : null;
   window.avaCompanionChatBridge = { uiKey: () => window.currentUser ? 'real-owner|owner@example.test' : 'guest' };
-  function makeChatReady() { window.avaCompanionChatOpen = async () => { opens++; chat.hidden = false; return { status: 'opened' }; }; }
+  const chatOptions = [];
+  function makeChatReady() { window.avaCompanionChatOpen = async options => { opens++; chatOptions.push(options); chat.hidden = false; return { status: 'opened' }; }; }
   if (chatReady) makeChatReady();
   window.avaCompanionChatClose = () => { closes++; chat.hidden = true; document.body.inert = false; };
   const calls = []; window.avaFloatingOpenAction = action => { calls.push(action); return action; };
@@ -53,7 +55,7 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   const inject = () => vm.runInContext(source, context);
   const events = []; window.addEventListener('ava:app-ready', event => events.push(event.detail));
   inject();
-  return { window, document, authNode, welcomeNode, chat, advance, inject, makeChatReady, calls, events,
+  return { window, document, authNode, welcomeNode, chat, advance, inject, makeChatReady, calls, events, chatOptions,
     get opens() { return opens; }, get closes() { return closes; } };
 }
 async function settle(f, ms = 250) { f.advance(ms); for (let i = 0; i < 8; i++) await Promise.resolve(); }
@@ -114,4 +116,61 @@ test('native tools use an allowlisted intentional handoff and unknown actions ha
   assert.equal(f.window.avaAppEntry.action('untrusted-other-action'), 'unavailable'); assert.equal(f.closes, closes); assert.equal(f.calls.length, 0);
   assert.equal(f.window.avaAppEntry.action('notes'), 'notes'); assert.deepEqual(f.calls, ['notes']);
   await settle(f); assert.equal(f.window.avaAppEntry.stage, 'tools'); assert.equal(f.opens, 1);
+});
+
+test('setup starts before chat for a late signed-in account and hands off once completed', async () => {
+  const f = setup({ signedIn: false }); let needsSetup = true, starts = 0;
+  f.window.avaWelcomeShouldStart = () => needsSetup;
+  f.window.avaWelcomeMaybeStart = () => { starts++; f.welcomeNode.hidden = false; return true; };
+  f.window.currentUser = { id: 'real-owner', email: 'owner@example.test' };
+  f.window.avaAppEntry.refresh(); await settle(f);
+  assert.equal(starts, 1); assert.equal(f.opens, 0); assert.equal(f.window.avaAppEntry.stage, 'welcome');
+  needsSetup = false; f.welcomeNode.hidden = true; f.window.dispatchEvent(new Event('ava:welcome-closed'));
+  await settle(f); await settle(f); assert.equal(f.opens, 1);
+});
+
+test('replaying introduction releases chat focus isolation and does not bypass sign-in', async () => {
+  const f = setup(); await settle(f); let options;
+  f.window.openAvaWelcome = value => { options = value; f.welcomeNode.hidden = false; };
+  f.document.body.inert = true;
+  assert.equal(f.window.avaAppEntry.showIntroduction(), true);
+  assert.equal(f.chat.hidden, true); assert.equal(f.document.body.inert, false); assert.equal(options.replay, true);
+  assert.equal(f.window.avaAppEntry.stage, 'welcome');
+  f.welcomeNode.hidden = true; f.authNode.hidden = false;
+  assert.equal(f.window.avaAppEntry.showIntroduction(), false);
+});
+
+test('setup starter enters the real Ava draft without sending a message', async () => {
+  const f = setup(); await settle(f);
+  f.window.avaAppEntry.stagePrompt('Help me plan the week'); await settle(f);
+  assert.equal(f.chatOptions.at(-1).message, 'Help me plan the week');
+  assert.equal(f.chatOptions.at(-1).send, false); assert.equal(f.window.avaAppEntry.stage, 'chat');
+});
+
+test('live voice stop is inside the chat boundary and only stops the real session', async () => {
+  const f = setup(); await settle(f); let stops = 0;
+  f.window._topNavVoiceActive = true;
+  f.window.stopTopNavVoice = () => { stops++; f.window._topNavVoiceActive = false; };
+  f.window.avaAppEntry.refresh();
+  const bar = f.document.getElementById('avaAppVoiceBar'), stop = f.document.getElementById('avaAppVoiceStop');
+  assert.equal(bar.parentNode, f.chat); assert.equal(bar.hidden, false); assert.equal(bar.inert, false);
+  stop.click(); await settle(f); assert.equal(stops, 1); assert.equal(bar.hidden, true);
+  assert.equal(f.window._topNavVoiceActive, false); assert.equal(f.opens, 1);
+  f.window.avaAppEntry.destroy(); assert.equal(f.document.getElementById('avaAppVoiceBar'), null);
+});
+
+test('Ava first-run setup has its own per-account completion marker without changing desktop completion', async () => {
+  const page = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const line = page.split('\n').find(value => value.includes('window.avaWelcomeStorageKey=function'));
+  assert.ok(line);
+  function key(search, owner) {
+    const window = { currentUser: owner };
+    vm.runInNewContext(line, { window, currentUser: owner, location: { search }, URLSearchParams });
+    return window.avaWelcomeStorageKey();
+  }
+  const owner = { id: 'owner-123', email: 'owner@example.test' };
+  assert.equal(key('', owner), 'synapses_ava_welcome_v1_owner-123');
+  assert.equal(key('?ava-app=1', owner), 'synapses_ava_app_welcome_v1_owner-123');
+  assert.equal(key('?ava-app=1', { isGuest: true }), 'synapses_ava_app_welcome_v1_guest');
+  assert.notEqual(key('?ava-app=1', owner), key('?ava-app=1', { id: 'other-owner' }));
 });
