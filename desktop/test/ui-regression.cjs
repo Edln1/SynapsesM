@@ -40,18 +40,20 @@ app.whenReady().then(async()=>{
   const cleanup=bindWindowControls(ipcMain,win,view.webContents,'synapses-shell://app/index.html');
   await win.loadURL('synapses-shell://app/index.html');await view.webContents.loadURL('https://synapses.cloud/fixture');
   const pause=()=>new Promise(resolve=>setTimeout(resolve,45));
-  async function click(contents,x,y){contents.sendInputEvent({type:'mouseMove',x,y});contents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});contents.sendInputEvent({type:'mouseUp',x,y,button:'left',clickCount:1});await pause();}
+  async function click(contents,x,y){contents.focus();contents.sendInputEvent({type:'mouseMove',x,y});contents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});contents.sendInputEvent({type:'mouseUp',x,y,button:'left',clickCount:1});await pause();}
   const state=()=>view.webContents.executeJavaScript("({drawer:document.getElementById('chpSidebar').classList.contains('open'),hidden:TOP_BAR_HIDDEN,bridge:typeof window.synapsesWindow,logoRect:JSON.stringify(document.getElementById('bnavLogoMark').getBoundingClientRect().toJSON()),arrowRect:JSON.stringify(document.getElementById('topBarToggle').getBoundingClientRect().toJSON())})");
   const initial=await state();
-  await click(view.webContents,24,14);const beforeLogo=await state();assert.equal(beforeLogo.drawer,false,'Legacy drag overlay should reproduce blocked web logo');
-  await click(view.webContents,896,4);const beforeArrowEdge=await state();assert.equal(beforeArrowEdge.hidden,false,'Legacy corner resize overlay should reproduce blocked arrow hit area');
-  await click(view.webContents,886,14);assert.equal((await state()).hidden,true,'Production arrow center handler should work without an interceptor');
-  await click(view.webContents,886,14);assert.equal((await state()).hidden,false);
+  const logo=JSON.parse(initial.logoRect),arrow=JSON.parse(initial.arrowRect);
+  const logoX=Math.round(logo.x+logo.width/2),logoY=Math.round(logo.y+logo.height/2),arrowX=Math.round(arrow.x+arrow.width/2),arrowY=Math.round(arrow.y+arrow.height/2),edgeX=Math.round(arrow.right-4),edgeY=Math.round(arrow.top+4);
+  await click(view.webContents,logoX,logoY);const beforeLogo=await state();assert.equal(beforeLogo.drawer,false,'Legacy drag overlay should reproduce blocked web logo');
+  await click(view.webContents,edgeX,edgeY);const beforeArrowEdge=await state();assert.equal(beforeArrowEdge.hidden,false,'Legacy corner resize overlay should reproduce blocked arrow hit area');
+  await click(view.webContents,arrowX,arrowY);assert.equal((await state()).hidden,true,'Production arrow center handler should work without an interceptor');
+  await click(view.webContents,arrowX,arrowY);assert.equal((await state()).hidden,false);
   await view.webContents.insertCSS(fs.readFileSync(path.join(root,'src/remote-shell.css'),'utf8'),{cssOrigin:'user'});await pause();
-  await click(view.webContents,24,14);assert.equal((await state()).drawer,true,'Fixed web logo should open the drawer');
-  await click(view.webContents,24,14);assert.equal((await state()).drawer,false);
-  await click(view.webContents,896,4);assert.equal((await state()).hidden,true,'Fixed arrow edge should receive the click');
-  await click(view.webContents,886,14);assert.equal((await state()).hidden,false);
+  await click(view.webContents,logoX,logoY);assert.equal((await state()).drawer,true,'Fixed web logo should open the drawer');
+  await click(view.webContents,logoX,logoY);assert.equal((await state()).drawer,false);
+  await click(view.webContents,edgeX,edgeY);assert.equal((await state()).hidden,true,'Fixed arrow edge should receive the click');
+  await click(view.webContents,arrowX,arrowY);assert.equal((await state()).hidden,false);
   const native=await win.webContents.executeJavaScript("(()=>{const e=document.getElementById('navigation'),r=e.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),tag:e.tagName,label:e.getAttribute('aria-label'),region:getComputedStyle(e).appRegion}})()");
   assert.equal(native.tag,'BUTTON');assert.equal(native.region,'no-drag');
   await click(win.webContents,native.x,native.y);assert.equal((await state()).drawer,true,'Native brand should dispatch actual production logo action');

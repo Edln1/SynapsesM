@@ -1,12 +1,30 @@
-## Controls update: 0.1.2
-
-The local titlebar brand now activates the existing production navigation control through a sender-checked local IPC action. Shell-only user CSS removes the remote page drag regions and legacy resize interceptors before the hosted view becomes visible. Same-document navigation retains the current visible surface. Six policy groups passed, including the same-document navigation regression. Production handlers were checked in an isolated fixture. These checks do not establish a physical OS click test; computer control was stopped at the user's request.
-
 # Synapses Windows preview verification — 19 November 2026
+
+## Final 0.1.3 voice capability
+
+The final source adds an explicit Windows PC voice lease on top of the verified tray base. Forty-three desktop tests pass, covering wake-word parsing, public URL/DNS boundaries, exact-frame IPC, pending-consent cancellation, stale sessions, foreground setup/hidden capture rules, user-gesture forwarding, client account/track/error handling, tray lifecycle and asynchronous document readiness. Independent review also passed the focused real-source ASR hook tests.
+
+The final `--dir` build produced `dist/win-unpacked/resources/app.asar`: **203,438 bytes**, SHA-256 **707A4FC567AC27B817618FBDE7A9EE6B261B32BE9EE989A4EB2526905DB2D1C3**. All **14 runtime source files** were read back and matched exactly. The accompanying `Synapses.exe` has version metadata 0.1.3.0 and SHA-256 **112151F5CDAAF273C7C988448D6F7328086923CA6D14A33D5633A01164A9E81D**. CI builds its installer separately and publishes that build's own checksum.
+
+The actual fresh-profile source smoke confirmed the narrow seven-method `synapsesDesktopVoice` API is available in the trusted Windows renderer while `require`, `process` and the local window-control bridge remain absent. Sandbox/context isolation are enabled; hash navigation, maximize/restore and tray hide/restore/Quit checks passed. The configured remote preload is only `src/desktop-voice-preload.cjs`; current Electron omitted its legacy `preload` field from the preference getter, so the smoke verifies the actual exposed capability and the archive/source checks verify the configured file.
+
+The final packaged fresh-profile smoke also passed those checks, with evidence at ignored `.preview/pc-voice-0.1.3-packaged-verified/smoke.json`. It caught and verified a corrected startup race: document generations now preserve visibility across hash/pushState changes while required CSS is pending, and optional voice-client setup cannot block the app surface.
+
+PC voice is off by default. Background capture/throttling exceptions require the current explicit lease plus a live-track report. Native start consent, microphone permission and the existing account gate are retained. Stop, logout, navigation, renderer loss and Quit revoke it. Raw accepted ASR commands, never model replies, feed the restricted native browser parser. Cached pages lacking the versioned ASR hook must reload.
+
+No physical microphone, live ASR session or real browser-opening voice command was exercised. Client tracks, browser launch and cleanup are simulated in the relevant fixtures; the real smoke checks the native capability boundary and window/tray lifecycle. No computer-use tools or installed user profile were used by these checks.
+
+## Earlier local backups
 
 Local backup installer: `dist/Synapses-Setup-0.1.0.exe`
 
-Current source/release target: **0.1.1** / **desktop-v0.1.1**. The existing local backup below remains 0.1.0; no new local installer was built for the CI-only packaging change. The failed 0.1.0 CI tag is retained without forcing it to a different commit.
+Verified tray-base source/release target: **0.1.3** / **desktop-v0.1.3**. The existing local installer backup below remains 0.1.0. The 0.1.3 local build used `--dir` only; the installer is built separately by release CI.
+
+The verified tray-base `dist/win-unpacked/resources/app.asar` is **173,024 bytes**, SHA-256 **02EAD98971A2B1BF90FA29BDC2C5B9F6F110183EB9EA61236BAEE062025FCDAD**. Packaged identity is 0.1.3, and all nine runtime source files were read back and matched exactly. The accompanying `Synapses.exe` has version metadata 0.1.3.0 and SHA-256 **D27936035B8689BAEFA775030CFFCE72E5C3C642CF5A8513439F4A1A5890DB9A**.
+
+Thirteen policy/lifecycle tests passed. The final tray-base packaged fresh-profile smoke confirmed voice cleanup before X hides the window, a retained tray and document, click/double-click/Open menu restore, second-instance handler restore and explicit Quit completion. Voice cleanup was stubbed; no real microphone was used. Unit regressions cover cleanup failure, restore-versus-hide races, canceled Quit recovery and bounded explicit-Quit cleanup.
+
+The final fresh-profile packaged smoke passed: four accessible local buttons, actual maximize/restore IPC, no remote Node/preload/native bridge, and the remote view visible both before and after hash navigation. Six policy groups pass, including the guard that prevents same-document navigation from hiding the app. An independent handler-only fixture confirmed production drawer/top-bar functions; the separate hidden `sendInputEvent` diagnostic did not deliver the expected center click and is not counted as pointer-hit verification. No computer-use tools or installed user profile were used by these tests.
 
 - Version: **0.1.0**
 - Size: **121,534,176 bytes** (115.9 MiB)
@@ -18,7 +36,7 @@ Current source/release target: **0.1.1** / **desktop-v0.1.1**. The existing loca
 
 The real NSIS build completed successfully, and 7-Zip archive testing reported `Everything is Ok`. The application executable contains Synapses product/company metadata and the approved favicon converted to ICO. The app archive's JavaScript, local header HTML/CSS, preload and icon assets were read back and exactly matched the final source files.
 
-Five security test groups passed: exact HTTPS host boundaries, validated external links, first-party audio-only permission requests, local-main-frame-only window IPC and app export download boundaries.
+Six security test groups passed: exact HTTPS host boundaries, validated external links, first-party audio-only permission requests, local-main-frame-only window IPC, app export download boundaries and same-document navigation preservation.
 
 Both source and packaged executable smoke tests loaded the full public `https://synapses.cloud/` site in an isolated profile. Actual local-header maximize and restore IPC succeeded. Remote-page evaluation found `require`, `process` and the local window bridge undefined. Last web preferences confirmed sandbox/context isolation enabled, Node integration disabled and no remote preload. The remote view bounds were 1320 × 828 below the 32px local titlebar. The smoke test closed through the native close bridge. Evidence is under ignored `.preview/packaged/`.
 
