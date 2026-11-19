@@ -70375,9 +70375,14 @@ function speakVoiceReply(text) {
       _traceDesktopSpeechRoute(desktopResult&&desktopResult.handled?'handled':'unhandled',speech,desktopResult);
       if (desktopResult && desktopResult.handled) {
         var desktopReply = String(desktopResult.message || (desktopResult.ok ? 'PC voice command finished.' : 'PC voice control could not complete that command.')).slice(0,500);
-        try { speak(desktopReply); } catch(error) { toast(desktopReply); }
-        _busy = false; _busySince = 0;
-        setTimeout(function() { if (_on && desktopGeneration === _micSessionGeneration && _myTurn === _voiceTurnId) record(); }, 800);
+        // TTS owns the busy state and resumes listening after real playback.
+        // A fixed timer here recorded Ava's own reply while it was still playing.
+        try { speak(desktopReply, _myTurn); }
+        catch(error) {
+          try { if(typeof _ttsStopAll==='function')_ttsStopAll(true); } catch(stopError) {}
+          _busy = false; _busySince = 0; _ttsBusy = false; toast(desktopReply);
+          setTimeout(function() { if (_on && desktopGeneration === _micSessionGeneration && _myTurn === _voiceTurnId) record(); }, 800);
+        }
         return;
       }
     }else if(desktopSpeechMetadata)_traceDesktopSpeechRoute('unhandled',speech);
@@ -71726,6 +71731,13 @@ function speakVoiceReply(text) {
 
   function record() {
     if (!_on) return;
+    var desktopVoice=window.synapsesDesktopVoiceClient;
+    if(desktopVoice&&typeof desktopVoice.active==='function'&&desktopVoice.active()){
+      if(_ttsBusy)return;
+      // The persistent Flux session is already the listener. Legacy capture
+      // resumes only after Flux releases ownership during its fallback.
+      if(typeof _flux!=='undefined'&&_flux.speech&&typeof _flux.speech.current==='function'&&_flux.speech.current())return;
+    }
     // The showcase may leave delayed TTS completion callbacks behind. Keep
     // the mic locked until the next deliberate manual voice toggle so those
     // callbacks cannot reopen recording or trigger a permission prompt.
