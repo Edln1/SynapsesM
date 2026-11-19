@@ -24,7 +24,7 @@
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null, homeRequested: true };
   var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
   var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
-  var listeners = [], observed = new Set(), patched = new Map();
+  var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '';
 
   function emit(name, detail) {
     try { window.dispatchEvent(new window.CustomEvent(name, { detail: detail })); } catch (_) {}
@@ -85,6 +85,18 @@
   function stopVoice() {
     if (typeof window.stopTopNavVoice === 'function') window.stopTopNavVoice({ skipAway: true });
     schedule('voice-stopped', 0);
+  }
+  function showVoiceIssue(event) {
+    var notice = document.getElementById('acNotice');
+    var message = event.detail && event.detail.message;
+    if (!notice || typeof message !== 'string') return;
+    if (message) {
+      voiceNotice = message.slice(0, 240);
+      notice.textContent = voiceNotice;
+    } else {
+      if (voiceNotice && notice.textContent === voiceNotice) notice.textContent = '';
+      voiceNotice = '';
+    }
   }
   function restoreVoiceControl() {
     if (!dockedVoice) return;
@@ -349,6 +361,7 @@
       schedule('surface-changed');
     }); watch();
     listen(document, 'click', captureClick, true); listen(document, 'keydown', captureKey, true);
+    listen(window, 'ava:voice-error', showVoiceIssue);
     ['ava:chat-ready', 'ava:welcome-closed', 'synapses:intro-complete', 'focus', 'pageshow'].forEach(function (name) { listen(window, name, function () { schedule(name, 100); }); });
     listen(document, 'visibilitychange', function () { if (!document.hidden) schedule('visible', 100); });
     refresh('entry-started');

@@ -39,25 +39,30 @@ function stream({ enabled = true } = {}) {
     stop() { this.stops++; this.readyState = 'ended'; } };
   return { track, getTracks: () => [track], getAudioTracks: () => [track] };
 }
-function setup() {
-  const requests = [], messages = [], errors = [], timers = [];
+function setup({ appMode = false } = {}) {
+  const requests = [], messages = [], errors = [], timers = [], notices = [];
+  const document = { documentElement: { classList: { contains: value => appMode && value === 'ava-app-mode' } } };
+  const window = new EventTarget();
+  window.document = document; window._stream = null;
+  window.CustomEvent = class extends Event { constructor(name, options) { super(name); this.detail = options.detail; } };
+  window.addEventListener('ava:voice-error', event => notices.push({ ...event.detail }));
   const context = vm.createContext({
-    window: { _stream: null }, _on: true, _stream: null,
+    window, document, _on: true, _stream: null,
     navigator: { mediaDevices: { getUserMedia(constraints) {
       const pending = deferred(); requests.push({ ...pending, constraints }); return pending.promise;
     } } },
     console: { error: (...args) => errors.push(args), warn() {} },
     toast: message => messages.push(message), toastHide() {},
-    _teardownBargeAnalyser() {}, _abortAllTurnRequests() {},
+    _ensureBargeAnalyser() {}, _teardownBargeAnalyser() {}, _abortAllTurnRequests() {},
     _setTopNavVoiceActive(value) { context.window._topNavVoiceActive = value; },
     _voiceTurnId: 0, _recordTimer: null, _recorder: null,
-    _busy: false, _busySince: 0, _ttsBusy: false, _bargeTurnActive: false,
+    _busy: false, _busySince: 0, _ttsBusy: false, _bargeTurnActive: false, _bargingIn: false,
     _chunks: [], _toastFull: '', btnState() {}, record() {},
     setTimeout(callback, delay) { timers.push({ callback, delay }); return timers.length; },
     clearTimeout() {},
   });
   vm.runInContext(lifecycle + '\n' + recovery + '\n' + stopping, context);
-  return { context, requests, messages, errors, timers };
+  return { context, requests, messages, errors, timers, notices };
 }
 async function settle() { for (let i = 0; i < 10; i++) await Promise.resolve(); }
 
@@ -177,4 +182,110 @@ test('a stale ready callback cannot initialize a newer session', () => {
   f.context.stopAll(); f.context._on = true;
   let started = 0; f.context._runMicReady(generation, () => { started++; });
   assert.equal(started, 0);
+});
+
+test('mobile permission denial emits an actionable notice without exposing raw media error details', async () => {
+  const f = setup({ appMode: true });
+  const generation = f.context._micSessionGeneration;
+  const request = f.context._acquireMic();
+  const error = Object.assign(new Error('Private native media details'), { name: 'NotAllowedError' });
+  f.requests[0].reject(error);
+  await assert.rejects(request);
+  f.context._micCaptureFailed(error, generation);
+  assert.equal(f.context._on, false);
+  assert.equal(f.requests.length, 1);
+  assert.equal(f.notices.length, 1);
+  assert.deepEqual(Object.keys(f.notices[0]), ['message']);
+  assert.match(f.notices[0].message, /mic(?:rophone)?|permission/i);
+  assert.match(f.notices[0].message, /allow|settings|access/i);
+  assert.doesNotMatch(f.notices[0].message, /Private native media details/);
+});
+
+test('the real mobile mic toggle gives an inline error when the WebView cannot acquire media', () => {
+  const f = setup({ appMode: true });
+  f.context._on = false;
+  f.context.navigator.mediaDevices = null;
+  f.context.location = { protocol: 'https:' };
+  f.context.fetch = async () => ({ ok: true });
+  f.context._desktopVoiceSpeechError = () => false;
+  vm.runInContext(extract('  window.toggleTopNavVoice = function() {', '\n})();'), f.context);
+
+  f.context.window.toggleTopNavVoice();
+
+  assert.equal(f.context._on, false);
+  assert.equal(f.context.window._topNavVoiceActive, false);
+  assert.equal(f.requests.length, 0);
+  const messages = f.notices.map(notice => notice.message).filter(Boolean);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /mic(?:rophone)?.*(?:support|start|access|capture)/i);
+});
+
+test('mobile Flux failure reports an inline error and releases the track if legacy recording cannot start', () => {
+  const f = setup({ appMode: true }), mic = stream();
+  f.context._stream = mic; f.context.window._stream = mic;
+  let fluxStops = 0, legacyAttempts = 0;
+  f.context.window._fluxSessionStop = () => { fluxStops++; };
+  f.context.record = () => { legacyAttempts++; };
+  vm.runInContext(extract('  function _desktopVoiceFluxFallback(', '  function _desktopVoiceSpeechError('), f.context);
+
+  assert.equal(f.context._desktopVoiceFluxFallback(f.context._micSessionGeneration, 'asr_error'), true);
+  assert.equal(fluxStops, 1);
+  assert.equal(legacyAttempts, 1);
+  assert.equal(mic.track.stops, 1);
+  assert.equal(f.context._on, false);
+  assert.equal(f.notices.length, 1);
+  assert.match(f.notices[0].message, /(?:voice|speech recognition).*(?:start|listening)/i);
+});
+
+test('the original mobile waveform keeps its SVG and bar nodes across listening, PCM speech and analyser reset', () => {
+  function node() {
+    const attrs = new Map(), classes = new Set();
+    return {
+      style: {}, isConnected: true,
+      classList: {
+        add(...names) { names.forEach(name => classes.add(name)); },
+        remove(...names) { names.forEach(name => classes.delete(name)); },
+        contains(name) { return classes.has(name); }
+      },
+      setAttribute(name, value) { attrs.set(name, String(value)); }, getAttribute(name) { return attrs.get(name); },
+      getBoundingClientRect() { return {}; }
+    };
+  }
+  const mic = node(), wave = node(), group = node(), glow = node();
+  const bars = Array.from({ length: 7 }, node), frames = [];
+  wave.querySelectorAll = () => bars;
+  wave.cloneNode = () => { throw Error('Ava mobile must keep the original waveform SVG'); };
+  const ids = { topNavVoiceBtn: node(), tnvMicIcon: mic, tnvWaveIcon: wave, tnvBarsGroup: group, tnvGlowBlur: glow };
+  const document = { getElementById: id => ids[id], documentElement: { classList: { contains: value => value === 'ava-app-mode' } } };
+  const window = { document };
+  const context = vm.createContext({
+    document, window, _pcmWaveRaf: null, _wsAnalyserRaf: null, _analyserRaf: null, _actx: { currentTime: 0 },
+    _pcmWaveQueue: [{ time: 0, sliceDur: 1, rms: [0, 1] }],
+    requestAnimationFrame(callback) { frames.push(callback); return frames.length; }, cancelAnimationFrame() {}
+  });
+  vm.runInContext([
+    extract('  function btnState(s) {', '  window._tnvBtnState = btnState;'),
+    extract('function _drivePcmWaveform() {', '// Shared "speech has genuinely finished"'),
+    extract('  function _stopAnalyser() {', '  // Exposed so the auto-brief announcer')
+  ].join('\n'), context);
+
+  context.btnState('listen');
+  assert.equal(group.getAttribute('fill'), 'rgba(0,217,168,1)');
+  context.btnState('speak');
+  assert.match(group.getAttribute('fill'), /^(?:#a78bfa|rgb\(167,\s*139,\s*250\))$/i);
+  context._drivePcmWaveform();
+  assert.equal(group.getAttribute('fill'), 'rgb(34,211,238)');
+  context._actx.currentTime = 1;
+  frames.shift()();
+  assert.equal(group.getAttribute('fill'), 'rgb(167,139,250)');
+  context._stopAnalyser(); // While active, the PCM driver keeps ownership.
+  assert.equal(group.getAttribute('fill'), 'rgb(167,139,250)');
+  context._stopPcmWaveform();
+  context._stopAnalyser();
+  assert.equal(group.getAttribute('fill'), '#a78bfa');
+  assert.equal(ids.tnvWaveIcon, wave);
+  assert.equal(wave.querySelectorAll(), bars);
+  assert.deepEqual(bars.map(bar => Number(bar.getAttribute('height'))), [4, 10, 18, 14, 10, 6, 3]);
+  context.btnState('listen');
+  assert.equal(group.getAttribute('fill'), 'rgba(0,217,168,1)');
 });

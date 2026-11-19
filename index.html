@@ -14,7 +14,7 @@
 </script>
 <link rel="stylesheet" href="ava-app-entry.css?v=20261119-mobile-motion3">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-voice3" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-voice4" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -67689,8 +67689,26 @@ function _fluxSessionStart(speech) {
   if (!window._stream || !speech || typeof speech.current!=='function' || typeof speech.accept!=='function' || !speech.current()) return false;
   _flux.speech = speech;
   try {
-    _flux.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (_flux.ctx.state === 'suspended') _flux.ctx.resume();
+    var captureContext = new (window.AudioContext || window.webkitAudioContext)();
+    _flux.ctx = captureContext;
+    var waitForAudio = window.document?.documentElement?.classList.contains('ava-app-mode') &&
+      (captureContext.state === 'suspended' || captureContext.state === 'interrupted');
+    if (waitForAudio) {
+      // A mobile browser may resolve microphone permission after the tap's
+      // gesture has ended. Its audio graph can then stay silent on an open socket.
+      function checkAudio(reason) {
+        if (_flux.ctx !== captureContext || _flux.speech !== speech || _flux.resumeTimer !== resumeTimer) return;
+        clearTimeout(resumeTimer);
+        _flux.resumeTimer = null;
+        if (!speech.current()) return;
+        if (captureContext.state === 'running') {
+          if (typeof speech.listening === 'function') speech.listening();
+        } else if (typeof speech.error === 'function') speech.error(reason);
+      }
+      var resumeTimer = setTimeout(function() { checkAudio('asr_timeout'); }, 2500);
+      _flux.resumeTimer = resumeTimer;
+      Promise.resolve(captureContext.resume()).then(function() { checkAudio('asr_error'); }, function() { checkAudio('asr_error'); });
+    } else if (captureContext.state === 'suspended') captureContext.resume();
     _flux.resampleRatio = _flux.ctx.sampleRate / 16000;
     _flux.src = _flux.ctx.createMediaStreamSource(window._stream);
     _flux.proc = _flux.ctx.createScriptProcessor(2048, 1, 1);
@@ -67707,7 +67725,7 @@ function _fluxSessionStart(speech) {
       _flux.ws.send(int16.buffer);
     };
     if (!_fluxConnect(true)) throw new Error('Flux socket could not start');
-    if (typeof speech.listening === 'function') speech.listening();
+    if (!waitForAudio && typeof speech.listening === 'function') speech.listening();
     return true;
   } catch (eS) {
     console.error('[Flux] session start failed, falling back to legacy listening', eS);
@@ -67717,6 +67735,7 @@ function _fluxSessionStart(speech) {
 }
 
 function _fluxSessionStop() {
+  if (_flux.resumeTimer != null) { clearTimeout(_flux.resumeTimer); _flux.resumeTimer = null; }
   if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
   if (_flux.reconnectTimer) { clearTimeout(_flux.reconnectTimer); _flux.reconnectTimer = null; }
   try { if (_flux.proc) _flux.proc.disconnect(); } catch (e1) {}
@@ -68509,6 +68528,7 @@ function speakVoiceReply(text) {
     document.body.classList.toggle('voice-live', !!v);
     var inAvaApp = window.document?.documentElement?.classList.contains('ava-app-mode');
     if (inAvaApp && was !== !!v) {
+      if (v && typeof _notifyAvaAppVoiceIssue === 'function') _notifyAvaAppVoiceIssue('');
       btnState(v ? 'listen' : 'off');
       if (window.avaAppEntry) window.avaAppEntry.refresh('voice-toggled');
     }
@@ -68570,6 +68590,15 @@ function speakVoiceReply(text) {
   // AVA_MIC_LIFECYCLE_START — shared by initial capture and watchdog recovery.
   var _micSessionGeneration = 0;
   var _micAcquirePending = null;
+  function _notifyAvaAppVoiceIssue(message) {
+    if (!window.document?.documentElement?.classList.contains('ava-app-mode') ||
+        typeof window.CustomEvent !== 'function' || typeof window.dispatchEvent !== 'function') return false;
+    window.dispatchEvent(new window.CustomEvent('ava:voice-error', { detail: { message: message } }));
+    return true;
+  }
+  function _reportVoiceIssue(message) {
+    if (!_notifyAvaAppVoiceIssue(message)) toast(message);
+  }
   function _micSessionCurrent(generation) {
     return _on && generation === _micSessionGeneration && !window.__synShowcaseActive && !window._synShowcaseMicSuppressed && !window._synShowcaseMicSimulation;
   }
@@ -68630,14 +68659,17 @@ function speakVoiceReply(text) {
     console.error('Mic capture error:', error && error.name, error && error.message);
     var message = 'Could not start the microphone. Try again.', reasonCode = 'capture_error';
     if (error) {
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') { message = 'Mic blocked — allow microphone access for this site in your browser settings'; reasonCode = 'capture_denied'; }
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        message = window.AndroidAva ? 'Allow microphone access for Ava in Android Settings, then tap the mic again.' : 'Mic blocked — allow microphone access for this site in your browser settings';
+        reasonCode = 'capture_denied';
+      }
       else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') { message = 'No microphone found on this device'; reasonCode = 'capture_missing'; }
       else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') { message = 'Could not start microphone capture. Check device microphone access and try again.'; reasonCode = 'capture_unreadable'; }
       else if (error.name === 'SecurityError') { message = 'Mic blocked — this page must be loaded over HTTPS'; reasonCode = 'capture_security'; }
     }
     var desktopStopped = typeof _desktopVoiceSpeechError === 'function' && _desktopVoiceSpeechError(reasonCode, message);
     stopAll();
-    toast(message);
+    _reportVoiceIssue(message);
     if (!desktopStopped) try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
   }
   function _runMicReady(generation, ready) {
@@ -68647,7 +68679,7 @@ function speakVoiceReply(text) {
       console.error('Voice initialization error:', error && error.name, error && error.message);
       var desktopStopped = typeof _desktopVoiceSpeechError === 'function' && _desktopVoiceSpeechError('voice_init_error', 'Microphone opened, but voice could not start. Try again.');
       stopAll();
-      toast('Microphone opened, but voice could not start. Try again.');
+      _reportVoiceIssue('Microphone opened, but voice could not start. Try again.');
       if (!desktopStopped) try { if (typeof window._tnvSendAway === 'function') window._tnvSendAway(); } catch(e) {}
     }
   }
@@ -69803,7 +69835,8 @@ function speakVoiceReply(text) {
           bar.setAttribute('height',_oh[i]); bar.setAttribute('y',_oy[i]);
         });
         var _bg = document.getElementById('tnvBarsGroup');
-        if(_bg) _bg.setAttribute('fill','rgba(0,217,168,1)');
+        var appSpeaking = s === 'speak' && window.document?.documentElement?.classList.contains('ava-app-mode');
+        if(_bg) _bg.setAttribute('fill', appSpeaking ? '#a78bfa' : 'rgba(0,217,168,1)');
         void wave.getBoundingClientRect();
         wave.classList.add('tnv-breathe');
       }
@@ -69891,12 +69924,23 @@ function speakVoiceReply(text) {
     if (_pcmWaveRaf) return;
     // Reset fill and glow
     var bg = document.getElementById('tnvBarsGroup');
-    if (bg) bg.setAttribute('fill', 'rgba(0,217,168,1)');
+    var inAvaApp = window.document?.documentElement?.classList.contains('ava-app-mode');
+    var speaking = inAvaApp && document.getElementById('topNavVoiceBtn')?.classList.contains('tnv-speak');
+    if (bg) bg.setAttribute('fill', speaking ? '#a78bfa' : 'rgba(0,217,168,1)');
     var glow = document.getElementById('tnvGlowBlur');
     if (glow) glow.setAttribute('stdDeviation', '0');
-    // Fully reset wave icon by cloning it — guarantees no leftover inline styles or attributes
     var wave = document.getElementById('tnvWaveIcon');
     if (wave) {
+      if (inAvaApp) {
+        var heights = [4,10,18,14,10,6,3], offsets = [8,5,1,3,5,7,9];
+        wave.querySelectorAll('.tnv-bar').forEach(function(bar, i) {
+          bar.style.transform = ''; bar.style.transformOrigin = ''; bar.style.animation = '';
+          bar.setAttribute('height', heights[i]); bar.setAttribute('y', offsets[i]);
+        });
+        wave.classList.add('tnv-breathe');
+        return;
+      }
+      // The desktop animation resets its former idle styles with a fresh version.
       var fresh = wave.cloneNode(true);
       fresh.style.display = wave.style.display;
       wave.parentNode.replaceChild(fresh, wave);
@@ -70349,7 +70393,11 @@ function speakVoiceReply(text) {
     var deadline=Date.now()+30000;
     function failed(message) {
       if (desktop) _desktopVoiceSpeechError('voice_init_error',message);
-      else { stopAll(); toast('Voice could not start listening. Tap the microphone to try again.'); }
+      else {
+        stopAll();
+        var retry = 'Voice could not start listening. Tap the microphone to try again.';
+        if(typeof _reportVoiceIssue==='function')_reportVoiceIssue(retry);else toast(retry);
+      }
     }
     function resumeLegacy(){
       if(!_micSessionCurrent(generation)||(desktop&&!client.isCurrentAccount()))return;
@@ -72946,7 +72994,8 @@ function speakVoiceReply(text) {
         // a secure origin (https:// or localhost). Browsers silently strip
         // navigator.mediaDevices on insecure http:// pages, which is what
         // makes this look like an instant "denied" with no real prompt.
-        toast(location.protocol === 'https:' ? 'Mic not supported in this browser' : 'Mic needs HTTPS — open this page with https:// to use voice');
+        var micMessage = location.protocol === 'https:' ? 'Mic not supported in this browser' : 'Mic needs HTTPS — open this page with https:// to use voice';
+        if (!_notifyAvaAppVoiceIssue(micMessage)) toast(micMessage);
         _desktopVoiceSpeechError('capture_unsupported', 'This browser cannot start microphone capture.');
         _on = false;
         _setTopNavVoiceActive(false);

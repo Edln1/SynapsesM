@@ -120,6 +120,49 @@ test('Ava app speech switches once from failed streaming recognition to the exis
   assert.equal(f.events.filter(event=>event.recording).length,1);
   assert.equal(f.events.some(event=>event.fallback||event.error),false);
 });
+
+test('a suspended mobile capture context must run or hand speech back to the recorder once',async()=>{
+  for(const scenario of ['running','suspended','rejected','timeout','stop-and-restart']){
+    const f=fluxFixture();
+    const app=f.context.window;
+    app.document={documentElement:{classList:{contains:name=>name==='ava-app-mode'}}};
+    const RunningContext=app.AudioContext;
+    let resolveResume,rejectResume;
+    app.AudioContext=class extends RunningContext{
+      constructor(){super();this.state='suspended';}
+      resume(){return new Promise((resolve,reject)=>{resolveResume=resolve;rejectResume=reject;});}
+    };
+    const speech=f.context.privateSpeech.speech;
+    assert.equal(app._fluxSessionStart(speech),true);
+    const original=f.context._flux.ctx;
+    assert.equal(f.events.some(event=>event.state==='listen'),false);
+    const timer=f.context._flux.resumeTimer;
+    const timerCallback=f.timers.get(timer).fn;
+    if(scenario==='stop-and-restart'){
+      app._fluxSessionStop();
+      app.AudioContext=RunningContext;
+      assert.equal(app._fluxSessionStart(speech),true);
+      rejectResume(Error('old capture ended'));
+      timerCallback();
+    }else if(scenario==='rejected')rejectResume(Error('resume denied'));
+    else if(scenario==='timeout')timerCallback();
+    else{
+      original.state=scenario;
+      resolveResume();
+    }
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(f.timers.has(timer),false,scenario);
+    const recovered=scenario==='rejected'||scenario==='suspended'||scenario==='timeout';
+    assert.equal(f.events.filter(event=>event.recording).length,recovered?1:0,scenario);
+    assert.equal(f.context._flux.ctx===null,recovered,scenario);
+    if(!recovered)assert.equal(f.events.filter(event=>event.state==='listen').length,1,scenario);
+    if(scenario==='timeout'){
+      resolveResume();
+      await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(f.events.filter(event=>event.recording).length,1);
+    }
+  }
+});
 test('Flux errors, rejected/closed sockets and stalled connection start real legacy recording without changing normal reconnect',()=>{
   for(const kind of ['error','close','timeout']){
     const f=fluxFixture({pc:true});assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);

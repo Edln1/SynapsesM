@@ -42,6 +42,7 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   function element(id, hidden) { const node = document.createElement(['acClose', 'acMainChat', 'acHistory', 'acNewTop', 'acVoice', 'topNavVoiceBtn'].includes(id) ? 'button' : 'div'); node.id = id; node.hidden = hidden; document.body.append(node); return node; }
   const authNode = element('authModal', !auth), welcomeNode = element('avaWelcome', !welcome), chat = element('avaCompanionChat', true);
   element('acClose', false); element('acMainChat', false); element('acConfirm', true); element('acNewTop', false); element('acVoice', false);
+  chat.appendChild(element('acNotice', false));
   const history = element('acHistory', false), actions = element('acTopActions', false); chat.appendChild(actions); actions.appendChild(history);
   const mic = element('topNavVoiceBtn', false), wave = element('tnvWaveIcon', false); mic.appendChild(wave);
   mic.style.setProperty('position', 'fixed', 'important'); mic.style.setProperty('top', '96px', 'important');
@@ -207,6 +208,25 @@ test('the original animated voice icon docks in the chat header and stops the re
   assert.equal(mic.parentNode, originalParent); assert.equal(mic.style.getPropertyValue('position'), 'fixed');
   assert.equal(f.window._topNavVoiceActive, false); assert.equal(f.opens, 1);
   f.window.avaAppEntry.destroy(); assert.equal(f.document.getElementById('avaAppVoiceDock'), null); assert.equal(f.document.getElementById('topNavVoiceBtn'), mic);
+});
+
+test('mobile voice errors stay visible in Ava and a retry clears only its own notice', async () => {
+  const f = setup(); await settle(f);
+  const notice = f.document.getElementById('acNotice');
+  const report = message => f.window.dispatchEvent(new f.window.CustomEvent('ava:voice-error', { detail: { message } }));
+  notice.textContent = 'Ava is preparing a reply.';
+  report('');
+  assert.equal(notice.textContent, 'Ava is preparing a reply.');
+  report('Allow microphone access in Android settings and try again.');
+  assert.equal(notice.textContent, 'Allow microphone access in Android settings and try again.');
+  assert.equal(f.chat.hidden, false);
+  assert.equal(f.window.avaAppEntry.stage, 'chat');
+  report('');
+  assert.equal(notice.textContent, '');
+  report('Voice could not start listening. Try again.');
+  notice.textContent = 'Message saved as a draft.';
+  report('');
+  assert.equal(notice.textContent, 'Message saved as a draft.');
 });
 
 test('legacy mic relocation cannot leave the live icon inert outside the chat', async () => {
