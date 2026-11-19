@@ -4812,6 +4812,20 @@ html[data-theme="trueblack"] #dgVoicePanel .vp-section-label{color:rgba(130,130,
   font-size:14px;line-height:18px;text-align:center;
 }
 #avaStsCtxMenu .ava-cx-ico svg{display:block;}
+#avaStsCtxMenu .ava-cx-icon-style{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px 4px 12px;
+  color:rgba(255,255,255,.85);font:13px 'DM Sans',sans-serif;
+}
+#avaStsCtxMenu .ava-cx-icon-options{
+  display:inline-flex;gap:2px;padding:2px;border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;background:rgba(255,255,255,.03);
+}
+#avaStsCtxMenu .ava-cx-icon-options button{
+  min-height:32px;padding:4px 8px;border:0;border-radius:6px;background:transparent;
+  color:rgba(255,255,255,.62);font:inherit;font-size:12px;white-space:nowrap;cursor:pointer;
+}
+#avaStsCtxMenu .ava-cx-icon-options button[aria-pressed="true"]{background:rgba(255,255,255,.14);color:#fff;}
+#avaStsCtxMenu .ava-cx-icon-options button:focus-visible{outline:2px solid #a6a8ba;outline-offset:-2px;}
 html[data-theme="trueblack"] #avaStsCtxMenu{
   background:rgba(12,12,12,0.97)!important;
   border-color:rgba(255,255,255,0.12)!important;
@@ -6200,6 +6214,8 @@ to{opacity:0;transform:translateX(-40px);}}
   max-width:17px!important;
   max-height:14px!important;
 }
+html #topNavVoiceBtn[data-voice-icon-style="ring"]:is(.tnv-on,.tnv-speak){background:transparent!important;}
+html #topNavVoiceBtn[data-voice-icon-style="ring"]:is(.tnv-on,.tnv-speak) > :is(#tnvMicIcon,#tnvWaveIcon){visibility:hidden!important;}
 /* Centered STS mic: fixed to the VIEWPORT so left:50% is true screen center
    (under the front camera), not “middle of the top-bar box” which can be offset. */
 #topNavVoiceBtn.tnv-centered{
@@ -74117,12 +74133,15 @@ async function srcAgentContact(supplier) {
   // Right-click context menu (speech-to-speech / voice button)
   var ctxMenu = document.createElement('div');
   ctxMenu.id = 'avaStsCtxMenu';
-  ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;min-width:220px;';
+  ctxMenu.style.cssText = 'display:none;position:fixed;z-index:999999;background:rgba(18,18,30,0.97);border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:5px;box-sizing:border-box;min-width:min(220px,calc(100vw - 16px));max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px);overflow:auto;';
   ctxMenu.innerHTML =
     '<div id="avaCx4" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span id="avaCx4Label">Enable Video Call</span></div>' +
     '<div id="avaCxVoice" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🎙</span><span style="flex:1;">Choose voice</span><span id="avaCxVoiceName" style="font-size:12px;opacity:0.5;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>' +
     '<div id="avaCxHistory" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="rgba(255,255,255,0.75)" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span style="flex:1;">Chat history</span></div>' +
     '<div id="avaCxToastToggle" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">💬</span><span style="flex:1;">Reply captions</span><span id="avaCxToastToggleChk" style="font-size:12px;color:#00d9a8;opacity:1;">✓</span></div>' +
+    '<div class="ava-cx-icon-style"><span id="avaCxIconLabel">Voice icon</span><div class="ava-cx-icon-options" role="group" aria-labelledby="avaCxIconLabel">' +
+      '<button id="avaCxIconClassic" type="button" aria-pressed="true" data-voice-icon-choice="classic">Classic</button>' +
+      '<button id="avaCxIconRing" type="button" aria-pressed="false" data-voice-icon-choice="ring">Ring only</button></div></div>' +
     '<div id="avaCxLife" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🧬</span><span>Ava Life State</span></div>' +
     '<div id="avaCxLifeTick" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span class="ava-cx-ico">⟳</span><span>Run solitude tick</span></div>' +
     '<div class="ava-cx-div" style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
@@ -74132,6 +74151,25 @@ async function srcAgentContact(supplier) {
     '<div id="avaCxModeBlend" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico" title="Blend"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="9.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><circle cx="14.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><path d="M12 8.2a5.25 5.25 0 0 1 0 7.6" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/></svg></span><span style="flex:1;">Blend both</span><span id="avaCxModeBlendChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
     '<div id="avaCx2" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">✕</span><span>Close Window</span></div>';
   document.body.appendChild(ctxMenu);
+  var iconStyleButtons = ctxMenu.querySelectorAll('[data-voice-icon-choice]');
+  var savedIconStyle = null;
+  try { savedIconStyle = localStorage.getItem('synapses_sts_icon_style'); } catch (error) {}
+  function applyVoiceIconStyle(style) {
+    var selected = style === 'ring' ? 'ring' : 'classic';
+    btn.setAttribute('data-voice-icon-style', selected);
+    iconStyleButtons.forEach(function(option) {
+      option.setAttribute('aria-pressed', String(option.getAttribute('data-voice-icon-choice') === selected));
+    });
+    return selected;
+  }
+  applyVoiceIconStyle(savedIconStyle);
+  iconStyleButtons.forEach(function(option) {
+    option.addEventListener('click', function(event) {
+      event.stopPropagation();
+      var selected = applyVoiceIconStyle(option.getAttribute('data-voice-icon-choice'));
+      try { localStorage.setItem('synapses_sts_icon_style', selected); } catch (error) {}
+    });
+  });
   function _cxHov(el,bg){ if(!el)return; el.onmouseenter=function(){el.style.background=(typeof _isTrueBlackTheme==='function'&&_isTrueBlackTheme())?'rgba(255,255,255,0.07)':bg;}; el.onmouseleave=function(){el.style.background='';}; }
   function _cxSyncModeChecks(){
     var m = window._avaVibeMode || 'blend';
@@ -74230,8 +74268,8 @@ async function srcAgentContact(supplier) {
     _cxSyncModeChecks();
     _cxSyncToastCheck();
     ctxMenu.style.display = 'block';
-    ctxMenu.style.left = Math.min(clientX, window.innerWidth - 240) + 'px';
-    ctxMenu.style.top = Math.min(clientY, window.innerHeight - 320) + 'px';
+    ctxMenu.style.left = Math.max(8, Math.min(clientX, window.innerWidth - ctxMenu.offsetWidth - 8)) + 'px';
+    ctxMenu.style.top = Math.max(8, Math.min(clientY, window.innerHeight - ctxMenu.offsetHeight - 8)) + 'px';
   }
   window._tnvOpenVoiceMenu = _cxShowMenu;
   btn.addEventListener('contextmenu', function(e){
