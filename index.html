@@ -67564,8 +67564,8 @@ function _fluxFloat32ToInt16(float32) {
   return int16;
 }
 
-function _fluxHandleEvent(msg) {
-  if (!msg || !msg.event) return;
+function _fluxHandleEvent(msg, speech) {
+  if (!msg || !msg.event || !speech || !speech.current()) return;
   switch (msg.event) {
     case 'StartOfTurn':
       // Mirrors what the old RMS barge-in watcher was trying to infer from
@@ -67575,7 +67575,7 @@ function _fluxHandleEvent(msg) {
       _flux.bargedTts = false;
       if (typeof _vmSpeaking !== 'undefined' && _vmSpeaking && !_flux.bargedTts) {
         _flux.bargedTts = true;
-        try { if (typeof _commitInterruptedReply === 'function') _commitInterruptedReply(); } catch (eI) {}
+        try { if (typeof speech.barge === 'function') speech.barge(); } catch (eI) {}
       }
       break;
     case 'EagerEndOfTurn':
@@ -67594,18 +67594,17 @@ function _fluxHandleEvent(msg) {
       try {
         window._voiceTvTuned = (typeof maybeTuneControlCentreTV === 'function') ? (maybeTuneControlCentreTV(text) || null) : null;
       } catch (eTv) {}
-      if (_flux.bargedTts) {
-        _bargeNeedsDirectAnswer = true;
-        _bargeForceToast = true;
-      }
+      var interrupted = _flux.bargedTts;
       _flux.bargedTts = false;
-      ask(text);
+      speech.accept(text, interrupted);
       break;
   }
 }
 
-function _fluxConnect() {
-  if (_flux.ws && (_flux.ws.readyState === WebSocket.OPEN || _flux.ws.readyState === WebSocket.CONNECTING)) return;
+function _fluxConnect(initialSetup) {
+  if (_flux.ws && (_flux.ws.readyState === WebSocket.OPEN || _flux.ws.readyState === WebSocket.CONNECTING)) return true;
+  var speech = _flux.speech;
+  if(!speech || !speech.current()) return false;
   var key = window._dgKey || '';
   var url = 'wss://api.deepgram.com' + FLUX_PATH +
     '?model=flux-general-en&encoding=linear16&sample_rate=16000&eager_eot_threshold=0.5';
@@ -67614,35 +67613,53 @@ function _fluxConnect() {
     sock = new WebSocket(url, ['token', key]);
   } catch (eC) {
     console.error('[Flux] failed to open socket', eC);
-    return;
+    if (!initialSetup && typeof speech.error === 'function') speech.error();
+    return false;
   }
+  if (_flux.connectTimer) clearTimeout(_flux.connectTimer);
+  _flux.connectTimer = setTimeout(function () {
+    _flux.connectTimer = null;
+    if (_flux.ws === sock && speech.current() && !_flux.connected && typeof speech.error === 'function') speech.error();
+  }, 10000);
   sock.binaryType = 'arraybuffer';
   sock.onopen = function () {
+    if (_flux.ws !== sock || !speech.current()) return;
+    if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
     _flux.connected = true;
     console.log('[Flux] connected');
   };
   sock.onmessage = function (evt) {
+    if (_flux.ws !== sock || !speech.current()) return;
     if (typeof evt.data !== 'string') return; // Flux sends JSON events, not audio, on this socket
-    try { _fluxHandleEvent(JSON.parse(evt.data)); }
+    try { _fluxHandleEvent(JSON.parse(evt.data), speech); }
     catch (eP) { console.warn('[Flux] bad event payload', eP); }
   };
   sock.onerror = function (eE) {
+    if (_flux.ws !== sock || !speech.current()) return;
     console.error('[Flux] socket error — check FLUX_PATH if this persists (see comment above _fluxConnect)', eE);
+    if (typeof speech.error === 'function') speech.error();
   };
   sock.onclose = function (ev) {
+    if (_flux.ws !== sock || !speech.current()) return;
+    if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
     _flux.connected = false;
+    // Native PC listening must not outlive a failed ASR connection. This
+    // callback is a no-op outside explicit PC mode; normal reconnect stays.
+    if (typeof speech.error === 'function') speech.error();
     // Auto-reconnect while voice mode is still on and Flux is still the
     // chosen provider — a dropped connection shouldn't end the session.
     if (_flux.reconnectTimer) clearTimeout(_flux.reconnectTimer);
-    if (typeof _on !== 'undefined' && _on && _sttProvider === 'flux') {
+    if (speech.current() && _sttProvider === 'flux') {
       _flux.reconnectTimer = setTimeout(_fluxConnect, 1200);
     }
   };
   _flux.ws = sock;
+  return true;
 }
 
-function _fluxSessionStart() {
-  if (!window._stream) return false;
+function _fluxSessionStart(speech) {
+  if (!window._stream || !speech || typeof speech.current!=='function' || typeof speech.accept!=='function' || !speech.current()) return false;
+  _flux.speech = speech;
   try {
     _flux.ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (_flux.ctx.state === 'suspended') _flux.ctx.resume();
@@ -67661,9 +67678,8 @@ function _fluxSessionStart() {
       var int16 = _fluxFloat32ToInt16(resampled);
       _flux.ws.send(int16.buffer);
     };
-    _fluxConnect();
-    btnState('listen');
-    if (window.avaTvSetState) window.avaTvSetState('listen');
+    if (!_fluxConnect(true)) throw new Error('Flux socket could not start');
+    if (typeof speech.listening === 'function') speech.listening();
     return true;
   } catch (eS) {
     console.error('[Flux] session start failed, falling back to legacy listening', eS);
@@ -67673,12 +67689,13 @@ function _fluxSessionStart() {
 }
 
 function _fluxSessionStop() {
+  if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
   if (_flux.reconnectTimer) { clearTimeout(_flux.reconnectTimer); _flux.reconnectTimer = null; }
   try { if (_flux.proc) _flux.proc.disconnect(); } catch (e1) {}
   try { if (_flux.src) _flux.src.disconnect(); } catch (e2) {}
   try { if (_flux.ctx && _flux.ctx.state !== 'closed') _flux.ctx.close(); } catch (e3) {}
   try { if (_flux.ws) { _flux.ws.onclose = null; _flux.ws.close(); } } catch (e4) {}
-  _flux.ws = null; _flux.ctx = null; _flux.src = null; _flux.proc = null;
+  _flux.ws = null; _flux.ctx = null; _flux.src = null; _flux.proc = null; _flux.speech = null;
   _flux.connected = false; _flux.turnActive = false; _flux.bargedTts = false;
 }
 window._fluxSessionStart = _fluxSessionStart;
@@ -70287,7 +70304,13 @@ function speakVoiceReply(text) {
     });
   }
 
-  async function ask(text) {
+  function _desktopVoiceSpeechError(){
+    var client=window.synapsesDesktopVoiceClient;
+    if(client&&typeof client.active==='function'&&client.active()&&typeof client.stop==='function')Promise.resolve(client.stop('Speech recognition failed. Start PC voice control again to retry.')).catch(function(){});
+  }
+  window.__synapsesDesktopVoiceHookVersion = 1;
+  async function ask(text, speech) {
+    if(speech&&speech.acceptedSpeech===true&&!_micSessionCurrent(speech.generation))return;
     // A real turn is now taking over — stop blocking record() on the barge
     // pipeline's account, speak(reply)'s own natural completion re-arms the
     // mic from here on (same as any normal, non-interrupted turn).
@@ -70302,6 +70325,24 @@ function speakVoiceReply(text) {
       _bargeForceToast = true;
       _bargeDirectNudge = '\nThey interrupted you. Their latest user message is the only thing to answer. Use the last turns as context. Do not continue or restart your previous reply.';
     }
+    // DESKTOP_VOICE_COMMAND_HOOK_START
+    // Only the Windows package installs this client. Both real ASR providers
+    // enter ask(); ordinary web/mobile conversations keep their existing path.
+    var desktopVoice = window.synapsesDesktopVoiceClient;
+    if (_on && speech && speech.acceptedSpeech === true && (speech.provider === 'whisper' || speech.provider === 'flux') && speech.generation === _micSessionGeneration && desktopVoice && typeof desktopVoice.enabled === 'function' && desktopVoice.enabled() && typeof desktopVoice.consume === 'function') {
+      var desktopGeneration = speech.generation, desktopResult;
+      try { desktopResult = await desktopVoice.consume(text); }
+      catch(error) { desktopResult = { handled: true, message: 'PC voice control could not confirm that command.' }; }
+      if (!_on || desktopGeneration !== _micSessionGeneration || _myTurn !== _voiceTurnId) return;
+      if (desktopResult && desktopResult.handled) {
+        var desktopReply = String(desktopResult.message || (desktopResult.ok ? 'PC voice command finished.' : 'PC voice control could not complete that command.')).slice(0,500);
+        try { speak(desktopReply); } catch(error) { toast(desktopReply); }
+        _busy = false; _busySince = 0;
+        setTimeout(function() { if (_on && desktopGeneration === _micSessionGeneration && _myTurn === _voiceTurnId) record(); }, 800);
+        return;
+      }
+    }
+    // DESKTOP_VOICE_COMMAND_HOOK_END
     // ── Voice App Commands ────────────────────────────────────────────────────
     var _vcHandled = false;
     var _t = text.trim();
@@ -71526,6 +71567,8 @@ function speakVoiceReply(text) {
 
 
   function transcribe(blob) {
+    var sttGeneration = _micSessionGeneration;
+    if(!_micSessionCurrent(sttGeneration))return;
     _busy = true;
     _busySince = Date.now();
     var _tw0 = Date.now();
@@ -71551,6 +71594,7 @@ function speakVoiceReply(text) {
       signal: _sttCtrl ? _sttCtrl.signal : undefined
     }).then(function(r) { return r.json(); }).then(function(d) {
       clearTimeout(_sttTimer);
+      if(!_micSessionCurrent(sttGeneration))return;
       console.log('[Voice] Whisper: ' + (Date.now()-_tw0) + 'ms');
       var _rawWhisper = d.text ? d.text.trim() : '';
       var text = _rawWhisper;
@@ -71623,11 +71667,13 @@ function speakVoiceReply(text) {
         // Whisper-transcribed mic audio, not typed chat) — and only when
         // Control Centre is the page the user is actually looking at.
         try{ window._voiceTvTuned = (typeof maybeTuneControlCentreTV==='function') ? (maybeTuneControlCentreTV(text) || null) : null; }catch(_tve){ window._voiceTvTuned = null; }
-        ask(text);
+        ask(text, { acceptedSpeech: true, provider: 'whisper', generation: sttGeneration });
       }
       else { console.log('[Voice] Dropped as noise/hallucination:', JSON.stringify(text)); _bargeTurnActive = false; _bargeHoldToast = false; try { try { if (window._toastDebug) console.log('[toast][site:stt-noise-hallucination]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); } catch (eH) {} _busy = false; _busySince = 0; if (_on) record(); }
     }).catch(function(e) {
       clearTimeout(_sttTimer);
+      if(!_micSessionCurrent(sttGeneration))return;
+      _desktopVoiceSpeechError();
       if (e && e.name === 'AbortError') console.warn('[Voice] STT timed out (8s)');
       else toast('STT error: ' + (e && e.message ? e.message : 'failed'));
       _bargeTurnActive = false;
@@ -72779,7 +72825,13 @@ function speakVoiceReply(text) {
           // Flux replaces both the per-turn MediaRecorder/VAD loop (record())
           // AND the separate always-on barge-in RMS watcher — turn detection
           // and barge-in both come from the same persistent socket now.
-          if (!window._fluxSessionStart()) {
+          if (!window._fluxSessionStart({
+            current:function(){return _micSessionCurrent(micGeneration);},
+            accept:function(text,interrupted){if(!_micSessionCurrent(micGeneration))return;if(interrupted){_bargeNeedsDirectAnswer=true;_bargeForceToast=true;}ask(text,{acceptedSpeech:true,provider:'flux',generation:micGeneration});},
+            listening:function(){if(_micSessionCurrent(micGeneration)){btnState('listen');if(window.avaTvSetState)window.avaTvSetState('listen');}},
+            error:function(){if(_micSessionCurrent(micGeneration))_desktopVoiceSpeechError();},
+            barge:function(){if(_micSessionCurrent(micGeneration)&&typeof _commitInterruptedReply==='function')_commitInterruptedReply();}
+          })) {
             // Fell back — behave exactly like legacy mode for this session.
             try { _ensureBargeAnalyser(); } catch (eAn) {}
             record();
