@@ -1,3 +1,7 @@
+## Controls update: 0.1.2
+
+The local titlebar brand now activates the existing production navigation control through a sender-checked local IPC action. Shell-only user CSS removes the remote page drag regions and legacy resize interceptors before the hosted view becomes visible. Same-document navigation retains the current visible surface. Six policy groups passed, including the same-document navigation regression. Production handlers were checked in an isolated fixture. These checks do not establish a physical OS click test; computer control was stopped at the user's request.
+
 # Synapses Windows preview verification — 19 November 2026
 
 Local backup installer: `dist/Synapses-Setup-0.1.0.exe`

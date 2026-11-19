@@ -29,4 +29,7 @@ function downloadLink(value) {
 function chromeSender(event, contents, expectedUrl) {
   return !!event && event.sender === contents && event.senderFrame === contents.mainFrame && event.senderFrame.url === expectedUrl;
 }
-module.exports = { trustedSite, externalLink, audioRequest, chromeSender, downloadLink };
+function newMainDocument(event, inPlace, isMainFrame) {
+  return !!(event.isMainFrame ?? isMainFrame) && !(event.isSameDocument ?? inPlace);
+}
+module.exports = { trustedSite, externalLink, audioRequest, chromeSender, downloadLink, newMainDocument };

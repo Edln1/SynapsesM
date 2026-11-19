@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { trustedSite, externalLink, audioRequest, chromeSender, downloadLink } = require('../src/policy.cjs');
+const { trustedSite, externalLink, audioRequest, chromeSender, downloadLink, newMainDocument } = require('../src/policy.cjs');
 test('trusted HTTPS site boundaries',()=>{
   for(const value of ['https://synapses.cloud/','https://www.synapses.cloud:443/index.html','https://SYNAPSES.CLOUD/a'])assert.equal(trustedSite(value),true,value);
   for(const value of ['http://synapses.cloud/','https://synapses.cloud.evil.test/','https://evil-synapses.cloud/','https://user@synapses.cloud/','https://synapses.cloud:444/','https://ava.synapses.cloud/','file:///C:/test','javascript:alert(1)','not a url'])assert.equal(trustedSite(value),false,value);
@@ -26,4 +26,12 @@ test('window controls accept only the packaged local main frame',()=>{
 test('user downloads permit trusted app exports, excluding foreign blobs and local schemes',()=>{
   for(const value of ['https://cdn.example.com/export.png','blob:https://synapses.cloud/123','blob:https://www.synapses.cloud/123'])assert.equal(downloadLink(value),true,value);
   for(const value of ['blob:https://evil.test/123','blob:null/123','file:///C:/test','mailto:test@example.com','http://synapses.cloud/file'])assert.equal(downloadLink(value),false,value);
+});
+test('same-document and subframe navigation keep the current app surface visible',()=>{
+  assert.equal(newMainDocument({isMainFrame:true,isSameDocument:true}),false);
+  assert.equal(newMainDocument({isMainFrame:false,isSameDocument:false}),false);
+  assert.equal(newMainDocument({isMainFrame:true,isSameDocument:false}),true);
+  assert.equal(newMainDocument({},true,true),false);
+  assert.equal(newMainDocument({},false,false),false);
+  assert.equal(newMainDocument({},false,true),true);
 });

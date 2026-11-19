@@ -1,4 +1,5 @@
 'use strict';
+document.getElementById('navigation').addEventListener('click', () => window.synapsesWindow.toggleNavigation());
 document.getElementById('minimize').addEventListener('click', () => window.synapsesWindow.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.synapsesWindow.toggleMaximize());
 document.getElementById('close').addEventListener('click', () => window.synapsesWindow.close());

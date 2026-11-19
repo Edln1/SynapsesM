@@ -1,3 +1,5 @@
+Version 0.1.2 fixes the titlebar icon opening navigation and removes conflicting legacy web drag/resize areas around the web logo and top-right icons toggle. Normal page and hash navigation preserve the app surface.
+
 Synapses Desktop preview brings the full Synapses web app into a dedicated Windows x64 window, with a slim black titlebar and minimize, maximize/restore and close controls.
 
 - Uses the existing Synapses account and hosted service; an internet connection is required.

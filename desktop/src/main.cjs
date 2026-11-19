@@ -3,11 +3,13 @@ const { app, BrowserWindow, WebContentsView, Menu, dialog, ipcMain, protocol, ne
 const path = require('node:path');
 const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
-const { trustedSite, externalLink, audioRequest, chromeSender, downloadLink } = require('./policy.cjs');
+const { trustedSite, externalLink, audioRequest, downloadLink, newMainDocument } = require('./policy.cjs');
+const { bindWindowControls } = require('./window-controls.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
 const START_URL = 'https://synapses.cloud/';
 const BAR_HEIGHT = 32;
+const remoteShellCss = fs.readFileSync(path.join(__dirname,'remote-shell.css'),'utf8');
 const smoke = process.argv.includes('--smoke-test');
 const smokeDir = smoke ? path.resolve(process.env.SYNAPSES_SMOKE_DIR || path.join(app.getPath('temp'),'synapses-desktop-smoke')) : null;
 let mainWindow;
@@ -55,11 +57,7 @@ async function createWindow() {
   resize(); win.on('resize', resize);
   const sendState = () => { if(!win.webContents.isDestroyed())win.webContents.send('window:state',{maximized:win.isMaximized()}); };
   win.on('maximize',sendState); win.on('unmaximize',sendState);
-  for (const [channel, action] of [
-    ['window:minimize',()=>win.minimize()],
-    ['window:toggle-maximize',()=>win.isMaximized()?win.unmaximize():win.maximize()],
-    ['window:close',()=>win.close()]
-  ]) ipcMain.handle(channel,event=>{ if(!chromeSender(event,win.webContents,CHROME_URL))throw new Error('Untrusted window control sender'); action(); });
+  const unbindWindowControls = bindWindowControls(ipcMain,win,contents,CHROME_URL);
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
 
@@ -115,8 +113,20 @@ async function createWindow() {
     if(answer===1)event.preventDefault();else closing=false;
   });
   contents.on('destroyed',()=>{if(!win.isDestroyed())win.destroy();});
-  win.on('closed',()=>{for(const name of ['window:minimize','window:toggle-maximize','window:close'])ipcMain.removeHandler(name); if(!contents.isDestroyed())contents.close(); mainWindow=null;});
-  contents.on('did-finish-load',()=>{if(trustedSite(contents.getURL()))site.setVisible(true);});
+  win.on('closed',()=>{unbindWindowControls(); if(!contents.isDestroyed())contents.close(); mainWindow=null;});
+  let inputStylesReady = Promise.resolve(false);
+  contents.on('did-start-navigation',(event,_url,_inPlace,isMainFrame)=>{
+    if(newMainDocument(event,_inPlace,isMainFrame)){site.setVisible(false);inputStylesReady=Promise.resolve(false);}
+  });
+  contents.on('dom-ready',()=>{
+    inputStylesReady = trustedSite(contents.getURL())
+      ? contents.insertCSS(remoteShellCss,{cssOrigin:'user'}).then(()=>true).catch(()=>false)
+      : Promise.resolve(false);
+  });
+  contents.on('did-finish-load',async()=>{
+    const documentUrl=contents.getURL();
+    if(trustedSite(documentUrl)&&(await inputStylesReady)&&contents.getURL()===documentUrl)site.setVisible(true);
+  });
   contents.on('did-fail-load',(_event,code,_description,_url,isMain)=>{if(isMain&&code!==-3)site.setVisible(false);});
   contents.on('render-process-gone',()=>site.setVisible(false));
   await win.loadURL(CHROME_URL);
@@ -125,6 +135,11 @@ async function createWindow() {
 }
 
 async function smokeTest(win,site) {
+  await new Promise(resolve=>setTimeout(resolve,100));
+  const visibleBeforeHash = site.getVisible();
+  await site.webContents.executeJavaScript("location.hash='desktop-shell-smoke'");
+  await new Promise(resolve=>setTimeout(resolve,100));
+  const visibleAfterHash = site.getVisible();
   const chrome=await win.webContents.executeJavaScript("({buttons:[...document.querySelectorAll('button')].map(x=>x.getAttribute('aria-label')),bridge:typeof window.synapsesWindow,require:typeof require})");
   const remote=await site.webContents.executeJavaScript("({url:location.href,title:document.title,require:typeof require,process:typeof process,bridge:typeof window.synapsesWindow})");
   const prefs=site.webContents.getLastWebPreferences();
@@ -134,8 +149,8 @@ async function smokeTest(win,site) {
   await win.webContents.executeJavaScript('window.synapsesWindow.toggleMaximize()');
   await new Promise(resolve=>setTimeout(resolve,150));
   const restored=!win.isMaximized();
-  const evidence={chrome,remote,controls:{maximized,restored},bounds:site.getBounds(),sandbox:prefs.sandbox,contextIsolation:prefs.contextIsolation,nodeIntegration:prefs.nodeIntegration,remotePreload:prefs.preload||null};
-  if(!trustedSite(remote.url)||remote.require!=='undefined'||remote.process!=='undefined'||remote.bridge!=='undefined'||chrome.buttons.length!==3||!maximized||!restored||!prefs.sandbox||!prefs.contextIsolation||prefs.nodeIntegration||prefs.preload)throw new Error('Desktop isolation smoke test failed');
+  const evidence={chrome,remote,controls:{maximized,restored},navigation:{visibleBeforeHash,visibleAfterHash},bounds:site.getBounds(),sandbox:prefs.sandbox,contextIsolation:prefs.contextIsolation,nodeIntegration:prefs.nodeIntegration,remotePreload:prefs.preload||null};
+  if(!trustedSite(remote.url)||remote.require!=='undefined'||remote.process!=='undefined'||remote.bridge!=='undefined'||chrome.buttons.length!==4||!maximized||!restored||!visibleBeforeHash||!visibleAfterHash||!prefs.sandbox||!prefs.contextIsolation||prefs.nodeIntegration||prefs.preload)throw new Error('Desktop isolation smoke test failed');
   fs.mkdirSync(smokeDir,{recursive:true});
   fs.writeFileSync(path.join(smokeDir,'smoke.json'),JSON.stringify(evidence,null,2));
   fs.writeFileSync(path.join(smokeDir,'window.png'),(await win.capturePage()).toPNG());

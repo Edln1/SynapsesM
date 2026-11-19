@@ -1,0 +1,14 @@
+/* The dedicated desktop shell owns OS dragging, resizing and window controls. */
+*, *::before, *::after {
+  -webkit-app-region:no-drag!important;
+  app-region:no-drag!important;
+}
+#etbDragZoneL,
+[id^="neu-resize-"],
+#right-edge-blocker,
+#etbMin,
+#etbMax,
+#etbClose {
+  display:none!important;
+  pointer-events:none!important;
+}
