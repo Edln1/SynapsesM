@@ -1,4 +1,8 @@
-Synapses Desktop 0.1.15 preview recognizes regional DoorDash brand and menu links.
+Synapses Desktop 0.1.16 preview verifies the DoorDash item before cart confirmation.
+
+- “Add an Egg McMuffin to my cart” uses the menu in the Ava browser. Ava stops for ambiguous items. Changed item details require a fresh confirmation.
+- The general planner can browse DoorDash. Cart changes use a separate exact-item workflow. You review and place the order in DoorDash.
+- A temporary rate limit specific to the primary planner model can use the other configured model once.
 
 - Ava rechecks the page after a DoorDash redirect before reporting whether it opened. If the requested restaurant is already open, Ava uses that page for the next menu request.
 - If an item request starts before a delivery location is selected, Ava searches DoorDash for the restaurant and tries an available location. It uses the restaurant’s menu search when the exact item is not already visible.

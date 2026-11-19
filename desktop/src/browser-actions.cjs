@@ -2,6 +2,8 @@
 const crypto = require('node:crypto');
 const dns = require('node:dns').promises;
 const { publicWebUrl, publicAddress } = require('./desktop-voice-policy.cjs');
+const { isDoorDashPage } = require('./doordash-restaurant.cjs');
+const { findDoorDashMenuSearch, findDoorDashMenuItem, findDoorDashAddToCart } = require('./doordash-menu.cjs');
 
 const WORLD = 1041;
 const TOOLS = Object.freeze({
@@ -9,6 +11,20 @@ const TOOLS = Object.freeze({
   press: ['ref', 'key'], scroll: ['direction', 'amount'], back: [], media_play: ['ref']
 });
 const KEYS = new Set(['Enter', 'Escape', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Backspace']);
+const DOORDASH_INTERACTIONS = new Set(['click', 'type', 'press', 'media_play']);
+
+function permitsDoorDashControl(tool, args, page, expected) {
+  const scope = expected?.doorDash;
+  if (!scope || scope.url !== page.url || typeof scope.item !== 'string' || !scope.item.trim()) return false;
+  if (scope.operation === 'menu-search' && tool === 'type' && args.text === scope.item) {
+    return findDoorDashMenuSearch(page, scope.url, scope.merchant)?.ref === args.ref;
+  }
+  if (scope.operation === 'open-item' && tool === 'click') {
+    return findDoorDashMenuItem(page, scope.item, scope.url)?.ref === args.ref;
+  }
+  return scope.operation === 'add-item' && tool === 'click' && expected.confirm === true &&
+    findDoorDashAddToCart(page, scope.item, scope.url)?.ref === args.ref;
+}
 
 // This trusted function runs in an isolated world. Model arguments are only JSON
 // data; the model cannot supply code, selectors, or a DOM node identifier.
@@ -49,7 +65,7 @@ async function pageOperation(args) {
     const heading = (controlKind === 'button' || controlKind === 'link') && el.querySelector?.(headingSelector);
     return { kind: controlKind, label: name, inputType: type, href: el.tagName === 'A' ? String(el.href || '').slice(0, 2048) : '', disabled: !!(el.disabled || el.getAttribute('aria-disabled') === 'true'), risky, search, dialogTitle: dialogTitle(dialog(el)), menuTitle: clip(heading?.innerText, 160) };
   }
-  function fingerprint(info) { return JSON.stringify([info.kind, info.label, info.inputType, info.href, info.disabled, info.risky, info.search, info.dialogTitle, info.menuTitle]); }
+  function fingerprint(info, cartState) { return JSON.stringify([info.kind, info.label, info.inputType, info.href, info.disabled, info.risky, info.search, info.dialogTitle, info.menuTitle, cartState]); }
   if (args.mode === 'snapshot') {
     const nodes = Array.from(document.querySelectorAll('a[href],button,input:not([type="hidden"]),textarea,select,[role="button"],[contenteditable="true"],video,audio')).filter(visible).slice(0, 90);
     const refs = new Map(), controls = [], media = [];
@@ -69,10 +85,37 @@ async function pageOperation(args) {
   if (args.mode === 'scroll') { scrollBy(args.x, args.y); return { ok: true }; }
   const el = state.refs.get(args.ref);
   if (!el || !el.isConnected || !visible(el)) return { ok: false, error: 'stale_ref' };
+  let cartState;
+  if (args.doorDash) {
+    if (String(location.href) !== args.doorDash.url) return { ok: false, error: 'page_changed' };
+    const rect = el.getBoundingClientRect();
+    const x = (Math.max(rect.left, 0) + Math.min(rect.right, innerWidth)) / 2;
+    const y = (Math.max(rect.top, 0) + Math.min(rect.bottom, innerHeight)) / 2;
+    const hit = document.elementFromPoint(x, y);
+    if (!hit || hit !== el && !el.contains(hit)) return { ok: false, error: 'covered_control' };
+    const panels = Array.from(document.querySelectorAll(dialogSelector)).filter(panel => panel.matches?.(dialogSelector) && visible(panel));
+    const adding = args.doorDash.operation === 'add-item';
+    if (adding ? panels.length !== 1 || dialog(el) !== panels[0] : panels.length > 0) {
+      return { ok: false, error: 'changed_control' };
+    }
+    if (adding) {
+      const panel = panels[0];
+      const text = clip(panel.innerText, 5000);
+      const choices = Array.from(panel.querySelectorAll('input:not([type="password"]):not([type="hidden"]),select,[role="spinbutton"],[aria-checked],[aria-selected]'))
+        .filter(visible).slice(0, 150);
+      const quantities = choices.filter(choice => /^(?:number|spinbutton)$/i.test(choice.type || choice.getAttribute('role')) || /\bquantity\b/i.test(label(choice)))
+        .map(choice => String(choice.value ?? choice.getAttribute('aria-valuenow') ?? ''));
+      if (quantities.some(value => /^\d+$/.test(value) && Number(value) !== 1) || /\b(?:quantity|qty)\s*:?\s*(?:[2-9]|\d{2,})\b/i.test(text)) {
+        return { ok: false, error: 'quantity_review_required' };
+      }
+      cartState = [text, choices.map(choice => [label(choice), clip(choice.value, 240), choice.checked === true, choice.getAttribute('aria-checked'), choice.getAttribute('aria-selected'), choice.getAttribute('aria-valuenow')])];
+    }
+  }
   const info = describe(el);
   if (info.disabled) return { ok: false, error: 'disabled_control' };
-  if (args.mode === 'inspect') return { ok: true, ...info, fingerprint: fingerprint(info), needsConfirmation: info.risky || args.key === 'Enter' && !info.search };
-  if (args.fingerprint !== fingerprint(info)) return { ok: false, error: 'changed_control' };
+  const observedFingerprint = fingerprint(info, cartState);
+  if (args.mode === 'inspect') return { ok: true, ...info, fingerprint: observedFingerprint, needsConfirmation: info.risky || args.key === 'Enter' && !info.search };
+  if (args.fingerprint !== observedFingerprint) return { ok: false, error: 'changed_control' };
   if (args.mode === 'click') { el.click(); return { ok: true }; }
   if (args.mode === 'focus') { el.focus(); return { ok: document.activeElement === el }; }
   if (args.mode === 'type' || args.mode === 'verify_type') {
@@ -101,6 +144,7 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
   if (typeof BrowserWindow !== 'function' || typeof assertActive !== 'function') throw Error('BrowserWindow and assertActive are required.');
   if (!/^persist:synapses-agent-[a-z0-9-]+$/.test(partition)) throw Error('A separate agent browser partition is required.');
   let win = null, contents = null, lifetime = 0, generation = 0, snapshot = null, token = '', performingTicket = null, pendingPopup = null, disposed = false, detached = false;
+  let cartApproval = null;
   const cancelWaiters = new Set();
   const active = ticket => {
     if (disposed || ticket !== lifetime) throw Object.assign(Error('Browser task is no longer active.'), { code: 'canceled' });
@@ -120,7 +164,7 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
     finally { cancelWaiters.delete(rejectCancellation); }
   };
   const abortPending = () => { for (const reject of cancelWaiters) reject(Object.assign(Error('Browser task canceled.'), { code: 'canceled' })); cancelWaiters.clear(); };
-  const invalidate = () => { generation++; snapshot = null; token = ''; };
+  const invalidate = () => { generation++; snapshot = null; token = ''; cartApproval = null; };
   const requestCurrent = ticket => {
     if (disposed || ticket !== lifetime) throw Object.assign(Error('Browser request canceled.'), { code: 'canceled' });
     if (!detached) active(ticket);
@@ -215,7 +259,7 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
     if (!publicWebUrl(url)) throw Object.assign(Error('Open a public HTTPS website first.'), { code: 'no_public_page' });
     const nextToken = makeToken(), page = await execute({ mode: 'snapshot', token: nextToken }, ticket);
     if (!page || page.url !== contents.getURL() || !Array.isArray(page.controls)) throw Object.assign(Error('The page changed while it was being read.'), { code: 'page_changed' });
-    token = nextToken; generation++;
+    token = nextToken; generation++; cartApproval = null;
     snapshot = { generation, url: page.url, title: String(page.title || '').slice(0, 240), text: String(page.text || '').slice(0, 14000),
       controls: page.controls.slice(0, 90), media: Array.isArray(page.media) ? page.media.slice(0, 90) : [], dialogs: Array.isArray(page.dialogs) ? page.dialogs.slice(0, 12) : [], scroll: page.scroll };
     return snapshot;
@@ -244,6 +288,15 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
       if (tool === 'read_page') { await waitForPage(ticket); return { ok: true, verified: false, page: await observe(ticket) }; }
       if (!snapshot || snapshot.url !== contents.getURL()) return { ok: false, error: 'read_required', message: 'Read the current page before acting.' };
       const before = snapshot, signature = visibleSignature(before);
+      const expected = ['click', 'type'].includes(tool) ? trusted.expectedControl : null;
+      const protectedControl = isDoorDashPage(before) && DOORDASH_INTERACTIONS.has(tool);
+      if (protectedControl && !permitsDoorDashControl(tool, args, before, expected)) {
+        return { ok: false, error: 'door_dash_review_required', message: 'Use an exact item request or continue in the DoorDash page.' };
+      }
+      const doorDash = protectedControl ? expected.doorDash : undefined;
+      const cartAction = doorDash?.operation === 'add-item';
+      const approvedCart = cartAction && trusted.confirmed === true ? cartApproval : null;
+      if (cartAction) cartApproval = null;
       let outcome = { ok: true }, ref = args.ref, observedFingerprint;
       if (tool === 'back') {
         if (!contents.navigationHistory.canGoBack()) return { ok: false, error: 'no_history', message: 'There is no previous browser page.' };
@@ -257,22 +310,27 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
         requireRef(ref);
         if (tool === 'press' && !KEYS.has(args.key)) return { ok: false, error: 'unsupported_key' };
         if (tool === 'type' && (typeof args.text !== 'string' || args.text.length > 4000 || /\u0000/.test(args.text))) return { ok: false, error: 'invalid_text' };
-        const inspected = await execute({ mode: 'inspect', token, ref, key: tool === 'press' ? args.key : '' }, ticket);
+        const inspected = await execute({ mode: 'inspect', token, ref, key: tool === 'press' ? args.key : '', doorDash }, ticket);
         if (!inspected.ok) return inspected;
-        const expected = ['click','type'].includes(tool) ? trusted.expectedControl : null;
         if (expected && (inspected.label !== expected.label || inspected.dialogTitle !== expected.dialogTitle || expected.href !== undefined && inspected.href !== expected.href || expected.menuTitle !== undefined && inspected.menuTitle !== expected.menuTitle)) {
           return { ok: false, error: 'changed_control', message: 'The page changed before Ava could use that control.' };
         }
         if ((inspected.needsConfirmation || expected?.confirm === true) && trusted.confirmed !== true) {
+          if (cartAction) cartApproval = { token, ref, item: doorDash.item, fingerprint: inspected.fingerprint };
           const message = expected?.confirm === true && inspected.dialogTitle
             ? 'Confirm “' + inspected.label.slice(0, 120) + '” for ' + inspected.dialogTitle + '.'
             : 'Confirm ' + tool + ' on “' + inspected.label.slice(0, 120) + '”.';
           return { ok: false, needsConfirmation: true, confirmationRequired: true, message, page: snapshot };
         }
+        if (cartAction) {
+          if (!approvedCart || approvedCart.token !== token || approvedCart.ref !== ref || approvedCart.item !== doorDash.item || approvedCart.fingerprint !== inspected.fingerprint) {
+            return { ok: false, error: 'changed_control', message: 'The DoorDash item changed while awaiting confirmation. Review it in the browser.' };
+          }
+        }
         if (tool === 'click' && inspected.href) await publicTarget(inspected.href, ticket);
         observedFingerprint = inspected.fingerprint;
         const mode = tool === 'press' ? 'focus' : tool;
-        outcome = await execute({ mode, token, ref, text: args.text, fingerprint: inspected.fingerprint }, ticket, true);
+        outcome = await execute({ mode, token, ref, text: args.text, fingerprint: inspected.fingerprint, doorDash }, ticket, true);
         if (!outcome.ok) return outcome;
         if (tool === 'press') {
           active(ticket); const keyCode = args.key === 'Space' ? 'Space' : args.key;

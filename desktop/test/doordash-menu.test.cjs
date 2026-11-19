@@ -60,6 +60,10 @@ test('chained DoorDash commands preserve which restaurant and item to open or or
 test('short item commands can refer to the current restaurant or name its menu', () => {
   const mcmuffin = { item: 'Egg McMuffin' };
   assert.deepEqual(parseDoorDashCurrentItemRequest('Order an Egg McMuffin.'), mcmuffin);
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Hey Ava, please add an Egg McMuffin to my cart on DoorDash.', { orderingOnly: true }), mcmuffin);
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Add the Egg McMuffin to the cart'), mcmuffin);
+  assert.equal(parseDoorDashCurrentItemRequest('Add an Egg McMuffin to my cart and check out'), null);
+  assert.equal(parseDoorDashCurrentItemRequest('Add my cart to the cart'), null);
   assert.deepEqual(parseDoorDashCurrentItemRequest('Get me an Egg McMuffin here, please.'), mcmuffin);
   assert.deepEqual(parseDoorDashCurrentItemRequest('Can you order an Egg McMuffin from this menu?'), mcmuffin);
   assert.deepEqual(parseDoorDashCurrentItemRequest("Order an Egg McMuffin on the McDonald's page"), { ...mcmuffin, query:'McDonald’s' });
@@ -120,6 +124,34 @@ test('store-menu search accepts only an unambiguous visible input owned by the v
   assert.equal(findDoorDashMenuSearch({ ...page, url:'https://www.doordash.com/business/mcdonalds-437107/' }, 'https://www.doordash.com/business/mcdonalds-437107/'), null);
   assert.equal(findDoorDashMenuSearch(page, store.replace('123', '999')), null);
   assert.equal(findDoorDashMenuSearch({ url:store, controls:[{ ...field, disabled:true }] }, store), null);
+});
+
+test('a conflicting menu name, variant, or quick-add label cannot identify the requested item', () => {
+  for (const [label, menuTitle] of [
+    ['Egg McMuffin® Meal', 'Egg McMuffin®'],
+    ['Sausage McMuffin® with Egg · CA$8.39', 'Egg McMuffin®'],
+    ['Egg McMuffin® · CA$7.49', 'Egg McMuffin® Meal'],
+    ['Add to cart', 'Egg McMuffin®']
+  ]) {
+    const controls = [{ ...card, label, menuTitle }];
+    assert.equal(findDoorDashMenuItem({ url: store, controls }, 'Egg McMuffin', store), null, label);
+  }
+  for (const requested of ['two Big Macs', 'Big Mac without pickles', 'Big Mac or a cheeseburger', 'Big Mac · CA$3.00']) {
+    assert.equal(findDoorDashMenuItem({ url: store, controls: [card] }, requested, store), null, requested);
+    assert.equal(findDoorDashAddToCart(details, requested, store), null, requested);
+  }
+});
+
+test('a second modal blocks background menu clicks, cart actions and URL-only verification', () => {
+  const href = store + '?item_id=123';
+  const other = { id: 'dialog-1', title: 'Big Mac® Meal' };
+  const field = { ref: 's', kind: 'input', inputType: 'search', label: 'Search menu', needsConfirmation: false };
+  const layered = { url: href, dialogs: [...details.dialogs, other], controls: [card, add, field] };
+  assert.equal(findDoorDashMenuSearch(layered, store), null);
+  assert.equal(findDoorDashMenuItem(layered, item, store), null);
+  assert.equal(findDoorDashAddToCart(layered, item, store), null);
+  assert.equal(isDoorDashMenuItemOpen(layered, item, store, { href }), false);
+  assert.equal(isDoorDashMenuItemOpen({ ...layered, dialogs: [other] }, item, store, { href }), false);
 });
 
 test('store-menu search recognizes the exact merchant label on a verified DoorDash store', () => {

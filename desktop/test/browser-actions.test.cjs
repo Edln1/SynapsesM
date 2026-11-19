@@ -12,6 +12,7 @@ function fixture(t, options = {}) {
     getAttribute(name) { return this.attrs[name] || ''; }
     getBoundingClientRect() { return { width: 120, height: 28, left: 20, top: 20, right: 140, bottom: 48 }; }
     closest() { return this.form || null; }
+    contains(node) { return node === this; }
     focus() { document.activeElement = this; }
     click() { this.clicked = (this.clicked || 0) + 1; if (this.onclick) this.onclick(); }
     dispatchEvent() {}
@@ -289,21 +290,56 @@ test('async lease verdicts cannot be mistaken for synchronous permission', async
   }
 });
 
-test('trusted cart confirmation cannot be skipped or applied to a replacement checkout control', async t => {
+test('DoorDash cart approval binds the exact visible item, options, quantity and route', async t => {
   const f = fixture(t), add = f.node('BUTTON', 'Add to cart', 'button');
-  const page = (await f.driver.perform('open_url', { url: 'https://www.doordash.com/store/mcdonalds-123/' })).page;
+  const url = 'https://www.doordash.com/store/mcdonalds-123/';
+  const quantity = f.node('INPUT', 'Quantity', 'number');
+  quantity.value = '1';
+  const panel = {
+    matches: selector => selector.startsWith('dialog['),
+    getBoundingClientRect: () => ({width:200,height:130,left:10,top:10,right:210,bottom:140}),
+    getAttribute: name => name === 'aria-label' ? 'Egg McMuffin®' : '',
+    innerText: 'Egg McMuffin® Quantity: 1', querySelectorAll: () => [quantity]
+  };
+  add.closest = selector => selector.startsWith('dialog[') ? panel : null;
+  f.document.querySelectorAll = selector => selector.startsWith('dialog[') ? [panel] : f.state.nodes;
+  f.document.elementFromPoint = () => add;
+  const page = (await f.driver.perform('open_url', { url })).page;
   const ref = page.controls[0].ref;
   assert.equal(page.controls[0].needsConfirmation, false);
-  const expectedControl = { label: 'Add to cart', dialogTitle: '', href: '', confirm: true };
-  const beforeApproval = await f.driver.perform('click', { ref }, { expectedControl });
+  const expectedControl = { label: 'Add to cart', dialogTitle: 'Egg McMuffin®', href: '', confirm: true,
+    doorDash: { operation: 'add-item', url, item: 'Egg McMuffin' } };
+  const click = (confirmed = false) => f.driver.perform('click', { ref }, { confirmed, expectedControl });
+  for (const tool of ['click', 'type', 'press']) {
+    const args = tool === 'type' ? {ref,text:'foo'} : tool === 'press' ? {ref,key:'Enter'} : {ref};
+    assert.equal((await f.driver.perform(tool, args, {confirmed:true})).error, 'door_dash_review_required');
+  }
+  assert.equal((await click(true)).error, 'changed_control');
+  assert.equal((await f.driver.perform('click', {ref}, {expectedControl:{...expectedControl,
+    doorDash:{...expectedControl.doorDash,item:'Big Mac'}}})).error, 'door_dash_review_required');
+  assert.equal((await f.driver.perform('click', {ref}, {expectedControl:{...expectedControl,
+    doorDash:{...expectedControl.doorDash,url:url+'?changed=1'}}})).error, 'door_dash_review_required');
+  const beforeApproval = await click();
   assert.equal(beforeApproval.confirmationRequired, true);
   assert.equal(add.clicked, undefined);
   add.attrs['aria-label'] = 'Place order';
-  const afterChange = await f.driver.perform('click', { ref }, { confirmed: true, expectedControl });
-  assert.equal(afterChange.error, 'changed_control');
-  assert.equal(add.clicked, undefined);
+  assert.equal((await click(true)).error, 'changed_control');
   add.attrs['aria-label'] = 'Add to cart';
-  const afterApproval = await f.driver.perform('click', { ref }, { confirmed: true, expectedControl });
+  assert.equal((await click()).confirmationRequired, true);
+  quantity.value = '2';
+  assert.equal((await click(true)).error, 'quantity_review_required');
+  quantity.value = '1';
+  assert.equal((await click()).confirmationRequired, true);
+  panel.innerText += ' Extra cheese selected';
+  assert.equal((await click(true)).error, 'changed_control');
+  panel.innerText = 'Egg McMuffin® Quantity: 1';
+  assert.equal((await click()).confirmationRequired, true);
+  f.document.elementFromPoint = () => panel;
+  assert.equal((await click(true)).error, 'covered_control');
+  assert.equal(add.clicked, undefined);
+  f.document.elementFromPoint = () => add;
+  assert.equal((await click()).confirmationRequired, true);
+  const afterApproval = await click(true);
   assert.equal(afterApproval.ok, true);
   assert.equal(add.clicked, 1);
 });

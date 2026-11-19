@@ -40,6 +40,16 @@ test('fixed key aliases work and generic submit/delete delivery requires native 
   const count=f.calls.length;assert.equal((await f.driver.pressKey({windowId,key:'Enter'})).confirmationRequired,true);assert.equal(f.calls.length,count);await f.driver.pressKey({windowId,key:'Enter'},{confirmed:true});assert.equal(f.calls.at(-1).key,'ENTER');
   assert.equal((await f.driver.pressKey({windowId,key:'Win+R; arbitrary'})).ok,false);
 });
+test('native controls cannot bypass verified DoorDash item handling',async()=>{
+  const f=fixture();
+  f.responses.windows.windows=[{...window,title:'McDonald’s - DoorDash - Google Chrome'}];
+  f.responses.read.controls=[control('Add')];
+  const target=await f.observed(),count=f.calls.length;
+  assert.equal((await f.driver.clickControl(target,{confirmed:true})).ok,false);
+  assert.equal((await f.driver.typeControl({...target,text:'test'},{confirmed:true})).ok,false);
+  assert.equal((await f.driver.pressKey({windowId:target.windowId,key:'Enter'},{confirmed:true})).ok,false);
+  assert.equal(f.calls.length,count);
+});
 test('cancellation before async lease verification prevents any native dispatch',async()=>{
   let dispatches=0;const driver=createWindowsActions({assertActive:async()=>true,runScript:async()=>{dispatches++;return {ok:true,apps:[]};}});const pending=driver.catalog();driver.cancel();await assert.rejects(pending,/stopped/);assert.equal(dispatches,0);
 });

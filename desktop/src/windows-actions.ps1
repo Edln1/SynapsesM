@@ -121,6 +121,7 @@ function Get-Target($expected) {
   $info = [SynapsesNative.Win]::Info($handle)
   if (-not $info -or $info.pid -ne [int]$expected.pid -or $info.started -ne [string]$expected.started) { throw 'stale_window' }
   if ($info.app -match '^(Synapses|powershell|pwsh|cmd|WindowsTerminal|regedit|mmc|consent|CredentialUIBroker|runas)$' -or $info.title -match '^(Run|Windows Security|User Account Control)$') { throw 'unsupported_window' }
+  if ($request.op -in @('click','type','key') -and $info.title -match '\bdoor\s*dash\b') { throw 'door_dash_review_required' }
   return @{ handle=$handle; info=$info }
 }
 

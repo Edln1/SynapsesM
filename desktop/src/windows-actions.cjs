@@ -2,6 +2,8 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),{execFile}=require('node:child_process');
 const {publicWebUrl}=require('./desktop-voice-policy.cjs');
 const SENSITIVE=/\b(?:buy|purchase|pay|payment|checkout|order|delete|remove|send|submit|publish|install|uninstall|transfer|password|credential|security|confirm)\b/i;
+const DOORDASH_WINDOW=/\bdoor\s*dash\b/i;
+const DOORDASH_REVIEW=Object.freeze({ok:false,verified:false,message:'Use the Ava browser for a verified DoorDash item, or complete the action yourself in DoorDash.'});
 const KEYS=new Set(['ENTER','ESCAPE','TAB','SHIFT_TAB','SPACE','ARROW_UP','ARROW_DOWN','ARROW_LEFT','ARROW_RIGHT','HOME','END','PAGE_UP','PAGE_DOWN','CTRL_L','CTRL_A','CTRL_F','BACKSPACE','DELETE']);
 function materializeDriver(){
   const bytes=fs.readFileSync(path.join(__dirname,'windows-actions.ps1')),hash=crypto.createHash('sha256').update(bytes).digest('hex');
@@ -68,6 +70,7 @@ function createWindowsActions({displays=()=>[],assertActive=()=>true,runScript}=
   }
   async function controlAction(op,{windowId,ref,text}={},options={}){
     const window=target(windowId),snapshot=snapshots.get(windowId),control=snapshot?.controls.get(ref);
+    if(DOORDASH_WINDOW.test(window.title))return DOORDASH_REVIEW;
     if(!control||snapshot.generation!==generation)return {ok:false,verified:false,message:'Read this window again; the control reference is stale.'};
     if(/terminal|powershell|command prompt|run command/i.test(control.name))return {ok:false,verified:false,message:'Shell and command-entry controls are not supported.'};
     if(control.password)return {ok:false,verified:false,message:'Password fields are not supported by this controller.'};
@@ -82,8 +85,10 @@ function createWindowsActions({displays=()=>[],assertActive=()=>true,runScript}=
   async function pressKey({windowId,key}={},options={}){
     const aliases={ARROWUP:'ARROW_UP',ARROWDOWN:'ARROW_DOWN',ARROWLEFT:'ARROW_LEFT',ARROWRIGHT:'ARROW_RIGHT',PAGEUP:'PAGE_UP',PAGEDOWN:'PAGE_DOWN',CONTROL_A:'CTRL_A',CONTROL_L:'CTRL_L',CONTROL_F:'CTRL_F'};
     let normalized=String(key||'').toUpperCase().replace(/[+ -]/g,'_');normalized=aliases[normalized]||normalized;if(!KEYS.has(normalized))return {ok:false,verified:false,message:'That keyboard shortcut is not supported.'};
+    const window=target(windowId);
+    if(DOORDASH_WINDOW.test(window.title))return DOORDASH_REVIEW;
     if(['ENTER','SPACE','DELETE'].includes(normalized)&&options.confirmed!==true)return {ok:false,confirmationRequired:true,message:'Confirm sending '+normalized+' to the selected app.'};
-    const result=await call({op:'key',window:target(windowId),key:normalized});snapshots.delete(windowId);return result;
+    const result=await call({op:'key',window,key:normalized});snapshots.delete(windowId);return result;
   }
   async function scrollWindow({windowId,direction,amount=3}={}){
     if(!['up','down','left','right'].includes(direction))return {ok:false,verified:false,message:'Use a supported scroll direction.'};

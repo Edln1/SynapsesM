@@ -8,6 +8,8 @@ const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window'
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
 const DIRECTIONS=Object.freeze(['up','down','left','right']);
 const READ_ACTIONS=Object.freeze(['list_apps','list_windows','read_window','read_page']);
+const DOORDASH_BROWSE_ACTIONS = new Set(['read_page','open_url','scroll','back']);
+const DOORDASH_REVIEW = 'Say one exact menu item on DoorDash. You can review your cart and check out in the Ava browser.';
 const MAX_CONTEXT=20000;
 const MAX_OBSERVATION=10000;
 const PLANNER_MODELS=Object.freeze(['openai/gpt-oss-20b','openai/gpt-oss-120b']);
@@ -142,10 +144,18 @@ function plannerError(status,data,invalidResponse=false){
   if(FORMAT_CODES.has(providerCode)||status===400&&/json|response.format|function.call|tool.call/i.test(message))return {providerCode:providerCode==='unknown'?'output_parse_failed':providerCode,error:fail('planner_format','The planner could not produce a usable action. Please try again.')};
   return {providerCode,error:fail('planner_server','The task planner could not respond. Please try again later.')};
 }
+function temporaryModelLimit(data,model){
+  const error=data?.error;
+  if(error?.code!=='rate_limit_exceeded'||typeof error.message!=='string')return false;
+  const message=error.message.toLowerCase();
+  return /\brate limit (?:reached|exceeded) for model\b/.test(message)&&message.includes(model)&&/\b(?:rpm|tpm|itpm|otpm|per minute)\b/.test(message);
+}
 function createGroqComplete({fetch:fetcher=globalThis.fetch,endpoint='https://synbot-whatsapp-2.onrender.com/groq-chat'}={}){
+  let primaryLimitedUntil=0;
   return async function complete(request,{signal,onTransport=()=>{}}={}){
     const current=()=>{if(signal?.aborted)throw fail('cancelled','The PC task was stopped.');};
-    const base={...request,model:PLANNER_MODELS.includes(request?.model)?request.model:PLANNER_MODELS[0]};
+    const preferred=PLANNER_MODELS.includes(request?.model)?request.model:PLANNER_MODELS[0];
+    const base={...request,model:preferred===PLANNER_MODELS[0]&&Date.now()<primaryLimitedUntil?PLANNER_MODELS[1]:preferred};
     if(!accountId(base.userId))delete base.userId;
     let body=base,formatRetried=false,fallbackUsed=body.model===PLANNER_MODELS[1],lastFailure;
     function emit(httpStatus,providerCode,attempt){
@@ -174,8 +184,12 @@ function createGroqComplete({fetch:fetcher=globalThis.fetch,endpoint='https://sy
         : plannerError(response?.status||0,data,invalidResponse);
       lastFailure=failure.error;
       emit(response?.status||0,failure.providerCode,attempt);
-      // Only malformed plans get a corrective retry. A guest,
-      // authentication, quota, network or server error is never retried here.
+      // A temporary limit explicitly attached to the first model can use the other configured model once.
+      if(failure.error.code==='planner_rate_limited'&&!fallbackUsed&&attempt<3&&temporaryModelLimit(data,body.model)){
+        primaryLimitedUntil=Date.now()+15000;
+        fallbackUsed=true;body={...body,model:PLANNER_MODELS[1]};continue;
+      }
+      // Guest and account-wide quota failures go straight back to the caller.
       if(failure.error.code==='planner_format'&&!formatRetried&&!fallbackUsed&&attempt<3){
         const correction=invalidArguments
           ? '\nThe prior response was rejected because its action arguments were invalid. Use a public HTTPS address for a website. For apps, windows and page controls, copy the exact observed identifier into target, or take a discovery step first. Never use a display name as an ID.'
@@ -306,6 +320,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       if(step>=maxSteps)throw fail('step_limit','I reached the task step limit. You can continue in the Ava browser.');
       return perform(context,++step,action,args,expectedControl);
     };
+    const scoped=(operation,page,fields,merchant)=>({...fields,doorDash:{operation,url:page.url,item,...(merchant?{merchant}:{})}});
     const read=async()=>{
       const result=await next('read_page',{});
       return result?.ok===true?result.page:null;
@@ -329,7 +344,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       if(!match&&available.includes('type')&&step+2<maxSteps){
         const search=findDoorDashMenuSearch(page,restaurantUrl,query);
         if(search){
-          const typed=await next('type',{target:search.ref,value:item},{label:search.label,dialogTitle:'',href:''});
+          const typed=await next('type',{target:search.ref,value:item},scoped('menu-search',page,{label:search.label,dialogTitle:'',href:''},query));
           if(typed?.ok===true&&verifyDoorDashRestaurant(typed.page,restaurantUrl)){
             page=typed.page;
             match=findDoorDashMenuItem(page,item,restaurantUrl);
@@ -350,9 +365,9 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         const menu=query?`the ${query} menu`:'this DoorDash menu';
         throw fail('unverified',`I couldn’t verify ${item} on ${menu}. Check the location and menu in the Ava browser.`);
       }
-      const opened=await next('click',{target:match.ref},{
+      const opened=await next('click',{target:match.ref},scoped('open-item',page,{
         label:match.label,dialogTitle:match.dialogTitle,href:match.href,...(match.menuTitle?{menuTitle:match.menuTitle}:{})
-      });
+      }));
       if(opened?.ok!==true)throw fail('unverified',`I found ${item} on DoorDash. Select it in the Ava browser to continue.`);
       page=opened.page;
       if(!isDoorDashMenuItemOpen(page,item,restaurantUrl,match)&&step<maxSteps)page=await read();
@@ -367,7 +382,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       progress('complete',step,'finish');
       return {handled:true,ok:true,message:`I opened ${item} in the Ava browser. Review the options and add it there.`};
     }
-    const added=await next('click',{target:add.ref},{label:add.label,dialogTitle:add.dialogTitle,href:'',confirm:true});
+    const added=await next('click',{target:add.ref},scoped('add-item',page,{label:add.label,dialogTitle:add.dialogTitle,href:'',confirm:true}));
     if(added?.confirmationRequired===true){
       progress('complete',step,'finish');
       return {handled:true,ok:true,message:`I left ${item} open in the Ava browser so you can continue there.`};
@@ -381,6 +396,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     if(context.doorDashFollowUp)return openDoorDashRestaurant(context,context.doorDashFollowUp);
     const canBrowse=available.includes('read_page')&&available.includes('open_url');
     const canSelect=canBrowse&&available.includes('click');
+    const doorDashNamed=/\bdoor\s*dash\b/i.test(context.text);
+    const purchaseRequest=/\b(?:order|buy|purchase|checkout|check\s+out|cart)\b/i.test(context.text)&&
+      /\b(?:order|buy|purchase|add|put|get|remove|update|place|confirm|checkout|check\s+out|pay|submit|clear|empty)\b/i.test(context.text);
+    const useCurrentDoorDash=context.recentDoorDash&&/\b(?:click|select|find|show|order|add|cart|menu|this page|this restaurant)\b/i.test(context.text);
     const menuRequest=parseDoorDashMenuRequest(context.text);
     if(menuRequest&&canSelect)return prepareDoorDashItem(context,menuRequest);
     const direct=available.includes('open_url') ? directWebPlan(context.text) : null;
@@ -414,12 +433,22 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         return openDoorDashRestaurant(context,{query:restaurant,openListing:true,preference:'closest'},1);
       }
     }
-    const allowed=context.readOnly ? available.filter(action=>['read_page','list_windows','read_window'].includes(action)) : available;
+    if(purchaseRequest&&!currentItem&&canBrowse&&!doorDashNamed&&!context.recentDoorDash){
+      progress('planning',1);
+      const current=await perform(context,1,'read_page',{foregroundOnly:true});
+      if(current?.ok===true&&isDoorDashPage(current.page))throw fail('unverified',DOORDASH_REVIEW);
+    }
+    if(purchaseRequest&&(doorDashNamed||context.recentDoorDash||lastDoorDash&&lastDoorDash.userId===context.userId)){
+      throw fail('unverified',DOORDASH_REVIEW);
+    }
+    const generalActions=context.readOnly?available.filter(action=>['read_page','list_windows','read_window'].includes(action)):available;
+    let doorDashObserved=doorDashNamed||useCurrentDoorDash;
     for(let step=1;step<=maxSteps;step++){
       await guard(context);progress('planning',step);await guard(context);
+      const allowed=doorDashObserved&&!context.readOnly?generalActions.filter(action=>DOORDASH_BROWSE_ACTIONS.has(action)):generalActions;
       let plan;
       const startingNavigation=step===1 ? direct : null;
-      const continuingBrowser=step===1&&context.recentDoorDash&&!direct&&/\b(?:click|select|find|show|order|open|go to|add)\b/i.test(context.text);
+      const continuingBrowser=step===1&&useCurrentDoorDash&&!direct;
       const initialRead=step===1&&(context.readOnly||continuingBrowser)&&allowed.includes('read_page');
       if(startingNavigation){
         plan={action:'open_url',args:{target:startingNavigation.url}};
@@ -443,9 +472,13 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         if((context.readOnly ? !context.readEvidence : !context.verified)||context.failures.size)throw fail('unverified','I could not verify that the task was completed.');
         progress('complete',step,'finish');return {handled:true,ok:true,message:plan.message};
       }
-      if(!allowed.includes(plan.action))throw fail('unsupported','That action is not available for this PC task.');
+      if(!allowed.includes(plan.action)){
+        if(doorDashObserved)throw fail('unverified',DOORDASH_REVIEW);
+        throw fail('unsupported','That action is not available for this PC task.');
+      }
       const args=context.readOnly&&plan.action==='read_page'?{foregroundOnly:true}:plan.args;
       const result=await perform(context,step,plan.action,args);
+      if(result?.ok===true&&isDoorDashPage(result.page))doorDashObserved=true;
       if(result&&(result.confirmationRequired===true||result.requiresConfirmation===true||result.confirmationNeeded===true))return {handled:true,ok:false,message:shortMessage(result.message,'I need your confirmation before continuing.')};
       const verified=!!(result&&result.ok===true&&result.verified===true);
       if(startingNavigation){

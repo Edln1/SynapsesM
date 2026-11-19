@@ -20,7 +20,7 @@ function page(controls, dialogs = [], url = store) {
   return { url, title: 'McDonald’s Menu', controls, dialogs };
 }
 
-function fixture({ current = page([mealCard, menuCard]), approved = true, addResult, afterScroll } = {}) {
+function fixture({ current = page([mealCard, menuCard]), approved = true, addResult, afterScroll, dialogAfterOpen = dialog } = {}) {
   const trace = [];
   let visiblePage = current;
   let additions = 0;
@@ -59,12 +59,21 @@ function fixture({ current = page([mealCard, menuCard]), approved = true, addRes
         }
         assert.equal(action, 'click');
         if (args.ref === menuCard.ref) {
-          assert.deepEqual(trusted, { confirmed: false, expectedControl: { label: menuCard.label, dialogTitle: '', href: '' } });
-          visiblePage = page([checkout, add], [dialog]);
+          assert.deepEqual(trusted, {
+            confirmed: false,
+            expectedControl: {
+              label: menuCard.label, dialogTitle: '', href: '',
+              doorDash: { operation: 'open-item', url: visiblePage.url, item: 'big mac' }
+            }
+          });
+          visiblePage = page([checkout, { ...add, dialog: dialogAfterOpen.id }], [dialogAfterOpen]);
           return { ok: true, verified: true, page: visiblePage };
         }
         assert.equal(args.ref, add.ref, 'Only the observed Add control may be clicked');
-        assert.deepEqual(trusted.expectedControl, { label: add.label, dialogTitle: dialog.title, href: '', confirm: true });
+        assert.deepEqual(trusted.expectedControl, {
+          label: add.label, dialogTitle: dialog.title, href: '', confirm: true,
+          doorDash: { operation: 'add-item', url: visiblePage.url, item: 'big mac' }
+        });
         if (!trusted.confirmed) return { ok: false, confirmationRequired: true, message: question };
         assert.equal(approved, true);
         additions++;
@@ -118,6 +127,39 @@ test('a Big Mac Meal alone cannot satisfy the request and remains unselected', a
   assert.equal(f.plannerCalls(), 0);
   assert.equal(f.visiblePage(), initial);
   assert.deepEqual(f.trace.map(([action]) => action), ['read_page', 'read_page', 'scroll']);
+});
+
+test('ambiguous or finalizing DoorDash requests stay local and never touch the cart', async () => {
+  for (const request of [
+    'Add a Big Mac and fries to my DoorDash cart',
+    'Add a Big Mac and then select fries to cart on DoorDash',
+    'Order a Big Mac and then add some fries on DoorDash',
+    'Place my DoorDash order'
+  ]) {
+    const f = fixture();
+    const result = await f.runner.run(request, { userId: 'same-owner' });
+
+    assert.equal(result.handled, true, request);
+    assert.equal(result.ok, false, request);
+    assert.doesNotMatch(result.message, /rate.?limit|planner/i, request);
+    assert.equal(f.plannerCalls(), 0, request);
+    assert.deepEqual(clickedRefs(f.trace), [], request);
+    assert.equal(f.trace.some(([action]) => action === 'confirm'), false, request);
+    assert.equal(f.additions(), 0, request);
+  }
+});
+
+test('a different item dialog after opening the exact card cannot reach cart confirmation', async () => {
+  const wrongItemDialog = { id: 'different-item', title: 'Big Mac® Meal' };
+  const f = fixture({ dialogAfterOpen: wrongItemDialog });
+  const result = await f.runner.run(utterance);
+
+  assert.equal(result.ok, false, result.message);
+  assert.match(result.message, /couldn’t verify|exact item/i);
+  assert.equal(f.plannerCalls(), 0);
+  assert.deepEqual(clickedRefs(f.trace), [[menuCard.ref, false]]);
+  assert.equal(f.trace.some(([action]) => action === 'confirm'), false);
+  assert.equal(f.additions(), 0);
 });
 
 test('the first verified scroll can reveal the Big Mac without further scrolling', async () => {
@@ -282,6 +324,46 @@ test('a different account cannot use the previous account’s DoorDash context',
   assert.deepEqual(requests, [restaurantFollowUp]);
 });
 
+test('a general planner cannot click a DoorDash item or use native clicks after entering DoorDash', async () => {
+  for (const action of ['click', 'click_control']) {
+    const calls = [];
+    const requests = [];
+    const tools = createPcTaskTools({
+      assertActive: () => true,
+      authorizeAction: async () => { calls.push('confirm'); return true; },
+      windows: {
+        clickControl: async () => { calls.push('native-click'); return { ok: true, verified: true }; }
+      },
+      browser: {
+        async perform(tool) {
+          calls.push(tool);
+          if (tool === 'open_url' || tool === 'read_page') return { ok: true, verified: tool === 'open_url', page: page([add]) };
+          return { ok: true, verified: true };
+        }
+      }
+    });
+    const runner = createPcTaskRunner({
+      tools,
+      assertActive: () => true,
+      complete: async request => {
+        const declared = request.response_format.json_schema.schema.properties.action.enum;
+        requests.push(declared);
+        const step = requests.length === 1
+          ? { action: 'open_url', target: store }
+          : { action, target: action === 'click' ? add.ref : 'window-1', secondary: action === 'click_control' ? add.ref : null };
+        return { target: null, value: null, secondary: null, direction: null, amount: null, message: '', ...step };
+      }
+    });
+
+    const result = await runner.run('Find where the delivery deals are', { userId: 'owner' });
+
+    assert.equal(result.ok, false, action);
+    assert.ok(requests.length >= 2, action);
+    assert.equal(requests[1].includes(action), false, action);
+    assert.deepEqual(calls, ['open_url'], action);
+  }
+});
+
 test('an explicit DoorDash order finds a different restaurant and item from observed pages', async () => {
   const restaurantName = 'Cedar Kitchen';
   const itemName = 'Spicy Chicken Sandwich';
@@ -363,17 +445,22 @@ function breakfastFixture({ searchMenu = false, searchLabel = 'Search store menu
         }
         if (action === 'type') {
           assert.deepEqual(args, { ref: searchField.ref, text: 'Egg McMuffin' });
-          assert.deepEqual(trusted.expectedControl, { label: searchField.label, dialogTitle: '', href: '' });
+          assert.deepEqual(trusted.expectedControl, {
+            label: searchField.label, dialogTitle: '', href: '',
+            doorDash: { operation: 'menu-search', url: visiblePage.url, item: 'Egg McMuffin', merchant: restaurant }
+          });
           visiblePage = page([searchField, breakfast], [], visiblePage.url);
           return { ok: true, verified: true, page: visiblePage };
         }
         assert.equal(action, 'click');
         if (args.ref === breakfast.ref) {
+          assert.deepEqual(trusted.expectedControl.doorDash, { operation: 'open-item', url: visiblePage.url, item: 'Egg McMuffin' });
           const checkoutInDialog = { ...checkout, dialog: breakfastDialog.id };
           visiblePage = page([addBreakfast, checkoutInDialog], [breakfastDialog], visiblePage.url);
         } else {
           assert.equal(args.ref, addBreakfast.ref, 'Only the observed breakfast Add control may be used');
           assert.equal(trusted.expectedControl.confirm, true);
+          assert.deepEqual(trusted.expectedControl.doorDash, { operation: 'add-item', url: visiblePage.url, item: 'Egg McMuffin' });
           if (!trusted.confirmed) return { ok: false, confirmationRequired: true, message: question };
           visiblePage = page([checkout], [], visiblePage.url);
         }
