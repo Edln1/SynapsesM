@@ -1,5 +1,11 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.11 DoorDash location follow-ups
+
+The reported flow reached a location question followed by a DoorDash page-not-found error. A bounded, session-scoped restaurant reference lets a follow-up choose from fresh DoorDash results. Ava orders matching branches by observed distance when asked for the closest, retries a small number of observed listings, and rejects missing or unavailable pages even when their URL matches the requested listing. The verified public brand page remains a fallback. Verification challenges stop the task.
+
+All **146 desktop tests pass**. The end-to-end runner fixture covers clarification, “any or closest one,” mixed miles and kilometers, retry after an exact-URL not-found page, and clearing the remembered restaurant when PC voice stops.
+
 ## 0.1.10 verified voice replies
 
 The user confirmed that 0.1.9 reached the restaurant and reported a later target-resolution error. The updated route recognizes additional wording variants and confirms a matched destination as soon as it is verified. If a broader request opens the restaurant before a later plan fails, the reply reports the successful opening and the unverified remainder.

@@ -33,31 +33,51 @@ function doorDashBlocked(value){
   if(/\b(?:verify (?:that )?you are (?:a )?human|confirm you are human|complete (?:the )?(?:security check|captcha)|checking your browser|enable javascript and cookies to continue)\b/i.test(text))return true;
   try{return /\/(?:cdn-cgi\/challenge|captcha)(?:[-/]|$)/i.test(new URL(page.url).pathname);}catch{return false;}
 }
-function selectDoorDashRestaurant(value,query){
-  const page=snapshot(value),name=queryValue(query),base=doorDashUrl(page.url);if(!name||!base||doorDashBlocked(page))return null;
+function doorDashUnavailable(value){
+  const page=snapshot(value),title=String(page.title||'').trim(),text=String(page.text||'').slice(0,6000);
+  const content=title+'\n'+text;
+  if(/^(?:(?:404\s*[-:|]?\s*)?(?:page|store|restaurant) (?:not found|unavailable|no longer available)|404(?:\s*[-:|]\s*not found)?|not found)(?:[.!]?\s*(?:[-|]\s*DoorDash)?)?$/i.test(title))return true;
+  return /\b(?:page not found|(?:we (?:couldn['\u2018\u2019]t|could not|cannot|can['\u2018\u2019]t)|unable to) find (?:this|that|the) (?:page|store|restaurant)|(?:this|that|the) (?:page|store|restaurant) (?:(?:is |was |has been )?(?:not found|(?:currently |temporarily )?(?:unavailable|not available)|no longer available|(?:has been )?removed)|(?:doesn['\u2018\u2019]t|does not) exist|isn['\u2018\u2019]t available)|(?:the )?page you(?:['\u2018\u2019]re| are) looking for (?:doesn['\u2018\u2019]t exist|(?:is |was )?(?:not found|unavailable|no longer available|removed)))\b/i.test(content);
+}
+function distanceMeters(label){
+  const match=/(?:^|[^\p{L}\p{N}.])(\d+(?:\.\d+)?)\s*(miles?|mi|kilomet(?:er|re)s?|km|met(?:er|re)s?|m)\b/iu.exec(label);
+  if(!match)return null;
+  const value=Number(match[1]),unit=match[2].toLowerCase();
+  const meters=value*(unit==='mi'||unit.startsWith('mile')?1609.344:unit==='km'||unit.startsWith('kilo')?1000:1);
+  return Number.isFinite(meters)&&meters>=0&&meters<=1000000?Math.round(meters):null;
+}
+function listDoorDashRestaurants(value,query){
+  const page=snapshot(value),name=queryValue(query),base=doorDashUrl(page.url);if(!name||!base||doorDashBlocked(page)||doorDashUnavailable(page))return [];
   const candidates=new Map();
   for(const link of [...(Array.isArray(page.controls)?page.controls:[]),...(Array.isArray(page.links)?page.links:[])]){
     if(!link||typeof link!=='object'||link.visible===false||link.hidden===true||link.disabled===true)continue;
     const href=typeof link.href==='string'?link.href:typeof link.url==='string'?link.url:null;
     if(!href)continue;const item=restaurant(href,base.href);if(!item)continue;
-    const label=link.label||link.name||link.text||link.title||'';
+    const label=String(link.label||link.name||link.text||link.title||'').slice(0,500);
     if(!startsWithName(label,name)&&!startsWithName(item.nameWords.join(' '),name))continue;
-    const key=item.kind+':'+item.id;if(!candidates.has(key))candidates.set(key,item);
+    const key=item.kind+':'+item.id;
+    if(!candidates.has(key))candidates.set(key,{url:item.url,kind:item.kind,id:item.id,label,rank:candidates.size,distanceMeters:distanceMeters(label)});
+    else if(candidates.get(key).distanceMeters===null){
+      const distance=distanceMeters(label);if(distance!==null)candidates.get(key).distanceMeters=distance;
+    }
   }
-  const matches=[...candidates.values()],store=matches.find(item=>item.kind==='store');
+  return [...candidates.values()];
+}
+function selectDoorDashRestaurant(value,query){
+  const matches=listDoorDashRestaurants(value,query),store=matches.find(item=>item.kind==='store');
   if(store)return store.url;
-  const brand=matches.find(item=>item.kind==='business'&&(!item.name||item.name===words(name).join('')));
+  const brand=matches.find(item=>item.kind==='business'&&(!restaurant(item.url).name||restaurant(item.url).name===words(query).join('')));
   return brand?brand.url:null;
 }
 function verifyDoorDashRestaurant(value,expectedUrl){
-  const page=snapshot(value);if(doorDashBlocked(page))return false;
+  const page=snapshot(value);if(doorDashBlocked(page)||doorDashUnavailable(page))return false;
   const actual=restaurant(page.url),expected=restaurant(expectedUrl);
   return !!(actual&&expected&&actual.kind===expected.kind&&(!actual.name||!expected.name||actual.name===expected.name)&&actual.id===expected.id);
 }
 
 function isDoorDashRestaurant(value,query){
   const page=snapshot(value),listing=restaurant(page.url);
-  return !!listing&&!doorDashBlocked(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
+  return !!listing&&!doorDashBlocked(page)&&!doorDashUnavailable(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
 }
 
-module.exports={doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,doorDashBlocked};
+module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,doorDashBlocked,doorDashUnavailable};

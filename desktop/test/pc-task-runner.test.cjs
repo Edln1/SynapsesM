@@ -159,6 +159,36 @@ test('DoorDash navigation verifies the brand fallback and stops for a verificati
   }
 });
 
+test('DoorDash location follow-up remembers the restaurant, tries closest first and skips a not-found store', async () => {
+  const search='https://www.doordash.com/search/store/McDonald%E2%80%99s/';
+  const nearest='https://www.doordash.com/store/101/';
+  const next='https://www.doordash.com/store/102/';
+  const farther='https://www.doordash.com/store/103/';
+  const calls=[];
+  const runner=createPcTaskRunner({
+    assertActive:()=>true,
+    complete:planner([step('clarify',{message:'Which McDonald’s location do you want?'}),step('chat')]),
+    tools:{open_url:async ({target})=>{
+      calls.push(target);
+      if(target===search)return {ok:true,verified:true,page:{url:target,controls:[
+        {href:farther,label:'McDonald’s 4.1 • 4.5 km'},
+        {href:next,label:'McDonald’s 4.7 • 1.7 km'},
+        {href:nearest,label:'McDonald’s 4.0 • 0.5 mi'}
+      ]}};
+      const text=target===nearest?'We couldn’t find the page you’re looking for.':'McDonald’s menu';
+      return {ok:true,verified:true,page:{url:target,text}};
+    }}
+  });
+  const first=await runner.run('I’m looking for a McDonald’s branch on DoorDash.',{userId:'owner'});
+  assert.match(first.message,/Which McDonald’s/);
+  const second=await runner.run('Any or closest one.',{userId:'owner'});
+  assert.equal(second.ok,true);
+  assert.deepEqual(calls,[search,nearest,next]);
+  runner.cancel();
+  assert.equal((await runner.run('Any one.',{userId:'owner'})).handled,false);
+  assert.deepEqual(calls,[search,nearest,next]);
+});
+
 test('a direct navigation reports failure when the browser cannot verify the destination', async () => {
   const runner = createPcTaskRunner({
     assertActive: () => true,

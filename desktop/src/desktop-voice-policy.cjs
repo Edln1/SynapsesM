@@ -41,17 +41,28 @@ function isPageReadRequest(text) {
   return /^(?:(?:what(?:['’]s| is) (?:on|in)|what do you see (?:on|in)|what can you see (?:on|in)|tell me what(?:['’]s| is) (?:on|in)|can you see what(?:['’]s| is) (?:on|in)) (?:this|the(?: current)?) (?:page|screen|window)|(?:read|describe|summarize) (?:this|the(?: current)?) (?:page|screen|window)|what do you see here)$/i.test(command);
 }
 
+function doorDashPreference(text) {
+  const answer=normalizeVoiceCommand(text).toLowerCase().replace(/[.,!?]+/g,' ').trim().replace(/\s+/g,' ');
+  if(/^(?:(?:pick|choose|open|go to|just) )?(?:(?:any(?: one)?|whichever)(?: or (?:the )?(?:closest|nearest)(?: one)?)?|(?:the )?(?:closest|nearest)(?: (?:one|location))?(?: to me)?|whatever is (?:closest|nearest))(?: please)?$/.test(answer)) {
+    return /\b(?:closest|nearest)\b/.test(answer)?'closest':'any';
+  }
+  return null;
+}
+
 function directWebPlan(text) {
   if (typeof text !== 'string' || text.length > 500 || /[\u0000-\u001f\u007f]/.test(text)) return null;
   const command = normalizeVoiceCommand(text).replace(/\s+(?:for me(?: please)?|please)[.!?]*$/i, '').replace(/[.!?]+$/, '').trim();
-  const sequence = /(?:\bthen\b|\band\s+(?:also\s+)?(?:open|go to|search|find|look|click|play|show|order|add|select|pick|read|type|buy|log|sign)\b|[;,]\s*(?:open|search|find|click|play|order)\b)/i;
+  const sequence = /(?:\bthen\b|\band\s+(?:also\s+)?(?:open|go to|search|find|look|click|play|show|order|add|select|pick|read|type|buy|log|sign|check|see|ask|describe|summarize|tell)\b|[;,]\s*(?:open|search|find|click|play|order)\b)/i;
   const restaurantCommand = command.replace(/[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:go (?:there|to it|to (?:its|their) page)|take me there|(?:open|click(?: on)?) (?:it|the (?:restaurant|listing|store|(?:first )?result)))$/i, '');
   const scopedRestaurant = /^(?:search(?:\s+(?:for|up))?|look (?:up|for)|find|open|go to|take me to|bring up|pull up)\s+(.+?)\s+(?:on|in|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?(?:\s+please)?$/i.exec(restaurantCommand);
-  const doorDashFirst = /^(?:(?:open|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:search(?:\s+(?:for|up))?|find|look (?:up|for))|search\s+(?:on\s+)?(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+for)\s+(.+)$/i.exec(restaurantCommand);
-  const restaurant = (scopedRestaurant || doorDashFirst)?.[1].trim();
+  const doorDashFirst = /^(?:(?:open(?: up)?|visit|go (?:to|on))\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?[\s,.;:]+(?:(?:and(?:\s+then)?|then)\s+)?(?:search(?:\s+(?:for|up))?|find|look (?:up|for)|go to|open)|search\s+(?:on\s+)?(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+for)\s+(.+)$/i.exec(restaurantCommand);
+  const namedMcDonalds = /^(?:(?:i (?:want|need) (?:you )?to|try to|just)\s+)?(?:open|find|search|look|go|take|pull|bring)\b/i.test(restaurantCommand)&&/\bdoor\s*dash\b/i.test(restaurantCommand)&&/\bmc\s*donald['’]?\s*s\b/i.test(restaurantCommand)&&!sequence.test(restaurantCommand)&&!/\b(?:and|order|buy|add to cart|pay|checkout)\b/i.test(restaurantCommand);
+  const restaurant = (scopedRestaurant || doorDashFirst)?.[1].trim() || (namedMcDonalds ? 'McDonald’s' : '');
   if (restaurant && restaurant.length <= 100 && !sequence.test(restaurant)) {
-    const openListing = restaurantCommand !== command || /^(?:open|go to|take me to|bring up|pull up)\s+/i.test(scopedRestaurant?.[0] || '');
-    return {doorDashRestaurant:{query:restaurant,openListing}};
+    const closest=/^(?:the\s+)?(?:closest|nearest)\s+/i.exec(restaurant);
+    const query=closest?restaurant.slice(closest[0].length):restaurant;
+    const openListing = !!closest || restaurantCommand !== command || /^(?:open|go to|take me to|bring up|pull up)\s+/i.test(scopedRestaurant?.[0] || '');
+    return {doorDashRestaurant:{query,openListing,preference:closest?'closest':undefined}};
   }
   if (/^search\s+(?:on\s+)?google$/i.test(command)) return {url:sites.google,message:'Opened Google.'};
   const search = /^(?:search(?:\s+on)?\s+(google|you\s*tube|door\s*dash)\s+for\s+|google\s+|search(?:\s+the\s+web)?\s+for\s+|look\s+up\s+)(.+)$/i.exec(command);
@@ -104,4 +115,4 @@ function captureAllowed({freshInput,visible,minimized,lease,startedAt,now,hidden
 function captureApprovalCurrent(before,current,allowed) {
   return !!allowed&&before.generation===current.generation&&before.sessionId===current.sessionId&&before.frame===current.frame;
 }
-module.exports={parseVoiceCommand,directWebPlan,isPageReadRequest,explicitWebUrl,publicWebUrl,publicAddress,captureAllowed,captureApprovalCurrent};
+module.exports={parseVoiceCommand,directWebPlan,doorDashPreference,isPageReadRequest,explicitWebUrl,publicWebUrl,publicAddress,captureAllowed,captureApprovalCurrent};
