@@ -13,6 +13,22 @@ const lifecycle = extract('  // AVA_MIC_LIFECYCLE_START', '  // AVA_MIC_LIFECYCL
 const recovery = extract('  var _reacquiringMic = false;', '  setInterval(function() {');
 const stopping = extract('  function stopAll() {', '  window._stsStopAll = stopAll;');
 
+test('Ava app mode immediately docks the original waveform on activation and restores the mic on stop', () => {
+  const states = [], dock = [];
+  const document = {
+    documentElement: { classList: { contains: name => name === 'ava-app-mode' } },
+    body: { classList: { toggle() {} } }, getElementById: () => null
+  };
+  const window = { document, avaAppEntry: { refresh: () => dock.push(window._topNavVoiceActive) } };
+  const context = vm.createContext({ document, window, TOP_BAR_HIDDEN: true, btnState: state => states.push(state) });
+  vm.runInContext(extract('  function _setTopNavVoiceActive(v)', '  // True while Ava'), context);
+  context._setTopNavVoiceActive(true);
+  context._setTopNavVoiceActive(true);
+  context._setTopNavVoiceActive(false);
+  assert.deepEqual(states, ['listen', 'off']);
+  assert.deepEqual(dock, [true, false]);
+});
+
 function deferred() {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });

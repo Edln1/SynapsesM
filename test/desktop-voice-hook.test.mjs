@@ -107,6 +107,19 @@ test('PC legacy recording waits for its current TTS and never duplicates a healt
   f.context.privateSpeech.setSpeaking(false);f.context.privateSpeech.record();assert.equal(f.events.filter(e=>e.recording).length,1);
   const ordinary=fluxFixture();ordinary.context.window._fluxSessionStart(ordinary.context.privateSpeech.speech);ordinary.context.privateSpeech.record();assert.equal(ordinary.events.filter(e=>e.recording).length,1);
 });
+test('Ava app speech switches once from failed streaming recognition to the existing recorder',()=>{
+  const f=fluxFixture();
+  f.context.window.document={documentElement:{classList:{contains:name=>name==='ava-app-mode'}}};
+  assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);
+  f.context.privateSpeech.record();
+  assert.equal(f.events.filter(event=>event.recording).length,0);
+  f.sockets[0].onerror(Error('ASR unavailable'));
+  assert.equal(f.context._flux.ws,null);
+  assert.equal(f.events.filter(event=>event.recording).length,1);
+  f.sockets[0].onerror(Error('late failure'));
+  assert.equal(f.events.filter(event=>event.recording).length,1);
+  assert.equal(f.events.some(event=>event.fallback||event.error),false);
+});
 test('Flux errors, rejected/closed sockets and stalled connection start real legacy recording without changing normal reconnect',()=>{
   for(const kind of ['error','close','timeout']){
     const f=fluxFixture({pc:true});assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);

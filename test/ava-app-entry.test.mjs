@@ -75,6 +75,38 @@ test('ordinary site and non-exact flags do not initialize app mode', () => {
     const f = setup({ search }); assert.equal(f.window.avaAppEntry, undefined); assert.equal(f.document.documentElement.classList.contains('ava-app-mode'), false); assert.equal(f.opens, 0);
   }
 });
+test('the mobile history control becomes a compose shortcut on Home', async () => {
+  const f = setup();
+  const nav = f.document.getElementById('acHistory');
+  nav.setAttribute('aria-label', 'Show conversations');
+  nav.setAttribute('aria-expanded', 'false');
+  nav.innerHTML = '<svg>history</svg>';
+  const input = f.document.createElement('textarea'); input.id = 'acInput';
+  let focused = 0; input.focus = () => { focused++; };
+  f.chat.append(input);
+  f.document.documentElement.classList.add('ava-app-handheld');
+  f.chat.dataset.home = 'true';
+  await settle(f);
+  f.window.avaAppEntry.refresh();
+  assert.equal(nav.getAttribute('aria-label'), 'New conversation');
+  assert.match(nav.innerHTML, /M12 5v14/);
+  const tap = new Event('click', { cancelable: true }); Object.defineProperty(tap, 'target', { value: nav });
+  f.document.dispatchEvent(tap);
+  assert.equal(tap.defaultPrevented, true);
+  assert.equal(focused, 1);
+  assert.equal(f.opens, 1);
+  f.chat.dataset.home = 'false';
+  f.window.avaAppEntry.refresh();
+  assert.equal(nav.getAttribute('aria-label'), 'Back to conversations');
+  assert.equal(nav.innerHTML, '<svg>history</svg>');
+  const back = new Event('click', { cancelable: true }); Object.defineProperty(back, 'target', { value: nav });
+  f.document.dispatchEvent(back);
+  assert.equal(back.defaultPrevented, false);
+  assert.equal(focused, 1);
+  f.window.avaAppEntry.destroy();
+  assert.equal(nav.getAttribute('aria-label'), 'Show conversations');
+  assert.equal(nav.getAttribute('aria-expanded'), 'false');
+});
 test('signed-in app opens the real existing chat once after legacy startup settles', async () => {
   const f = setup(); assert.equal(f.opens, 0); await settle(f); assert.equal(f.opens, 1); assert.equal(f.window.avaAppEntry.stage, 'chat');
   assert.equal(f.chatOptions[0].focus, false);

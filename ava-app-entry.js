@@ -220,6 +220,7 @@
   }
   function patchControls() {
     patchAuthSurface();
+    if (html.classList.contains('ava-app-handheld')) patchHistoryButton();
     ['acClose', 'acMainChat', 'acNewTop'].forEach(function (id) {
       var control = document.getElementById(id);
       if (!control || patched.has(control)) return;
@@ -229,6 +230,23 @@
       else if (id === 'acClose') control.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
       else control.textContent = 'Menu';
     });
+  }
+  function patchHistoryButton() {
+    var chat = document.getElementById('avaCompanionChat'), button = document.getElementById('acHistory');
+    if (!chat || !button) return;
+    if (!patched.has(button)) {
+      patched.set(button, { label: button.getAttribute('aria-label'), title: button.getAttribute('title'),
+        expanded: button.getAttribute('aria-expanded'), html: button.innerHTML });
+    }
+    var onHome = chat.dataset.home === 'true';
+    var label = onHome ? 'New conversation' : 'Back to conversations';
+    button.removeAttribute('aria-expanded');
+    if (button.getAttribute('aria-label') === label) return;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+    button.innerHTML = onHome
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>'
+      : patched.get(button).html;
   }
   function patchAuthSurface() {
     var form = document.getElementById('loginForm');
@@ -247,7 +265,7 @@
   function watch() {
     if (!observer || !document.body) return;
     [document.body, document.getElementById('authModal'), document.getElementById('avaWelcome'), document.getElementById('avaCompanionChat'), voiceDock, document.getElementById('topNavVoiceBtn')].forEach(function (node) {
-      if (node && !observed.has(node)) { observed.add(node); observer.observe(node, { attributes: true, childList: node === document.body || node === voiceDock, attributeFilter: ['class', 'style', 'hidden', 'inert'] }); }
+      if (node && !observed.has(node)) { observed.add(node); observer.observe(node, { attributes: true, childList: node === document.body || node === voiceDock, attributeFilter: ['class', 'style', 'hidden', 'inert', 'data-home'] }); }
     });
   }
   function refresh(reason) {
@@ -298,6 +316,12 @@
     var target = event.target && event.target.closest ? event.target.closest('button') : null;
     if (!target) return;
     if (target.id === 'topNavVoiceBtn' && dockedVoice && voiceActive()) { event.preventDefault(); event.stopImmediatePropagation(); stopVoice(); }
+    else if (target.id === 'acHistory' && html.classList.contains('ava-app-handheld') && document.getElementById('avaCompanionChat')?.dataset.home === 'true') {
+      var input = document.getElementById('acInput');
+      if (!input) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      input.focus();
+    }
     else if (target.id === 'acNewTop') { event.preventDefault(); event.stopImmediatePropagation(); action('call-records'); }
     else if (target.id === 'acClose' || target.id === 'acMainChat') { event.preventDefault(); event.stopImmediatePropagation(); openMenu(); }
     else if (target.id === 'acVoice') { state.suspension = null; schedule('voice-requested', 0); }
@@ -309,7 +333,8 @@
     if (event.key !== 'Escape' || !chatVisible()) return;
     var root = document.getElementById('avaCompanionChat');
     // Preserve the existing dismiss-history/delete behavior inside Ava.
-    if (root.dataset.history === 'true' || visible(document.getElementById('acConfirm'))) return;
+    if (root.dataset.history === 'true' || visible(document.getElementById('acConfirm')) ||
+        root.querySelector?.('.ac-home-chat-actions:not([hidden])')) return;
     event.preventDefault(); event.stopImmediatePropagation(); openMenu();
   }
   function start() {
@@ -359,6 +384,9 @@
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);
       if (before.title == null) node.removeAttribute('title'); else node.setAttribute('title', before.title);
+      if (Object.prototype.hasOwnProperty.call(before, 'expanded')) {
+        if (before.expanded == null) node.removeAttribute('aria-expanded'); else node.setAttribute('aria-expanded', before.expanded);
+      }
       node.innerHTML = before.html;
     });
     if (typeof window.avaCompanionChatClose === 'function') window.avaCompanionChatClose(false);

@@ -72,7 +72,8 @@ html.ava-app-mode #avaCompanionChat[data-history="true"] .ac-rail {
 html.ava-app-mode #avaCompanionChat .ac-input { font-size:16px!important; }
 html.ava-app-mode #avaCompanionChat .ac-bottom { padding-bottom:max(12px,env(safe-area-inset-bottom,0px)); }
 html.ava-app-mode #avaAppVoiceDock { display:flex; align-items:center; justify-content:center; flex:0 0 36px; height:44px; cursor:pointer; touch-action:manipulation; }
-html.ava-app-mode #avaAppVoiceDock[hidden] { display:none!important; }
+html.ava-app-mode #avaAppVoiceDock[hidden],
+html.ava-app-mode #avaAppVoiceDock #acVoice[hidden] { display:none!important; }
 /* Keep the original circle, waveform, colours and analyser. Only its location changes. */
 html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #topNavVoiceBtn { width:28px!important; height:28px!important; min-width:28px!important; min-height:28px!important; flex:0 0 28px!important; }
 
@@ -110,6 +111,14 @@ html.ava-app-mode #loginForm .auth-step-sub { font:400 14px/1.6 'DM Sans',sans-s
 html.ava-app-mode #authModal input { font-size:16px!important; background:#0d0d10!important; border-color:#ffffff12!important; border-radius:10px!important; }
 
 html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #acVoice { width:28px; height:28px; min-width:28px; padding:0; flex:0 0 28px; border-radius:50%; }
+html.ava-app-mode.ava-app-handheld #avaAppVoiceDock { flex-basis:44px; }
+html.ava-app-mode.ava-app-handheld #avaCompanionChat #avaAppVoiceDock #acVoice {
+  place-items:center; flex:0 0 44px; width:44px; min-width:44px;
+  height:44px; min-height:44px; border:0; border-radius:10px; background:transparent;
+}
+html.ava-app-mode.ava-app-handheld #avaAppVoiceDock #acVoice svg {
+  display:block; width:19px; height:19px; stroke-width:1.7; stroke-linejoin:round;
+}
 html.ava-app-mode #avaCompanionChat #acReadAloud { width:34px; height:34px; flex:0 0 34px; color:#777780; border:1px solid transparent; border-radius:9px; background:transparent; }
 html.ava-app-mode #avaCompanionChat #acReadAloud[aria-pressed="true"] { color:#d7d7df; border-color:#ffffff12; background:#ffffff05; box-shadow:0 0 10px #cbd2df12; }
 html.ava-app-mode #avaCompanionChat #acReadAloud[data-state="speaking"] { color:#eeeef3; box-shadow:0 0 12px #d6dfed24; }
@@ -122,3 +131,44 @@ html.ava-app-mode #avaCompanionChat .ac-home-chat:hover { background:#ffffff04; 
 html.ava-app-mode #avaCompanionChat .ac-home-chat-title { font-size:14px; font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 html.ava-app-mode #avaCompanionChat .ac-home-chat-preview { grid-column:1; color:#777780; font-size:12px; line-height:1.5; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 html.ava-app-mode #avaCompanionChat .ac-home-chat-time { grid-column:2; grid-row:1; align-self:center; color:#686872; font-size:12px; white-space:nowrap; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html.ava-app-mode.ava-app-handheld #avaCompanionChat:not([hidden])[data-home="true"] #acWelcome {
+    animation: ava-app-return-to-list 210ms cubic-bezier(.22,.75,.25,1);
+  }
+  html.ava-app-mode.ava-app-handheld #avaCompanionChat:not([hidden])[data-home="false"] #acMessages {
+    animation: ava-app-open-conversation 225ms cubic-bezier(.22,.75,.25,1);
+  }
+  html.ava-app-mode.ava-app-handheld #avaAppMenu[open] {
+    transform-origin: top right;
+    animation: ava-app-open-menu 175ms cubic-bezier(.22,.75,.25,1);
+  }
+  html.ava-app-mode.ava-app-handheld #avaAppMenu[open]::backdrop {
+    animation: ava-app-fade-overlay 175ms ease-out;
+  }
+  html.ava-app-mode.ava-app-handheld #avaCompanionChat .ac-home-chat {
+    transition: background-color 160ms ease, transform 160ms cubic-bezier(.22,.75,.25,1);
+  }
+  html.ava-app-mode.ava-app-handheld #avaCompanionChat .ac-home-chat:active {
+    transform: scale(.992);
+  }
+  html.ava-app-mode.ava-app-handheld #avaCompanionChat .ac-home-chat-actions:not([hidden]) {
+    animation: ava-app-fade-overlay 145ms ease-out;
+  }
+}
+@keyframes ava-app-return-to-list {
+  from { opacity:.55; transform:translateY(-5px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes ava-app-open-conversation {
+  from { opacity:.55; transform:translateY(7px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes ava-app-open-menu {
+  from { opacity:0; transform:translateY(-4px) scale(.985); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes ava-app-fade-overlay {
+  from { opacity:0; }
+  to { opacity:1; }
+}

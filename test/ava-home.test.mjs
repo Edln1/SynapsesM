@@ -45,7 +45,7 @@ function thread(id, { title = id, updated = 1, draft = '', messages = [{ id: id 
   return { id, title, updated, draft, messages };
 }
 function setup({ app = true, owner = alice, threads = [], active = threads[0]?.id ?? null, homeDraft = '', storage = new Map() } = {}) {
-  let identity = owner, subscription = () => {};
+  let identity = owner, subscription = () => {}, writable = true;
   if (owner && !storage.has(storageKey(owner))) storage.set(storageKey(owner), JSON.stringify({ version: 1, owner: owner.id, threads, active, homeDraft }));
   const nodes = new Map(), document = new EventTarget();
   document.documentElement = new Element('html'); if (app) document.documentElement.classList.add('ava-app-mode');
@@ -71,15 +71,16 @@ function setup({ app = true, owner = alice, threads = [], active = threads[0]?.i
   window.avaCompanionChatBridge = bridge; window.matchMedia = () => ({ matches: app }); window.crypto = { randomUUID };
   const context = vm.createContext({ window, document, Event, URL, AbortController, crypto: window.crypto,
     navigator: { clipboard: { async writeText() {} } },
-    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+    localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => { if (!writable) throw Error('Storage unavailable'); storage.set(key, value); } },
     setTimeout(callback) { const id = ++timerId; timers.set(id, callback); return id; }, clearTimeout: id => timers.delete(id),
     setInterval() {}, requestAnimationFrame: callback => callback(),
   });
   vm.runInContext(source, context);
   return { window, document, root, nodes, storage, requests, gates, tasks,
     input: nodes.get('acInput'), node: id => nodes.get(id),
-    rows: () => nodes.get('acHomeChats').children.filter(child => child.className === 'ac-home-chat'),
+    rows: () => nodes.get('acHomeChats').children.filter(child => child.className === 'ac-home-chat-row').map(row => row.children[0]),
     changeOwner(value) { identity = value; },
+    disableStorageWrites() { writable = false; },
     draft(value) { nodes.get('acInput').value = value; nodes.get('acInput').dispatchEvent(new Event('input')); },
     submit() { nodes.get('acForm').dispatchEvent(new Event('submit', { cancelable: true })); },
     flushDraft() { for (const [id, callback] of [...timers]) { timers.delete(id); callback(); } },
@@ -101,6 +102,19 @@ test('the ordinary desktop voice action keeps its existing handoff behavior', as
   f.node('acVoice').click(); assert.equal(f.root.hidden, true);
 });
 async function settle() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
+
+function homeRow(f, id) {
+  const open = f.rows().find(button => button.dataset.thread === id);
+  const [, more, actions] = open.parentNode.children;
+  return { open, more, actions, remove: actions.children[0] };
+}
+
+function point(element, type, { pointerType = 'touch', x = 18, y = 32 } = {}) {
+  const event = new Event(type, { cancelable: true });
+  Object.assign(event, { pointerType, pointerId: 1, clientX: x, clientY: y });
+  element.dispatchEvent(event);
+  return event;
+}
 
 test('opening app Home never creates or saves an empty conversation', async () => {
   const f = setup(); await f.window.avaCompanionChatOpen({ home: true, focus: false });
@@ -133,6 +147,120 @@ test('choosing a Home row opens that real conversation without focusing the comp
   assert.equal(f.root.dataset.home, 'false'); assert.equal(f.input.value, 'Keep this draft');
   assert.equal(f.input.focuses, 0); assert.ok(f.node('acMessages').children.length);
   assert.equal(f.saved().active, 'two');
+});
+
+test('holding a mobile conversation reveals Delete and requires confirmation before removing it', async () => {
+  const f = setup({ threads: [thread('keep'), thread('remove', { title: 'Old chat', updated: 2 })], active: 'remove' });
+  await f.window.avaCompanionChatHome();
+  f.draft('Keep this Home draft');
+  const row = homeRow(f, 'remove');
+  assert.equal(row.more.getAttribute('aria-label'), 'More actions for Old chat');
+  assert.equal(row.actions.hidden, true);
+  point(row.open, 'pointerdown');
+  f.flushDraft();
+  point(row.open, 'pointerup');
+  row.open.click();
+  assert.equal(row.actions.hidden, false);
+  assert.equal(row.more.getAttribute('aria-expanded'), 'true');
+  assert.equal(f.root.dataset.home, 'true');
+  assert.equal(f.node('acConfirm').hidden, true);
+  assert.equal(f.saved().threads.length, 2);
+
+  row.remove.click();
+  assert.equal(f.node('acConfirm').hidden, false);
+  assert.match(f.node('acDeleteMessage').textContent, /Old chat/);
+  assert.equal(f.saved().threads.length, 2);
+  f.node('acDeleteYes').click();
+  assert.equal(f.node('acConfirm').hidden, true);
+  assert.deepEqual(f.saved().threads.map(chat => chat.id), ['keep']);
+  assert.equal(f.saved().active, 'keep');
+  assert.equal(f.saved().homeDraft, 'Keep this Home draft');
+  assert.equal(f.input.focuses, 0);
+  assert.deepEqual(f.rows().map(button => button.dataset.thread), ['keep']);
+});
+
+test('movement or scrolling cancels a mobile hold and its release does not open the chat', async () => {
+  for (const gesture of ['pointermove', 'scroll']) {
+    const f = setup({ threads: [thread('kept')] });
+    await f.window.avaCompanionChatHome();
+    const row = homeRow(f, 'kept');
+    point(row.open, 'pointerdown');
+    if (gesture === 'pointermove') point(row.open, gesture, { y: 72 });
+    else f.node('acScroll').dispatchEvent(new Event('scroll'));
+    f.flushDraft();
+    point(row.open, 'pointerup');
+    row.open.click();
+    assert.equal(row.actions.hidden, true, gesture);
+    assert.equal(f.root.dataset.home, 'true', gesture);
+    assert.equal(f.saved().threads.length, 1, gesture);
+  }
+});
+
+test('more actions and right-click expose the same Delete choice, and Keep preserves the chat', async () => {
+  const f = setup({ threads: [thread('keep', { title: 'Keep this chat' })] });
+  await f.window.avaCompanionChatHome();
+  const row = homeRow(f, 'keep');
+  row.more.click();
+  assert.equal(row.actions.hidden, false);
+  row.remove.click();
+  f.node('acDeleteCancel').click();
+  assert.equal(f.node('acConfirm').hidden, true);
+  assert.equal(f.saved().threads.length, 1);
+  assert.ok(row.remove.focuses > 1);
+  row.more.click();
+  assert.equal(row.actions.hidden, true);
+  assert.equal(point(row.open, 'contextmenu', { pointerType: 'mouse' }).defaultPrevented, true);
+  assert.equal(row.actions.hidden, false);
+  assert.equal(f.root.dataset.home, 'true');
+});
+
+test('a stale mobile delete prompt cannot remove a conversation from the next account', async () => {
+  const storage = new Map([[storageKey(bob), JSON.stringify({ version: 1, owner: bob.id, threads: [thread('same-id')] })]]);
+  const f = setup({ storage, threads: [thread('same-id')] });
+  await f.window.avaCompanionChatHome();
+  const old = homeRow(f, 'same-id');
+  old.more.click();
+  old.remove.click();
+  f.changeOwner(bob);
+  await f.window.avaCompanionChatHome();
+  old.remove.click();
+  f.node('acDeleteYes').click();
+  assert.equal(f.node('acConfirm').hidden, true);
+  assert.equal(f.saved(alice).threads.length, 1);
+  assert.equal(f.saved(bob).threads.length, 1);
+});
+
+test('failed device storage does not hide a conversation that was never deleted', async () => {
+  const f = setup({ threads: [thread('unsaved')] });
+  await f.window.avaCompanionChatHome();
+  const row = homeRow(f, 'unsaved');
+  row.more.click();
+  row.remove.click();
+  f.disableStorageWrites();
+  f.node('acDeleteYes').click();
+  assert.equal(f.saved().threads.length, 1);
+  assert.equal(f.rows().length, 1);
+  assert.match(f.node('acNotice').textContent, /storage is unavailable/i);
+});
+
+test('confirming deletion of an active reply stops it and prevents the late reply from restoring the chat', async () => {
+  const f = setup();
+  await f.window.avaCompanionChatHome();
+  f.draft('Remove after this');
+  f.submit();
+  await settle();
+  const pending = f.requests[0], threadId = f.saved().active;
+  await f.window.avaCompanionChatHome();
+  const row = homeRow(f, threadId);
+  row.more.click();
+  row.remove.click();
+  assert.equal(pending.options.signal.aborted, false);
+  f.node('acDeleteYes').click();
+  assert.equal(pending.options.signal.aborted, true);
+  pending.resolve({ status: 'complete', text: 'Late text', sources: [] });
+  await settle();
+  assert.equal(f.saved().threads.length, 0);
+  assert.equal(f.rows().length, 0);
 });
 
 test('Home and conversation drafts are saved separately without changing the active conversation', async () => {
