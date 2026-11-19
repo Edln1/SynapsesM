@@ -1,5 +1,6 @@
-Synapses Desktop 0.1.14 preview continues DoorDash item requests from a brand or store page.
+Synapses Desktop 0.1.15 preview recognizes regional DoorDash brand and menu links.
 
+- Ava rechecks the page after a DoorDash redirect before reporting whether it opened. If the requested restaurant is already open, Ava uses that page for the next menu request.
 - If an item request starts before a delivery location is selected, Ava searches DoorDash for the restaurant and tries an available location. It uses the restaurant’s menu search when the exact item is not already visible.
 - Say “Open DoorDash, go to McDonald’s, and open an Egg McMuffin” to open the item in one request. Ava uses the locations and items shown on DoorDash. An open request stops at the menu item.
 - On an open DoorDash store page, say “Order an Egg McMuffin” to continue from that store and review adding it to the cart.

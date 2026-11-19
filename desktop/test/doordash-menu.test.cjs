@@ -122,6 +122,23 @@ test('store-menu search accepts only an unambiguous visible input owned by the v
   assert.equal(findDoorDashMenuSearch({ url:store, controls:[{ ...field, disabled:true }] }, store), null);
 });
 
+test('store-menu search recognizes the exact merchant label on a verified DoorDash store', () => {
+  const field = { ref:'merchant-search', label:"Search McDonald's", kind:'input', inputType:'search', needsConfirmation:false };
+  const global = { ...field, ref:'door-dash-search', label:'Search DoorDash' };
+  const unrelated = { ...field, ref:'unrelated-merchant', label:"Search Wendy's" };
+  const generic = { ...field, ref:'generic-search', label:'Search store menu' };
+  const storeUrl = 'https://www.doordash.com/en/store/1242885/';
+  const page = { url:storeUrl, title:'Order McDonald’s - Vancouver, BC Menu Delivery [Menu & Prices] | Vancouver - DoorDash', controls:[global, unrelated, field] };
+  assert.deepEqual(findDoorDashMenuSearch(page, storeUrl), { ref:field.ref, label:field.label });
+  assert.deepEqual(findDoorDashMenuSearch({ ...page, controls:[...page.controls, generic] }, storeUrl), { ref:generic.ref, label:generic.label });
+  assert.equal(findDoorDashMenuSearch({ ...page, title:'DoorDash' }, storeUrl), null);
+  assert.equal(findDoorDashMenuSearch({ ...page, controls:[global, unrelated] }, storeUrl), null);
+  assert.equal(findDoorDashMenuSearch({ ...page, controls:[field, { ...field, ref:'duplicate-input' }] }, storeUrl), null);
+  assert.equal(findDoorDashMenuSearch(page, storeUrl.replace('1242885', '1242886')), null);
+  assert.deepEqual(findDoorDashMenuSearch({ url:store, controls:[field] }, store, 'McDonald’s'), { ref:field.ref, label:field.label });
+  assert.equal(findDoorDashMenuSearch({ url:store, controls:[unrelated] }, store, 'Wendy’s'), null);
+});
+
 test('links must reveal an item on the same verified DoorDash listing', () => {
   const href = '/en-CA/store/mcdonalds-123/?item_id=9876';
   const link = { ...card, kind: 'link', href };

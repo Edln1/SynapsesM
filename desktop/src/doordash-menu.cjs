@@ -64,9 +64,9 @@ function parseDoorDashMenuRequest(text, { onDoorDash = false } = {}) {
   return { query, item };
 }
 
-function parseDoorDashCurrentItemRequest(text) {
+function parseDoorDashCurrentItemRequest(text, { orderingOnly = false } = {}) {
   const request = /^(open|show|find|order|buy|get)\s+(.+)$/i.exec(spokenRequest(text).replace(DOORDASH_SCOPE, ''));
-  if (!request) return null;
+  if (!request || (orderingOnly && !/^(?:order|buy)$/i.test(request[1]))) return null;
   const body = request[2].replace(CURRENT_MENU_SCOPE, '');
   const scope = NAMED_MENU_SCOPE.exec(body);
   const query = scope ? restaurantName(scope[1]) : null;
@@ -99,13 +99,34 @@ function pageControls(page) {
   return Array.isArray(page.controls) ? page.controls : [];
 }
 
-function findDoorDashMenuSearch(page, restaurantUrl) {
+function normalizeMerchantName(value) {
+  return value.normalize('NFKC').replace(/['’]/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function findDoorDashMenuSearch(page, restaurantUrl, merchant) {
   if (!isDoorDashStore(page) || !verifyDoorDashRestaurant(page, restaurantUrl)) return null;
   const fields = pageControls(page).filter(control => shown(control) && control.kind === 'input' && !control.dialog &&
-    control.needsConfirmation === false && /^(?:search|text)$/.test(control.inputType) && /^search (?:store )?menu$/i.test(control.label));
-  if (fields.length !== 1) return null;
-  const { ref, label } = fields[0];
+    control.needsConfirmation === false && /^(?:search|text)$/.test(control.inputType) && typeof control.label === 'string');
+  let matches = fields.filter(control => /^search (?:store )?menu$/i.test(control.label));
+  if (!matches.length) {
+    const titleMerchant = typeof page.title === 'string' ? /^Order (.+) [-–—] .+? Menu Delivery\b/i.exec(page.title.trim())?.[1] : null;
+    const merchantName = titleMerchant || (typeof merchant === 'string' && isDoorDashStore(page, merchant) ? merchant : '');
+    if (!merchantName || NAMED_PC_TARGET.test(merchantName)) return null;
+    const expected = normalizeMerchantName('Search ' + merchantName);
+    matches = fields.filter(control => normalizeMerchantName(control.label) === expected);
+  }
+  if (matches.length !== 1) return null;
+  const { ref, label } = matches[0];
   return { ref, label };
+}
+
+function hasDeliveryUnavailableMenu(page, merchant) {
+  if (!page || typeof page.text !== 'string') return false;
+  const text = page.text.replace(/\b(?:this|that|the) (?:store|restaurant) (?:is (?:(?:currently|temporarily) )?(?:unavailable|not available)|isn['’]t available) (?:in your area|for delivery(?: to (?:your|this) (?:address|location))?)\b/gi, '');
+  if (text === page.text) return false;
+  // Only discount the delivery-status sentence. A missing page or verification challenge still fails.
+  const menu = { ...page, text };
+  return isDoorDashStore(menu, merchant) && !!findDoorDashMenuSearch(menu, menu.url, merchant);
 }
 
 function itemLink(href, base, restaurantUrl) {
@@ -171,4 +192,4 @@ function findDoorDashAddToCart(page, item, restaurantUrl) {
   return { ref: controls[0].ref, label: controls[0].label, dialogTitle: dialog.title };
 }
 
-module.exports = { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuSearch, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };
+module.exports = { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuSearch, hasDeliveryUnavailableMenu, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };

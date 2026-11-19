@@ -2,7 +2,7 @@
 
 const {directWebPlan,doorDashPreference,isPageReadRequest,explicitWebUrl}=require('./desktop-voice-policy.cjs');
 const {doorDashSearchUrl,listDoorDashRestaurants,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBrandName,doorDashBlocked,doorDashUnavailable}=require('./doordash-restaurant.cjs');
-const {parseDoorDashMenuRequest,parseDoorDashCurrentItemRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,findDoorDashMenuSearch,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
+const {parseDoorDashMenuRequest,parseDoorDashCurrentItemRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,findDoorDashMenuSearch,hasDeliveryUnavailableMenu,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
 
 const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window','read_window','click_control','type_control','press_key','scroll_window','open_url','read_page','click','type','press','scroll','back','media_play','finish','chat','clarify']);
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
@@ -238,22 +238,31 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     pendingDoorDash={query,userId:context.userId,expires:Date.now()+120000};
     lastDoorDashRestaurant={query,userId:context.userId};
   }
-  async function findDoorDashListing(context,{query,openListing,preference},step=0){
+  function doorDashOpeningMessage(page,query){
+    if(hasDeliveryUnavailableMenu(page,query))return 'Opened '+query+' on DoorDash. This location is unavailable for delivery.';
+    return isDoorDashStore(page)?`Opened ${query} on DoorDash.`:`Opened the ${query} listing on DoorDash. DoorDash may ask you to select a location.`;
+  }
+  async function findDoorDashListing(context,{query,openListing,preference,forItem=false},step=0){
     const searchUrl=doorDashSearchUrl(query);
     if(!searchUrl)throw fail('unverified','I couldn’t form a DoorDash search for that restaurant.');
     rememberRestaurant(context,query);
     if(step>=maxSteps)throw fail('step_limit','I reached the task step limit before searching DoorDash.');
-    const search=await perform(context,++step,'open_url',{target:searchUrl});
-    let page=search?.page;
-    if(doorDashBlocked(page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
-    if(search?.ok===true&&search.verified===true&&isDoorDashRestaurant(page,query)){
-      return {step,page,message:`Opened ${query} on DoorDash.`};
-    }
-    let matches=listDoorDashRestaurants(page,query);
-    if(!matches.length&&available.includes('read_page')&&step+1<maxSteps){
-      const read=await perform(context,++step,'read_page',{});
-      if(read?.ok===true&&read.page)page=read.page;
+    const checkedPage=result=>{
+      const page=result?.page;
       if(doorDashBlocked(page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
+      return result?.ok===true?page:null;
+    };
+    const readPage=()=>perform(context,++step,'read_page',{}).then(checkedPage);
+    const canRead=()=>available.includes('read_page')&&step<maxSteps;
+    const matchesRequest=page=>forItem?isDoorDashStore(page,query):isDoorDashRestaurant(page,query)||hasDeliveryUnavailableMenu(page,query);
+    const result=page=>({step,page,message:doorDashOpeningMessage(page,query)});
+    const search=await perform(context,++step,'open_url',{target:searchUrl});
+    let page=checkedPage(search);
+    if(matchesRequest(page))return result(page);
+    let matches=listDoorDashRestaurants(page,query);
+    if(!matches.length&&canRead()&&step+1<maxSteps){
+      page=await readPage()||page;
+      if(matchesRequest(page))return result(page);
       matches=listDoorDashRestaurants(page,query);
     }
     const stores=matches.filter(match=>match.kind==='store');
@@ -274,12 +283,15 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     for(const listing of candidates){
       if(step>=maxSteps)throw fail('step_limit','I reached the task step limit before opening the restaurant.');
       const opened=await perform(context,++step,'open_url',{target:listing.url});
-      if(doorDashBlocked(opened?.page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
-      if(!(opened?.ok===true&&opened.verified===true&&verifyDoorDashRestaurant(opened.page,listing.url)))continue;
-      const message=listing.kind==='business'?`Opened the ${query} listing on DoorDash. DoorDash may ask you to select a location.`:`Opened ${query} on DoorDash.`;
-      return {step,page:opened.page,message};
+      let loaded=checkedPage(opened);
+      const matchesListing=page=>verifyDoorDashRestaurant(page,listing.url)||(!forItem&&matchesRequest(page));
+      if(opened?.verified===true&&matchesListing(loaded))return result(loaded);
+      if(canRead()&&(!loaded||isDoorDashPage(loaded)&&(!doorDashUnavailable(loaded)||!forItem&&hasDeliveryUnavailableMenu(loaded,query)))){
+        loaded=await readPage();
+        if(matchesListing(loaded))return result(loaded);
+      }
     }
-    throw fail('unverified','DoorDash didn’t load an available listing for that restaurant. Check the delivery address in the Ava browser.');
+    throw fail('unverified','I couldn’t confirm the restaurant on DoorDash. Check the page in the Ava browser.');
   }
   async function openDoorDashRestaurant(context,options,step=0){
     if(!step)progress('planning',1);
@@ -301,7 +313,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     const current=currentPage||await read();
     let page=isDoorDashStore(current,query)?current:null;
     if(!page){
-      const listing=await findDoorDashListing(context,{query,openListing:true,preference:'closest'},step);
+      const listing=await findDoorDashListing(context,{query,openListing:true,preference:'closest',forItem:true},step);
       ({step,page}=listing);
     }
     const restaurantUrl=page.url;
@@ -315,7 +327,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         match=findDoorDashMenuItem(page,item,restaurantUrl);
       }
       if(!match&&available.includes('type')&&step+2<maxSteps){
-        const search=findDoorDashMenuSearch(page,restaurantUrl);
+        const search=findDoorDashMenuSearch(page,restaurantUrl,query);
         if(search){
           const typed=await next('type',{target:search.ref,value:item},{label:search.label,dialogTitle:'',href:''});
           if(typed?.ok===true&&verifyDoorDashRestaurant(typed.page,restaurantUrl)){
@@ -375,19 +387,29 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     if(direct?.doorDashRestaurant)return openDoorDashRestaurant(context,direct.doorDashRestaurant);
     const contextualMenu=canSelect&&context.recentDoorDash&&parseDoorDashMenuRequest(context.text,{onDoorDash:true});
     const restaurant=canBrowse&&context.recentDoorDash&&parseDoorDashRestaurantFollowUp(context.text);
-    const currentItem=canSelect&&context.recentDoorDash&&!direct&&!contextualMenu&&!restaurant&&parseDoorDashCurrentItemRequest(context.text);
+    const currentItem=canSelect&&!direct&&!contextualMenu&&!restaurant&&parseDoorDashCurrentItemRequest(context.text,{orderingOnly:!context.recentDoorDash});
     if(contextualMenu||currentItem||restaurant&&(!direct||direct.url?.startsWith('https://www.google.com/search?'))){
       progress('planning',1);
-      const current=await perform(context,1,'read_page',{});
-      if(current?.ok===true&&isDoorDashPage(current.page)){
+      const coldItem=currentItem&&!context.recentDoorDash;
+      const current=await perform(context,1,'read_page',coldItem?{foregroundOnly:true}:{});
+      if(current?.ok===true&&(coldItem?isDoorDashStore(current.page,currentItem.query)||hasDeliveryUnavailableMenu(current.page,currentItem.query):isDoorDashPage(current.page))){
         if(doorDashBlocked(current.page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
         if(contextualMenu)return prepareDoorDashItem(context,contextualMenu,current.page);
         if(currentItem){
-          if(isDoorDashStore(current.page,currentItem.query))return prepareDoorDashItem(context,currentItem,current.page);
+          if(hasDeliveryUnavailableMenu(current.page,currentItem.query))throw fail('unverified','The menu is open, but DoorDash says this location is unavailable for delivery.');
           const brandedItem=/^(?:egg mc\s*muffin|big mac)[®™]?$/i.test(currentItem.item)?'McDonald’s':null;
+          if(isDoorDashStore(current.page,currentItem.query)){
+            const query=[currentItem.query,brandedItem,lastDoorDashRestaurant?.query].find(name=>name&&isDoorDashStore(current.page,name));
+            return prepareDoorDashItem(context,{...currentItem,query},current.page);
+          }
           const query=currentItem.query||doorDashBrandName(current.page)||brandedItem||lastDoorDashRestaurant?.query;
           if(query)return prepareDoorDashItem(context,{...currentItem,query},current.page);
           throw fail('unverified',`Which restaurant should I find ${currentItem.item} at on DoorDash?`);
+        }
+        if(isDoorDashRestaurant(current.page,restaurant)||hasDeliveryUnavailableMenu(current.page,restaurant)){
+          rememberRestaurant(context,restaurant);
+          progress('complete',1,'finish');
+          return {handled:true,ok:true,message:doorDashOpeningMessage(current.page,restaurant)};
         }
         return openDoorDashRestaurant(context,{query:restaurant,openListing:true,preference:'closest'},1);
       }

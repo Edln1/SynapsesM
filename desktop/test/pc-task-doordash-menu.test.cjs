@@ -157,9 +157,10 @@ const landingUrl = 'https://www.doordash.com/';
 const brandUrl = 'https://www.doordash.com/business/mcdonald%27s-437107';
 const restaurantFollowUp = "go to McDonald's";
 
-function navigationFixture() {
+function navigationFixture({ destination = store, destinationTitle = 'McDonald’s Menu', verifyNavigation = true } = {}) {
   const opens = [];
   const requests = [];
+  const reads = [];
   let visiblePage;
   const runner = createPcTaskRunner({
     assertActive: () => true,
@@ -168,12 +169,19 @@ function navigationFixture() {
       return { action: 'chat', target: null, value: null, secondary: null, direction: null, amount: null, message: '' };
     },
     tools: {
-      read_page: async () => ({ ok: !!visiblePage, page: visiblePage }),
+      read_page: async () => {
+        reads.push(visiblePage?.url);
+        return { ok: !!visiblePage, page: visiblePage };
+      },
       open_url: async ({ target }) => {
         opens.push(target);
         if (target === landingUrl) visiblePage = { url: target, title: 'DoorDash', controls: [] };
-        else if (target === store) visiblePage = { url: target, title: 'McDonald’s Menu', controls: [] };
-        else {
+        else if (target === store) {
+          visiblePage = { url: destination, title: destinationTitle, text: destinationTitle + '\nFeatured items', controls: [] };
+          return verifyNavigation ? { ok: true, verified: true, page: visiblePage } : { ok: false, verified: false, error: 'page_changed' };
+        } else if (target === brandUrl) {
+          visiblePage = { url: target, title: 'Page not found', controls: [] };
+        } else {
           assert.match(decodeURIComponent(new URL(target).pathname), /^\/search\/store\/mcdonald['’]?s\/?$/i);
           visiblePage = { url: target, title: 'DoorDash Search', controls: [{ href: store, label: restaurant }] };
         }
@@ -181,7 +189,7 @@ function navigationFixture() {
       }
     }
   });
-  return { runner, opens, requests };
+  return { runner, opens, requests, reads, setVisiblePage: page => { visiblePage = page; } };
 }
 
 test('after opening DoorDash, a separate McDonald’s request uses the same account’s verified DoorDash context', async () => {
@@ -195,6 +203,71 @@ test('after opening DoorDash, a separate McDonald’s request uses the same acco
   assert.match(result.message, /mcdonald.+doordash/i);
   assert.equal(opens[0], landingUrl);
   assert.equal(opens.at(-1), store);
+  assert.deepEqual(requests, []);
+});
+
+test('a DoorDash restaurant follow-up accepts verified canonical storefront and brand redirects', async () => {
+  const destinations = [
+    'https://www.doordash.com/en-CA/store/mcdonalds-vancouver-robson-street-123/',
+    'https://www.doordash.com/en/store/mcdonald%27s-vancouver-123/26592951/',
+    brandUrl,
+    'https://www.doordash.com/en-CA/city/vancouver-bc/b/mcdonalds-437107/'
+  ];
+  for (const destination of destinations) {
+    const { runner, opens, requests } = navigationFixture({ destination });
+    const account = { userId: 'door-owner' };
+    assert.equal((await runner.run('Open DoorDash', account)).ok, true);
+
+    const result = await runner.run(restaurantFollowUp, account);
+
+    assert.equal(result.ok, true, `${destination}: ${result.message}`);
+    assert.match(result.message, /mcdonald.+doordash/i);
+    assert.equal(opens.at(-1), store, 'Do not replace a confirmed redirect with a fallback navigation');
+    assert.deepEqual(requests, []);
+  }
+});
+
+test('a storefront that becomes visible after a page change is verified before trying a fallback', async () => {
+  const destination = 'https://www.doordash.com/en/store/mcdonald%27s-vancouver-123/26592951/';
+  const { runner, opens, requests, reads } = navigationFixture({ destination, verifyNavigation: false });
+  const account = { userId: 'door-owner' };
+  assert.equal((await runner.run('Open DoorDash', account)).ok, true);
+
+  const result = await runner.run(restaurantFollowUp, account);
+
+  assert.equal(result.ok, true, result.message);
+  assert.match(result.message, /mcdonald.+doordash/i);
+  assert.equal(opens.at(-1), store);
+  assert.equal(reads.at(-1), destination);
+  assert.deepEqual(requests, []);
+});
+
+test('a restaurant follow-up cannot confirm an outside website or unrelated DoorDash listing', async () => {
+  for (const [destination, destinationTitle] of [
+    ['https://www.mcdonalds.com/ca/en-ca.html', 'McDonald’s Menu'],
+    ['https://www.doordash.com/store/burger-king-324/', 'Burger King']
+  ]) {
+    const { runner, opens, requests } = navigationFixture({ destination, destinationTitle });
+    const account = { userId: 'door-owner' };
+    assert.equal((await runner.run('Open DoorDash', account)).ok, true);
+    assert.equal((await runner.run(restaurantFollowUp, account)).ok, false);
+    assert.equal(opens.at(-1), brandUrl);
+    assert.deepEqual(requests, []);
+  }
+});
+
+test('a restaurant follow-up reuses the matching storefront that is already visible', async () => {
+  const destination = 'https://www.doordash.com/en/store/mcdonald%27s-vancouver-123/26592951/';
+  const { runner, opens, requests, setVisiblePage } = navigationFixture();
+  const account = { userId: 'door-owner' };
+  assert.equal((await runner.run('Open DoorDash', account)).ok, true);
+  setVisiblePage({ url: destination, title: 'McDonald’s Menu', controls: [] });
+
+  const result = await runner.run(restaurantFollowUp, account);
+
+  assert.equal(result.ok, true, result.message);
+  assert.match(result.message, /mcdonald.+doordash/i);
+  assert.deepEqual(opens, [landingUrl], 'The already-open storefront should not be reloaded');
   assert.deepEqual(requests, []);
 });
 
@@ -245,13 +318,15 @@ test('an explicit DoorDash order finds a different restaurant and item from obse
   assert.deepEqual(calls, [['read'], ['open', searchUrl], ['open', storefront], ['click', ref]]);
 });
 
-function breakfastFixture({ searchMenu = false } = {}) {
+const breakfastMenuUrl = 'https://www.doordash.com/en/store/mcdonald%27s-vancouver-1242885/26592951/';
+
+function breakfastFixture({ searchMenu = false, searchLabel = 'Search store menu' } = {}) {
   const breakfast = { ...menuCard, ref: 'menu-mcmuffin', label: 'Egg McMuffin®' };
   const breakfastMeal = { ...breakfast, ref: 'menu-mcmuffin-meal', label: 'Egg McMuffin® Meal' };
   const breakfastDialog = { id: 'breakfast-dialog', title: breakfast.label };
   const addBreakfast = { ...add, ref: 'add-mcmuffin', label: 'Add to cart – $4.59', dialog: breakfastDialog.id };
   const question = 'Confirm “Add to cart – $4.59” for Egg McMuffin®.';
-  const searchField = { ref: 'breakfast-search', kind: 'input', label: 'Search store menu', inputType: 'search', href: '', needsConfirmation: false };
+  const searchField = { ref: 'breakfast-search', kind: 'input', label: searchLabel, inputType: 'search', href: '', needsConfirmation: false };
   const calls = [];
   const account = { userId: 'breakfast-owner' };
   let visiblePage;
@@ -270,6 +345,10 @@ function breakfastFixture({ searchMenu = false } = {}) {
         if (action === 'open_url') {
           if (args.url === landingUrl) visiblePage = { url: args.url, title: 'DoorDash', controls: [] };
           else if (args.url === brandUrl) visiblePage = { url: args.url, title: 'McDonald’s on DoorDash', text: 'Select a delivery location', controls: [] };
+          else if (args.url === breakfastMenuUrl) visiblePage = {
+            ...page([searchField, breakfastMeal], [], args.url),
+            title: "Order McDonald's - Vancouver, BC Menu Delivery [Menu & Prices] | Vancouver - DoorDash"
+          };
           else if ([store, fartherStore].includes(args.url)) visiblePage = page(searchMenu ? [searchField, breakfastMeal] : [breakfastMeal, breakfast], [], args.url);
           else {
             assert.match(decodeURIComponent(new URL(args.url).pathname), /^\/search\/store\/mcdonald['’]?s\/?$/i);
@@ -346,6 +425,68 @@ test('order an Egg McMuffin uses the current store and confirms only the observe
   assert.equal(f.visiblePage().url, openStore);
   assert.deepEqual(f.calls.map(([action]) => action), ['read_page', 'click', 'click', 'confirm', 'click']);
   assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+});
+
+test('an order stays on the current numeric DoorDash menu URL and uses that store’s named search field', async () => {
+  const f = breakfastFixture({ searchLabel: "Search McDonald's" });
+  const first = await f.runner.run(`Open ${breakfastMenuUrl}`, f.account);
+  assert.equal(first.ok, true, first.message);
+  assert.equal(f.visiblePage().url, breakfastMenuUrl);
+  f.calls.length = 0;
+
+  const result = await f.runner.run('order an Egg McMuffin on the DoorDash page', f.account);
+
+  assert.equal(result.ok, true, result.message);
+  assert.equal(f.visiblePage().url, breakfastMenuUrl);
+  assert.equal(f.calls.some(([action]) => action === 'open_url' || action === 'planner'), false);
+  assert.deepEqual(f.calls.filter(([action]) => action === 'type').map(([, args]) => args), [
+    { ref: 'breakfast-search', text: 'Egg McMuffin' }
+  ]);
+  assert.equal(f.calls.filter(([action]) => action === 'confirm').length, 1);
+  assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+});
+
+test('after PC voice restarts, a foreground menu can handle a spoken order without planner memory', async () => {
+  const f = breakfastFixture({ searchLabel: "Search McDonald's" });
+  assert.equal((await f.runner.run('Open ' + breakfastMenuUrl, f.account)).ok, true);
+  f.runner.cancel();
+  f.calls.length = 0;
+  const result = await f.runner.run('Ava, please order an Egg McMuffin', f.account);
+  assert.equal(result.ok, true, result.message);
+  assert.deepEqual(f.calls[0].slice(0, 2), ['read_page', { foregroundOnly: true }]);
+  assert.equal(f.calls.some(([action]) => action === 'open_url' || action === 'planner'), false);
+  assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+});
+
+test('a cold item command does not act on a background window or unrelated foreground page', async () => {
+  for (const observation of [{ ok: false, error: 'no_public_page' }, { ok: true, page: { url: 'https://example.org/', title: 'Other site' } }]) {
+    const calls = [];
+    const runner = createPcTaskRunner({
+      assertActive: () => true,
+      complete: async () => { calls.push('planner'); return { action: 'chat' }; },
+      tools: {
+        read_page: async args => { assert.deepEqual(args, { foregroundOnly: true }); calls.push('read'); return observation; },
+        open_url: async () => { calls.push('open'); },
+        click: async () => { calls.push('click'); }
+      }
+    });
+    await runner.run('Order an Egg McMuffin', { userId: 'owner' });
+    assert.deepEqual(calls, ['read', 'planner']);
+  }
+});
+
+test('a visible store menu with a local delivery restriction reports navigation and the delivery restriction separately', async () => {
+  const { runner, setVisiblePage, opens } = navigationFixture();
+  const account = { userId: 'owner' };
+  assert.equal((await runner.run('Open DoorDash', account)).ok, true);
+  setVisiblePage({
+    url: store, title: 'McDonald’s Menu', text: 'This store is not available in your area.',
+    controls: [{ ref: 'search-menu', kind: 'input', inputType: 'search', label: 'Search store menu', needsConfirmation: false }]
+  });
+  const result = await runner.run(restaurantFollowUp, account);
+  assert.equal(result.ok, true, result.message);
+  assert.match(result.message, /opened mcdonald.+unavailable for delivery/i);
+  assert.deepEqual(opens, [landingUrl]);
 });
 
 test('an Egg McMuffin order finds a delivery branch from the brand page or the same account’s DoorDash landing', async () => {

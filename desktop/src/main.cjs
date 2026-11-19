@@ -21,7 +21,7 @@ const { createBrowserActions } = require('./browser-actions.cjs');
 const { createTaskDiagnostics } = require('./pc-task-diagnostics.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
-const START_URL = 'https://synapses.cloud/?desktop=0.1.14&v=pc-door-delivery-menu';
+const START_URL = 'https://synapses.cloud/?desktop=0.1.15&v=pc-door-store-readback';
 const BAR_HEIGHT = 32;
 const remoteShellCss = fs.readFileSync(path.join(__dirname,'remote-shell.css'),'utf8');
 const smoke = process.argv.includes('--smoke-test');

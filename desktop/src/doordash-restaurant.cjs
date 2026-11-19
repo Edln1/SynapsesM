@@ -10,11 +10,14 @@ function queryValue(value){return typeof value==='string'&&value.trim()&&value.t
 function restaurant(value,base){
   const url=doorDashUrl(value,base);if(!url)return null;
   let pathname;try{pathname=decodeURIComponent(url.pathname);}catch{return null;}
-  const route=/^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(store|business)\/([^/]+)\/?$/i.exec(pathname);
-  if(!route)return null;
-  const numeric=/^\d{1,20}$/.test(route[2]),slug=/^(.+)-(\d{1,20})$/.exec(route[2]);if(!numeric&&!slug)return null;
+  const localized=pathname.replace(/^\/[a-z]{2}(?:-[a-z]{2})?(?=\/)/i,'');
+  const store=/^\/store\/([^/]+)(?:\/\d{1,20})?\/?$/i.exec(localized);
+  const brand=/^\/(?:business|city\/[a-z0-9-]+\/b)\/([^/]+)\/?$/i.exec(localized);
+  const identity=store?.[1]||brand?.[1];
+  if(!identity)return null;
+  const numeric=/^\d{1,20}$/.test(identity),slug=/^(.+)-(\d{1,20})$/.exec(identity);if(!numeric&&!slug)return null;
   const name=numeric?'':slug[1];
-  return {url:url.href,kind:route[1].toLowerCase(),name:words(name).join(''),nameWords:words(name),id:numeric?route[2]:slug[2]};
+  return {url:url.href,kind:store?'store':'business',name:words(name).join(''),nameWords:words(name),id:numeric?identity:slug[2]};
 }
 function startsWithName(value,query){
   const target=words(query).join('');if(!target)return false;
@@ -77,7 +80,8 @@ function verifyDoorDashRestaurant(value,expectedUrl){
 
 function isDoorDashRestaurant(value,query){
   const page=snapshot(value),listing=restaurant(page.url);
-  return !!listing&&!doorDashBlocked(page)&&!doorDashUnavailable(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
+  const title=String(page.title||'').replace(/^Order\s+/i,'');
+  return !!listing&&!doorDashBlocked(page)&&!doorDashUnavailable(page)&&(!query||[listing.nameWords.join(' '),title,page.text].some(label=>startsWithName(label,query)));
 }
 function isDoorDashPage(value){return !!doorDashUrl(snapshot(value).url);}
 function isDoorDashStore(value,query){

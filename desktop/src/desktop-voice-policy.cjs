@@ -52,6 +52,9 @@ function doorDashPreference(text) {
 function directWebPlan(text) {
   if (typeof text !== 'string' || text.length > 500 || /[\u0000-\u001f\u007f]/.test(text)) return null;
   const command = normalizeVoiceCommand(text).replace(/\s+(?:for me(?: please)?|please)[.!?]*$/i, '').replace(/[.!?]+$/, '').trim();
+  const visit = /^(?:open(?:\s+up)?|visit|go\s+to)\s+(.+)$/i.exec(command);
+  const explicit=visit&&!/\s/.test(visit[1])?explicitWebUrl(visit[1]):null;
+  if(explicit)return {url:explicit,message:'Opened '+new URL(explicit).hostname+'.'};
   const sequence = /(?:\bthen\b|\band\s+(?:also\s+)?(?:open|go to|search|find|look|click|play|show|order|add|select|pick|read|type|buy|log|sign|check|see|ask|describe|summarize|tell)\b|[;,]\s*(?:open|search|find|click|play|order)\b)/i;
   const restaurantCommand = command.replace(/[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:go (?:there|to it|to (?:its|their) page)|take me there|(?:open|click(?: on)?) (?:it|the (?:restaurant|listing|store|(?:first )?result)))$/i, '');
   const scopedRestaurant = /^(?:search(?:\s+(?:for|up))?|look (?:up|for)|find|open|go to|take me to|bring up|pull up)\s+(.+?)\s+(?:on|in|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?(?:\s+please)?$/i.exec(restaurantCommand);
@@ -66,7 +69,6 @@ function directWebPlan(text) {
   }
   if (/^search\s+(?:on\s+)?google$/i.test(command)) return {url:sites.google,message:'Opened Google.'};
   const search = /^(?:search(?:\s+on)?\s+(google|you\s*tube|door\s*dash)\s+for\s+|google\s+|search(?:\s+the\s+web)?\s+for\s+|look\s+up\s+)(.+)$/i.exec(command);
-  const visit = /^(?:open(?:\s+up)?|visit|go\s+to)\s+(.+)$/i.exec(command);
   const visitThenSearch = visit && /^(.+?)\s+(?:and(?:\s+then)?|then)\s+search\s+(?:for\s+)?(.+)$/i.exec(visit[1]);
   let target = visitThenSearch ? visitThenSearch[1] : search?.[1];
   let query = visitThenSearch ? visitThenSearch[2] : search?.[2];
@@ -84,7 +86,7 @@ function directWebPlan(text) {
     return null;
   }
   if (!visit || sequence.test(visit[1])) return null;
-  const url = knownSite(visit[1]) || explicitWebUrl(visit[1]);
+  const url = knownSite(visit[1]);
   return url ? {url,message:'Opened '+new URL(url).hostname+'.'} : null;
 }
 
