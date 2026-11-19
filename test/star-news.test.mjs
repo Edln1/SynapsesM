@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 import { SOURCES, parseRSS, plainText, fetchSource, buildSnapshot } from '../scripts/fetch-star-news.mjs';
 const require = createRequire(import.meta.url);
 const ui = require('../star-news.js');
@@ -61,7 +63,7 @@ test('ordinary home/chat particles map from real canvas coordinates including of
   style.opacity='1';doc.hidden=true;assert.equal(ui.particlePoints(canvas,container,[{x:100,y:80,alpha:.25}],800,600).length,0);
 });
 
-function desktopFixture({width=1280,fine=true,hover=true,search='',avaMode=false}={}){
+function desktopFixture({width=1280,fine=true,hover=true,search='',avaMode=false,userAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64)',mobile=false,touchPoints=0}={}){
   const state={width,fine,hover,avaMode,fetches:0,created:0},timers=new Map(),frames=new Map(),observers=[];let timerId=0,frameId=0;
   function emitter(target){const listeners=new Map();return Object.assign(target,{listeners,addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,new Set());listeners.get(type).add(fn);},removeEventListener(type,fn){listeners.get(type)?.delete(fn);},emit(type,event={}){for(const fn of [...(listeners.get(type)||[])])fn(event);}});}
   let doc;
@@ -69,18 +71,19 @@ function desktopFixture({width=1280,fine=true,hover=true,search='',avaMode=false
   const html={classList:{contains:name=>name==='ava-app-mode'&&state.avaMode}};
   doc=emitter({documentElement:html,hidden:false,createElement:element,elementFromPoint(){return this.body;}});doc.body=element('body');doc.activeElement=doc.body;state.created=0;
   const media=emitter({get matches(){return state.fine&&state.hover;}});
-  const win=emitter({document:doc,location:{search},get innerWidth(){return state.width;},innerHeight:720,matchMedia:()=>media,setTimeout(fn){const id=++timerId;timers.set(id,fn);return id;},clearTimeout(id){timers.delete(id);},requestAnimationFrame(fn){const id=++frameId;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);},fetch(){state.fetches++;throw Error('Tests must not fetch a provider.');},MutationObserver:class{constructor(callback){this.callback=callback;this.active=false;observers.push(this);}observe(){this.active=true;}disconnect(){this.active=false;}}});
+  const win=emitter({document:doc,navigator:{userAgent,userAgentData:{mobile},maxTouchPoints:touchPoints},location:{search},get innerWidth(){return state.width;},innerHeight:720,matchMedia:()=>media,setTimeout(fn){const id=++timerId;timers.set(id,fn);return id;},clearTimeout(id){timers.delete(id);},requestAnimationFrame(fn){const id=++frameId;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);},fetch(){state.fetches++;throw Error('Tests must not fetch a provider.');},MutationObserver:class{constructor(callback){this.callback=callback;this.active=false;observers.push(this);}observe(){this.active=true;}disconnect(){this.active=false;}}});
   return{win,doc,media,state,timers,frames,observers,flushTimers(){const pending=[...timers.values()];timers.clear();for(const fn of pending)fn();},stepFrame(time){const pending=[...frames.values()];frames.clear();for(const fn of pending)fn(time);},observerChange(){for(const observer of observers)if(observer.active)observer.callback();}};
 }
 const desktopSnapshot={version:1,generatedAt:now.toISOString(),sources:[{id:'nvidia',checkedAt:now.toISOString(),status:'ok'}],items:parseRSS(rss([{}]),source,now)};
 const starPoints=()=>[{id:'test-star',x:100,y:100}];
 
-test('star news initializes only for a wide desktop with real hover and a fine primary pointer',()=>{
-  for(const options of [{width:390},{width:899},{width:1280,fine:false},{width:1280,hover:false}]){
+test('star news requires a desktop with real hover and a fine primary pointer, including compact installed-app windows',()=>{
+  for(const options of [{width:390,userAgent:'Mozilla/5.0 (Linux; Android 15) Mobile'},{width:699,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18) Mobile'},{width:1280,fine:false},{width:1280,hover:false}]){
     const f=desktopFixture(options);assert.equal(ui.desktopAllowed(f.win),false);assert.equal(ui.init({window:f.win}),null);
     assert.equal(f.state.created,0);assert.equal(f.doc.body.children.length,0);assert.equal(f.win.listeners.size,0);assert.equal(f.state.fetches,0);assert.equal(f.observers.length,0);assert.equal(f.frames.size,0);
   }
   const desktop=desktopFixture();assert.equal(ui.desktopAllowed(desktop.win),true);
+  const compact=desktopFixture({width:760});assert.equal(ui.desktopAllowed(compact.win),true);ui.init({window:compact.win,snapshot:desktopSnapshot,getPoints:starPoints}).destroy();
   const missingCapability=desktopFixture();delete missingCapability.win.matchMedia;assert.equal(ui.desktopAllowed(missingCapability.win),false);
 });
 
@@ -102,11 +105,12 @@ test('desktop hover, mouse click and keyboard discovery work, while touch and pe
   f.win.emit('keydown',{key:'Escape'});assert.equal(card.hidden,true);assert.equal(f.doc.activeElement,access);api.destroy();assert.equal(f.state.fetches,0);
 });
 
-test('resizing to a phone removes the desktop card, discovery button and every interaction listener',async()=>{
+test('shrinking a PC below the minimum removes news UI and interactions while retaining only its passive recovery gate',async()=>{
   const f=desktopFixture(),api=ui.init({window:f.win,snapshot:desktopSnapshot,getPoints:starPoints});api.open();
   assert.equal(f.doc.body.children[1].hidden,false);f.state.width=390;f.win.emit('resize');
-  assert.equal(f.doc.body.children.length,0);assert.equal(f.win.__synapsesStarNews,undefined);assert.equal([...f.win.listeners.values()].every(set=>set.size===0),true);assert.equal([...f.media.listeners.values()].every(set=>set.size===0),true);assert.equal(f.observers.every(o=>!o.active),true);assert.equal(f.frames.size,0);
+  assert.equal(f.doc.body.children.length,0);assert.equal(f.win.__synapsesStarNews,undefined);for(const type of ['pointermove','pointerup','mousedown','keydown'])assert.equal(f.win.listeners.get(type)?.size||0,0);assert.equal(f.win.listeners.get('resize').size,1);assert.equal(f.frames.size,0);
   api.open();await api.refresh();assert.equal(f.doc.body.children.length,0);assert.equal(f.state.fetches,0);
+  api.destroy();assert.equal([...f.win.listeners.values()].every(set=>set.size===0),true);assert.equal(f.observers.every(o=>!o.active),true);
 });
 
 test('loss of desktop pointer capability and later Ava mode activation safely tear down initialized news',()=>{
@@ -121,6 +125,7 @@ test('marked stars are sparse, spatially separated, stable by actual ID and neve
   for(const a of chosen)for(const b of chosen)if(a!==b)assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>=120);
   const moved=all.map(p=>({...p,x:p.x+1}));assert.deepEqual(ui.markedPoints(moved,chosen.map(p=>p.id),1280,720,99).map(p=>p.id),chosen.map(p=>p.id));
   assert.equal(ui.markedPoints([{id:'bad',x:NaN,y:100},{id:'edge',x:5,y:5}],[],1280,720).length,0);
+  const compact=all.filter(p=>p.x<730&&p.y<470);assert.equal(ui.markedPoints(compact,[],760,520).length,3);assert.equal(ui.markedPoints(compact,[],760,520,1).length,1);
 });
 
 test('soft silver glow markers track actual star coordinates at a capped rate and pause while hidden',()=>{
@@ -145,4 +150,42 @@ test('news cards expose the official source, publication date and working plain-
   const first=card.children[1].textContent;assert.ok(items.some(i=>i.title===first));assert.equal(card.children[1].children.length,0);assert.equal(card.children[1].rel,'noopener noreferrer');
   const footer=card.children[3];assert.equal(footer.children[0].textContent,'Read update');assert.equal(footer.children[1].textContent,'Next update');assert.equal(footer.children[0].target,'_blank');assert.equal(footer.children[0].rel,'noopener noreferrer');
   footer.children[1].click();assert.notEqual(card.children[1].textContent,first);assert.equal(card.children[1].children.length,0);assert.ok(items.some(i=>i.url===card.children[1].href));api.destroy();
+});
+
+test('mobile devices remain excluded even with a desktop-sized viewport and an attached fine pointer',()=>{
+  for(const options of [{userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'},{userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15',touchPoints:5},{mobile:true}]){
+    const f=desktopFixture(options);assert.equal(ui.init({window:f.win}),null);assert.equal(f.state.created,0);assert.equal(f.win.listeners.size,0);assert.equal(f.state.fetches,0);assert.equal(f.frames.size,0);
+  }
+});
+
+test('a compact PC keeps stars working and a previously initialized tiny window recovers without reload or another snapshot request',()=>{
+  const f=desktopFixture(),old=ui.init({window:f.win,snapshot:desktopSnapshot,getPoints:starPoints});
+  f.state.width=760;f.win.emit('resize');assert.equal(f.win.__synapsesStarNews,old);assert.equal(f.doc.body.children[2].children.length,1);
+  f.state.width=650;f.win.emit('resize');assert.equal(f.win.__synapsesStarNews,undefined);assert.equal(f.doc.body.children.length,0);assert.equal(f.frames.size,0);
+  f.state.width=760;f.win.emit('resize');const recovered=f.win.__synapsesStarNews;assert.ok(recovered);assert.notEqual(recovered,old);assert.equal(f.doc.body.children[2].children.length,1);
+  f.win.emit('pointerup',{pointerType:'mouse',button:0,clientX:100,clientY:100,target:f.doc.body});assert.equal(f.doc.body.children[1].hidden,false);assert.equal(f.state.fetches,0);recovered.destroy();
+});
+
+test('an initially narrow desktop waits without UI or fetch and initializes once after expansion',()=>{
+  for(const width of [760,1400]){
+    const f=desktopFixture({width:600}),options={window:f.win,snapshot:desktopSnapshot,getPoints:starPoints};
+    assert.equal(ui.init(options),null);assert.equal(ui.init(options),null);assert.equal(f.doc.body.children.length,0);assert.equal(f.state.fetches,0);assert.equal(f.frames.size,0);assert.equal(f.win.listeners.get('resize').size,1);
+    for(const name of ['pointermove','pointerup','mousedown','keydown'])assert.equal(f.win.listeners.get(name)?.size||0,0);
+    f.state.width=width;f.win.emit('resize');const api=f.win.__synapsesStarNews;assert.ok(api);assert.equal(f.win.__synapsesStarNewsWake,undefined);assert.equal(f.doc.body.children.length,3);assert.equal(f.win.listeners.get('resize').size,1);
+    f.win.emit('pointerup',{pointerType:'mouse',button:0,clientX:100,clientY:100,target:f.doc.body});assert.equal(f.doc.body.children[1].hidden,false);assert.equal(f.state.fetches,0);api.destroy();assert.equal([...f.win.listeners.values()].every(set=>set.size===0),true);
+  }
+});
+
+test('Ava activation during a PC recovery wait removes that wait and cannot reopen news after maximizing',()=>{
+  const f=desktopFixture();ui.init({window:f.win,snapshot:desktopSnapshot,getPoints:starPoints});f.state.width=650;f.win.emit('resize');assert.ok(f.win.__synapsesStarNewsWake);
+  f.state.avaMode=true;f.observerChange();assert.equal(f.win.__synapsesStarNewsWake,undefined);f.state.width=1280;f.win.emit('resize');assert.equal(f.doc.body.children.length,0);assert.equal(f.win.__synapsesStarNews,undefined);assert.equal(f.state.fetches,0);
+});
+
+test('the production Night star export and Sun particle collector both feed actual marked coordinates in a compact PC',async()=>{
+  const html=await readFile(new URL('../index.html',import.meta.url),'utf8'),night=html.match(/window\.synapsesStarNewsPoints=function\(\)\{[\s\S]*?\n  \};/)?.[0],collector=html.match(/window\.synapsesStarNewsPoints=function\(\)\{var deep=[\s\S]*?return all;\};/)?.[0];assert.ok(night&&collector);
+  const f=desktopFixture({width:760}),mode={night:true};
+  const context=vm.createContext({window:f.win,document:f.doc,active:()=>mode.night,running:true,stars:[{a:.8}],project:()=>({sx:100,sy:100,edgeFade:1}),w:760,h:720});
+  vm.runInContext(night,context);context.deepSpacePoints=f.win.synapsesStarNewsPoints;f.win._synStarNewsParticleGetters={flowCanvas:()=>[{id:'flowCanvas-0',x:240,y:160,brightness:.3}]};vm.runInContext(collector,context);
+  const api=ui.init({window:f.win,snapshot:desktopSnapshot});assert.equal(f.doc.body.children[2].children[0].attributes.get('data-star-id'),'deep-0');
+  mode.night=false;f.stepFrame(0);const marker=f.doc.body.children[2].children[0];assert.equal(marker.attributes.get('data-star-id'),'flowCanvas-0');assert.equal(marker.style.transform,'translate3d(240.00px,160.00px,0)');api.destroy();
 });
