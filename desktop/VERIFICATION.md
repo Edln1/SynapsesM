@@ -1,5 +1,19 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.6 model-planned PC tasks
+
+The full desktop suite passes **119 tests with zero failures or skips**. Coverage includes the existing accepted-speech/native lease path plus structured planning, fixed tool argument mapping, observed-reference boundaries, native confirmations, cancellation races, unresolved failures, coherent bounded observations, Windows app/window/control fixtures and the isolated browser driver. The web suite remains at **134 passing tests** for the separately published voice/resize changes.
+
+A real call to the existing hosted Groq proxy accepted the strict JSON schema. Live model tests with explicitly fake executors resolved an informal Codex launch request, and selected YouTube search-results navigation, an observed matching video, media playback, then completion. These tests establish planner behavior against fixtures; they did not open a real app or play a real video. A JSON-format provider rejection is retried once; rate-limit errors are not retried by this client.
+
+Read-only Windows catalog discovery found the actual installed Codex identity (displayed by Windows as ChatGPT), Steam and Dota 2. The native PowerShell self-test loaded the actual UI Automation assemblies and compiled its Win32 helpers with the expected 40-byte x64 INPUT layout. It did not enumerate or inspect live windows, send input, launch apps or move windows. The fixed packaged script is read through ASAR-aware Node fs, hash-materialized and invoked with JSON stdin; model output is never executable script.
+
+The local 0.1.6 unpacked artifact is `dist/win-unpacked/resources/app.asar`: **313,674 bytes**, SHA-256 **73E8AB7A81F4E7D6098C00FF015807B0D846D36FE11CBEB13C61CB3CEEA96BA8**. The matching executable SHA-256 is **7559797295FBB460E69B6248CEA0A3C89EE90ED21ECB9A2073398AE2A1C52FF8**, version **0.1.6.0**. CI builds its own installer and publishes a separate checksum.
+
+All **23 packaged runtime source files** matched byte-for-byte, including the PowerShell script. The fresh-profile packaged shell smoke passed native controls, same-document visibility, tray/Quit and the read-only second-instance report. Actual packaged-ASAR require, hash materialization and the non-GUI driver self-test also passed; the 25,066-byte PS1 hash is **079890753BFE56A242BC337312E948C77D316C8CECF803C6F29216E8B6230CF5**. No unpacked runtime files are required, and no own test processes remain. Evidence is `.preview/pc-agent-0.1.6-packaged/smoke.json` and `.preview/packaged-driver-selftest-result.json`.
+
+Physical microphone capture, reliable controls in arbitrary target apps, actual YouTube playback and DoorDash checkout have not been established by these fixture/model/build checks. Accessibility limits, custom canvases, elevated apps, provider limits and external-site changes remain material limitations. A successful native action requires observed readback; input delivery alone does not establish task completion.
+
 ## 0.1.5 startup diagnostics
 
 The desktop suite passes **68 tests with zero skips**. The real production Whisper/Flux accepted-ASR chain still reaches the real restricted host/parser in fixtures, including thirteen supported direct/polite, DoorDash and YouTube-search forms per provider with no language-model fallthrough. YouTube “play” requests honestly return search results rather than claiming playback. The portable test requires the tagged web source in CI and fails if it is absent. New tests execute the actual native permission handler: hidden microphone consent delayed by 2.5 seconds remains within the original 30-second grant, while Stop or expiry before approval denies it. Native grant lifetime was already retained through client return; no visibility or grant expansion was added.

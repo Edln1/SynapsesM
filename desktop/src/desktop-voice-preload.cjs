@@ -11,7 +11,7 @@ if(process.platform==='win32'&&process.isMainFrame&&trusted){
   contextBridge.exposeInMainWorld('synapsesDesktopVoice',Object.freeze({
     getState:()=>ipcRenderer.invoke('pc-voice:state'),start:()=>ipcRenderer.invoke('pc-voice:start'),stop:p=>ipcRenderer.invoke('pc-voice:stop',{reasonCode:typeof p?.reasonCode==='string'?p.reasonCode:''}),
     setListening:p=>ipcRenderer.invoke('pc-voice:listening',{sessionId:typeof p?.sessionId==='string'?p.sessionId:'',active:p?.active===true}),
-    runCommand:p=>ipcRenderer.invoke('pc-voice:command',{sessionId:typeof p?.sessionId==='string'?p.sessionId:'',text:typeof p?.text==='string'?p.text:''}),
+    runCommand:p=>ipcRenderer.invoke('pc-voice:command',{sessionId:typeof p?.sessionId==='string'?p.sessionId:'',text:typeof p?.text==='string'?p.text:'',userId:typeof p?.userId==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(p.userId)?p.userId:undefined}),
     onRequest:callback=>subscribe('pc-voice:request',callback,p=>({action:p.action==='start'?'start':'stop'})),
     onState:callback=>subscribe('pc-voice:state',callback,copyState)
   }));

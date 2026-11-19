@@ -1,8 +1,9 @@
 'use strict';
-const { app, BrowserWindow, WebContentsView, Tray, Menu, dialog, ipcMain, protocol, net, session, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, Tray, Menu, dialog, ipcMain, protocol, net, session, shell, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const dns = require('node:dns').promises;
+const { createHash } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const { trustedSite, externalLink, audioRequest, downloadLink, newMainDocument } = require('./policy.cjs');
 const { bindWindowControls } = require('./window-controls.cjs');
@@ -13,9 +14,14 @@ const { createDocumentGate } = require('./document-gate.cjs');
 const { createTrayVoiceStarter, showDialogPreservingWindowState } = require('./tray-voice-start.cjs');
 const { createVoiceDiagnostics } = require('./voice-diagnostics.cjs');
 const { RUNTIME_EXPRESSION, sanitizeRuntimeReport, dispatchSecondInstance } = require('./voice-runtime-report.cjs');
+const { createPcTaskRunner } = require('./pc-task-runner.cjs');
+const { createPcTaskTools } = require('./pc-task-tools.cjs');
+const { createWindowsActions } = require('./windows-actions.cjs');
+const { createBrowserActions } = require('./browser-actions.cjs');
+const { createTaskDiagnostics } = require('./pc-task-diagnostics.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
-const START_URL = 'https://synapses.cloud/?desktop=0.1.5&v=pc-voice-fix3';
+const START_URL = 'https://synapses.cloud/?desktop=0.1.6&v=pc-agent1';
 const BAR_HEIGHT = 32;
 const remoteShellCss = fs.readFileSync(path.join(__dirname,'remote-shell.css'),'utf8');
 const smoke = process.argv.includes('--smoke-test');
@@ -78,7 +84,7 @@ async function createWindow() {
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
 
   let lastInput = 0, micAllowed = false, pendingMic = false;
-  let pcVoice,lifecycle,tray,trayMenu,trayIntent=null,trayIntentTimer=null,pcStartAt=0;
+  let pcVoice,lifecycle,tray,trayMenu,trayIntent=null,trayIntentTimer=null,pcStartAt=0,taskRunner,browserActions,windowsActions,browserOwner='';
   const voiceDiagnostics=createVoiceDiagnostics({file:path.join(app.getPath('userData'),'pc-voice-status.json'),version:app.getVersion(),readState:()=>pcVoice?.state()});
   const freshInput = () => Date.now()-lastInput < 5000 && win.isVisible() && !win.isMinimized();
   const captureAllowed = () => voiceCaptureAllowed({freshInput:freshInput(),visible:win.isVisible(),minimized:win.isMinimized(),lease:pcVoice?.state(),hiddenStart:pcVoice?.startingHidden(),startedAt:pcStartAt,now:Date.now()});
@@ -142,9 +148,34 @@ async function createWindow() {
     trayMenu=Menu.buildFromTemplate(template);tray.setContextMenu(trayMenu);tray.setToolTip(state.listening?'Synapses — PC voice listening':state.enabled||starting?'Synapses — PC voice starting':'Synapses');
     if(desktopRuntime)desktopRuntime.trayMenu=trayMenu;
   }
+  function assertPcActive(){
+    if(!pcVoice?.active()||contents.isDestroyed()||!trustedSite(contents.getURL()))throw Error('PC voice control is stopped.');
+    return true;
+  }
+  windowsActions=createWindowsActions({displays:()=>screen.getAllDisplays().map(display=>({...display,
+    physicalBounds:screen.dipToScreenRect(null,display.bounds),physicalWorkArea:screen.dipToScreenRect(null,display.workArea)})),assertActive:assertPcActive});
+  browserActions=createBrowserActions({BrowserWindow,lookupHost:host=>dns.lookup(host,{all:true,verbatim:true}),assertActive:assertPcActive});
+  const taskTools=createPcTaskTools({windows:windowsActions,browser:{perform:(...args)=>browserActions.perform(...args),cancel:options=>browserActions.cancel(options)},assertActive:assertPcActive,
+    authorizeAction:async request=>{
+      assertPcActive();
+      const generation=pcVoice.generation(),id=pcVoice.state().sessionId;
+      const {response}=await showDialogPreservingWindowState(dialog,win,{type:'question',title:'Confirm Ava action',message:'Allow this action?',detail:request.description,buttons:['Allow this action','Cancel'],defaultId:1,cancelId:1,noLink:true});
+      assertPcActive();return response===0&&generation===pcVoice.generation()&&id===pcVoice.state().sessionId;
+    }});
+  const taskDiagnostics=createTaskDiagnostics({file:path.join(app.getPath('userData'),'pc-task-status.json'),version:app.getVersion()});
+  taskRunner=createPcTaskRunner({tools:taskTools,assertActive:assertPcActive,onProgress:event=>{taskDiagnostics.record(event);pcVoice?.taskProgress(event.phase);},maxSteps:12,timeoutMs:90000});
   pcVoice=createDesktopVoiceHost({
     lookupHost:host=>dns.lookup(host,{all:true,verbatim:true}),
     openBrowser:url=>shell.openExternal(url),
+    runTask:(text,options)=>{
+      const owner=options.userId||pcVoice.state().sessionId;
+      if(owner!==browserOwner){
+        browserActions.close();browserOwner=owner;
+        const partition='persist:synapses-agent-'+createHash('sha256').update(owner).digest('hex').slice(0,20);
+        browserActions=createBrowserActions({BrowserWindow,partition,lookupHost:host=>dns.lookup(host,{all:true,verbatim:true}),assertActive:assertPcActive});
+      }
+      return taskRunner.run(text,options);
+    },cancelTask:()=>{taskRunner.cancel();windowsActions.cancel?.();browserActions.cancel({keepIdleWindow:true});},
     onState:state=>{
       updateBackgroundPolicy();
       if(!contents.isDestroyed()&&trustedSite(contents.getURL()))contents.send('pc-voice:state',state);
@@ -159,11 +190,12 @@ async function createWindow() {
     ipcMain,contents,host:pcVoice,micAllowed:()=>micAllowed,
     authorizeStart:async()=>{
       if(!trustedSite(contents.getURL())){voiceDiagnostics.record('stopped','native_start_denied');return false;}
-      if(validTrayIntent()){const approval={allowed:true,allowHiddenStart:true,expiresAt:trayIntent.expiresAt,beganAt:trayIntent.beganAt};clearTrayIntent();return approval;}
-      if(!win.isVisible()||win.isMinimized()){voiceDiagnostics.record('stopped','native_start_denied');return false;}
-      if(!freshInput()){voiceDiagnostics.record('stopped','native_start_denied');return false;}
-      const {response}=await dialog.showMessageBox(win,{type:'question',title:'PC voice control',message:'Enable PC voice control?',detail:'While this session is listening, say “open YouTube”, “open browser” or “search for …” to open public websites in your browser. Saying Ava first is optional. It can keep listening in the tray until you stop it.',buttons:['Enable PC voice','Cancel'],defaultId:1,cancelId:1,noLink:true});
-      const approved=response===0&&win.isVisible()&&!win.isMinimized();if(!approved)voiceDiagnostics.record('stopped','native_start_denied');return approved;
+      const intent=validTrayIntent()?{allowed:true,allowHiddenStart:true,expiresAt:trayIntent.expiresAt,beganAt:trayIntent.beganAt}:null;
+      if(!intent&&(!win.isVisible()||win.isMinimized()||!freshInput())){voiceDiagnostics.record('stopped','native_start_denied');return false;}
+      const {response}=await showDialogPreservingWindowState(dialog,win,{type:'question',title:'PC voice control',message:'Let Ava operate this PC while listening?',detail:'Ava can open installed apps and websites, move windows, and read or interact with visible controls in the windows you ask about. Your spoken request and the needed app, window and page information are sent to the existing AI service. Sensitive actions ask for confirmation. Stop PC voice to revoke control. Normal voice chat stays separate.',buttons:['Enable PC voice','Cancel'],defaultId:1,cancelId:1,noLink:true});
+      const approved=response===0&&(intent?validTrayIntent():win.isVisible()&&!win.isMinimized());
+      if(!approved){voiceDiagnostics.record('stopped','native_start_denied');return false;}
+      if(intent){clearTrayIntent();return intent;}return true;
     },
     onStartGesture:approval=>{lastInput=Date.now();pcStartAt=approval?.beganAt||Date.now();}
   }):()=>{};
@@ -208,7 +240,7 @@ async function createWindow() {
     if(answer===1)event.preventDefault();else lifecycle.cancelQuit();
   });
   contents.on('destroyed',()=>{pcVoice.stop('PC voice is stopped.','window_closed');if(!win.isDestroyed())win.destroy();});
-  win.on('closed',()=>{clearTrayIntent();unbindWindowControls();unbindDesktopVoice();if(!tray.isDestroyed())tray.destroy();if(!contents.isDestroyed())contents.close();mainWindow=null;desktopRuntime=null;});
+  win.on('closed',()=>{taskRunner.cancel();windowsActions.cancel?.();browserActions.close();clearTrayIntent();unbindWindowControls();unbindDesktopVoice();if(!tray.isDestroyed())tray.destroy();if(!contents.isDestroyed())contents.close();mainWindow=null;desktopRuntime=null;});
   const documentGate=createDocumentGate({showSurface:()=>{if(trustedSite(contents.getURL()))site.setVisible(true);},hideSurface:()=>site.setVisible(false),onOptionalError:()=>console.warn('PC voice client is unavailable on this page.')});
   contents.on('did-start-navigation',(event,_url,_inPlace,isMainFrame)=>{
     if(newMainDocument(event,_inPlace,isMainFrame)){pcVoice.stop('PC voice stopped because the page changed.','page_changed');documentGate.reset();}

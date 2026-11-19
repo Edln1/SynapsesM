@@ -16,6 +16,18 @@ Microphone requests require trusted top-level Synapses content, audio-only acces
 
 ## PC voice
 
+Version 0.1.6 adds an LLM task loop to the explicit Windows PC voice session. Natural requests are planned through the existing Groq proxy, executed with fixed local tools, and checked against observed results. The model cannot supply executable JavaScript, PowerShell, paths, selectors or arbitrary shell commands. App/window/control references come from native discovery. Ordinary speech-to-speech and mobile remain separate.
+
+Examples include opening installed apps such as Codex, Steam or Dota 2; moving a discovered window to another display; selecting a named visible control in the current browser; and searching then playing a YouTube video in the controlled browser. These are requests, not required exact phrases. Codex's Windows display name can be ChatGPT; its package identity supplies the Codex alias.
+
+The native controller uses Windows accessibility controls, which are unavailable in some applications, custom canvases and elevated windows. The controlled browser uses observed DOM references and checks actual media playback. It does not attach to arbitrary existing browser tabs; existing windows are accessed through Windows accessibility. Unsupported or unverified steps return a limitation rather than claiming success. This is a preview, not universal or error-free PC control.
+
+Native consent describes PC control and the needed app/window/page information sent to the existing model service. Password fields are excluded. Sensitive actions require concrete native confirmation; the model cannot approve itself. Stop, logout, navigation, microphone loss, task replacement and Quit cancel pending work. Idle controlled-browser playback can remain open after Stop; an in-flight browser action is retired to prevent late execution. Tasks are bounded to 12 planning steps and 90 seconds.
+
+`pc-task-status.json` contains only fixed phase/action names, step counts, version/time and failure codes, without transcripts, window titles, URLs, account IDs or tokens. Physical microphone and actual target-app behavior still require user testing; model-plus-fixture tests are not hardware validation.
+
+### Earlier website-only mode (0.1.5)
+
 Choose **Start PC voice** in the tray or the installed app's Ava menu. Tray Start preserves the window exactly: visible stays visible, hidden stays hidden, and minimized stays minimized. It never shows, focuses, restores or auto-hides the app. Sign in first; a failed account or microphone check reports failure without opening the app. The app asks to reload when the cached page lacks the required voice hook.
 
 Say **“open YouTube”**, **“open browser”**, **“open example.com”**, **“search for nearby coffee”**, or **“stop PC voice.”** Saying **Ava** first is optional while PC voice is enabled. “Open browser” opens the public Google home page in the system browser. Native parsing and DNS checks reject local/private addresses, files, unsupported URL schemes and stale sessions. Model replies do not authorize native actions. The capability does not exist in normal browsers or the Android app.

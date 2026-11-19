@@ -70,7 +70,7 @@
         style.textContent = '#avaDesktopVoiceToggle{display:block;width:100%;min-height:34px;margin:8px 0;padding:7px 9px;border:1px solid #ffffff12;border-radius:8px;background:#ffffff04;color:#aaaab3;text-align:left;font:12px/1.4 "DM Sans",sans-serif;cursor:pointer}#avaDesktopVoiceToggle:hover{background:#ffffff08;color:#eee}#avaDesktopVoiceToggle:disabled{opacity:.5;cursor:default}#avaDesktopVoiceStatus{margin:4px 1px 10px;color:#85858f;font:11px/1.5 "DM Sans",sans-serif}';
         document.head.appendChild(style);
         button = document.createElement('button'); button.id = 'avaDesktopVoiceToggle'; button.type = 'button';
-        button.title = 'Say "Open YouTube", "Open browser" or "Search for ...".';
+        button.title = 'Ask naturally to open an app, move a window, or work with a page.';
         button.onclick = function () { if (state.enabled || starting) stop('PC voice control is stopped.'); else start(); };
         status = document.createElement('p'); status.id = 'avaDesktopVoiceStatus'; status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         var anchor = popover.querySelector('.af-account-actions') || document.getElementById('avaFloatStatus');
@@ -93,6 +93,7 @@
       if (destroyed || !next || next.available !== true) return;
       var wasEnabled = state.enabled, previousId = state.sessionId;
       state = { available: true, enabled: next.enabled === true && typeof next.sessionId === 'string', listening: next.listening === true, sessionId: next.enabled ? next.sessionId : null };
+      if(state.enabled&&typeof next.message==='string')notice=next.message.slice(0,500);
       if (!state.enabled || previousId && previousId !== state.sessionId) {
         if (wasEnabled || ownsVoice) { attempt++; releaseVoice(); }
         sawCapture = false; owner = '';
@@ -183,7 +184,8 @@
       var sessionId = state.sessionId;
       if (!captureActive() || account() !== owner) { await stop('PC voice control stopped with the microphone or account.'); return { handled: true, ok: false, message: 'PC voice control is stopped.' }; }
       try {
-        var result = await native.runCommand({ sessionId: sessionId, text: String(text).slice(0,1000) });
+        var accountId=window.currentUser&&window.currentUser.id;
+        var result = await native.runCommand({ sessionId: sessionId, text: String(text).slice(0,1000), userId:typeof accountId==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(accountId)?accountId:undefined });
         if (state.sessionId !== sessionId || !state.enabled) return { handled: true, ok: false, message: 'PC voice control is stopped.' };
         if (!result || typeof result.handled !== 'boolean') throw Error('Invalid command response');
         if (!result.handled && result.message) { await stop(result.message); return { handled: true, ok: false, message: result.message }; }
