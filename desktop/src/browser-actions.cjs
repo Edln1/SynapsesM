@@ -259,7 +259,7 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
         if (tool === 'type' && (typeof args.text !== 'string' || args.text.length > 4000 || /\u0000/.test(args.text))) return { ok: false, error: 'invalid_text' };
         const inspected = await execute({ mode: 'inspect', token, ref, key: tool === 'press' ? args.key : '' }, ticket);
         if (!inspected.ok) return inspected;
-        const expected = tool === 'click' ? trusted.expectedControl : null;
+        const expected = ['click','type'].includes(tool) ? trusted.expectedControl : null;
         if (expected && (inspected.label !== expected.label || inspected.dialogTitle !== expected.dialogTitle || expected.href !== undefined && inspected.href !== expected.href || expected.menuTitle !== undefined && inspected.menuTitle !== expected.menuTitle)) {
           return { ok: false, error: 'changed_control', message: 'The page changed before Ava could use that control.' };
         }

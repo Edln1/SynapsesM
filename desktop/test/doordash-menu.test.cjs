@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const vm = require('node:vm');
 const { pageOperation } = require('../src/browser-actions.cjs');
-const { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart } = require('../src/doordash-menu.cjs');
+const { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuSearch, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart } = require('../src/doordash-menu.cjs');
 
 const store = 'https://www.doordash.com/en-CA/store/mcdonalds-123/';
 const item = 'Big Mac';
@@ -95,12 +95,31 @@ test('a menu click requires one visible exact item and its verified restaurant',
   const semanticCard = { ...card, label: 'View item and customize', menuTitle: title };
   assert.deepEqual(findDoorDashMenuItem({ url: store, controls: [semanticCard] }, item, store), { ref: card.ref, label: semanticCard.label, href: '', dialogTitle: '', menuTitle: title });
   assert.equal(findDoorDashMenuItem({ url: store, controls: [{ ...semanticCard, label: 'Place order', needsConfirmation: true }] }, item, store), null);
-  assert.equal(findDoorDashMenuItem({ ...page, controls: [...page.controls, { ...card, ref: 'other-card' }] }, item, store), null);
+  assert.equal(findDoorDashMenuItem({ ...page, controls: [...page.controls, { ...card, ref: 'duplicate-card' }] }, item, store).ref, card.ref);
+  assert.equal(findDoorDashMenuItem({ ...page, controls: [...page.controls, { ...card, ref: 'other-price', label: title + ' · CA$8.99' }] }, item, store), null);
+  assert.equal(findDoorDashMenuItem({ ...page, controls: [...page.controls, { ...card, ref: 'no-price', label: title }] }, item, store), null);
   for (const url of ['https://example.com/', 'https://www.doordash.com/search/store/mcdonalds/', store.replace('123', '999')]) {
     assert.equal(findDoorDashMenuItem({ ...page, url }, item, store), null, url);
   }
   assert.equal(findDoorDashMenuItem({ ...page, title: 'Page not found' }, item, store), null);
   assert.equal(findDoorDashMenuItem({ ...page, title: 'Verify you are human' }, item, store), null);
+});
+
+test('store-menu search accepts only an unambiguous visible input owned by the verified store', () => {
+  const field = { ref:'menu-search', label:'Search store menu', kind:'input', inputType:'search', needsConfirmation:false };
+  const page = { url:store, controls:[
+    { ...field, ref:'delivery', label:'Enter delivery address' },
+    { ...field, ref:'door-dash-search', label:'Search DoorDash' },
+    { ...field, ref:'menu-button', kind:'button' },
+    { ...field, ref:'not-shown', visible:false },
+    field
+  ] };
+  assert.deepEqual(findDoorDashMenuSearch(page, store), { ref:field.ref, label:field.label });
+  assert.deepEqual(findDoorDashMenuSearch({ url:store, controls:[{ ...field, label:'Search menu', inputType:'text' }] }, store), { ref:field.ref, label:'Search menu' });
+  assert.equal(findDoorDashMenuSearch({ ...page, controls:[...page.controls,{ ...field, ref:'second-menu-search' }] }, store), null);
+  assert.equal(findDoorDashMenuSearch({ ...page, url:'https://www.doordash.com/business/mcdonalds-437107/' }, 'https://www.doordash.com/business/mcdonalds-437107/'), null);
+  assert.equal(findDoorDashMenuSearch(page, store.replace('123', '999')), null);
+  assert.equal(findDoorDashMenuSearch({ url:store, controls:[{ ...field, disabled:true }] }, store), null);
 });
 
 test('links must reveal an item on the same verified DoorDash listing', () => {

@@ -1,8 +1,8 @@
 'use strict';
 
 const {directWebPlan,doorDashPreference,isPageReadRequest,explicitWebUrl}=require('./desktop-voice-policy.cjs');
-const {doorDashSearchUrl,listDoorDashRestaurants,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBlocked,doorDashUnavailable}=require('./doordash-restaurant.cjs');
-const {parseDoorDashMenuRequest,parseDoorDashCurrentItemRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
+const {doorDashSearchUrl,listDoorDashRestaurants,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBrandName,doorDashBlocked,doorDashUnavailable}=require('./doordash-restaurant.cjs');
+const {parseDoorDashMenuRequest,parseDoorDashCurrentItemRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,findDoorDashMenuSearch,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
 
 const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window','read_window','click_control','type_control','press_key','scroll_window','open_url','read_page','click','type','press','scroll','back','media_play','finish','chat','clarify']);
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
@@ -191,13 +191,13 @@ function createGroqComplete({fetch:fetcher=globalThis.fetch,endpoint='https://sy
 function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},complete=createGroqComplete(),maxSteps=8,timeoutMs=60000}={}){
   if(!tools||typeof tools!=='object'||typeof assertActive!=='function'||typeof complete!=='function')throw new TypeError('Tools, an active-session guard and a planner are required.');
   if(!Number.isInteger(maxSteps)||maxSteps<1||maxSteps>20||!Number.isFinite(timeoutMs)||timeoutMs<1||timeoutMs>120000)throw new TypeError('Task limits are invalid.');
-  let active=null,sequence=0,pendingDoorDash=null,lastDoorDash=null;
+  let active=null,sequence=0,pendingDoorDash=null,lastDoorDash=null,lastDoorDashRestaurant=null;
   const available=ACTIONS.filter(action=>!['finish','chat','clarify'].includes(action)&&typeof tools[action]==='function');
   function progress(phase,step,action,reasonCode,transport){
     try{const value={phase,step};if(ACTIONS.includes(action))value.action=action;if(reasonCode)value.reasonCode=reasonCode;if(phase==='transport')Object.assign(value,transportFields(transport));const result=onProgress(Object.freeze(value));if(result&&typeof result.catch==='function')result.catch(()=>{});}catch{}
   }
   function abortActive(){if(active){active.reason='cancelled';active.controller.abort();}}
-  function cancel(){pendingDoorDash=null;lastDoorDash=null;abortActive();}
+  function cancel(){pendingDoorDash=null;lastDoorDash=null;lastDoorDashRestaurant=null;abortActive();}
   async function guard(context){
     if(active!==context||context.controller.signal.aborted)throw fail(context.reason||'cancelled','The PC task was stopped.');
     let result;
@@ -230,11 +230,13 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     await guard(context);context.executed++;
     if(result?.ok===true&&result.page?.url){
       lastDoorDash=isDoorDashPage(result.page)?{userId:context.userId}:null;
+      if(!lastDoorDash)lastDoorDashRestaurant=null;
     }
     return result;
   }
   function rememberRestaurant(context, query){
     pendingDoorDash={query,userId:context.userId,expires:Date.now()+120000};
+    lastDoorDashRestaurant={query,userId:context.userId};
   }
   async function findDoorDashListing(context,{query,openListing,preference},step=0){
     const searchUrl=doorDashSearchUrl(query);
@@ -303,11 +305,28 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       ({step,page}=listing);
     }
     const restaurantUrl=page.url;
+    if(!isDoorDashStore(page)){
+      throw fail('unverified',`I found ${query} on DoorDash. Set your delivery address there so I can find a location with ${item}.`);
+    }
     if(!isDoorDashMenuItemOpen(page,item,restaurantUrl)){
       let match=findDoorDashMenuItem(page,item,restaurantUrl);
       if(!match&&step<maxSteps){
         page=await read();
         match=findDoorDashMenuItem(page,item,restaurantUrl);
+      }
+      if(!match&&available.includes('type')&&step+2<maxSteps){
+        const search=findDoorDashMenuSearch(page,restaurantUrl);
+        if(search){
+          const typed=await next('type',{target:search.ref,value:item},{label:search.label,dialogTitle:'',href:''});
+          if(typed?.ok===true&&verifyDoorDashRestaurant(typed.page,restaurantUrl)){
+            page=typed.page;
+            match=findDoorDashMenuItem(page,item,restaurantUrl);
+            if(!match){
+              page=await read();
+              match=findDoorDashMenuItem(page,item,restaurantUrl);
+            }
+          }
+        }
       }
       for(let passes=0;!match&&available.includes('scroll')&&passes<2&&step+1<maxSteps&&verifyDoorDashRestaurant(page,restaurantUrl);passes++){
         const scrolled=await next('scroll',{direction:'down',amount:420});
@@ -365,7 +384,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         if(contextualMenu)return prepareDoorDashItem(context,contextualMenu,current.page);
         if(currentItem){
           if(isDoorDashStore(current.page,currentItem.query))return prepareDoorDashItem(context,currentItem,current.page);
-          throw fail('unverified','Open the restaurant’s delivery location on DoorDash first, or say which restaurant you want.');
+          const brandedItem=/^(?:egg mc\s*muffin|big mac)[®™]?$/i.test(currentItem.item)?'McDonald’s':null;
+          const query=currentItem.query||doorDashBrandName(current.page)||brandedItem||lastDoorDashRestaurant?.query;
+          if(query)return prepareDoorDashItem(context,{...currentItem,query},current.page);
+          throw fail('unverified',`Which restaurant should I find ${currentItem.item} at on DoorDash?`);
         }
         return openDoorDashRestaurant(context,{query:restaurant,openListing:true,preference:'closest'},1);
       }
@@ -439,6 +461,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       ? {query:pendingDoorDash.query,openListing:true,preference}:null;
     pendingDoorDash=null;
     if(lastDoorDash&&lastDoorDash.userId!==userId)lastDoorDash=null;
+    if(lastDoorDashRestaurant&&lastDoorDashRestaurant.userId!==userId)lastDoorDashRestaurant=null;
     const context={id:++sequence,text:text.trim(),userId,controller:new AbortController(),reason:null,history:[],verified:0,executed:0,failures:new Set(),readOnly:isPageReadRequest(text),readEvidence:false,openedDoorDashPage:false,openedDoorDashListing:false,doorDashFollowUp,recentDoorDash:!!lastDoorDash};active=context;
     const external=()=>{context.reason='cancelled';context.controller.abort();};
     if(signal?.aborted)external();else signal?.addEventListener('abort',external,{once:true});

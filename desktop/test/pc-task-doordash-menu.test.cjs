@@ -154,6 +154,7 @@ test('an uncertain cart action is never retried and leaves checkout to the user'
 });
 
 const landingUrl = 'https://www.doordash.com/';
+const brandUrl = 'https://www.doordash.com/business/mcdonald%27s-437107';
 const restaurantFollowUp = "go to McDonald's";
 
 function navigationFixture() {
@@ -244,12 +245,13 @@ test('an explicit DoorDash order finds a different restaurant and item from obse
   assert.deepEqual(calls, [['read'], ['open', searchUrl], ['open', storefront], ['click', ref]]);
 });
 
-function breakfastFixture() {
+function breakfastFixture({ searchMenu = false } = {}) {
   const breakfast = { ...menuCard, ref: 'menu-mcmuffin', label: 'Egg McMuffin®' };
   const breakfastMeal = { ...breakfast, ref: 'menu-mcmuffin-meal', label: 'Egg McMuffin® Meal' };
   const breakfastDialog = { id: 'breakfast-dialog', title: breakfast.label };
   const addBreakfast = { ...add, ref: 'add-mcmuffin', label: 'Add to cart – $4.59', dialog: breakfastDialog.id };
   const question = 'Confirm “Add to cart – $4.59” for Egg McMuffin®.';
+  const searchField = { ref: 'breakfast-search', kind: 'input', label: 'Search store menu', inputType: 'search', href: '', needsConfirmation: false };
   const calls = [];
   const account = { userId: 'breakfast-owner' };
   let visiblePage;
@@ -267,7 +269,8 @@ function breakfastFixture() {
         if (action === 'read_page') return { ok: !!visiblePage, page: visiblePage };
         if (action === 'open_url') {
           if (args.url === landingUrl) visiblePage = { url: args.url, title: 'DoorDash', controls: [] };
-          else if ([store, fartherStore].includes(args.url)) visiblePage = page([breakfastMeal, breakfast], [], args.url);
+          else if (args.url === brandUrl) visiblePage = { url: args.url, title: 'McDonald’s on DoorDash', text: 'Select a delivery location', controls: [] };
+          else if ([store, fartherStore].includes(args.url)) visiblePage = page(searchMenu ? [searchField, breakfastMeal] : [breakfastMeal, breakfast], [], args.url);
           else {
             assert.match(decodeURIComponent(new URL(args.url).pathname), /^\/search\/store\/mcdonald['’]?s\/?$/i);
             visiblePage = {
@@ -277,6 +280,12 @@ function breakfastFixture() {
               ]
             };
           }
+          return { ok: true, verified: true, page: visiblePage };
+        }
+        if (action === 'type') {
+          assert.deepEqual(args, { ref: searchField.ref, text: 'Egg McMuffin' });
+          assert.deepEqual(trusted.expectedControl, { label: searchField.label, dialogTitle: '', href: '' });
+          visiblePage = page([searchField, breakfast], [], visiblePage.url);
           return { ok: true, verified: true, page: visiblePage };
         }
         assert.equal(action, 'click');
@@ -336,5 +345,36 @@ test('order an Egg McMuffin uses the current store and confirms only the observe
   assert.match(result.message, /check your cart/i);
   assert.equal(f.visiblePage().url, openStore);
   assert.deepEqual(f.calls.map(([action]) => action), ['read_page', 'click', 'click', 'confirm', 'click']);
+  assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+});
+
+test('an Egg McMuffin order finds a delivery branch from the brand page or the same account’s DoorDash landing', async () => {
+  for (const openLanding of [false, true]) {
+    const f = breakfastFixture();
+    assert.equal((await f.runner.run(`Open ${brandUrl}`, f.account)).ok, true);
+    assert.equal(f.visiblePage().url, brandUrl);
+    if (openLanding) assert.equal((await f.runner.run('Open DoorDash', f.account)).ok, true);
+    f.calls.length = 0;
+
+    const result = await f.runner.run('order an Egg McMuffin on DoorDash', f.account);
+
+    assert.equal(result.ok, true, result.message);
+    assert.match(result.message, /check your cart/i);
+    assert.equal(f.visiblePage().url, store);
+    assert.equal(f.calls.some(([action]) => action === 'planner'), false);
+    assert.equal(f.calls.filter(([action]) => action === 'confirm').length, 1);
+    assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+  }
+});
+
+test('an Egg McMuffin order from the DoorDash homepage finds the store and uses its visible menu search', async () => {
+  const f = breakfastFixture({ searchMenu: true });
+  assert.equal((await f.runner.run('Open DoorDash', f.account)).ok, true);
+  f.calls.length = 0;
+  const result = await f.runner.run('order an Egg McMuffin on the DoorDash page', f.account);
+  assert.equal(result.ok, true, result.message);
+  assert.equal(f.visiblePage().url, store);
+  assert.equal(f.calls.filter(([action]) => action === 'type').length, 1);
+  assert.equal(f.calls.some(([action]) => action === 'planner'), false);
   assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
 });

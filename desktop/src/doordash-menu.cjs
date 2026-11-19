@@ -1,6 +1,6 @@
 'use strict';
 
-const { verifyDoorDashRestaurant } = require('./doordash-restaurant.cjs');
+const { isDoorDashStore, verifyDoorDashRestaurant } = require('./doordash-restaurant.cjs');
 
 const PRICE = /(?:(?:(?:CA|US|AU|NZ)?\$|[€£]|CAD|USD)\s*\d+(?:[.,]\d{2})?)/i;
 const PRICE_SEPARATOR = /(?:\s*[,|·•–—-]\s*|\s+)/;
@@ -9,7 +9,7 @@ const CALORIE_SUFFIX = /\s*\[\d+(?:[.,]\d+)?\s+(?:cals?|calories|kcal)\]$/i;
 const ADD_TO_CART = new RegExp('^add to (?:cart|order)(?:' + PRICE_SEPARATOR.source + PRICE.source + ')?$', 'i');
 const RESTAURANT_NAME = /^[\p{L}\p{N}][\p{L}\p{M}\p{N}\s&'’.,()!+–-]*$/u;
 const MCDONALDS_NAME = /^(?:mc\s*donald['’]?\s*s|mcodanlds)$/i;
-const DOORDASH_SCOPE = /\s+(?:on|in|via|through|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?$/i;
+const DOORDASH_SCOPE = /\s+(?:on|in|via|through|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website|page))?$/i;
 const OPEN_DOORDASH = /^(?:open(?: up)?|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?[\s,;:.]+(?:(?:and(?:\s+then)?|then)\s+)?/i;
 const MENU_CHAIN = /^(?:go to|find|open)\s+(.+?)(?:\s*[,;:.]+\s*|\s+)(?:(?:and(?:\s+then)?|then)\s+)?(open|show|find|order|buy|get)\s+(.+)$/i;
 const MENU_ARTICLE = /^(?:(?:me\s+)?(?:an?|one|the)\s+|me\s+)/i;
@@ -99,6 +99,15 @@ function pageControls(page) {
   return Array.isArray(page.controls) ? page.controls : [];
 }
 
+function findDoorDashMenuSearch(page, restaurantUrl) {
+  if (!isDoorDashStore(page) || !verifyDoorDashRestaurant(page, restaurantUrl)) return null;
+  const fields = pageControls(page).filter(control => shown(control) && control.kind === 'input' && !control.dialog &&
+    control.needsConfirmation === false && /^(?:search|text)$/.test(control.inputType) && /^search (?:store )?menu$/i.test(control.label));
+  if (fields.length !== 1) return null;
+  const { ref, label } = fields[0];
+  return { ref, label };
+}
+
 function itemLink(href, base, restaurantUrl) {
   if (typeof href !== 'string' || !href) return null;
   try {
@@ -111,6 +120,18 @@ function itemLink(href, base, restaurantUrl) {
   }
 }
 
+function displayedPrice(label) {
+  const amounts = label.match(new RegExp(PRICE.source, 'gi')) || [];
+  return amounts.length === 1 ? amounts[0].replace(/\s+/g, '').toUpperCase() : null;
+}
+
+function identicalCard(first, next) {
+  const price = displayedPrice(first.label);
+  const title = itemName(first.menuTitle);
+  return !!price && price === displayedPrice(next.label) && first.kind === next.kind &&
+    (first.href || '') === (next.href || '') && (first.label === next.label || !!title && title === itemName(next.menuTitle));
+}
+
 function findDoorDashMenuItem(page, item, restaurantUrl) {
   const name = itemName(item);
   if (!name || !verifyDoorDashRestaurant(page, restaurantUrl)) return null;
@@ -120,7 +141,7 @@ function findDoorDashMenuItem(page, item, restaurantUrl) {
     if (control.kind === 'link') return !!itemLink(control.href, page.url, restaurantUrl);
     return control.kind === 'button' && !control.href;
   });
-  if (candidates.length !== 1) return null;
+  if (!candidates.length || candidates.slice(1).some(control => !identicalCard(candidates[0], control))) return null;
   const { ref, label, href = '', menuTitle } = candidates[0];
   return { ref, label, href, dialogTitle: '', ...(itemName(label) !== name ? { menuTitle } : {}) };
 }
@@ -150,4 +171,4 @@ function findDoorDashAddToCart(page, item, restaurantUrl) {
   return { ref: controls[0].ref, label: controls[0].label, dialogTitle: dialog.title };
 }
 
-module.exports = { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };
+module.exports = { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuSearch, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };

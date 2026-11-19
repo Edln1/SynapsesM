@@ -83,5 +83,11 @@ function isDoorDashPage(value){return !!doorDashUrl(snapshot(value).url);}
 function isDoorDashStore(value,query){
   return restaurant(snapshot(value).url)?.kind==='store'&&isDoorDashRestaurant(value,query);
 }
+function doorDashBrandName(value){
+  const listing=restaurant(snapshot(value).url);
+  if(listing?.kind!=='business'||doorDashBlocked(value)||doorDashUnavailable(value))return null;
+  if(listing.id==='437107'&&(!listing.name||listing.name==='mcdonalds'))return 'McDonald’s';
+  return listing.nameWords.join(' ')||null;
+}
 
-module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBlocked,doorDashUnavailable};
+module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBrandName,doorDashBlocked,doorDashUnavailable};

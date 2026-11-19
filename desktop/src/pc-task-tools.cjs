@@ -29,7 +29,7 @@ function createPcTaskTools({windows,browser,assertActive,authorizeAction=async()
   const native=(name,operation)=>(args,context)=>invoke(name,confirmed=>operation(args,{confirmed}),context);
   const web=(name,tool,convert)=>(args,context)=>invoke(name,confirmed=>browser.perform(tool,convert(args),{
     confirmed,
-    ...(tool==='click'&&context?.expectedControl?{expectedControl:context.expectedControl}:{})
+    ...(['click','type'].includes(tool)&&context?.expectedControl?{expectedControl:context.expectedControl}:{})
   }),context);
   return {
     list_apps:simple('list_apps',args=>windows.catalog({query:args.value||''})),
