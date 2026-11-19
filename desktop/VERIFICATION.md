@@ -1,5 +1,11 @@
 # Synapses Windows preview verification — 19 November 2026
 
+## 0.1.9 DoorDash restaurant navigation
+
+The requested command searches within DoorDash, follows a matching storefront link observed in the search results, and verifies the destination. The verified public DoorDash McDonald’s brand listing is available when a local branch is absent. The restaurant flow uses the existing browser executor and does not rely on generated plans. A challenge page stops the flow and is left visible for the user.
+
+DoorDash’s public search results page and public McDonald’s listing were checked independently. The user’s delivery location, signed-in DoorDash session, and speech were not used during validation.
+
 ## 0.1.8 website and search routing
 
 The installed 0.1.7 diagnostic showed a successful planner HTTP response followed by `invalid_target` on step 2. The preceding action was `list_apps`. Local fixtures reproduced that trace with both a website domain without a scheme and a display name used as an app ID. The original rejected argument was not recorded.

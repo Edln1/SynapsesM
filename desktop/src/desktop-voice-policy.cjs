@@ -39,7 +39,15 @@ function directWebPlan(text) {
   if (typeof text !== 'string' || text.length > 500 || /[\u0000-\u001f\u007f]/.test(text)) return null;
   const command = normalizeVoiceCommand(text).replace(/\s+(?:for me(?: please)?|please)[.!?]*$/i, '').replace(/[.!?]+$/, '').trim();
   const sequence = /(?:\bthen\b|\band\s+(?:also\s+)?(?:open|go to|search|find|look|click|play|show|order|add|select|pick|read|type|buy|log|sign)\b|[;,]\s*(?:open|search|find|click|play|order)\b)/i;
-  if (/^search\s+(?:on\s+)?google$/i.test(command)) return {url:sites.google,message:'Opened Google.',complete:true};
+  const restaurantCommand = command.replace(/[\s,.;:]+(?:and(?:\s+then)?|then)\s+(?:go there|open it|open the (?:restaurant|listing|store))$/i, '');
+  const scopedRestaurant = /^(?:search(?:\s+for)?|look up|find|open|go to)\s+(.+?)\s+(?:on|in|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?$/i.exec(restaurantCommand);
+  const doorDashFirst = /^(?:(?:open|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+(?:and(?:\s+then)?|then)\s+(?:search(?:\s+for)?|find|look up)|search\s+(?:on\s+)?(?:the\s+)?door\s*dash(?:\s+(?:app|website))?\s+for)\s+(.+)$/i.exec(restaurantCommand);
+  const restaurant = (scopedRestaurant || doorDashFirst)?.[1].trim();
+  if (restaurant && restaurant.length <= 100 && !sequence.test(restaurant)) {
+    const openListing = restaurantCommand !== command || /^(?:open|go to)\s+/i.test(scopedRestaurant?.[0] || '');
+    return {doorDashRestaurant:{query:restaurant,openListing}};
+  }
+  if (/^search\s+(?:on\s+)?google$/i.test(command)) return {url:sites.google,message:'Opened Google.'};
   const search = /^(?:search(?:\s+on)?\s+(google|you\s*tube|door\s*dash)\s+for\s+|google\s+|search(?:\s+the\s+web)?\s+for\s+|look\s+up\s+)(.+)$/i.exec(command);
   const visit = /^(?:open(?:\s+up)?|visit|go\s+to)\s+(.+)$/i.exec(command);
   const visitThenSearch = visit && /^(.+?)\s+(?:and(?:\s+then)?|then)\s+search\s+(?:for\s+)?(.+)$/i.exec(visit[1]);
@@ -54,14 +62,13 @@ function directWebPlan(text) {
       else if (/\s+(?:on|in|using)\s+(?:this\b|the\s+(?:current|open)\b|(?:chrome|edge|firefox)\b|\S+\.\S+$)/i.test(query)) return null;
     }
     const site = target ? knownSite(target) : sites.google;
-    if (site === sites.google) return {url:site+'search?'+new URLSearchParams({q:query}),message:'Opened Google search results.',complete:true};
-    if (site === sites.youtube) return {url:site+'results?'+new URLSearchParams({search_query:query}),message:'Opened YouTube search results.',complete:true};
-    if (site === sites.doordash) return {url:site,complete:false};
+    if (site === sites.google) return {url:site+'search?'+new URLSearchParams({q:query}),message:'Opened Google search results.'};
+    if (site === sites.youtube) return {url:site+'results?'+new URLSearchParams({search_query:query}),message:'Opened YouTube search results.'};
     return null;
   }
   if (!visit || sequence.test(visit[1])) return null;
   const url = knownSite(visit[1]) || explicitWebUrl(visit[1]);
-  return url ? {url,message:'Opened '+new URL(url).hostname+'.',complete:true} : null;
+  return url ? {url,message:'Opened '+new URL(url).hostname+'.'} : null;
 }
 
 function parseVoiceCommand(text) {

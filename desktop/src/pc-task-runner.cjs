@@ -1,12 +1,12 @@
 'use strict';
 
 const {directWebPlan,explicitWebUrl}=require('./desktop-voice-policy.cjs');
+const {doorDashSearchUrl,selectDoorDashRestaurant,verifyDoorDashRestaurant,doorDashBlocked}=require('./doordash-restaurant.cjs');
 
 const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window','read_window','click_control','type_control','press_key','scroll_window','open_url','read_page','click','type','press','scroll','back','media_play','finish','chat','clarify']);
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
 const DIRECTIONS=Object.freeze(['up','down','left','right']);
 const READ_ACTIONS=Object.freeze(['list_apps','list_windows','read_window','read_page']);
-const BROWSER_ACTIONS=new Set(['open_url','read_page','click','type','press','scroll','back','media_play']);
 const MAX_CONTEXT=20000;
 const MAX_OBSERVATION=10000;
 const PLANNER_MODELS=Object.freeze(['openai/gpt-oss-20b','openai/gpt-oss-120b']);
@@ -218,10 +218,59 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     if(JSON.stringify(body).length>MAX_CONTEXT-384)throw fail('context_limit','The task context is too large. Please ask for a smaller task.');
     return body;
   }
+  async function perform(context, step, action, args){
+    const tool=tools[action];
+    if(!available.includes(action)||typeof tool!=='function')throw fail('unsupported','That action is not available for this PC task.');
+    await guard(context);progress('running-tool',step,action);await guard(context);
+    let result;
+    try{result=await tool(Object.freeze(args),{signal:context.controller.signal});}
+    catch{result={ok:false,message:'The tool could not complete that step.'};}
+    await guard(context);context.executed++;
+    return result;
+  }
+  async function openDoorDashRestaurant(context, {query,openListing}){
+    const searchUrl=doorDashSearchUrl(query);
+    if(!searchUrl)throw fail('unverified','I couldn’t form a DoorDash search for that restaurant.');
+    progress('planning',1);
+    const search=await perform(context,1,'open_url',{target:searchUrl});
+    let page=search?.page;
+    if(doorDashBlocked(page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
+    let listing=selectDoorDashRestaurant(page,query);
+    let step=1;
+    if(!listing&&available.includes('read_page')&&maxSteps>=3){
+      const read=await perform(context,++step,'read_page',{});
+      if(read?.ok===true&&read.page)page=read.page;
+      if(doorDashBlocked(page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
+      listing=selectDoorDashRestaurant(page,query);
+    }
+    let brandPage=false;
+    if(!listing){
+      // DoorDash's public McDonald's listing lets the user select a location if
+      // the local search shows no branch or requires an address.
+      const brand=query.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(brand==='mcdonalds'){
+        listing='https://www.doordash.com/business/mcdonald%27s-437107';
+        brandPage=true;
+      }
+    }
+    if(!listing){
+      if(!openListing&&search?.ok===true&&search.verified===true&&page?.url===searchUrl){
+        progress('complete',step,'finish');
+        return {handled:true,ok:true,message:'Opened DoorDash search results.'};
+      }
+      throw fail('unverified','I couldn’t find that restaurant in DoorDash’s results. Check that a delivery address is set in the Ava browser.');
+    }
+    if(step>=maxSteps)throw fail('step_limit','I reached the task step limit before opening the restaurant.');
+    const opened=await perform(context,++step,'open_url',{target:listing});
+    if(doorDashBlocked(opened?.page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
+    if(!(opened?.ok===true&&opened.verified===true&&verifyDoorDashRestaurant(opened.page,listing)))throw fail('unverified','I couldn’t verify that the DoorDash restaurant listing opened.');
+    progress('complete',step,'finish');
+    return {handled:true,ok:true,message:brandPage?'Opened the McDonald’s listing on DoorDash. DoorDash may ask you to select a location.':`Opened ${query} on DoorDash.`};
+  }
   async function work(context){
     await guard(context);
     const direct=available.includes('open_url') ? directWebPlan(context.text) : null;
-    const taskTools=direct?.complete===false ? available.filter(action=>BROWSER_ACTIONS.has(action)) : available;
+    if(direct?.doorDashRestaurant)return openDoorDashRestaurant(context,direct.doorDashRestaurant);
     for(let step=1;step<=maxSteps;step++){
       await guard(context);progress('planning',step);await guard(context);
       let plan;
@@ -229,7 +278,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       if(startingNavigation){
         plan={action:'open_url',args:{target:startingNavigation.url}};
       }else{
-        const raw=await complete(request(context,taskTools),{signal:context.controller.signal,onTransport:value=>progress('transport',step,undefined,undefined,value)});
+        const raw=await complete(request(context,available),{signal:context.controller.signal,onTransport:value=>progress('transport',step,undefined,undefined,value)});
         await guard(context);
         plan=parseStep(raw);
       }
@@ -242,22 +291,15 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         if(!context.verified||context.failures.size)throw fail('unverified','I could not verify that the task was completed.');
         progress('complete',step,'finish');return {handled:true,ok:true,message:plan.message};
       }
-      const tool=tools[plan.action];
-      if(!taskTools.includes(plan.action)||typeof tool!=='function')throw fail('unsupported','That action is not available for this PC task.');
-      await guard(context);progress('running-tool',step,plan.action);await guard(context);
-      let result;
-      try{result=await tool(Object.freeze(plan.args),{signal:context.controller.signal});}
-      catch(error){result={ok:false,message:'The tool could not complete that step.'};}
-      await guard(context);context.executed++;
+      const result=await perform(context,step,plan.action,plan.args);
       if(result&&(result.confirmationRequired===true||result.requiresConfirmation===true||result.confirmationNeeded===true))return {handled:true,ok:false,message:shortMessage(result.message,'I need your confirmation before continuing.')};
       const verified=!!(result&&result.ok===true&&result.verified===true);
       if(startingNavigation){
         if(!verified)throw fail('unverified','I couldn’t verify that the website opened.');
-        if(startingNavigation.complete){
-          progress('complete',step,'finish');
-          return {handled:true,ok:true,message:startingNavigation.message};
-        }
-      }else if(READ_ACTIONS.includes(plan.action)){
+        progress('complete',step,'finish');
+        return {handled:true,ok:true,message:startingNavigation.message};
+      }
+      if(READ_ACTIONS.includes(plan.action)){
         if(!result||result.ok!==true)context.failures.add(plan.action);
         else context.failures.delete(plan.action);
       }else if(verified){context.verified++;context.failures.delete(plan.action);}else context.failures.add(plan.action);

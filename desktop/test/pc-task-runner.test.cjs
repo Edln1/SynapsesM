@@ -59,22 +59,59 @@ test('clear web navigation and Google searches run through the browser without t
   assert.equal(catalogCalls, 0);
 });
 
-test('a DoorDash search starts on its site and needs another verified action before reporting success', async () => {
-  const calls = [], requests = [];
-  const runner = createPcTaskRunner({
-    assertActive: () => true,
-    complete: planner([done('I searched on DoorDash.')], requests),
-    tools: {
-      open_url: async ({target}) => { calls.push(target); return success('DoorDash loaded.'); },
-      list_apps: async () => { throw new Error('App lookup is unavailable for a site search'); }
+test('spoken DoorDash search and open requests search in DoorDash and navigate to its matching result', async () => {
+  const store = 'https://www.doordash.com/en/store/mcdonalds-city-12345/';
+  for (const request of [
+    'Search McDonalds on the DoorDash app and go there.',
+    'Open Door Dash and search for McDonald’s.',
+    'Search for McDonald\'s on DoorDash and then open it.',
+    'Open McDonald’s on DoorDash.'
+  ]) {
+    const calls = [];
+    let plannerCalls = 0;
+    const runner = createPcTaskRunner({
+      assertActive: () => true,
+      complete: async () => { plannerCalls++; throw new Error('The restaurant search should be direct'); },
+      tools: {open_url: async ({target}) => {
+        calls.push(target);
+        const controls = calls.length === 1 ? [
+          {href:'https://www.doordash.com/en/store/other-123/',label:'Other Restaurant'},
+          {href:store,label:'McDonald’s'}
+        ] : [];
+        return {ok:true,verified:true,page:{url:target,title:calls.length === 1 ? 'Search DoorDash' : 'McDonald’s menu',controls}};
+      }}
+    });
+    const result = await runner.run(request);
+    assert.equal(result.ok, true, request);
+    assert.equal(plannerCalls, 0);
+    assert.equal(new URL(calls[0]).hostname, 'www.doordash.com');
+    assert.match(decodeURIComponent(new URL(calls[0]).pathname), /^\/search\/store\/McDonald.?s\/$/i);
+    assert.equal(calls[1], store);
+  }
+});
+
+test('DoorDash navigation verifies the brand fallback and stops for a verification challenge', async () => {
+  const brand = 'https://www.doordash.com/business/mcdonald%27s-437107';
+  for (const mode of ['brand', 'challenge', 'wrong-destination']) {
+    const calls = [];
+    const runner = createPcTaskRunner({
+      assertActive: () => true,
+      tools: {open_url: async ({target}) => {
+        calls.push(target);
+        const url = calls.length===2 && mode==='wrong-destination' ? 'https://www.doordash.com/' : target;
+        const title = mode==='challenge' ? 'Checking if the site connection is secured' : 'DoorDash';
+        return {ok:true,verified:true,page:{url,title,controls:[]}};
+      }}
+    });
+    const result = await runner.run('Search DoorDash for McDonalds.');
+    assert.equal(result.ok, mode==='brand', mode);
+    if(mode==='challenge'){
+      assert.equal(calls.length,1);
+      assert.match(result.message,/complete the check/);
+    }else{
+      assert.equal(calls[1],brand);
     }
-  });
-  const result = await runner.run('Open DoorDash and search for McDonald’s.');
-  assert.equal(result.ok, false);
-  assert.deepEqual(calls, ['https://www.doordash.com/']);
-  assert.equal(requests.length, 1);
-  assert.match(requests[0].messages[1].content, /DoorDash loaded/);
-  assert.ok(!requests[0].response_format.json_schema.schema.properties.action.enum.includes('list_apps'));
+  }
 });
 
 test('a direct navigation reports failure when the browser cannot verify the destination', async () => {

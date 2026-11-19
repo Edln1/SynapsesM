@@ -1,7 +1,8 @@
-Synapses Desktop 0.1.8 preview improves PC voice website and search routing.
+Synapses Desktop 0.1.9 preview adds direct DoorDash restaurant search and listing navigation to PC voice.
 
 - Clear commands such as opening DoorDash or searching Google navigate directly in the Ava browser without waiting for a model response.
-- A search scoped to DoorDash opens DoorDash first and continues through its browser controls.
+- Say “Search for McDonald’s on DoorDash and go there” to search inside DoorDash and open a matching listing. If no matching branch appears, Ava can open DoorDash’s McDonald’s brand page, where you can select your location.
+- Ava verifies the listing destination. If DoorDash requests a security check, the browser stays on that check for you to complete.
 - Invalid tool arguments from the planner get a bounded correction and model fallback. The executor still validates public addresses and observed app and control references.
 
 - Turn on **Start PC voice** in the tray or Ava menu. Normal speech-to-speech remains separate.
