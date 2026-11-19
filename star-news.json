@@ -1,0 +1,221 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-19T06:09:01.215Z",
+  "sources": [
+    {
+      "id": "nvidia",
+      "name": "NVIDIA",
+      "homepage": "https://blogs.nvidia.com/",
+      "checkedAt": "2026-11-19T06:09:01.215Z",
+      "status": "ok"
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "homepage": "https://about.fb.com/",
+      "checkedAt": "2026-11-19T06:09:01.215Z",
+      "status": "ok"
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "homepage": "https://blog.youtube/",
+      "checkedAt": "2026-11-19T06:09:01.215Z",
+      "status": "ok"
+    }
+  ],
+  "items": [
+    {
+      "id": "a9ef6dbadc6b0013c70d",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "NVIDIA RTX Spark Compact Desktops Out Now",
+      "url": "https://blogs.nvidia.com/blog/rtx-spark-desktop-local-ai-available-now/",
+      "publishedAt": "2026-11-18T14:00:31.000Z"
+    },
+    {
+      "id": "ddf115d7813094d00ca0",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Forum, a Dedicated App for Facebook Groups, Is Now Available in Indonesia",
+      "url": "https://about.fb.com/news/2026/11/forum-a-dedicated-app-for-facebook-groups-is-now-available-in-indonesia/",
+      "publishedAt": "2026-11-19T06:05:13.000Z"
+    },
+    {
+      "id": "954b84ae97821e45e189",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "Coming soon to YouTube: A first look at the next wave of must-see creator-led entertainment",
+      "url": "https://blog.youtube/news-and-events/youtube-creator-premieres-slate-2026/",
+      "publishedAt": "2026-11-18T04:00:00.000Z"
+    },
+    {
+      "id": "49e988fe944963bc5d35",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "Ian Buck Kicks Off NVIDIA’s Week at SC26 as Science Enters the Age of Agents",
+      "url": "https://blogs.nvidia.com/blog/ian-buck-sc26/",
+      "publishedAt": "2026-11-17T14:00:10.000Z"
+    },
+    {
+      "id": "747dbf1590966a750b01",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Our Approach to Updating Our Commercial Terms of Service",
+      "url": "https://about.fb.com/news/2026/11/our-approach-to-updating-our-commercial-terms-of-service/",
+      "publishedAt": "2026-11-18T18:01:47.000Z"
+    },
+    {
+      "id": "a00180bed169fc837205",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "There from the start: YouTube Music celebrates Latin artists at Latin GRAMMY® 2026",
+      "url": "https://blog.youtube/news-and-events/youtube-latin-music-las-vegas-2026/",
+      "publishedAt": "2026-11-16T18:00:00.000Z"
+    },
+    {
+      "id": "0f13e34240505e908ad0",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "NVIDIA DGX Spark Developer Kit Turns a Desk Into a Supercomputing Lab",
+      "url": "https://blogs.nvidia.com/blog/dgx-spark-hpc-developer-kit-sc26/",
+      "publishedAt": "2026-11-16T23:00:05.000Z"
+    },
+    {
+      "id": "b0dfaac3cf70b7a94e4f",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Meta Welcomes Loblaw as First Canadian Retail Partner to Muse",
+      "url": "https://about.fb.com/news/2026/11/meta-welcomes-loblaw-as-first-canadian-retail-partner-to-muse/",
+      "publishedAt": "2026-11-18T14:07:00.000Z"
+    },
+    {
+      "id": "a0e0e55174d5ebaa85cf",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "Paddy Galloway dives deep with us on Video A/B, Ask Studio, and evolving over time",
+      "url": "https://blog.youtube/creator-and-artist-stories/creator-insider-paddy-galloway-youtube-ab-testing-ask-studio/",
+      "publishedAt": "2026-11-16T17:30:00.000Z"
+    },
+    {
+      "id": "4c9c656647cd3a23c71c",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "How the World’s Most Advanced AI Infrastructure Supply Chain Invents the Future",
+      "url": "https://blogs.nvidia.com/blog/ai-infrastructure-supply-chain/",
+      "publishedAt": "2026-11-16T20:00:37.000Z"
+    },
+    {
+      "id": "61001433cd15e382e460",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Muse Is Now Available in Australia: The World’s First Personal AI Agent Built for Everyone",
+      "url": "https://about.fb.com/news/2026/11/muse-is-now-available-in-australia/",
+      "publishedAt": "2026-11-17T18:00:31.000Z"
+    },
+    {
+      "id": "848f18a5f3c26d3f4f23",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "YouTube celebrates the launch and cultural impact of Grand Theft Auto VI",
+      "url": "https://blog.youtube/news-and-events/youtube-rockstar-games-gta-vi-launch/",
+      "publishedAt": "2026-11-12T15:00:00.000Z"
+    },
+    {
+      "id": "fc3a56c14a550ef5b6bc",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "Lambda Boosts AI Factory Resiliency and Efficiency With NVIDIA Photonics",
+      "url": "https://blogs.nvidia.com/blog/lambda-photonics/",
+      "publishedAt": "2026-11-16T16:00:51.000Z"
+    },
+    {
+      "id": "3878cb92b138613b6a90",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "An Update on the Content We Recommend on Instagram in India",
+      "url": "https://about.fb.com/news/2026/11/an-update-on-the-content-we-recommend-on-instagram-in-india/",
+      "publishedAt": "2026-11-17T03:58:09.000Z"
+    },
+    {
+      "id": "57dd55783b0d1ddcd041",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "Paris Hilton talks vulnerability, privilege and creativity for ADHD Awareness Month",
+      "url": "https://blog.youtube/creator-and-artist-stories/paris-hilton-adhd-awareness-interview/",
+      "publishedAt": "2026-11-10T19:00:00.000Z"
+    },
+    {
+      "id": "c046784cf46697f9446f",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "NVIDIA Expands Slurm to Bring Quantum Computing Into Supercomputing",
+      "url": "https://blogs.nvidia.com/blog/slurm-quantum-computing-supercomputing/",
+      "publishedAt": "2026-11-16T16:00:47.000Z"
+    },
+    {
+      "id": "d9e47f512715dddc8f18",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Introducing Direct: An App Just for Messaging",
+      "url": "https://about.fb.com/news/2026/11/introducing-direct-an-app-just-for-messaging/",
+      "publishedAt": "2026-11-17T01:00:48.000Z"
+    },
+    {
+      "id": "8ccc0f3fec8d411d0feb",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "Watch the 'Always Lalisa' documentary with YouTube Premium on November 18",
+      "url": "https://blog.youtube/culture-and-trends/youtube-premium-always-lalisa-documentary/",
+      "publishedAt": "2026-11-10T15:00:00.000Z"
+    },
+    {
+      "id": "b696bf684c37a1c04a6f",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "NVIDIA Sweeps MLPerf Training and Endpoints as Vera Rubin Debuts With Leading Performance",
+      "url": "https://blogs.nvidia.com/blog/mlperf-training-endpoints-vera-rubin/",
+      "publishedAt": "2026-11-16T16:00:25.000Z"
+    },
+    {
+      "id": "59e284e3cfc62c7e1899",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "94% of Singapore Small Business Owners Surveyed Say More AI Guidance Is Needed",
+      "url": "https://about.fb.com/news/2026/11/94-of-singapore-small-business-owners-surveyed-say-more-ai-guidance-is-needed/",
+      "publishedAt": "2026-11-16T06:25:27.000Z"
+    },
+    {
+      "id": "d8314083fd39a57ba675",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "A change to YouTube’s inclusion on the U.S. Billboard charts",
+      "url": "https://blog.youtube/news-and-events/youtube-billboard-chart-update/",
+      "publishedAt": "2026-11-09T16:00:00.000Z"
+    },
+    {
+      "id": "970d377277e32883700d",
+      "topic": "nvidia",
+      "source": "NVIDIA",
+      "title": "NVIDIA CUDA-X Libraries Give Agents the Tools to Accelerate Scientific Discovery",
+      "url": "https://blogs.nvidia.com/blog/cuda-x-libraries-agents-accelerate-scientific-discovery/",
+      "publishedAt": "2026-11-16T16:00:16.000Z"
+    },
+    {
+      "id": "6897443716994d3c82fe",
+      "topic": "meta",
+      "source": "Meta",
+      "title": "Meta’s New Agreements Bring Clean Manufacturing to Data Center Supply Chains",
+      "url": "https://about.fb.com/news/2026/11/meta-new-agreements-clean-manufacturing-data-center-supply-chains/",
+      "publishedAt": "2026-11-12T12:00:07.000Z"
+    },
+    {
+      "id": "af0aaaa39e695c4c2257",
+      "topic": "youtube",
+      "source": "YouTube",
+      "title": "New accessibility tags come to YouTube Playables",
+      "url": "https://blog.youtube/news-and-events/new-accessibility-tags-youtube-playables/",
+      "publishedAt": "2026-11-02T20:00:00.000Z"
+    }
+  ]
+}

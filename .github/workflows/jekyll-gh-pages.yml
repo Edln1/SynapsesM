@@ -8,6 +8,9 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  # Refresh the cached official headlines without per-hover API requests.
+  schedule:
+    - cron: '23 */2 * * *'
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -28,6 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up headline fetch runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refresh cached official company headlines
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node scripts/fetch-star-news.mjs star-news.json
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll

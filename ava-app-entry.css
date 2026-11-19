@@ -1,0 +1,80 @@
+/* Every rule is opt-in: the ordinary Synapses site is unchanged without the JS flag. */
+html.ava-app-mode, html.ava-app-mode body { min-height:100%; margin:0; background:#000!important; color-scheme:dark; }
+html.ava-app-mode #sidebar,
+html.ava-app-mode #chatHistoryPanel,
+html.ava-app-mode #chpSidebar,
+html.ava-app-mode #avaFloatingAssistant,
+html.ava-app-mode #winStrip,
+html.ava-app-mode #sidebarToggle,
+html.ava-app-mode #bnavNotesBtn,
+html.ava-app-mode #bnavAskBtn,
+html.ava-app-mode #bnavCallBtn,
+html.ava-app-mode #bnavSettingsBtn,
+html.ava-app-mode #bnavControlCenterBtn,
+html.ava-app-mode #bnavPulseBtn,
+html.ava-app-mode #bnavImageGenBtn,
+html.ava-app-mode #bnavBLRow,
+html.ava-app-mode #bnavBLMoreBtn,
+html.ava-app-mode #bnavMoreBtn,
+html.ava-app-mode #bnavCollapseHandle,
+html.ava-app-mode #bnavExpandBtn,
+html.ava-app-mode #synTourFloatBtn,
+html.ava-app-mode #bnavCCPanel,
+html.ava-app-mode #appSplash,
+html.ava-app-mode #globalBeamsCanvas,
+html.ava-app-mode #deepSpaceCanvas { display:none!important; }
+
+/* Keep the legacy DOM mounted. display:none on main/body would break its voice,
+   verification and account surfaces; targeted descendants can remain visible. */
+html.ava-app-mode main.main { margin:0!important; padding:0!important; width:100%!important; visibility:hidden; pointer-events:none; }
+html.ava-app-mode main.main > .top-bar { visibility:hidden; pointer-events:none; }
+html.ava-app-mode main.main .modal-overlay,
+html.ava-app-mode main.main dialog[open],
+html.ava-app-mode main.main [role="dialog"],
+html.ava-app-mode #authModal,
+html.ava-app-mode #avaWelcome,
+html.ava-app-mode #chpUserDock,
+html.ava-app-mode #avaCreditsDialog[open] { visibility:visible; pointer-events:auto; }
+html.ava-app-mode[data-ava-app-stage="voice"] main.main #sec-chat,
+html.ava-app-mode[data-ava-app-stage="voice"] main.main .top-bar,
+html.ava-app-mode[data-ava-app-stage="tools"] main.main .section.active { visibility:visible; pointer-events:auto; }
+html.ava-app-mode[data-ava-app-stage="voice"] main.main .top-bar .cat-btn { visibility:hidden; pointer-events:none; }
+
+html.ava-app-mode #avaCompanionChat,
+html.ava-app-mode #avaCompanionChat[data-compact="true"] {
+  inset:0!important; width:100%!important; max-width:none!important;
+  height:100dvh!important; max-height:none!important; margin:0!important;
+  border:0!important; border-radius:0!important; box-shadow:none!important; background:#000!important;
+}
+html.ava-app-mode #avaCompanionChat .ac-top {
+  padding-top:env(safe-area-inset-top,0px); min-height:calc(62px + env(safe-area-inset-top,0px));
+  height:auto; padding-right:12px; padding-left:16px;
+}
+html.ava-app-mode #avaCompanionChat .ac-title h2 { font-size:22px; font-weight:500; }
+html.ava-app-mode #avaCompanionChat #acSize,
+html.ava-app-mode #avaCompanionChat .ac-conversation-head { display:none!important; }
+html.ava-app-mode #avaCompanionChat .ac-layout { grid-template-columns:minmax(0,1fr); }
+html.ava-app-mode #avaCompanionChat .ac-rail { display:none; }
+html.ava-app-mode #avaCompanionChat .ac-history-toggle { display:inline-flex; }
+html.ava-app-mode #avaCompanionChat[data-history="true"] .ac-rail {
+  display:flex; position:absolute; left:0; top:calc(62px + env(safe-area-inset-top,0px));
+  bottom:0; width:min(300px,calc(100% - 45px)); z-index:3; background:#080808;
+}
+html.ava-app-mode #avaCompanionChat .ac-input { font-size:16px!important; }
+html.ava-app-mode #avaCompanionChat .ac-bottom { padding-bottom:max(12px,env(safe-area-inset-bottom,0px)); }
+
+html.ava-app-mode #avaAppReturn { position:fixed; z-index:94000; bottom:max(14px,env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:7px 8px 7px 13px; max-width:calc(100% - 28px); background:#0d0e11; border:1px solid #292c33; border-radius:12px; color:#a7abb5; font:12px/1.5 'DM Sans',sans-serif; }
+html.ava-app-mode #avaAppReturn[hidden] { display:none!important; }
+html.ava-app-mode #avaAppStatus:empty { display:none; }
+html.ava-app-mode #avaAppReturn button { border:1px solid #373a43; border-radius:8px; min-height:38px; padding:8px 13px; background:#191b20; color:#e0e2e7; font:inherit; white-space:nowrap; }
+html.ava-app-mode #avaAppMenu { position:fixed; inset:auto 12px max(14px,env(safe-area-inset-bottom,0px)); width:calc(100% - 24px); max-width:390px; margin:0 auto; padding:20px; color:#dedfe5; background:#0b0c0f; border:1px solid #272a31; border-radius:16px; font:13px/1.5 'DM Sans',sans-serif; box-sizing:border-box; }
+html.ava-app-mode #avaAppMenu::backdrop { background:#0009; }
+html.ava-app-mode #avaAppMenu .ava-app-menu-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+html.ava-app-mode #avaAppMenu h2 { margin:0; font-size:20px; font-weight:500; }
+html.ava-app-mode #avaAppMenu p { margin:0 0 17px; color:#858b99; font-size:11px; overflow-wrap:anywhere; }
+html.ava-app-mode #avaAppMenu > button { display:block; width:100%; min-height:43px; margin-top:8px; border:1px solid #292d35; border-radius:8px; padding:10px 13px; color:#c7cbd5; background:#14161b; text-align:left; font:inherit; }
+html.ava-app-mode #avaAppMenu .ava-app-menu-close { width:34px; height:34px; border:1px solid #282c34; border-radius:8px; background:#121419; color:#9ea5b4; font:20px/1 sans-serif; }
+html.ava-app-mode #avaAppMenu button { cursor:pointer; touch-action:manipulation; }
+html.ava-app-mode #avaAppMenu button:focus-visible,
+html.ava-app-mode #avaAppReturn button:focus-visible { outline:2px solid #8692aa; outline-offset:3px; }
+@media(prefers-reduced-motion:reduce) { html.ava-app-mode #avaAppMenu,html.ava-app-mode #avaAppReturn { animation:none!important; transition:none!important; } }
