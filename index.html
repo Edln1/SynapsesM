@@ -14,7 +14,7 @@
 </script>
 <link rel="stylesheet" href="ava-app-entry.css?v=20261119-mobile-motion3">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-voice4" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-voice5" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -67653,6 +67653,14 @@ function _fluxConnect(initialSetup) {
     if (_flux.ws !== sock || !speech.current()) return;
     if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
     _flux.connected = true;
+    if (_flux.waitForCapture) {
+      var captureTimer = setTimeout(function () {
+        if (_flux.captureTimer !== captureTimer) return;
+        _flux.captureTimer = null;
+        if (_flux.ws === sock && speech.current() && _flux.waitForCapture && typeof speech.error === 'function') speech.error('asr_timeout');
+      }, 2500);
+      _flux.captureTimer = captureTimer;
+    }
     console.log('[Flux] connected');
   };
   sock.onmessage = function (evt) {
@@ -67689,21 +67697,22 @@ function _fluxSessionStart(speech) {
   if (!window._stream || !speech || typeof speech.current!=='function' || typeof speech.accept!=='function' || !speech.current()) return false;
   _flux.speech = speech;
   try {
-    var captureContext = new (window.AudioContext || window.webkitAudioContext)();
+    var mobileAva = window.document?.documentElement?.classList.contains('ava-app-mode');
+    var unlockedContext = mobileAva && speech.captureContext;
+    _flux.ownsContext = !unlockedContext || unlockedContext.state === 'closed';
+    var captureContext = _flux.ownsContext ? new (window.AudioContext || window.webkitAudioContext)() : unlockedContext;
     _flux.ctx = captureContext;
-    var waitForAudio = window.document?.documentElement?.classList.contains('ava-app-mode') &&
+    _flux.waitForCapture = !!mobileAva;
+    var waitForAudio = mobileAva &&
       (captureContext.state === 'suspended' || captureContext.state === 'interrupted');
     if (waitForAudio) {
-      // A mobile browser may resolve microphone permission after the tap's
-      // gesture has ended. Its audio graph can then stay silent on an open socket.
+      // Permission may resolve outside the original tap. Reuse its unlocked
+      // context when possible and bound recovery if the device suspends it.
       function checkAudio(reason) {
         if (_flux.ctx !== captureContext || _flux.speech !== speech || _flux.resumeTimer !== resumeTimer) return;
         clearTimeout(resumeTimer);
         _flux.resumeTimer = null;
-        if (!speech.current()) return;
-        if (captureContext.state === 'running') {
-          if (typeof speech.listening === 'function') speech.listening();
-        } else if (typeof speech.error === 'function') speech.error(reason);
+        if (speech.current() && captureContext.state !== 'running' && typeof speech.error === 'function') speech.error(reason);
       }
       var resumeTimer = setTimeout(function() { checkAudio('asr_timeout'); }, 2500);
       _flux.resumeTimer = resumeTimer;
@@ -67713,19 +67722,27 @@ function _fluxSessionStart(speech) {
     _flux.src = _flux.ctx.createMediaStreamSource(window._stream);
     _flux.proc = _flux.ctx.createScriptProcessor(2048, 1, 1);
     var silent = _flux.ctx.createGain();
+    _flux.sink = silent;
     silent.gain.value = 0;
     _flux.src.connect(_flux.proc);
     _flux.proc.connect(silent);
     silent.connect(_flux.ctx.destination);
     _flux.proc.onaudioprocess = function (e) {
-      if (!_flux.ws || _flux.ws.readyState !== WebSocket.OPEN) return;
+      if (_flux.ctx !== captureContext || _flux.speech !== speech || !speech.current() || !_flux.ws || _flux.ws.readyState !== WebSocket.OPEN) return;
+      if (mobileAva && (!_flux.connected || captureContext.state !== 'running')) return;
       var input = e.inputBuffer.getChannelData(0);
-      var resampled = _fluxResampleTo16k(input, _flux.ctx.sampleRate);
+      var resampled = _fluxResampleTo16k(input, captureContext.sampleRate);
       var int16 = _fluxFloat32ToInt16(resampled);
       _flux.ws.send(int16.buffer);
+      if (_flux.waitForCapture) {
+        _flux.waitForCapture = false;
+        clearTimeout(_flux.captureTimer);
+        _flux.captureTimer = null;
+        if (typeof speech.listening === 'function') speech.listening();
+      }
     };
     if (!_fluxConnect(true)) throw new Error('Flux socket could not start');
-    if (!waitForAudio && typeof speech.listening === 'function') speech.listening();
+    if (!mobileAva && typeof speech.listening === 'function') speech.listening();
     return true;
   } catch (eS) {
     console.error('[Flux] session start failed, falling back to legacy listening', eS);
@@ -67737,12 +67754,15 @@ function _fluxSessionStart(speech) {
 function _fluxSessionStop() {
   if (_flux.resumeTimer != null) { clearTimeout(_flux.resumeTimer); _flux.resumeTimer = null; }
   if (_flux.connectTimer) { clearTimeout(_flux.connectTimer); _flux.connectTimer = null; }
+  if (_flux.captureTimer != null) { clearTimeout(_flux.captureTimer); _flux.captureTimer = null; }
   if (_flux.reconnectTimer) { clearTimeout(_flux.reconnectTimer); _flux.reconnectTimer = null; }
-  try { if (_flux.proc) _flux.proc.disconnect(); } catch (e1) {}
+  try { if (_flux.proc) { _flux.proc.onaudioprocess = null; _flux.proc.disconnect(); } } catch (e1) {}
   try { if (_flux.src) _flux.src.disconnect(); } catch (e2) {}
-  try { if (_flux.ctx && _flux.ctx.state !== 'closed') _flux.ctx.close(); } catch (e3) {}
+  try { if (_flux.sink) _flux.sink.disconnect(); } catch (e5) {}
+  try { if (_flux.ownsContext && _flux.ctx && _flux.ctx.state !== 'closed') _flux.ctx.close(); } catch (e3) {}
   try { if (_flux.ws) { _flux.ws.onclose = null; _flux.ws.close(); } } catch (e4) {}
-  _flux.ws = null; _flux.ctx = null; _flux.src = null; _flux.proc = null; _flux.speech = null;
+  _flux.ws = null; _flux.ctx = null; _flux.src = null; _flux.proc = null; _flux.sink = null; _flux.speech = null;
+  _flux.ownsContext = false; _flux.waitForCapture = false;
   _flux.connected = false; _flux.turnActive = false; _flux.bargedTts = false;
 }
 window._fluxSessionStart = _fluxSessionStart;
@@ -68528,8 +68548,8 @@ function speakVoiceReply(text) {
     document.body.classList.toggle('voice-live', !!v);
     var inAvaApp = window.document?.documentElement?.classList.contains('ava-app-mode');
     if (inAvaApp && was !== !!v) {
+      btnState('off');
       if (v && typeof _notifyAvaAppVoiceIssue === 'function') _notifyAvaAppVoiceIssue('');
-      btnState(v ? 'listen' : 'off');
       if (window.avaAppEntry) window.avaAppEntry.refresh('voice-toggled');
     }
     if(!v){
@@ -68712,6 +68732,12 @@ function speakVoiceReply(text) {
     if (_micTrackDead()) { _reacquireMic(); return; }
     if (!_busy) { _busySince = 0; return; }
     var now = Date.now();
+    // The mobile recorder can sit in silence while it waits for the next turn.
+    // Keep the request watchdog focused on transcription and reply work.
+    if (window.document?.documentElement?.classList.contains('ava-app-mode') && _recorder && _recorder.state === 'recording') {
+      _busySince = now;
+      return;
+    }
     if (_busySince === 0) { _busySince = now; return; }
     var stuckMs = now - _busySince;
     // Check if audio is actually playing (Web Audio TTS or HTML audio)
@@ -69993,13 +70019,21 @@ function speakVoiceReply(text) {
     };
     _startAnalyser(a);
     a.onended = function() { _unregister(); _stopAnalyser(); if (_speakIsStale(turnId, genId)) { _ttsBusy = false; return; } onEnded(); };
-    a.onerror = function() { _unregister(); _stopAnalyser(); if (_speakIsStale(turnId, genId)) { _ttsBusy = false; return; } onEnded(); };
+    a.onerror = function() {
+      _unregister(); _stopAnalyser();
+      if (_speakIsStale(turnId, genId)) { _ttsBusy = false; return; }
+      _notifyAvaAppVoiceIssue('Ava could not play her reply. Try again.');
+      onEnded();
+    };
     var p = a.play();
     if (p && p.then) {
       p.then(function() { _killIfStale(); }).catch(function(e) {
         _unregister();
         if (_speakIsStale(turnId, genId)) return;
-        toast('Playback blocked: ' + e.message); _stopAnalyser(); _busy = false; _busySince = 0; _ttsBusy = false; setTimeout(toastHide, 1500); if (_on) setTimeout(record, 1000);
+        var inAvaApp = _notifyAvaAppVoiceIssue('Ava could not play her reply. Try again.');
+        _stopAnalyser();
+        if (inAvaApp) { onEnded(); return; }
+        toast('Playback blocked: ' + e.message); _busy = false; _busySince = 0; _ttsBusy = false; setTimeout(toastHide, 1500); if (_on) setTimeout(record, 1000);
       });
     }
   }
@@ -70298,6 +70332,7 @@ function speakVoiceReply(text) {
     }).catch(function(e) {
       if (_speakIsStale(turnId, genId)) return;
       console.error('[ElevenLabs TTS] speak() fetch failed', e);
+      if (typeof _notifyAvaAppVoiceIssue === 'function') _notifyAvaAppVoiceIssue('Ava’s voice service could not play a reply. Try again.');
       _busy = false; _busySince = 0; _ttsBusy = false; if (_on) setTimeout(record, 1000);
     });
   }
@@ -70317,7 +70352,7 @@ function speakVoiceReply(text) {
         var bu = URL.createObjectURL(blob);
         var a = new Audio(bu);
         _playAudio(a, function() { _busy = false; _busySince = 0; _ttsBusy = false; try { if (window._toastDebug) console.log('[toast][site:playAudio-onEnded-2]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); }, genId, turnId);
-      }).catch(function(e) { if (_speakIsStale(turnId, genId)) return; _busy = false; _busySince = 0; _ttsBusy = false; if (_on) setTimeout(record, 1000); });
+      }).catch(replyFailed);
       return;
     }
     var voice = (typeof _dgVoice !== 'undefined') ? _dgVoice : 'aura-2-thalia-en';
@@ -70344,7 +70379,7 @@ function speakVoiceReply(text) {
             var bu2 = URL.createObjectURL(blob);
             var a2 = new Audio(bu2);
             _playAudio(a2, function() { _busy = false; _busySince = 0; _ttsBusy = false; try { if (window._toastDebug) console.log('[toast][site:playAudio-onEnded-3]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); URL.revokeObjectURL(bu2); if (_on) setTimeout(record, 180); }, genId, turnId);
-          });
+          }).catch(replyFailed);
           return;
         }
         var reader = r.body.getReader();
@@ -70363,7 +70398,7 @@ function speakVoiceReply(text) {
               playing = true;
               _playAudio(a, function() { _busy = false; _busySince = 0; _ttsBusy = false; try { if (window._toastDebug) console.log('[toast][site:playAudio-onEnded-4]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); URL.revokeObjectURL(burl); if (_on) setTimeout(record, 180); }, genId, turnId);
             }
-          }).catch(function(e) { if (_speakIsStale(turnId, genId)) return; _busy = false; _busySince = 0; _ttsBusy = false; if (_on) setTimeout(record, 1000); });
+          }).catch(replyFailed);
         }
         sb.addEventListener('updateend', function() {
           if (ended) { try { ms.endOfStream(); } catch(e){} return; }
@@ -70375,12 +70410,14 @@ function speakVoiceReply(text) {
         var p = a.play();
         if (p && p.catch) p.catch(function(){});
       }
-    }).catch(function(e) {
+    }).catch(replyFailed);
+    function replyFailed() {
       clearTimeout(_dgTimer2);
       if (_speakIsStale(turnId, genId)) return;
+      if (typeof _notifyAvaAppVoiceIssue === 'function') _notifyAvaAppVoiceIssue('Ava’s voice service could not play a reply. Try again.');
       _busy = false; _busySince = 0; _ttsBusy = false;
       if (_on) setTimeout(record, 1000);
-    });
+    }
   }
 
   function _desktopVoiceFluxFallback(generation,reasonCode){
@@ -70408,6 +70445,7 @@ function speakVoiceReply(text) {
       }
       try{
         _ensureBargeAnalyser();record();
+        if(!_micSessionCurrent(generation))return;
         if(!_recorder||_recorder.state!=='recording')throw new Error('Legacy microphone recording did not start');
         if(desktop&&typeof client.noteFallback==='function')client.noteFallback(reasonCode);
       }catch(error){failed('Microphone opened, but speech recognition could not start. Try again.');}
@@ -70446,6 +70484,7 @@ function speakVoiceReply(text) {
     _bargeTurnActive = false;
     _ttsBusy = false;
     if (!text || text.trim().length < 2) { _busy = false; _busySince = 0; if (_on) record(); return; }
+    if (speech && speech.acceptedSpeech === true && typeof _notifyAvaAppVoiceIssue === 'function') _notifyAvaAppVoiceIssue('');
     var _myTurn = ++_voiceTurnId;
     var _bargeDirectNudge = '';
     if (_fromBarge) {
@@ -71477,7 +71516,7 @@ function speakVoiceReply(text) {
     _voiceReq.then(function(r) {
       if (_myTurn !== _voiceTurnId) return Promise.reject(null); // stale turn — a newer one is already live
       if (r.status === 429) {
-        if (!_avatarLive()) toast('One moment...');
+        if (!_notifyAvaAppVoiceIssue('Ava’s reply service is busy. Try speaking again in a moment.') && !_avatarLive()) toast('One moment...');
         _busy = false; _busySince = 0;
         if (_on) setTimeout(record, 1200);
         return Promise.reject(null);
@@ -71590,7 +71629,7 @@ function speakVoiceReply(text) {
               }).catch(function(e){
                 if (_myTurn !== _voiceTurnId) return;
                 _busy = false; _busySince = 0;
-                if (!_avatarLive()) toast('LLM error: ' + (e && e.message));
+                if (!_notifyAvaAppVoiceIssue('Ava heard you but could not get a reply. Try speaking again.') && !_avatarLive()) toast('LLM error: ' + (e && e.message));
                 if (_on) setTimeout(record, 1000);
               });
               return;
@@ -71647,7 +71686,7 @@ function speakVoiceReply(text) {
               if (!_spokeEarly) _deliverFollowupReply(reply, _myTurn);
             } else {
               console.log('[Voice] Empty reply from LLM');
-              if (!_avatarLive()) toast('Hmm, try that again?');
+              if (!_notifyAvaAppVoiceIssue('Ava heard you but could not get a reply. Try speaking again.') && !_avatarLive()) toast('Hmm, try that again?');
               _busy = false; _busySince = 0;
               if (_on) record();
             }
@@ -71693,10 +71732,16 @@ function speakVoiceReply(text) {
             } catch (e) {}
           });
           readChunk();
-        }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+        }).catch(_voiceReplyFailed);
       }
       readChunk();
-    }).catch(function(e) { if (_myTurn !== _voiceTurnId) return; _busy = false; _busySince = 0; if (e) { if (!_avatarLive()) toast('LLM error: ' + e.message); } if (_on) setTimeout(record, 1000); });
+    }).catch(_voiceReplyFailed);
+    function _voiceReplyFailed(error) {
+      if (_myTurn !== _voiceTurnId) return;
+      _busy = false; _busySince = 0;
+      if (error && !_notifyAvaAppVoiceIssue('Ava heard you but could not get a reply. Try speaking again.') && !_avatarLive()) toast('LLM error: ' + error.message);
+      if (_on) setTimeout(record, 1000);
+    }
     }); // end Promise.all voice search (ensure-places now runs in background, unawaited)
   }
 
@@ -71727,7 +71772,14 @@ function speakVoiceReply(text) {
       method: 'POST',
       body: fd,
       signal: _sttCtrl ? _sttCtrl.signal : undefined
-    }).then(function(r) { if(r.ok===false)throw new Error('Speech recognition request failed');return r.json(); }).then(function(d) {
+    }).then(function(r) {
+      if(r.ok===false){
+        var error = new Error('Speech recognition request failed');
+        error.status = r.status;
+        throw error;
+      }
+      return r.json();
+    }).then(function(d) {
       clearTimeout(_sttTimer);
       if(!_micSessionCurrent(sttGeneration))return;
       if(d&&d.error)throw new Error('Speech recognition provider rejected the request');
@@ -71809,6 +71861,14 @@ function speakVoiceReply(text) {
     }).catch(function(e) {
       clearTimeout(_sttTimer);
       if(!_micSessionCurrent(sttGeneration))return;
+      if (window.document?.documentElement?.classList.contains('ava-app-mode')) {
+        var message = 'Speech recognition could not complete. Tap the microphone to try again.';
+        if (e?.status === 429) message = 'Speech recognition is busy. Wait a moment, then tap the microphone to try again.';
+        else if (e?.name === 'AbortError') message = 'Speech recognition timed out. Tap the microphone to try again.';
+        stopAll();
+        _reportVoiceIssue(message);
+        return;
+      }
       _desktopVoiceSpeechError();
       if (e && e.name === 'AbortError') console.warn('[Voice] STT timed out (8s)');
       else toast('STT error: ' + (e && e.message ? e.message : 'failed'));
@@ -71823,11 +71883,15 @@ function speakVoiceReply(text) {
   function record() {
     if (!_on) return;
     var desktopVoice=window.synapsesDesktopVoiceClient;
-    if((desktopVoice&&typeof desktopVoice.active==='function'&&desktopVoice.active())||window.document?.documentElement?.classList.contains('ava-app-mode')){
+    var mobileAva = window.document?.documentElement?.classList.contains('ava-app-mode');
+    if((desktopVoice&&typeof desktopVoice.active==='function'&&desktopVoice.active())||mobileAva){
       if(_ttsBusy)return;
       // The persistent Flux session is already the listener. Legacy capture
       // resumes only after Flux releases ownership during its fallback.
-      if(typeof _flux!=='undefined'&&_flux.speech&&typeof _flux.speech.current==='function'&&_flux.speech.current())return;
+      if(typeof _flux!=='undefined'&&_flux.speech&&typeof _flux.speech.current==='function'&&_flux.speech.current()){
+        if(mobileAva&&!_busy&&_flux.connected&&!_flux.waitForCapture)btnState('listen');
+        return;
+      }
     }
     // The showcase may leave delayed TTS completion callbacks behind. Keep
     // the mic locked until the next deliberate manual voice toggle so those
@@ -71860,12 +71924,28 @@ function speakVoiceReply(text) {
     _busy = true;
     _busySince = Date.now();
     _chunks = [];
-    btnState('listen');
-    if(window.avaTvSetState) window.avaTvSetState('listen');
-    
-    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
-               MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' :
-               MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    var recordGeneration = _micSessionGeneration;
+    function markListening() {
+      btnState('listen');
+      if(window.avaTvSetState) window.avaTvSetState('listen');
+    }
+    function failMobileRecording(message) {
+      if (!_micSessionCurrent(recordGeneration) || (rec && _recorder !== rec)) return;
+      _stopVad();
+      stopAll();
+      _reportVoiceIssue(message);
+    }
+    if (!mobileAva) markListening();
+    if (mobileAva && typeof MediaRecorder !== 'function') {
+      failMobileRecording('This browser cannot record voice.');
+      return;
+    }
+    var mime = '';
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
+             MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' :
+             MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    }
     var rec;
     try {
       rec = mime ? new MediaRecorder(_stream, { mimeType: mime }) : new MediaRecorder(_stream);
@@ -71874,9 +71954,14 @@ function speakVoiceReply(text) {
       // will throw synchronously here even after isTypeSupported lied — fall back
       // to letting the browser pick its own default rather than failing silently.
       try { rec = new MediaRecorder(_stream); mime = rec.mimeType || ''; }
-      catch (e2) { toast('Voice recording isn\'t supported in this browser'); _busy = false; _busySince = 0; return; }
+      catch (e2) {
+        if (mobileAva) failMobileRecording('Voice recording could not open the microphone. Tap to try again.');
+        else { toast('Voice recording isn\'t supported in this browser'); _busy = false; _busySince = 0; }
+        return;
+      }
     }
     _recorder = rec;
+    mime = rec.mimeType || mime;
 
     // ── VAD: wait for speech, then stop 1s after silence ────────────────────
     var SPEECH_THRESH = 0.045;
@@ -71887,6 +71972,8 @@ function speakVoiceReply(text) {
     var _vadCtx = null, _vadSrc = null, _vadAnalyser = null, _vadRaf = null;
     var _vadShared = false;
     var _speechDetected = false, _peakRms = 0, _silenceStart = null, _maxTimer = null;
+    var _vadResumeUntil = 0, _vadListening = false, _vadFailed = false;
+    var vadFailureMessage = 'The microphone opened but audio could not start. Tap the microphone to try again.';
     // Require energy to stay above threshold for a few consecutive ticks before
     // calling it real speech. A keyboard click or a music transient spikes RMS
     // for one ~33ms frame then drops back down; actual speech holds energy
@@ -71900,7 +71987,7 @@ function speakVoiceReply(text) {
         _vadCtx = _bargeCtx;
         _vadAnalyser = _bargeAnalyser;
         _vadBuf = _bargeBuf || new Uint8Array(_vadAnalyser.frequencyBinCount);
-        if (_vadCtx.state === 'suspended') _vadCtx.resume();
+        if (!mobileAva && _vadCtx.state === 'suspended') _vadCtx.resume();
       } else {
       _vadCtx = new (window.AudioContext || window.webkitAudioContext)();
       // Unlike _actx (TTS playback), this context is created fresh on every
@@ -71911,7 +71998,7 @@ function speakVoiceReply(text) {
       // speech. _actx already resumes itself (_ensureAudioCtx); this one
       // never did. Resume immediately, and re-check once on the first VAD
       // tick in case resume() hadn't settled yet.
-      if (_vadCtx.state === 'suspended') _vadCtx.resume();
+      if (!mobileAva && _vadCtx.state === 'suspended') _vadCtx.resume();
       _vadSrc = _vadCtx.createMediaStreamSource(_stream);
       _vadAnalyser = _vadCtx.createAnalyser();
       _vadAnalyser.fftSize = 256;
@@ -71921,8 +72008,23 @@ function speakVoiceReply(text) {
       // Use setInterval instead of requestAnimationFrame so VAD keeps running when tab is hidden
       _vadRaf = setInterval(function() {
         if (!_vadAnalyser) return;
-        if (_vadCtx && _vadCtx.state === 'suspended') { _vadCtx.resume(); return; }
-        _vadAnalyser.getByteTimeDomainData(_vadBuf);
+        if (mobileAva) {
+          if (_recorder !== rec || !_micSessionCurrent(recordGeneration)) { _stopVad(); return; }
+          if (_vadCtx.state !== 'running') {
+            if (_vadCtx.state === 'closed' || (_vadResumeUntil && Date.now() >= _vadResumeUntil)) {
+              failMobileRecording(vadFailureMessage);
+            } else if (!_vadResumeUntil) {
+              _vadResumeUntil = Date.now() + 2500;
+              try { Promise.resolve(_vadCtx.resume()).catch(function() { failMobileRecording(vadFailureMessage); }); }
+              catch(e) { failMobileRecording(vadFailureMessage); }
+            }
+            return;
+          }
+          _vadResumeUntil = 0;
+        } else if (_vadCtx && _vadCtx.state === 'suspended') { _vadCtx.resume(); return; }
+        try { _vadAnalyser.getByteTimeDomainData(_vadBuf); }
+        catch (error) { if (mobileAva) failMobileRecording(vadFailureMessage); else throw error; return; }
+        if (mobileAva && !_vadListening) { _vadListening = true; markListening(); }
         var sum = 0;
         for (var i = 0; i < _vadBuf.length; i++) { var v = (_vadBuf[i] - 128) / 128; sum += v * v; }
         var rms = Math.sqrt(sum / _vadBuf.length);
@@ -71952,7 +72054,7 @@ function speakVoiceReply(text) {
           }
         }
       }, 33); // ~30fps equivalent
-    } catch(e) {}
+    } catch(e) { _vadFailed = true; }
     _maxTimer = setTimeout(function() { _stopVad(); if (_recorder === rec && rec.state === 'recording') rec.stop(); }, MAX_MS);
     function _stopVad() {
       if (_maxTimer) { clearTimeout(_maxTimer); _maxTimer = null; }
@@ -71968,6 +72070,7 @@ function speakVoiceReply(text) {
     // ────────────────────────────────────────────────────────────────────────
 
     _recorder.ondataavailable = function(e) { if (e.data.size > 0) _chunks.push(e.data); };
+    if (mobileAva) _recorder.onerror = function() { failMobileRecording('Voice recording stopped. Tap the microphone to try again.'); };
     _recorder.onstop = function() {
       _stopVad();
       if (_recorder !== rec) return;
@@ -71977,7 +72080,13 @@ function speakVoiceReply(text) {
       if (blob.size > 1000) { transcribe(blob); }
       else { _busy = false; _busySince = 0; if (_on) record(); }
     };
-    _recorder.start();
+    try { _recorder.start(); }
+    catch (error) {
+      if (!mobileAva) throw error;
+      failMobileRecording('Voice recording could not start. Tap the microphone to try again.');
+      return;
+    }
+    if (mobileAva && _vadFailed) setTimeout(function() { failMobileRecording(vadFailureMessage); }, 0);
   }
 
   // ── Barge-in: let the user talk over Ava and have her stop + listen ─────
@@ -72956,19 +73065,21 @@ function speakVoiceReply(text) {
       }
       var micGeneration = _micSessionGeneration;
       function _afterMicReady() {
+        var mobileAva = window.document?.documentElement?.classList.contains('ava-app-mode');
         if (typeof _vmActive !== 'undefined' && _vmActive && typeof closeVoiceMode === 'function') { closeVoiceMode(); }
         /* Showcase Notes-beat flourish: Ava announces the live save instead
            of the guide intro line. */
         if (_maybeGuideNotesSaveLine()) return;
         /* Guide demo: explain what this button does, every time it's run from there */
         if (_maybeGuideS2SIntro()) return;
-        /* First open: Ava leads with a real intro — don't jump into random listen/reply */
-        if (_maybeS2SFirstIntro()) return;
+        // Ava app has its own onboarding. A first tap must start listening.
+        if (!mobileAva && _maybeS2SFirstIntro()) return;
         if (window._sttProvider === 'flux') {
           // Flux replaces both the per-turn MediaRecorder/VAD loop (record())
           // AND the separate always-on barge-in RMS watcher — turn detection
           // and barge-in both come from the same persistent socket now.
           if (!window._fluxSessionStart({
+            captureContext:mobileAva ? _bargeCtx : null,
             current:function(){return _micSessionCurrent(micGeneration);},
             accept:function(text,interrupted){if(!_micSessionCurrent(micGeneration))return;if(interrupted){_bargeNeedsDirectAnswer=true;_bargeForceToast=true;}ask(text,{acceptedSpeech:true,provider:'flux',generation:micGeneration});},
             listening:function(){if(_micSessionCurrent(micGeneration)){btnState('listen');if(window.avaTvSetState)window.avaTvSetState('listen');}},

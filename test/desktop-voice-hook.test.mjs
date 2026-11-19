@@ -70,23 +70,27 @@ test('ASR hop trace records native awaiting, handled and stale outcomes using on
   }
 });
 
-const fluxSource=extract('function _fluxHandleEvent(msg, speech)', 'function _wsClose()');
+const fluxSource=extract('function _fluxResampleTo16k(float32In, fromRate)', 'function _wsClose()');
 const fluxEndpoint=html.match(/var FLUX_PATH = '([^']+)';/)?.[1];assert.ok(fluxEndpoint);
 const handoff=html.match(/window\._fluxSessionStart\((\{[\s\S]*?\n\s*\})\)\)/)?.[1];assert.ok(handoff);
-function fluxFixture({failCapture=false,failSocket=false,failRecording=false,pc=false}={}) {
+function fluxFixture({failCapture=false,failSocket=false,failRecording=false,pc=false,mobile=false}={}) {
   const events=[],errors=[],sockets=[],timers=new Map();let nextTimer=0;
-  const node=()=>({connect(){},disconnect(){}});
+  const node=()=>({connect(){},disconnect(){this.disconnected=true;}});
   class Context{constructor(){this.state='running';this.sampleRate=48000;this.destination={};}createMediaStreamSource(){if(failCapture)throw Error('capture failed');return node();}createScriptProcessor(){return node();}createGain(){return{...node(),gain:{value:1}};}close(){this.state='closed';}resume(){}}
-  class Socket{static OPEN=1;static CONNECTING=0;constructor(url){if(failSocket)throw Error('socket failed');this.url=url;this.readyState=0;sockets.push(this);}close(){this.readyState=3;}send(){}}
+  class Socket{static OPEN=1;static CONNECTING=0;constructor(url){if(failSocket)throw Error('socket failed');this.url=url;this.readyState=0;this.frames=[];sockets.push(this);}open(){this.readyState=1;this.onopen();}close(){this.readyState=3;}send(frame){this.frames.push(frame);}}
   class Recorder{static isTypeSupported(){return true;}constructor(){if(failRecording)throw Error('recording failed');this.state='inactive';}start(){this.state='recording';events.push({recording:true});}}
   const context=vm.createContext({window:{_stream:{},_dgKey:'test-api-key',AudioContext:Context},_flux:{},_sttProvider:'flux',FLUX_PATH:fluxEndpoint,WebSocket:Socket,MediaRecorder:Recorder,_vmSpeaking:true,
     console:{log(){},warn(){},error:(...args)=>errors.push(args)},setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id),events});
+  if(mobile){context.window.document={documentElement:{classList:{contains:name=>name==='ava-app-mode'}}};context.window.appCaptureContext=new Context();}
   context.window.synapsesDesktopVoiceClient={active:()=>pc,isCurrentAccount:()=>pc,stop:(message,reasonCode)=>{events.push({error:true,reasonCode});context.privateSpeech.stop();},noteFallback:reasonCode=>events.push({fallback:reasonCode})};
   vm.runInContext(fluxSource,context);
   // The real callback object is evaluated in a separate private scope. None of
   // the STS private identifiers are placed in the global Flux script's scope.
-  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false,_busy=false,_busySince=0,_ttsBusy=false,_bargingIn=false,_bargeTurnActive=false,_stream=window._stream,_recorder=null;'+current+failure+fallback+recording+'function _micTrackDead(){return false;}function _ensureBargeAnalyser(){}function toast(){}function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',record:record,setSpeaking:function(value){_ttsBusy=value;},stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
+  vm.runInContext('var privateSpeech=(function(){var _on=true,_micSessionGeneration=4,micGeneration=4,_bargeNeedsDirectAnswer=false,_bargeForceToast=false,_busy=false,_busySince=0,_ttsBusy=false,_bargingIn=false,_bargeTurnActive=false,_stream=window._stream,_recorder=null,mobileAva=!!window.appCaptureContext,_bargeCtx=window.appCaptureContext;'+current+failure+fallback+recording+'function _micTrackDead(){return false;}function _ensureBargeAnalyser(){}function toast(){}function ask(text,speech){events.push({text,speech});}function btnState(value){events.push({state:value});}function _commitInterruptedReply(){events.push({barge:true});}return{speech:'+handoff+',record:record,setSpeaking:function(value){_ttsBusy=value;},stop:function(){_on=false;_micSessionGeneration++;},flags:function(){return[_bargeNeedsDirectAnswer,_bargeForceToast];}};})();',context);
   return{context,events,errors,sockets,timers};
+}
+function captureFrame(f) {
+  f.context._flux.proc.onaudioprocess({inputBuffer:{getChannelData:()=>new Float32Array(2048).fill(0.1)}});
 }
 test('actual global Flux code uses private callbacks without missing-private-global errors',()=>{
   const f=fluxFixture();assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);assert.equal(f.errors.length,0);
@@ -108,8 +112,7 @@ test('PC legacy recording waits for its current TTS and never duplicates a healt
   const ordinary=fluxFixture();ordinary.context.window._fluxSessionStart(ordinary.context.privateSpeech.speech);ordinary.context.privateSpeech.record();assert.equal(ordinary.events.filter(e=>e.recording).length,1);
 });
 test('Ava app speech switches once from failed streaming recognition to the existing recorder',()=>{
-  const f=fluxFixture();
-  f.context.window.document={documentElement:{classList:{contains:name=>name==='ava-app-mode'}}};
+  const f=fluxFixture({mobile:true});
   assert.equal(f.context.window._fluxSessionStart(f.context.privateSpeech.speech),true);
   f.context.privateSpeech.record();
   assert.equal(f.events.filter(event=>event.recording).length,0);
@@ -119,6 +122,59 @@ test('Ava app speech switches once from failed streaming recognition to the exis
   f.sockets[0].onerror(Error('late failure'));
   assert.equal(f.events.filter(event=>event.recording).length,1);
   assert.equal(f.events.some(event=>event.fallback||event.error),false);
+});
+
+test('the first Ava mobile mic tap starts Flux with the gesture context instead of the first-use intro',()=>{
+  const micReady=extract('      function _afterMicReady() {', '      if (_stream && !_micTrackDead()) {');
+  for(const mobile of [true,false]){
+    let introCalls=0,speech;
+    const captureContext={state:'running'};
+    const sandbox=vm.createContext({_bargeCtx:captureContext,
+      window:{document:{documentElement:{classList:{contains:()=>mobile}}},_sttProvider:'flux',_fluxSessionStart(value){speech=value;return true;}},
+      _maybeGuideNotesSaveLine:()=>false,_maybeGuideS2SIntro:()=>false,_maybeS2SFirstIntro:()=>{introCalls++;return true;}});
+    vm.runInContext(micReady+'\n_afterMicReady();',sandbox);
+    assert.equal(introCalls,mobile?0:1);
+    assert.equal(speech?.captureContext,mobile?captureContext:undefined);
+  }
+});
+
+test('Ava mobile shares its unlocked context and waits for PCM on the open socket before listening',()=>{
+  const f=fluxFixture({mobile:true});
+  const app=f.context.window;
+  app.AudioContext=class{constructor(){throw Error('a second capture context was created');}};
+  assert.equal(app._fluxSessionStart(f.context.privateSpeech.speech),true);
+  const {ctx,proc,sink}=f.context._flux;
+  assert.equal(ctx,app.appCaptureContext);
+  captureFrame(f);
+  assert.equal(f.events.length,0);
+  f.sockets[0].open();
+  assert.equal(f.events.length,0);
+  captureFrame(f);
+  captureFrame(f);
+  assert.equal(f.sockets[0].frames.length,2);
+  assert.equal(f.sockets[0].frames[0].byteLength,1364);
+  assert.equal(f.events.filter(event=>event.state==='listen').length,1);
+  assert.equal(f.timers.size,0);
+  f.sockets[0].onmessage({data:JSON.stringify({event:'EndOfTurn',transcript:'Can you hear me?'})});
+  assert.equal(f.events.find(event=>event.text)?.text,'Can you hear me?');
+  app._fluxSessionStop();
+  assert.equal(ctx.state,'running');
+  assert.equal(proc.onaudioprocess,null);
+  assert.equal(sink.disconnected,true);
+});
+
+test('an open Ava mobile socket without capture frames gives the recorder the mic',()=>{
+  const f=fluxFixture({mobile:true});
+  const app=f.context.window;
+  assert.equal(app._fluxSessionStart(f.context.privateSpeech.speech),true);
+  f.sockets[0].open();
+  const timeout=f.timers.get(f.context._flux.captureTimer);
+  assert.equal(timeout.ms,2500);
+  timeout.fn();
+  timeout.fn();
+  assert.equal(f.context._flux.ws,null);
+  assert.equal(f.events.filter(event=>event.recording).length,1);
+  assert.equal(app.appCaptureContext.state,'running');
 });
 
 test('a suspended mobile capture context must run or hand speech back to the recorder once',async()=>{
@@ -155,7 +211,12 @@ test('a suspended mobile capture context must run or hand speech back to the rec
     const recovered=scenario==='rejected'||scenario==='suspended'||scenario==='timeout';
     assert.equal(f.events.filter(event=>event.recording).length,recovered?1:0,scenario);
     assert.equal(f.context._flux.ctx===null,recovered,scenario);
-    if(!recovered)assert.equal(f.events.filter(event=>event.state==='listen').length,1,scenario);
+    if(!recovered){
+      assert.equal(f.events.filter(event=>event.state==='listen').length,0,scenario);
+      f.sockets.at(-1).open();
+      captureFrame(f);
+      assert.equal(f.events.filter(event=>event.state==='listen').length,1,scenario);
+    }
     if(scenario==='timeout'){
       resolveResume();
       await new Promise(resolve=>setImmediate(resolve));

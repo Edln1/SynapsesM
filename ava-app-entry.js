@@ -24,7 +24,7 @@
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null, homeRequested: true };
   var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
   var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
-  var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '';
+  var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
 
   function emit(name, detail) {
     try { window.dispatchEvent(new window.CustomEvent(name, { detail: detail })); } catch (_) {}
@@ -87,16 +87,23 @@
     schedule('voice-stopped', 0);
   }
   function showVoiceIssue(event) {
-    var notice = document.getElementById('acNotice');
     var message = event.detail && event.detail.message;
-    if (!notice || typeof message !== 'string') return;
-    if (message) {
-      voiceNotice = message.slice(0, 240);
-      notice.textContent = voiceNotice;
-    } else {
-      if (voiceNotice && notice.textContent === voiceNotice) notice.textContent = '';
-      voiceNotice = '';
+    if (typeof message !== 'string') return;
+    voiceNotice = message.slice(0, 240);
+    syncVoiceControl();
+  }
+  function syncVoiceNotice(connecting) {
+    var message = voiceNotice || (connecting ? 'Connecting microphone…' : '');
+    if (!voiceNoticeNode && message) {
+      var notice = document.getElementById('acNotice');
+      if (!notice || !notice.parentNode) return;
+      voiceNoticeNode = document.createElement('div');
+      voiceNoticeNode.id = 'avaAppVoiceNotice';
+      voiceNoticeNode.className = 'ac-notice';
+      voiceNoticeNode.setAttribute('role', 'status');
+      notice.parentNode.insertBefore(voiceNoticeNode, notice);
     }
+    if (voiceNoticeNode && voiceNoticeNode.textContent !== message) voiceNoticeNode.textContent = message;
   }
   function restoreVoiceControl() {
     if (!dockedVoice) return;
@@ -139,6 +146,8 @@
     if (talk && talk.hidden !== !!active) talk.hidden = !!active;
     var show = state.stage === 'chat' && Boolean(talk || active);
     if (voiceDock && voiceDock.hidden !== !show) voiceDock.hidden = !show;
+    syncVoiceNotice(Boolean(active && window._topNavVoiceActive &&
+      !mic.classList.contains('tnv-on') && !mic.classList.contains('tnv-speak')));
   }
   function closeChat() {
     // Undock before chat releases its saved sibling-inert state. Restoring the
@@ -393,6 +402,7 @@
       if (savedTalk.title === null) talk.removeAttribute('title'); else talk.setAttribute('title', savedTalk.title);
     }
     closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
+    if (voiceNoticeNode) voiceNoticeNode.remove();
     if (authBrand) authBrand.remove(); if (authCopy) authCopy.forEach(function (entry) { entry[0].textContent = entry[1]; });
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);

@@ -218,15 +218,37 @@ test('mobile voice errors stay visible in Ava and a retry clears only its own no
   report('');
   assert.equal(notice.textContent, 'Ava is preparing a reply.');
   report('Allow microphone access in Android settings and try again.');
-  assert.equal(notice.textContent, 'Allow microphone access in Android settings and try again.');
+  const voiceNotice = f.document.getElementById('avaAppVoiceNotice');
+  assert.equal(voiceNotice.textContent, 'Allow microphone access in Android settings and try again.');
+  assert.equal(notice.textContent, 'Ava is preparing a reply.');
   assert.equal(f.chat.hidden, false);
   assert.equal(f.window.avaAppEntry.stage, 'chat');
   report('');
-  assert.equal(notice.textContent, '');
+  assert.equal(voiceNotice.textContent, '');
   report('Voice could not start listening. Try again.');
   notice.textContent = 'Message saved as a draft.';
+  assert.equal(voiceNotice.textContent, 'Voice could not start listening. Try again.');
   report('');
   assert.equal(notice.textContent, 'Message saved as a draft.');
+});
+
+test('voice startup waits for listening on the original control and shows failures after it stops', async () => {
+  const f = setup(); await settle(f);
+  const mic = f.document.getElementById('topNavVoiceBtn');
+  f.window._topNavVoiceActive = true;
+  f.window.avaAppEntry.refresh();
+  const notice = f.document.getElementById('avaAppVoiceNotice');
+  assert.equal(notice.textContent, 'Connecting microphone…');
+  mic.classList.add('tnv-on');
+  f.window.avaAppEntry.refresh();
+  assert.equal(notice.textContent, '');
+  mic.classList.remove('tnv-on');
+  f.window._topNavVoiceActive = false;
+  f.window.avaAppEntry.refresh();
+  f.window.dispatchEvent(new f.window.CustomEvent('ava:voice-error', { detail: { message: 'Speech recognition is busy.' } }));
+  assert.equal(notice.textContent, 'Speech recognition is busy.');
+  f.window.avaAppEntry.destroy();
+  assert.equal(f.document.getElementById('avaAppVoiceNotice'), null);
 });
 
 test('legacy mic relocation cannot leave the live icon inert outside the chat', async () => {

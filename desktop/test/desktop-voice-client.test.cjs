@@ -164,7 +164,7 @@ test('real accepted-ASR hook routes plain commands through the packaged client a
   const flux=extract('function _fluxHandleEvent(msg, speech)','function _fluxConnect(');
   const handoff=html.match(/window\._fluxSessionStart\((\{[\s\S]*?\n\s*\})\)\)/)?.[1];assert.ok(handoff);
   function speechFixture(f){
-    const spoken=[];let transcript='';const context=vm.createContext({window:f.window,_on:true,_micSessionGeneration:4,micGeneration:4,_voiceTurnId:0,_bargeNeedsDirectAnswer:false,_bargeTurnActive:false,_bargeForceToast:false,_ttsBusy:false,_busy:true,_busySince:100,_bargeHoldToast:false,_flux:{},normal:0,
+    const spoken=[];let transcript='';const context=vm.createContext({window:f.window,mobileAva:false,_on:true,_micSessionGeneration:4,micGeneration:4,_voiceTurnId:0,_bargeNeedsDirectAnswer:false,_bargeTurnActive:false,_bargeForceToast:false,_ttsBusy:false,_busy:true,_busySince:100,_bargeHoldToast:false,_flux:{},normal:0,
       FormData:class{append(){}},AbortController,GROQ_PROXY:'https://voice.invalid',_registerTurnAbort(){},fetch:async()=>({json:async()=>({text:transcript})}),console:{log(){},warn(){}},
       speak:value=>spoken.push(value),toast:value=>spoken.push(value),toastHide(){},record(){},setTimeout(){},clearTimeout(){}});
     vm.runInContext(current+'\n'+routeTrace+'\n'+ask+'\n'+transcribe+'\n'+flux+'\nvar acceptedFlux='+handoff+';',context);
