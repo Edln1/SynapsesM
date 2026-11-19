@@ -2,6 +2,8 @@
 
 Local backup installer: `dist/Synapses-Setup-0.1.0.exe`
 
+Current source/release target: **0.1.1** / **desktop-v0.1.1**. The existing local backup below remains 0.1.0; no new local installer was built for the CI-only packaging change. The failed 0.1.0 CI tag is retained without forcing it to a different commit.
+
 - Version: **0.1.0**
 - Size: **121,534,176 bytes** (115.9 MiB)
 - SHA-256: **10C241B8BE4C5A698AE9BDDF014809042869AD27A3B904D18A5681EA01C70E53**
@@ -22,6 +24,6 @@ No installer was run, no user account was signed in, and no real voice call, ext
 
 ## CI release preparation
 
-`ci/publish-desktop.yml` is a prepared workflow for copying to the host repository's `.github/workflows/`. It expects this project at `desktop/`, uses Windows sparse checkout of that subtree to avoid unrelated Windows-reserved filenames, verifies `desktop-v<version>` against `package.json`, builds with Node 24, and transfers only the installer/checksum/manifest/release notes to a separate publishing job. Build permissions are read-only; publishing has repository contents write permission and uses only the temporary workflow token.
+`ci/publish-desktop.yml` is a prepared workflow for copying to the host repository's `.github/workflows/`. It expects this project at `desktop/`. A Linux preparation job checks out and validates the matching version tag, then archives only `HEAD:desktop`. Windows downloads and extracts this archive without any Git checkout/index, because Windows Git rejects an unrelated reserved filename even with sparse checkout. It builds with Node 24 and transfers only the installer/checksum/manifest/release notes to a separate publishing job. Only Linux preparation has repository read permission; the Windows build has no repository token permissions; publishing has repository contents write permission and uses only the temporary workflow token.
 
-Publishing creates a draft first, uploads verified assets, then marks it as a prerelease. A rerun will not replace an already public release for the same version. The CI workflow was parsed and its permission/sparse-checkout boundaries checked locally; it has not been run or published by this task. A CI rebuild has its **own** installer hash, which must be used for the public download rather than the local backup hash above.
+Publishing creates a draft first, uploads verified assets, then marks it as a prerelease. A rerun will not replace an already public release for the same version. The corrected CI workflow was parsed and its archive-transfer/permission boundaries checked locally; it has not been run or published by this task. A CI rebuild has its **own** installer hash, which must be used for the public download rather than the local backup hash above.

@@ -22,7 +22,7 @@ npm.cmd test
 npm.cmd run build:win
 ```
 
-The locked tools are Electron **45.4.1** and electron-builder **26.18.0**. The output is `dist/Synapses-Setup-0.1.0.exe`, an NSIS installer for the current user. It does not request administrator rights, automatically launch after installation, or delete account data on uninstall. Code signing is deliberately disabled while executable icon and company metadata editing remain enabled.
+The locked tools are Electron **45.4.1** and electron-builder **26.18.0**. The current source version is **0.1.1**; its build output is `dist/Synapses-Setup-0.1.1.exe`, an NSIS installer for the current user. It does not request administrator rights, automatically launch after installation, or delete account data on uninstall. Code signing is deliberately disabled while executable icon and company metadata editing remain enabled.
 
 This machine's global npm was missing an internal module. The verified build instead used an official npm 11.21.3 tarball unpacked under ignored `.cache/`; no system npm files were changed. Dependency installation and runtime downloads used the official npm/Electron distribution tooling.
 
@@ -39,4 +39,4 @@ The installer exceeds GitHub's 100 MiB source-file limit. Use a release asset ra
 - `assets/app.ico`, `assets/favicon.png`, `assets/favicon.svg`
 - `README.md`, `VERIFICATION.md`, `release-notes.md`
 
-Do not copy `node_modules`, `.cache`, `.preview`, `.git` or `dist` into source control. A tag such as `desktop-v0.1.0` triggers a Windows build and prerelease publish using GitHub's temporary workflow token. The workflow also supports manual dispatch for an existing matching tag. It deliberately refuses to replace an already public version. The public checksum must come from the CI-built release asset; local build hashes can differ.
+Do not copy `node_modules`, `.cache`, `.preview`, `.git` or `dist` into source control. A tag such as `desktop-v0.1.1` triggers a build and prerelease publish using GitHub's temporary workflow token. A Linux preparation job validates the tag and archives only the desktop subtree. Windows downloads that archive without running Git checkout or creating an index, avoiding unrelated Windows-reserved paths in the host repository. The workflow also supports manual dispatch for an existing matching tag. It deliberately refuses to replace an already public version. The public checksum must come from the CI-built release asset; local build hashes can differ.
