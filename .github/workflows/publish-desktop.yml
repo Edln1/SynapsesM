@@ -49,12 +49,16 @@ jobs:
           printf 'version=%s\ntag=%s\n' "$version" "$expected_tag" >> "$GITHUB_OUTPUT"
       - name: Archive only desktop source
         shell: bash
-        run: git archive --format=tar.gz --output="$RUNNER_TEMP/desktop-source.tar.gz" HEAD:desktop
+        run: |
+          git archive --format=tar.gz --output="$RUNNER_TEMP/desktop-source.tar.gz" HEAD:desktop
+          git show HEAD:index.html > "$RUNNER_TEMP/synapses-test-index.html"
       - name: Transfer source without a Windows Git checkout
         uses: actions/upload-artifact@v7.0.2
         with:
           name: synapses-desktop-source-${{ steps.version.outputs.version }}
-          path: ${{ runner.temp }}/desktop-source.tar.gz
+          path: |
+            ${{ runner.temp }}/desktop-source.tar.gz
+            ${{ runner.temp }}/synapses-test-index.html
           if-no-files-found: error
           retention-days: 2
           compression-level: 0
@@ -67,6 +71,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      SYNAPSES_WEB_SOURCE: ${{ github.workspace }}/source/synapses-test-index.html
     outputs:
       version: ${{ needs.prepare.outputs.version }}
       tag: ${{ needs.prepare.outputs.tag }}

@@ -57801,6 +57801,26 @@ function _tnvTrackToastDuring(ms){
 }
 window._tnvTrackToastDuring = _tnvTrackToastDuring;
 
+// Keep visible captions anchored to the live mic when the viewport resizes.
+// Reuse the normal mic/caret positioning once per frame, without restarting
+// its display, fade timer, speech, or the finite mic-glide tracking loop.
+(function(){
+  var resizeFrame = 0;
+  function positionVisibleToast(){
+    var toastEl = document.getElementById('tnvToast');
+    if(!toastEl || !toastEl.classList.contains('show') || resizeFrame) return;
+    resizeFrame = requestAnimationFrame(function(){
+      resizeFrame = 0;
+      if(!toastEl.isConnected || !toastEl.classList.contains('show')) return;
+      _tnvPositionToastToMic(toastEl, document.getElementById('topNavVoiceBtn'));
+    });
+  }
+  window.addEventListener('resize', positionVisibleToast, {passive:true});
+  if(window.visualViewport && typeof window.visualViewport.addEventListener === 'function'){
+    window.visualViewport.addEventListener('resize', positionVisibleToast, {passive:true});
+  }
+})();
+
 function _tnvGlideToCenter(){
   var btn = document.getElementById('topNavVoiceBtn');
   var bar = document.querySelector('.top-bar');

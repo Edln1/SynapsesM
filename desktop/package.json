@@ -1,7 +1,7 @@
 {
   "name": "synapses-desktop",
   "productName": "Synapses",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "The full Synapses experience in a dedicated Windows desktop app.",
   "author": "Synapses",
   "private": true,
@@ -19,13 +19,23 @@
     "appId": "cloud.synapses.desktop",
     "productName": "Synapses",
     "artifactName": "Synapses-Setup-${version}.${ext}",
-    "directories": { "output": "dist", "buildResources": "assets" },
-    "files": ["src/**/*", "assets/app.ico", "assets/favicon.png", "package.json"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/app.ico",
+      "assets/favicon.png",
+      "package.json"
+    ],
     "asar": true,
     "compression": "maximum",
     "forceCodeSigning": false,
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/app.ico",
       "signExecutable": false,
       "requestedExecutionLevel": "asInvoker"
