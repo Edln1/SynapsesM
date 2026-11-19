@@ -1,5 +1,7 @@
-Synapses Desktop 0.1.12 preview handles spoken DoorDash menu requests.
+Synapses Desktop 0.1.13 preview handles spoken DoorDash menu requests.
 
+- Say “Open DoorDash, go to McDonald’s, and open an Egg McMuffin” to open the item in one request. Ava uses the locations and items shown on DoorDash. An open request stops at the menu item.
+- On an open DoorDash store page, say “Order an Egg McMuffin” to continue from that store and review adding it to the cart.
 - After opening DoorDash, say “Go to McDonald’s” to continue in that browser. Ava uses the restaurant listings DoorDash shows.
 - Say “Order a Big Mac from McDonald’s” or name another restaurant and item on DoorDash. Ava opens the matching menu item and asks before adding it when a clear Add button is available. Review the cart and finish checkout in DoorDash.
 - If a PC voice task is interrupted, Ava stops working and leaves the browser open for you to continue.

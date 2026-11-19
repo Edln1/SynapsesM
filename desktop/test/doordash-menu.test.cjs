@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const vm = require('node:vm');
 const { pageOperation } = require('../src/browser-actions.cjs');
-const { parseDoorDashMenuRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart } = require('../src/doordash-menu.cjs');
+const { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart } = require('../src/doordash-menu.cjs');
 
 const store = 'https://www.doordash.com/en-CA/store/mcdonalds-123/';
 const item = 'Big Mac';
@@ -39,6 +39,37 @@ test('any named restaurant and item can use DoorDash with explicit or observed c
     'Order a taco from Burger King and open YouTube', 'Order a taco from burgerking.com',
     'Order a taco from Burger King and pay', 'Order a taco then checkout from Jack in the Box'
   ]) assert.equal(parseDoorDashMenuRequest(command, { onDoorDash: true }), null, command);
+});
+
+test('chained DoorDash commands preserve which restaurant and item to open or order', () => {
+  const mcmuffin = { query: 'McDonald’s', item: 'Egg McMuffin', openOnly: true };
+  assert.deepEqual(parseDoorDashMenuRequest("open DoorDash go to McDonald's and open an Egg McMuffin"), mcmuffin);
+  assert.deepEqual(parseDoorDashMenuRequest('Hey Ava: could you open the Door Dash app, and then find McDonalds, then show me an Egg McMuffin, please?'), mcmuffin);
+  assert.deepEqual(parseDoorDashMenuRequest("Go to McDonald's and open an Egg McMuffin", { onDoorDash: true }), mcmuffin);
+  assert.deepEqual(parseDoorDashMenuRequest('Open DoorDash. Find Game of Wings. Show me Buffalo Wings.'), { query: 'Game of Wings', item: 'Buffalo Wings', openOnly: true });
+  assert.deepEqual(parseDoorDashMenuRequest('Open DoorDash and open Jack in the Box then get a taco'), { query: 'Jack in the Box', item: 'taco' });
+  assert.deepEqual(parseDoorDashMenuRequest('Find Game of Wings and order a chicken sandwich on DoorDash'), { query: 'Game of Wings', item: 'chicken sandwich' });
+  for (const command of [
+    'Go to Game of Wings and open Buffalo Wings', 'Open DoorDash and go to McDonalds',
+    'Open DoorDash, go to McDonalds and open an Egg McMuffin then check out',
+    'Open DoorDash, find Jack in the Box and show me my cart',
+    'Open DoorDash, go to Burger King and order a chicken sandwich on Uber Eats'
+  ]) assert.equal(parseDoorDashMenuRequest(command), null, command);
+});
+
+test('short item commands can refer to the current restaurant or name its menu', () => {
+  const mcmuffin = { item: 'Egg McMuffin' };
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Order an Egg McMuffin.'), mcmuffin);
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Get me an Egg McMuffin here, please.'), mcmuffin);
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Can you order an Egg McMuffin from this menu?'), mcmuffin);
+  assert.deepEqual(parseDoorDashCurrentItemRequest("Order an Egg McMuffin on the McDonald's page"), { ...mcmuffin, query:'McDonald’s' });
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Show me an Egg McMuffin in the current menu.'), { ...mcmuffin, openOnly: true });
+  assert.deepEqual(parseDoorDashCurrentItemRequest('Open a taco from the Jack in the Box menu.'), { item:'taco', query:'Jack in the Box', openOnly: true });
+  for (const command of [
+    'Open YouTube', 'Open my browser', 'Find my order here', 'Show me the cart',
+    'Order an Egg McMuffin and then check out', 'Order a taco from Jack in the Box',
+    'Open burgerking.com', 'Get a Big Mac on Uber Eats'
+  ]) assert.equal(parseDoorDashCurrentItemRequest(command), null, command);
 });
 
 test('restaurant follow-ups preserve user phrasing without interpreting new or compound computer actions', () => {

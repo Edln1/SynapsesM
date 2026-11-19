@@ -1,8 +1,8 @@
 'use strict';
 
 const {directWebPlan,doorDashPreference,isPageReadRequest,explicitWebUrl}=require('./desktop-voice-policy.cjs');
-const {doorDashSearchUrl,listDoorDashRestaurants,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,doorDashBlocked,doorDashUnavailable}=require('./doordash-restaurant.cjs');
-const {parseDoorDashMenuRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
+const {doorDashSearchUrl,listDoorDashRestaurants,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBlocked,doorDashUnavailable}=require('./doordash-restaurant.cjs');
+const {parseDoorDashMenuRequest,parseDoorDashCurrentItemRequest,parseDoorDashRestaurantFollowUp,findDoorDashMenuItem,isDoorDashMenuItemOpen,findDoorDashAddToCart}=require('./doordash-menu.cjs');
 
 const ACTIONS=Object.freeze(['list_apps','list_windows','open_app','move_window','read_window','click_control','type_control','press_key','scroll_window','open_url','read_page','click','type','press','scroll','back','media_play','finish','chat','clarify']);
 const FIELDS=Object.freeze(['action','target','value','secondary','direction','amount','message']);
@@ -285,7 +285,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     progress('complete',listing.step,'finish');
     return {handled:true,ok:true,message:listing.message};
   }
-  async function prepareDoorDashItem(context,{query,item},currentPage){
+  async function prepareDoorDashItem(context,{query,item,openOnly},currentPage){
     let step=currentPage?1:0;
     if(!step)progress('planning',1);
     const next=(action,args,expectedControl)=>{
@@ -297,7 +297,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       return result?.ok===true?result.page:null;
     };
     const current=currentPage||await read();
-    let page=isDoorDashRestaurant(current,query)?current:null;
+    let page=isDoorDashStore(current,query)?current:null;
     if(!page){
       const listing=await findDoorDashListing(context,{query,openListing:true,preference:'closest'},step);
       ({step,page}=listing);
@@ -315,7 +315,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         page=scrolled.page;
         match=findDoorDashMenuItem(page,item,restaurantUrl);
       }
-      if(!match)throw fail('unverified',`I couldn’t verify ${item} on the ${query} menu. Check the location and menu in the Ava browser.`);
+      if(!match){
+        const menu=query?`the ${query} menu`:'this DoorDash menu';
+        throw fail('unverified',`I couldn’t verify ${item} on ${menu}. Check the location and menu in the Ava browser.`);
+      }
       const opened=await next('click',{target:match.ref},{
         label:match.label,dialogTitle:match.dialogTitle,href:match.href,...(match.menuTitle?{menuTitle:match.menuTitle}:{})
       });
@@ -323,6 +326,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       page=opened.page;
       if(!isDoorDashMenuItemOpen(page,item,restaurantUrl,match)&&step<maxSteps)page=await read();
       if(!isDoorDashMenuItemOpen(page,item,restaurantUrl,match))throw fail('unverified',`I found ${item} on DoorDash but couldn’t verify the item opened. Check the Ava browser.`);
+    }
+    if(openOnly){
+      progress('complete',step,'finish');
+      return {handled:true,ok:true,message:`I opened ${item} on DoorDash.`};
     }
     const add=findDoorDashAddToCart(page,item,restaurantUrl);
     if(!add||step>=maxSteps){
@@ -349,12 +356,17 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     if(direct?.doorDashRestaurant)return openDoorDashRestaurant(context,direct.doorDashRestaurant);
     const contextualMenu=canSelect&&context.recentDoorDash&&parseDoorDashMenuRequest(context.text,{onDoorDash:true});
     const restaurant=canBrowse&&context.recentDoorDash&&parseDoorDashRestaurantFollowUp(context.text);
-    if(contextualMenu||restaurant&&(!direct||direct.url?.startsWith('https://www.google.com/search?'))){
+    const currentItem=canSelect&&context.recentDoorDash&&!direct&&!contextualMenu&&!restaurant&&parseDoorDashCurrentItemRequest(context.text);
+    if(contextualMenu||currentItem||restaurant&&(!direct||direct.url?.startsWith('https://www.google.com/search?'))){
       progress('planning',1);
       const current=await perform(context,1,'read_page',{});
       if(current?.ok===true&&isDoorDashPage(current.page)){
         if(doorDashBlocked(current.page))throw fail('unverified','DoorDash is asking you to verify. Please complete the check in the Ava browser.');
         if(contextualMenu)return prepareDoorDashItem(context,contextualMenu,current.page);
+        if(currentItem){
+          if(isDoorDashStore(current.page,currentItem.query))return prepareDoorDashItem(context,currentItem,current.page);
+          throw fail('unverified','Open the restaurant’s delivery location on DoorDash first, or say which restaurant you want.');
+        }
         return openDoorDashRestaurant(context,{query:restaurant,openListing:true,preference:'closest'},1);
       }
     }
@@ -405,7 +417,10 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
         }else if(!initialRead)context.failures.add(plan.action);
       }else if(verified){
         context.verified++;context.failures.delete(plan.action);
-        if(['open_url','click'].includes(plan.action)&&isDoorDashRestaurant(result.page))context.openedDoorDashListing=true;
+        if(['open_url','click'].includes(plan.action)&&isDoorDashPage(result.page)){
+          context.openedDoorDashPage=true;
+          if(isDoorDashRestaurant(result.page))context.openedDoorDashListing=true;
+        }
         if(result.page?.url&&/^https:\/\/(?:www\.)?doordash\.com(?:\/|$)/i.test(result.page.url)&&/\bmc\s*donald['’]?\s*s\b/i.test(context.text)){
           rememberRestaurant(context,'McDonald’s');
         }
@@ -424,7 +439,7 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
       ? {query:pendingDoorDash.query,openListing:true,preference}:null;
     pendingDoorDash=null;
     if(lastDoorDash&&lastDoorDash.userId!==userId)lastDoorDash=null;
-    const context={id:++sequence,text:text.trim(),userId,controller:new AbortController(),reason:null,history:[],verified:0,executed:0,failures:new Set(),readOnly:isPageReadRequest(text),readEvidence:false,openedDoorDashListing:false,doorDashFollowUp,recentDoorDash:!!lastDoorDash};active=context;
+    const context={id:++sequence,text:text.trim(),userId,controller:new AbortController(),reason:null,history:[],verified:0,executed:0,failures:new Set(),readOnly:isPageReadRequest(text),readEvidence:false,openedDoorDashPage:false,openedDoorDashListing:false,doorDashFollowUp,recentDoorDash:!!lastDoorDash};active=context;
     const external=()=>{context.reason='cancelled';context.controller.abort();};
     if(signal?.aborted)external();else signal?.addEventListener('abort',external,{once:true});
     let timeout,aborted;
@@ -437,6 +452,9 @@ function createPcTaskRunner({tools={},assertActive=()=>false,onProgress=()=>{},c
     catch(error){
       const code=error instanceof TaskError?error.code:'planner_failed';
       progress(code==='cancelled'||code==='inactive'?'cancelled':'failed',0,undefined,code);
+      if(code==='planner_rate_limited'&&context.openedDoorDashPage){
+        return {handled:true,ok:false,message:'DoorDash is open. The task planner hit its limit before finishing. You can continue in the Ava browser.'};
+      }
       if(context.openedDoorDashListing&&['planner_format','invalid_plan','invalid_target','unverified','step_limit'].includes(code)){
         return {handled:true,ok:false,message:'The DoorDash restaurant page opened. I couldn’t verify the rest of the request.'};
       }

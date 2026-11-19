@@ -80,5 +80,8 @@ function isDoorDashRestaurant(value,query){
   return !!listing&&!doorDashBlocked(page)&&!doorDashUnavailable(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
 }
 function isDoorDashPage(value){return !!doorDashUrl(snapshot(value).url);}
+function isDoorDashStore(value,query){
+  return restaurant(snapshot(value).url)?.kind==='store'&&isDoorDashRestaurant(value,query);
+}
 
-module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,doorDashBlocked,doorDashUnavailable};
+module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,isDoorDashStore,doorDashBlocked,doorDashUnavailable};

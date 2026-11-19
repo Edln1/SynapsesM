@@ -10,6 +10,13 @@ const ADD_TO_CART = new RegExp('^add to (?:cart|order)(?:' + PRICE_SEPARATOR.sou
 const RESTAURANT_NAME = /^[\p{L}\p{N}][\p{L}\p{M}\p{N}\s&'’.,()!+–-]*$/u;
 const MCDONALDS_NAME = /^(?:mc\s*donald['’]?\s*s|mcodanlds)$/i;
 const DOORDASH_SCOPE = /\s+(?:on|in|via|through|using)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?$/i;
+const OPEN_DOORDASH = /^(?:open(?: up)?|visit|go to)\s+(?:the\s+)?door\s*dash(?:\s+(?:app|website))?[\s,;:.]+(?:(?:and(?:\s+then)?|then)\s+)?/i;
+const MENU_CHAIN = /^(?:go to|find|open)\s+(.+?)(?:\s*[,;:.]+\s*|\s+)(?:(?:and(?:\s+then)?|then)\s+)?(open|show|find|order|buy|get)\s+(.+)$/i;
+const MENU_ARTICLE = /^(?:(?:me\s+)?(?:an?|one|the)\s+|me\s+)/i;
+const MENU_OPEN_ACTION = /^(?:open|show|find)$/i;
+const CURRENT_MENU_SCOPE = /\s+(?:here|(?:on|from|in)\s+(?:this|the(?:\s+current)?)\s+(?:menu|page))$/i;
+const NAMED_MENU_SCOPE = /\s+(?:on|from|in)\s+(?:the\s+)?(.+?)\s+(?:menu|page)$/i;
+const NAMED_PC_TARGET = /^(?:google|youtube|you tube|steam|codex|chatgpt|chat gpt|edge|chrome|firefox|explorer|file explorer|door dash|doordash)$/i;
 const ACTION_SEQUENCE = /\b(?:then|(?:and|or)\s+(?:also\s+)?(?:open|go|search|find|look|order|buy|add|checkout|check out|pay|select|click|read|show|move|scroll|type|play|close|stop))\b/i;
 const EXTERNAL_SCOPE = /\s+(?:(?:via|through|using)\s+.+|(?:on|in)\s+(?:the\s+)?(?:uber\s*eats|skipthedishes|skip the dishes|grub\s*hub|postmates|deliveroo|google|google maps|yelp|instacart))$/i;
 const NATIVE_OR_BROWSER_SCOPE = /\b(?:app(?:lication)?|browser|website|web page|tab|window|screen|desktop|laptop|file|folder|settings|taskbar|start menu|computer)\b/i;
@@ -17,7 +24,7 @@ const EXPLICIT_ADDRESS = /\b(?:https?|www)\b|\.[a-z]{2,63}(?:\s|$)/i;
 
 function spokenRequest(text) {
   if (typeof text !== 'string' || text.length > 300 || /[\u0000-\u001f\u007f]/.test(text)) return '';
-  return text.trim().replace(/^(?:hey\s+)?ava[\s,]+/i, '')
+  return text.trim().replace(/^(?:hey\s+)?ava[\s,:]+/i, '')
     .replace(/^(?:please\s+)?(?:(?:can|could|would|will) you\s+|i(?:'|’)d like to\s+|i (?:want|need) to\s+)?(?:please\s+)?/i, '')
     .replace(/[.!?]+$/, '').replace(/(?:[\s,]+(?:for me|please))+$/i, '').trim();
 }
@@ -29,16 +36,46 @@ function restaurantName(value) {
   return MCDONALDS_NAME.test(name) ? 'McDonald’s' : name;
 }
 
+function menuItem(value) {
+  const item = value.trim().replace(MENU_ARTICLE, '').replace(/\s+/g, ' ');
+  if (!item || item.length > 100 || ACTION_SEQUENCE.test(item) || EXTERNAL_SCOPE.test(item) || EXPLICIT_ADDRESS.test(item)) return null;
+  if (/\b(?:checkout|check out|payments?|place (?:the|an) order)\b/i.test(item) || /^(?:(?:my|your)\s+)?(?:cart|orders?|account|profile|app|website)$/i.test(item)) return null;
+  return item;
+}
+
 function parseDoorDashMenuRequest(text, { onDoorDash = false } = {}) {
   const command = spokenRequest(text);
-  const explicitlyDoorDash = DOORDASH_SCOPE.test(command);
-  const request = /^(?:order|buy|get)\s+(?:(?:me\s+)?(?:an?|one|the)\s+|me\s+)?(.+?)\s+from\s+(.+)$/i.exec(command.replace(DOORDASH_SCOPE, ''));
+  const explicitlyDoorDash = OPEN_DOORDASH.test(command) || DOORDASH_SCOPE.test(command);
+  const body = command.replace(OPEN_DOORDASH, '').replace(DOORDASH_SCOPE, '');
+  if (onDoorDash || explicitlyDoorDash) {
+    const chain = MENU_CHAIN.exec(body);
+    if (chain) {
+      const query = restaurantName(chain[1]);
+      const item = menuItem(chain[3]);
+      if (!query || !item) return null;
+      return MENU_OPEN_ACTION.test(chain[2]) ? { query, item, openOnly: true } : { query, item };
+    }
+  }
+  const request = /^(?:order|buy|get)\s+(.+?)\s+from\s+(.+)$/i.exec(body);
   if (!request) return null;
-  const item = request[1].trim().replace(/\s+/g, ' ');
+  const item = menuItem(request[1]);
   const query = restaurantName(request[2]);
-  if (!query || (!explicitlyDoorDash && !onDoorDash && !MCDONALDS_NAME.test(query))) return null;
-  if (!item || item.length > 100 || ACTION_SEQUENCE.test(item) || /\b(?:checkout|check out|payments?|place (?:the|an) order)\b/i.test(item)) return null;
+  if (!item || !query || (!explicitlyDoorDash && !onDoorDash && !MCDONALDS_NAME.test(query))) return null;
   return { query, item };
+}
+
+function parseDoorDashCurrentItemRequest(text) {
+  const request = /^(open|show|find|order|buy|get)\s+(.+)$/i.exec(spokenRequest(text).replace(DOORDASH_SCOPE, ''));
+  if (!request) return null;
+  const body = request[2].replace(CURRENT_MENU_SCOPE, '');
+  const scope = NAMED_MENU_SCOPE.exec(body);
+  const query = scope ? restaurantName(scope[1]) : null;
+  if (scope && !query) return null;
+  const name = scope ? body.slice(0, scope.index) : body;
+  if (/\s+from\s+/i.test(name)) return null;
+  const item = menuItem(name);
+  if (!item || /^(?:my|your|our|how)\s+/.test(item.toLowerCase()) || NATIVE_OR_BROWSER_SCOPE.test(item) || NAMED_PC_TARGET.test(item)) return null;
+  return { item, ...(query ? { query } : {}), ...(MENU_OPEN_ACTION.test(request[1]) ? { openOnly: true } : {}) };
 }
 
 function parseDoorDashRestaurantFollowUp(text) {
@@ -46,7 +83,7 @@ function parseDoorDashRestaurantFollowUp(text) {
   if (MCDONALDS_NAME.test(command)) return 'McDonald’s';
   const request = /^(?:go to|find|search for)\s+(.+)$/i.exec(command);
   if (!request || /^(?:(?:my|your|this|that|a|the)\s+)?(?:cart|checkout|orders?|page|app|account|profile|browser|desktop|window|screen)\b/i.test(request[1])) return null;
-  if (/^(?:google|youtube|you tube|steam|codex|chatgpt|chat gpt|edge|chrome|firefox|explorer|file explorer|door dash|doordash)$/i.test(request[1])) return null;
+  if (NAMED_PC_TARGET.test(request[1])) return null;
   return restaurantName(request[1]);
 }
 
@@ -113,4 +150,4 @@ function findDoorDashAddToCart(page, item, restaurantUrl) {
   return { ref: controls[0].ref, label: controls[0].label, dialogTitle: dialog.title };
 }
 
-module.exports = { parseDoorDashMenuRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };
+module.exports = { parseDoorDashMenuRequest, parseDoorDashCurrentItemRequest, parseDoorDashRestaurantFollowUp, findDoorDashMenuItem, isDoorDashMenuItemOpen, findDoorDashAddToCart };

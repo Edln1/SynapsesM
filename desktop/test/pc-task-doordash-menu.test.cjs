@@ -243,3 +243,98 @@ test('an explicit DoorDash order finds a different restaurant and item from obse
   assert.match(result.message, /opened spicy chicken sandwich/i);
   assert.deepEqual(calls, [['read'], ['open', searchUrl], ['open', storefront], ['click', ref]]);
 });
+
+function breakfastFixture() {
+  const breakfast = { ...menuCard, ref: 'menu-mcmuffin', label: 'Egg McMuffin®' };
+  const breakfastMeal = { ...breakfast, ref: 'menu-mcmuffin-meal', label: 'Egg McMuffin® Meal' };
+  const breakfastDialog = { id: 'breakfast-dialog', title: breakfast.label };
+  const addBreakfast = { ...add, ref: 'add-mcmuffin', label: 'Add to cart – $4.59', dialog: breakfastDialog.id };
+  const question = 'Confirm “Add to cart – $4.59” for Egg McMuffin®.';
+  const calls = [];
+  const account = { userId: 'breakfast-owner' };
+  let visiblePage;
+  const tools = createPcTaskTools({
+    windows: {},
+    assertActive: () => true,
+    authorizeAction: async request => {
+      calls.push(['confirm', request]);
+      assert.deepEqual(request, { action: 'click', description: question });
+      return true;
+    },
+    browser: {
+      async perform(action, args, trusted) {
+        calls.push([action, args, trusted]);
+        if (action === 'read_page') return { ok: !!visiblePage, page: visiblePage };
+        if (action === 'open_url') {
+          if (args.url === landingUrl) visiblePage = { url: args.url, title: 'DoorDash', controls: [] };
+          else if ([store, fartherStore].includes(args.url)) visiblePage = page([breakfastMeal, breakfast], [], args.url);
+          else {
+            assert.match(decodeURIComponent(new URL(args.url).pathname), /^\/search\/store\/mcdonald['’]?s\/?$/i);
+            visiblePage = {
+              url: args.url, title: 'DoorDash Search', controls: [
+                { href: fartherStore, label: 'McDonald’s • 2 mi' },
+                { href: store, label: 'McDonald’s • 800 m' }
+              ]
+            };
+          }
+          return { ok: true, verified: true, page: visiblePage };
+        }
+        assert.equal(action, 'click');
+        if (args.ref === breakfast.ref) {
+          const checkoutInDialog = { ...checkout, dialog: breakfastDialog.id };
+          visiblePage = page([addBreakfast, checkoutInDialog], [breakfastDialog], visiblePage.url);
+        } else {
+          assert.equal(args.ref, addBreakfast.ref, 'Only the observed breakfast Add control may be used');
+          assert.equal(trusted.expectedControl.confirm, true);
+          if (!trusted.confirmed) return { ok: false, confirmationRequired: true, message: question };
+          visiblePage = page([checkout], [], visiblePage.url);
+        }
+        return { ok: true, verified: true, page: visiblePage };
+      }
+    }
+  });
+  const runner = createPcTaskRunner({
+    tools,
+    assertActive: () => true,
+    complete: async () => {
+      calls.push(['planner']);
+      throw Object.assign(Error('Too many planner requests'), { code: 'planner_rate_limited' });
+    }
+  });
+  return { runner, account, calls, breakfast, breakfastDialog, addBreakfast, visiblePage: () => visiblePage };
+}
+
+test('the combined Egg McMuffin command works without a planner and opens only the item', async () => {
+  const utterance = "open DoorDash go to McDonald's and open an Egg McMuffin";
+  for (const alreadyOpen of [false, true]) {
+    const f = breakfastFixture();
+    if (alreadyOpen) assert.equal((await f.runner.run('Open DoorDash', f.account)).ok, true);
+    f.calls.length = 0;
+
+    const result = await f.runner.run(utterance, f.account);
+
+    assert.equal(result.ok, true, result.message);
+    assert.match(result.message, /opened egg mcmuffin/i);
+    assert.equal(f.calls.some(([action]) => action === 'confirm' || action === 'planner'), false);
+    assert.equal(f.calls.filter(([action]) => action === 'open_url').at(-1)[1].url, store);
+    assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false]]);
+    assert.deepEqual(f.visiblePage().dialogs, [f.breakfastDialog]);
+  }
+});
+
+test('order an Egg McMuffin uses the current store and confirms only the observed cart action', async () => {
+  const f = breakfastFixture();
+  const first = await f.runner.run("Open McDonald's on DoorDash", f.account);
+  assert.equal(first.ok, true, first.message);
+  const openStore = f.visiblePage().url;
+  assert.ok([store, fartherStore].includes(openStore));
+  f.calls.length = 0;
+
+  const result = await f.runner.run('order an Egg McMuffin', f.account);
+
+  assert.equal(result.ok, true, result.message);
+  assert.match(result.message, /check your cart/i);
+  assert.equal(f.visiblePage().url, openStore);
+  assert.deepEqual(f.calls.map(([action]) => action), ['read_page', 'click', 'click', 'confirm', 'click']);
+  assert.deepEqual(clickedRefs(f.calls), [[f.breakfast.ref, false], [f.addBreakfast.ref, false], [f.addBreakfast.ref, true]]);
+});
