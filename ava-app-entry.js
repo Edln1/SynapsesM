@@ -21,8 +21,8 @@
   html.classList.add('synapses-intro-skipped');
   var state = { stage: 'waiting', destroyed: false, opening: false, initial: true,
     suspension: null, force: false, failed: false, ready: false, userKey: null,
-    settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null };
-  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, authCopy = null, authBrand = null;
+    settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null, homeRequested: true };
+  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
   var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map();
 
@@ -100,11 +100,15 @@
     if (saved.title === null) mic.removeAttribute('title'); else mic.setAttribute('title', saved.title);
   }
   function syncVoiceControl() {
-    var chat = document.getElementById('avaCompanionChat'), anchor = document.getElementById('acHistory'), mic = document.getElementById('topNavVoiceBtn');
+    var chat = document.getElementById('avaCompanionChat'), anchor = document.getElementById('acHistory'), mic = document.getElementById('topNavVoiceBtn'), talk = document.getElementById('acVoice');
     if (!voiceDock && chat && anchor && chat.contains(anchor)) {
       voiceDock = document.createElement('span'); voiceDock.id = 'avaAppVoiceDock';
-      voiceDock.addEventListener('click', function (event) { if (event.target === voiceDock && voiceActive()) stopVoice(); });
+      voiceDock.addEventListener('click', function (event) { if (event.target !== voiceDock) return; if (voiceActive()) stopVoice(); else if (talk) talk.click(); });
       anchor.parentNode.insertBefore(voiceDock, anchor);
+    }
+    if (voiceDock && talk && !idleVoice) {
+      idleVoice = { node: talk, parent: talk.parentNode, next: talk.nextSibling, hidden: talk.hidden, label: talk.getAttribute('aria-label'), title: talk.getAttribute('title') };
+      voiceDock.appendChild(talk); talk.setAttribute('aria-label', 'Talk to Ava'); talk.setAttribute('title', 'Talk to Ava');
     }
     var active = state.stage === 'chat' && voiceActive() && voiceDock && mic;
     if (!active) restoreVoiceControl();
@@ -120,7 +124,9 @@
       mic.setAttribute('aria-label', 'Stop voice conversation'); mic.setAttribute('title', 'Stop voice');
       Object.keys(voiceDockStyles).forEach(function (name) { if (mic.style.getPropertyValue(name) !== voiceDockStyles[name] || mic.style.getPropertyPriority(name) !== 'important') mic.style.setProperty(name, voiceDockStyles[name], 'important'); });
     }
-    if (voiceDock && voiceDock.hidden !== !active) voiceDock.hidden = !active;
+    if (talk && talk.hidden !== !!active) talk.hidden = !!active;
+    var show = state.stage === 'chat' && Boolean(talk || active);
+    if (voiceDock && voiceDock.hidden !== !show) voiceDock.hidden = !show;
   }
   function closeChat() {
     // Undock before chat releases its saved sibling-inert state. Restoring the
@@ -159,7 +165,7 @@
       var close = button('×', function () { closeOwnMenu(); showChat(); }, 'ava-app-menu-close');
       close.setAttribute('aria-label', 'Back to Ava'); top.append(title, close); menu.appendChild(top);
       var account = document.createElement('p'); account.id = 'avaAppMenuAccount'; menu.appendChild(account);
-      menu.append(button('Calls', function () { action('call-records'); }),
+      menu.append(button('Your chats', showHome), button('Calls', function () { action('call-records'); }),
         button('Notes', function () { action('notes'); }), button('Introduction & setup', showIntroduction), button('Settings', function () { action('settings'); }),
         button('Your account', function () { action('account'); }), button('Sign out', function () { action('logout'); }));
       document.body.appendChild(menu);
@@ -192,9 +198,21 @@
       if (close) close.click();
     }
   }
+  function closeKnownTools() {
+    var workspace = document.getElementById('avaCallsWorkspace'), close = document.getElementById('acwClose');
+    if (visible(workspace) && close) close.click();
+    var call = document.getElementById('callSuccessOverlay');
+    if (call && call.classList.contains('show')) {
+      if (typeof window._csMinimizeForPulse === 'function') window._csMinimizeForPulse();
+      else { var minimize = document.getElementById('csMinBtn'); if (minimize) minimize.click(); }
+    }
+    var credits = document.getElementById('avaCreditsDialog');
+    if (credits && credits.open && typeof credits.close === 'function') credits.close();
+  }
+  function showHome() { state.homeRequested = true; return showChat(); }
   function showChat() {
     if (state.destroyed) return false;
-    closeOwnMenu(); closeKnownSettings();
+    closeOwnMenu(); closeKnownSettings(); closeKnownTools();
     state.initial = false; state.force = true; state.failed = false; state.suspension = null;
     // Set the underlying view deliberately, so returning from Account never flashes a dashboard.
     if (!authVisible() && !welcomeVisible() && typeof window.setView === 'function') window.setView('sec-chat');
@@ -250,7 +268,7 @@
     var current = user(), key = current ? String(current.id || current.email) : '';
     if (key !== state.userKey) {
       state.userKey = key; state.settledAt = Date.now() + 180;
-      if (current) { state.initial = true; state.suspension = null; }
+      if (current) { state.initial = true; state.suspension = null; state.homeRequested = true; }
     }
     // Prepare the real setup before opening chat, including an account that
     // becomes ready after the legacy onboarding bootstrap's first attempt.
@@ -260,18 +278,18 @@
       setStage(visible(document.getElementById('avaWelcome')) ? 'welcome' : 'waiting', 'preparing-introduction');
       return false;
     }
-    if (chatVisible() && state.draft === null) { state.initial = false; state.force = false; setStage('chat', reason || 'chat-visible'); return true; }
+    if (chatVisible() && state.draft === null && !state.homeRequested) { state.initial = false; state.force = false; setStage('chat', reason || 'chat-visible'); return true; }
     if ((voiceActive() || state.suspension === 'voice') && !state.force) { setStage('voice', reason || 'voice-handoff'); return false; }
     if (state.suspension === 'tools' || menu && menu.open) { setStage('tools', reason || 'tools-handoff'); return false; }
     if (!current || typeof window.avaCompanionChatOpen !== 'function') { setStage('waiting', reason || 'waiting-for-account'); return false; }
     if (!(state.initial || state.force) || state.opening || state.failed) { setStage('waiting', reason || 'awaiting-user-return'); return false; }
     if (Date.now() < state.settledAt) { schedule('startup-settled', state.settledAt - Date.now() + 10); return false; }
     state.opening = true; state.force = false;
-    var draft = state.draft;
-    Promise.resolve().then(function () { return window.avaCompanionChatOpen(draft === null ? { focus: false } : { message: draft, send: false, focus: false }); }).then(function () {
+    var draft = state.draft, home = state.homeRequested && draft === null;
+    Promise.resolve().then(function () { return window.avaCompanionChatOpen(draft === null ? { home: home, focus: false } : { message: draft, send: false, focus: false }); }).then(function () {
       if (state.destroyed) return;
       state.initial = false;
-      if (chatVisible()) { if (state.draft === draft) state.draft = null; setStage('chat', 'ava-opened'); }
+      if (chatVisible()) { if (state.draft === draft) state.draft = null; state.homeRequested = false; setStage('chat', 'ava-opened'); }
       else { state.failed = true; setStage('waiting', 'chat-did-not-open'); }
     }, function () { if (!state.destroyed) { state.failed = true; setStage('waiting', 'chat-open-failed'); } }).finally(function () { state.opening = false; });
     return true;
@@ -282,7 +300,8 @@
     if (target.id === 'topNavVoiceBtn' && dockedVoice && voiceActive()) { event.preventDefault(); event.stopImmediatePropagation(); stopVoice(); }
     else if (target.id === 'acNewTop') { event.preventDefault(); event.stopImmediatePropagation(); action('call-records'); }
     else if (target.id === 'acClose' || target.id === 'acMainChat') { event.preventDefault(); event.stopImmediatePropagation(); openMenu(); }
-    else if (target.id === 'acVoice') suspend('voice');
+    else if (target.id === 'acVoice') { state.suspension = null; schedule('voice-requested', 0); }
+    else if (target.id === 'acwClose' || target.id === 'csMinBtn') setTimeout(showHome, 0);
     else if (target.id === 'acAccount' || target.id === 'acSettings') suspend('tools');
     else if (target.id === 'acLogout') { state.initial = true; state.suspension = null; }
   }
@@ -299,8 +318,11 @@
     returnBar = document.createElement('div'); returnBar.id = 'avaAppReturn';
     returnBar.setAttribute('aria-label', 'Ava navigation');
     statusNode = document.createElement('span'); statusNode.id = 'avaAppStatus'; statusNode.setAttribute('role', 'status');
-    returnBar.append(statusNode, button('Back to Ava', showChat)); document.body.appendChild(returnBar);
-    observer = new window.MutationObserver(function () { schedule('surface-changed'); }); watch();
+    returnBar.append(statusNode, button('Back to Ava', showHome)); document.body.appendChild(returnBar);
+    observer = new window.MutationObserver(function () {
+      if (dockedVoice && state.stage === 'chat' && chatVisible()) syncVoiceControl();
+      schedule('surface-changed');
+    }); watch();
     listen(document, 'click', captureClick, true); listen(document, 'keydown', captureKey, true);
     ['ava:chat-ready', 'ava:welcome-closed', 'synapses:intro-complete', 'focus', 'pageshow'].forEach(function (name) { listen(window, name, function () { schedule(name, 100); }); });
     listen(document, 'visibilitychange', function () { if (!document.hidden) schedule('visible', 100); });
@@ -324,7 +346,15 @@
     if (state.destroyed) return;
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
-    restoreVoiceControl(); closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
+    restoreVoiceControl();
+    if (idleVoice) {
+      var savedTalk = idleVoice, talk = savedTalk.node;
+      if (savedTalk.parent) savedTalk.parent.insertBefore(talk, savedTalk.next && savedTalk.next.parentNode === savedTalk.parent ? savedTalk.next : null);
+      talk.hidden = savedTalk.hidden;
+      if (savedTalk.label === null) talk.removeAttribute('aria-label'); else talk.setAttribute('aria-label', savedTalk.label);
+      if (savedTalk.title === null) talk.removeAttribute('title'); else talk.setAttribute('title', savedTalk.title);
+    }
+    closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
     if (authBrand) authBrand.remove(); if (authCopy) authCopy.forEach(function (entry) { entry[0].textContent = entry[1]; });
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);
@@ -337,7 +367,7 @@
     if (beforeIntro.skipped === undefined) delete window._synSkipDailyIntro; else window._synSkipDailyIntro = beforeIntro.skipped;
     delete window.avaAppEntry; delete window.avaMobileEntry; delete window.__avaMobileEntryReady;
   }
-  var api = { version: 1, refresh: refresh, showChat: showChat, open: showChat, openMenu: openMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
+  var api = { version: 1, refresh: refresh, showChat: showChat, open: showHome, home: showHome, openMenu: openMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
     action: function (name) { return ['settings', 'account', 'logout', 'notes', 'calls', 'call-records'].indexOf(name) === -1 ? 'unavailable' : action(name); },
     get stage() { return state.stage; } };
   window.avaAppEntry = window.avaMobileEntry = api;

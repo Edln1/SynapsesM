@@ -1,0 +1,131 @@
+name: Publish Synapses desktop preview
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing desktop version tag to build (for example desktop-v0.1.0)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: desktop-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: desktop
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Validate version and existing tag
+        id: version
+        run: |
+          $version = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Desktop package version must be a simple semantic version.' }
+          $expectedTag = "desktop-v$version"
+          if ($env:RELEASE_TAG -cne $expectedTag) { throw "Tag must match package version: $expectedTag" }
+          $tagCommit = git rev-parse --verify "refs/tags/$expectedTag^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'The release tag must already exist.' }
+          $headCommit = git rev-parse HEAD
+          if ($tagCommit.Trim() -ne $headCommit.Trim()) { throw 'Checked-out source does not match the release tag.' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$expectedTag" >> $env:GITHUB_OUTPUT
+      - name: Install locked build dependencies
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test security policies
+        run: npm test
+      - name: Build Windows x64 installer
+        run: npm run build:win
+      - name: Verify preview artifact and write checksum
+        env:
+          DESKTOP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $installerName = "Synapses-Setup-$env:DESKTOP_VERSION.exe"
+          $installer = Get-Item -LiteralPath "dist/$installerName" -ErrorAction Stop
+          if ($installer.Length -lt 10MB) { throw 'Installer is unexpectedly small.' }
+          $status = (Get-AuthenticodeSignature -LiteralPath $installer.FullName).Status.ToString()
+          if ($status -ne 'NotSigned') { throw 'This preview workflow expects an unsigned installer.' }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $installerName" | Set-Content -LiteralPath "dist/$installerName.sha256" -Encoding ascii
+          @{ version=$env:DESKTOP_VERSION; tag=$env:RELEASE_TAG; file=$installerName; bytes=$installer.Length; sha256=$hash; architecture='x64'; signed=$false; requiresInternet=$true } |
+            ConvertTo-Json | Set-Content -LiteralPath dist/release-manifest.json -Encoding utf8
+          Copy-Item -LiteralPath release-notes.md -Destination dist/release-notes.md
+      - name: Retain release files
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: synapses-desktop-${{ steps.version.outputs.version }}
+          path: |
+            desktop/dist/Synapses-Setup-${{ steps.version.outputs.version }}.exe
+            desktop/dist/Synapses-Setup-${{ steps.version.outputs.version }}.exe.sha256
+            desktop/dist/release-manifest.json
+            desktop/dist/release-notes.md
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: synapses-desktop-${{ needs.build.outputs.version }}
+          path: release
+      - name: Publish prerelease using the temporary workflow token
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          DESKTOP_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum --check "Synapses-Setup-${DESKTOP_VERSION}.exe.sha256")
+          if gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json isDraft > release-state.json 2>/dev/null; then
+            if ! jq -e '.isDraft == true' release-state.json >/dev/null; then
+              echo 'A public release already exists for this version. Use a new version/tag instead of replacing its installer.'
+              exit 1
+            fi
+          else
+            gh release create "$RELEASE_TAG" --repo "$GH_REPO" --verify-tag --draft --prerelease \
+              --title "Synapses Desktop ${DESKTOP_VERSION} preview" --notes-file release/release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" --repo "$GH_REPO" --clobber \
+            "release/Synapses-Setup-${DESKTOP_VERSION}.exe" \
+            "release/Synapses-Setup-${DESKTOP_VERSION}.exe.sha256" release/release-manifest.json
+          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" --draft=false --prerelease --latest=false

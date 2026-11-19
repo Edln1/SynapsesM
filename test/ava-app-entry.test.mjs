@@ -39,9 +39,9 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   document.readyState = 'complete'; document.hidden = false;
   document.createElement = tag => new FakeElement(tag, document);
   document.getElementById = id => document.nodes.get(id) || null;
-  function element(id, hidden) { const node = document.createElement(['acClose', 'acMainChat', 'acHistory', 'acNewTop', 'topNavVoiceBtn'].includes(id) ? 'button' : 'div'); node.id = id; node.hidden = hidden; document.body.append(node); return node; }
+  function element(id, hidden) { const node = document.createElement(['acClose', 'acMainChat', 'acHistory', 'acNewTop', 'acVoice', 'topNavVoiceBtn'].includes(id) ? 'button' : 'div'); node.id = id; node.hidden = hidden; document.body.append(node); return node; }
   const authNode = element('authModal', !auth), welcomeNode = element('avaWelcome', !welcome), chat = element('avaCompanionChat', true);
-  element('acClose', false); element('acMainChat', false); element('acConfirm', true); element('acNewTop', false);
+  element('acClose', false); element('acMainChat', false); element('acConfirm', true); element('acNewTop', false); element('acVoice', false);
   const history = element('acHistory', false), actions = element('acTopActions', false); chat.appendChild(actions); actions.appendChild(history);
   const mic = element('topNavVoiceBtn', false), wave = element('tnvWaveIcon', false); mic.appendChild(wave);
   mic.style.setProperty('position', 'fixed', 'important'); mic.style.setProperty('top', '96px', 'important');
@@ -78,6 +78,7 @@ test('ordinary site and non-exact flags do not initialize app mode', () => {
 test('signed-in app opens the real existing chat once after legacy startup settles', async () => {
   const f = setup(); assert.equal(f.opens, 0); await settle(f); assert.equal(f.opens, 1); assert.equal(f.window.avaAppEntry.stage, 'chat');
   assert.equal(f.chatOptions[0].focus, false);
+  assert.equal(f.chatOptions[0].home, true);
   f.window.avaAppEntry.refresh(); await settle(f); assert.equal(f.opens, 1); assert.equal(f.events.length, 1); assert.equal(f.window.avaMobileEntry, f.window.avaAppEntry);
 });
 test('sign-in stays accessible and no chat is opened until an actual user exists', async () => {
@@ -170,7 +171,7 @@ test('the original animated voice icon docks in the chat header and stops the re
   assert.equal(mic.parentNode, dock); assert.equal(mic.inert, false); assert.equal(mic.children[0], wave);
   assert.equal(mic.style.getPropertyValue('position'), 'static'); assert.equal(mic.getAttribute('aria-label'), 'Stop voice conversation');
   const event = new Event('click', { cancelable: true }); Object.defineProperty(event, 'target', { value: mic }); f.document.dispatchEvent(event);
-  await settle(f); assert.equal(stops, 1); assert.equal(dock.hidden, true); assert.equal(event.defaultPrevented, true);
+  await settle(f); assert.equal(stops, 1); assert.equal(dock.hidden, false); assert.equal(f.document.getElementById('acVoice').hidden, false); assert.equal(event.defaultPrevented, true);
   assert.equal(mic.parentNode, originalParent); assert.equal(mic.style.getPropertyValue('position'), 'fixed');
   assert.equal(f.window._topNavVoiceActive, false); assert.equal(f.opens, 1);
   f.window.avaAppEntry.destroy(); assert.equal(f.document.getElementById('avaAppVoiceDock'), null); assert.equal(f.document.getElementById('topNavVoiceBtn'), mic);
@@ -207,6 +208,30 @@ test('the compact menu stays over the conversation and the header phone opens Ca
   assert.deepEqual(f.calls, ['call-records']); assert.equal(event.defaultPrevented, true); assert.equal(f.chat.hidden, true);
 });
 
+test('one header slot holds the talk mic when idle and the original animated mic when live', async () => {
+  const f = setup(); await settle(f);
+  const dock = f.document.getElementById('avaAppVoiceDock'), talk = f.document.getElementById('acVoice'), animated = f.document.getElementById('topNavVoiceBtn');
+  assert.equal(talk.parentNode, dock); assert.equal(talk.hidden, false); assert.equal(dock.hidden, false);
+  f.window._topNavVoiceActive = true; f.window.avaAppEntry.refresh();
+  assert.equal(talk.hidden, true); assert.equal(animated.parentNode, dock); assert.equal(animated.inert, false);
+  f.window.avaAppEntry.destroy(); assert.equal(talk.parentNode, f.document.body); assert.equal(talk.hidden, false);
+});
+
+test('Back to Ava Home closes Calls through its real cleanup handlers and preserves draft/live call state', async () => {
+  const f = setup(); await settle(f); f.window.avaAppEntry.action('calls');
+  const trace = [], node = (id, tag = 'div') => { const n = f.document.createElement(tag); n.id = id; f.document.body.appendChild(n); return n; };
+  const workspace = node('avaCallsWorkspace'), close = node('acwClose', 'button');
+  f.chat.inert = true; close.addEventListener('click', () => { trace.push('workspace'); workspace.hidden = true; f.chat.inert = false; });
+  const draft = node('callSuccessOverlay'); draft.classList.add('show'); const phone = node('csNewPhone'); phone.value = '+15550123456';
+  f.window._csMinimizeForPulse = () => { trace.push('draft'); draft.classList.remove('show'); };
+  f.window.csDismiss = () => { throw Error('must not acknowledge or cancel the call'); };
+  const credits = node('avaCreditsDialog', 'dialog'); credits.showModal(); credits.addEventListener('close', () => trace.push('credits'));
+  const oldOpen = f.window.avaCompanionChatOpen; f.window.avaCompanionChatOpen = options => { assert.equal(f.chat.inert, false); trace.push('chat'); return oldOpen(options); };
+  f.window.avaAppEntry.home(); await settle(f);
+  assert.deepEqual(trace, ['workspace', 'draft', 'credits', 'chat']); assert.equal(phone.value, '+15550123456');
+  assert.equal(f.chatOptions.at(-1).home, true); assert.equal(f.chatOptions.at(-1).focus, false);
+});
+
 test('Ava first-run setup has its own per-account completion marker without changing desktop completion', async () => {
   const page = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const line = page.split('\n').find(value => value.includes('window.avaWelcomeStorageKey=function'));
@@ -226,18 +251,20 @@ test('Ava first-run setup has its own per-account completion marker without chan
 test('the real chat opener avoids automatic app keyboard focus while preserving explicit and desktop focus', async () => {
   const page = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const opener = page.match(/window\.avaCompanionChatOpen=async function\(options\)\{[\s\S]*?\n \};/);
-  assert.ok(opener);
+  const focusHelper = page.match(/function focusComposer\(force\)\{[^\n]+/);
+  const homeHelper = page.match(/function appHomeMode\(\)\{[^\n]+/);
+  assert.ok(opener && focusHelper && homeHelper);
   async function open(appMode, options) {
     let focuses = 0;
     const window = {}, context = vm.createContext({
       window, document: { activeElement: null, documentElement: { classList: { contains: () => appMode } } },
       openVersion: 0, opened: false, focusBefore: null, root: { hidden: true }, lastUi: 'same',
       bridge: { uiKey: () => 'same', verify: async () => {}, current: () => null, invalidate() {} },
-      state: { owner: null }, input: { focus: () => { focuses++; } }, current: () => ({}),
-      mobileFocusMode() {}, notify() {}, ownerChanged() {}, createThread() {}, render() {}, syncTasks() {},
+      state: { owner: null }, input: { focus: () => { focuses++; } }, current: () => ({}), homeView: false,
+      mobileFocusMode() {}, notify() {}, ownerChanged() {}, createThread() {}, render() {}, syncTasks() {}, rememberDraft() {}, closeHistory() {},
       requestAnimationFrame: callback => callback()
     });
-    vm.runInContext(opener[0], context); await window.avaCompanionChatOpen(options); return focuses;
+    vm.runInContext(focusHelper[0] + '\n' + homeHelper[0] + '\n' + opener[0], context); await window.avaCompanionChatOpen(options); return focuses;
   }
   assert.equal(await open(true), 0);
   assert.equal(await open(true, { focus: false }), 0);

@@ -1,0 +1,46 @@
+{
+  "name": "synapses-desktop",
+  "productName": "Synapses",
+  "version": "0.1.0",
+  "description": "The full Synapses experience in a dedicated Windows desktop app.",
+  "author": "Synapses",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "build:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "cloud.synapses.desktop",
+    "productName": "Synapses",
+    "artifactName": "Synapses-Setup-${version}.${ext}",
+    "directories": { "output": "dist", "buildResources": "assets" },
+    "files": ["src/**/*", "assets/app.ico", "assets/favicon.png", "package.json"],
+    "asar": true,
+    "compression": "maximum",
+    "forceCodeSigning": false,
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/app.ico",
+      "signExecutable": false,
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "assets/app.ico",
+      "uninstallerIcon": "assets/app.ico"
+    }
+  }
+}

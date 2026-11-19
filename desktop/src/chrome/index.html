@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-src 'none'; connect-src 'none'">
+  <title>Synapses</title>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body>
+  <header aria-label="Synapses window">
+    <div class="brand"><img src="favicon.png" alt=""><span>Synapses</span></div>
+    <nav aria-label="Window controls">
+      <button id="minimize" aria-label="Minimize" title="Minimize"><svg viewBox="0 0 12 12"><path d="M1 6.5h10"/></svg></button>
+      <button id="maximize" aria-label="Maximize" title="Maximize"><svg class="maximize-icon" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9"/></svg><svg class="restore-icon" viewBox="0 0 12 12"><path d="M4 3V1.5h6.5V8H9M1.5 4H8v6.5H1.5Z"/></svg></button>
+      <button id="close" aria-label="Close" title="Close"><svg viewBox="0 0 12 12"><path d="m1.5 1.5 9 9m0-9-9 9"/></svg></button>
+    </nav>
+  </header>
+  <main><span>Opening Synapses…</span><small>Check your connection if this takes a moment. Press Ctrl+R to retry.</small></main>
+  <script src="shell.js"></script>
+</body>
+</html>

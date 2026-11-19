@@ -108,3 +108,17 @@ html.ava-app-mode #avaAppAuthBrand svg { width:44px; height:44px; }
 html.ava-app-mode #loginForm .auth-step-title { font:500 24px/1.25 'DM Sans',sans-serif; letter-spacing:-.5px; color:#ededf0; }
 html.ava-app-mode #loginForm .auth-step-sub { font:400 14px/1.6 'DM Sans',sans-serif; color:#85858f; margin-bottom:28px; }
 html.ava-app-mode #authModal input { font-size:16px!important; background:#0d0d10!important; border-color:#ffffff12!important; border-radius:10px!important; }
+
+html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #acVoice { width:28px; height:28px; min-width:28px; padding:0; flex:0 0 28px; border-radius:50%; }
+html.ava-app-mode #avaCompanionChat #acReadAloud { width:34px; height:34px; flex:0 0 34px; color:#777780; border:1px solid transparent; border-radius:9px; background:transparent; }
+html.ava-app-mode #avaCompanionChat #acReadAloud[aria-pressed="true"] { color:#d7d7df; border-color:#ffffff12; background:#ffffff05; box-shadow:0 0 10px #cbd2df12; }
+html.ava-app-mode #avaCompanionChat #acReadAloud[data-state="speaking"] { color:#eeeef3; box-shadow:0 0 12px #d6dfed24; }
+html.ava-app-mode #avaCompanionChat #acReadAloud[data-state="blocked"] { border-color:#8a8a9540; }
+html.ava-app-mode #avaCompanionChat[data-home="true"] .ac-welcome { padding-top:24px; max-width:600px; margin:0 auto; }
+html.ava-app-mode #avaCompanionChat #acHomeChats { display:flex; flex-direction:column; margin-top:26px; text-align:left; }
+html.ava-app-mode #avaCompanionChat #acHomeChats[hidden] { display:none!important; }
+html.ava-app-mode #avaCompanionChat .ac-home-chat { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 16px; width:100%; padding:14px 12px; border:0; border-bottom:1px solid #ffffff08; border-radius:8px; background:transparent; text-align:left; color:#cfcfd6; }
+html.ava-app-mode #avaCompanionChat .ac-home-chat:hover { background:#ffffff04; }
+html.ava-app-mode #avaCompanionChat .ac-home-chat-title { font-size:14px; font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+html.ava-app-mode #avaCompanionChat .ac-home-chat-preview { grid-column:1; color:#777780; font-size:12px; line-height:1.5; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+html.ava-app-mode #avaCompanionChat .ac-home-chat-time { grid-column:2; grid-row:1; align-self:center; color:#686872; font-size:12px; white-space:nowrap; }
