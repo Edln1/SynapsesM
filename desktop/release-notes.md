@@ -1,5 +1,8 @@
-Synapses Desktop 0.1.11 preview handles DoorDash location follow-ups and unavailable listings.
+Synapses Desktop 0.1.12 preview handles spoken DoorDash menu requests.
 
+- After opening DoorDash, say “Go to McDonald’s” to continue in that browser. Ava uses the restaurant listings DoorDash shows.
+- Say “Order a Big Mac from McDonald’s” or name another restaurant and item on DoorDash. Ava opens the matching menu item and asks before adding it when a clear Add button is available. Review the cart and finish checkout in DoorDash.
+- If a PC voice task is interrupted, Ava stops working and leaves the browser open for you to continue.
 - Clear commands such as opening DoorDash or searching Google navigate directly in the Ava browser without waiting for a model response.
 - Say “Search for McDonald’s on DoorDash and go there” to search inside DoorDash and open a matching listing. If no matching branch appears, Ava can open DoorDash’s McDonald’s brand page, where you can select your location.
 - Ava verifies the listing destination. If DoorDash requests a security check, the browser stays on that check for you to complete.
@@ -15,7 +18,7 @@ Synapses Desktop 0.1.11 preview handles DoorDash location follow-ups and unavail
 - The existing model service plans one step at a time, receives tool results and checks progress. No additional API key is bundled or required.
 - Native consent describes PC control and the app/window/page information needed by the model. Password fields are excluded; consequential controls require a separate concrete confirmation.
 - The model cannot execute arbitrary shell commands or JavaScript. Native tools accept only validated actions and observed references. Some custom interfaces, canvases and elevated windows are unsupported.
-- Stop PC voice, sign out or Quit to revoke control. Pending work is canceled; tasks have step and time limits. Idle browser playback can remain open after Stop.
+- Stop PC voice, sign out or Quit to revoke control. Pending work is canceled. Tasks have step and time limits.
 - PC replies wait for speech completion before recording again. Visible voice captions stay aligned when the app is resized.
 - X hides Synapses to the tray. Start PC voice preserves the current window state. Quit exits the app.
 

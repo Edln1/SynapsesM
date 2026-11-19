@@ -35,8 +35,8 @@ function fixture(t, options = {}) {
   class Contents extends EventEmitter {
     constructor() { super(); this.session = session; this.navigationHistory = { canGoBack: () => state.loads.length > 1, goBack: () => { state.url = state.loads.at(-2); } }; }
     getURL() { return state.url; }
-    isLoadingMainFrame() { return false; }
-    stop() { state.stoppedLoads = (state.stoppedLoads || 0) + 1; }
+    isLoadingMainFrame() { return state.loadingMainFrame === true; }
+    stop() { state.loadingMainFrame = false; state.stoppedLoads = (state.stoppedLoads || 0) + 1; }
     setWindowOpenHandler(callback) { state.popup = callback; }
     async loadURL(url) {
       const request = await new Promise(resolve => state.request({ url, resourceType: 'mainFrame' }, resolve));
@@ -179,7 +179,7 @@ test('stopping an idle agent preserves visible work and playback, drops referenc
   assert.notEqual(observed.page.controls[0].ref, page.controls[0].ref);
 });
 
-test('revoking a pending action closes the dedicated renderer and prevents a late validated click', async t => {
+test('canceling a pending link keeps the current page and prevents the old action from clicking', async t => {
   let calls = 0, resolve;
   const f = fixture(t, { lookupHost: async () => ++calls === 3 ? new Promise(done => { resolve = done; }) : [{ address: '8.8.8.8' }] });
   const link = f.node('A', 'Public link', ''); link.href = 'https://other.example.org/';
@@ -188,12 +188,15 @@ test('revoking a pending action closes the dedicated renderer and prevents a lat
   for (let i = 0; i < 10 && !resolve; i++) await Promise.resolve();
   assert.equal(typeof resolve, 'function');
   f.state.active = false; f.driver.cancel({ keepIdleWindow: true });
-  assert.equal(f.state.windows[0].closed, true);
+  assert.equal(f.state.windows[0].closed, undefined);
+  assert.equal(f.state.stoppedLoads, 1);
+  f.state.active = true;
+  const next = f.driver.perform('read_page');
   resolve([{ address: '8.8.8.8' }]);
   assert.equal((await pending).error, 'canceled'); assert.equal(link.clicked, undefined);
-  f.state.active = true;
-  assert.equal((await f.driver.perform('open_url', { url: 'https://new.example.org/' })).ok, true);
-  assert.equal(f.state.windows.length, 2);
+  assert.equal((await next).page.url, 'https://example.org/');
+  assert.equal((await f.driver.perform('click', { ref: page.controls[0].ref })).error, 'stale_ref');
+  assert.equal(f.state.windows.length, 1);
 });
 
 test('cancel rejects a pending renderer promise promptly rather than waiting for media or navigation forever', async t => {
@@ -204,7 +207,38 @@ test('cancel rejects a pending renderer promise promptly rather than waiting for
   for (let i = 0; i < 15 && f.state.scripts.length < 3; i++) await Promise.resolve();
   f.state.active = false; f.driver.cancel({ keepIdleWindow: true });
   const result = await Promise.race([pending, new Promise(resolve => { const timer = setTimeout(() => resolve({ error: 'hung' }), 100); timer.unref(); })]);
-  assert.equal(result.error, 'canceled'); assert.equal(f.state.windows[0].closed, true);
+  assert.equal(result.error, 'canceled'); assert.equal(f.state.windows[0].closed, undefined);
+});
+
+test('canceling a pending popup prevents late navigation and keeps the original page', async t => {
+  let resolvePopup;
+  const f = fixture(t, { lookupHost: async host => host === 'pending.example.org' ? new Promise(resolve => { resolvePopup = resolve; }) : [{ address: '8.8.8.8' }] });
+  const originalUrl = 'https://example.org/';
+  await f.driver.perform('open_url', { url: originalUrl });
+  assert.deepEqual(f.state.popup({ url: 'https://pending.example.org/' }), { action: 'deny' });
+  assert.equal(typeof resolvePopup, 'function');
+  f.state.active = false;
+  f.driver.cancel({ keepIdleWindow: true });
+  f.state.active = true;
+  resolvePopup([{ address: '8.8.8.8' }]);
+  assert.equal((await f.driver.perform('read_page')).page.url, originalUrl);
+  assert.deepEqual(f.state.loads, [originalUrl]);
+  assert.equal(f.state.windows[0].closed, undefined);
+});
+
+test('canceling a navigation wait cleans up its listeners and leaves the browser open', async t => {
+  const f = fixture(t);
+  await f.driver.perform('open_url', { url: 'https://example.org/' });
+  const contents = f.state.windows[0].webContents;
+  f.state.loadingMainFrame = true;
+  const pending = f.driver.perform('read_page');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(contents.listenerCount('did-finish-load'), 1);
+  f.driver.cancel({ keepIdleWindow: true });
+  assert.equal((await pending).error, 'canceled');
+  assert.equal(contents.listenerCount('did-finish-load'), 0);
+  assert.equal(contents.listenerCount('did-fail-load'), 0);
+  assert.equal(f.state.windows[0].closed, undefined);
 });
 
 test('verification rereads the actual target after settling rather than trusting a transient type or play result', async t => {
@@ -253,4 +287,23 @@ test('async lease verdicts cannot be mistaken for synchronous permission', async
     assert.equal((await f.driver.perform('open_url', { url: 'https://example.org/' })).error, 'canceled');
     assert.equal(f.state.windows.length, 0); assert.equal(f.state.loads.length, 0);
   }
+});
+
+test('trusted cart confirmation cannot be skipped or applied to a replacement checkout control', async t => {
+  const f = fixture(t), add = f.node('BUTTON', 'Add to cart', 'button');
+  const page = (await f.driver.perform('open_url', { url: 'https://www.doordash.com/store/mcdonalds-123/' })).page;
+  const ref = page.controls[0].ref;
+  assert.equal(page.controls[0].needsConfirmation, false);
+  const expectedControl = { label: 'Add to cart', dialogTitle: '', href: '', confirm: true };
+  const beforeApproval = await f.driver.perform('click', { ref }, { expectedControl });
+  assert.equal(beforeApproval.confirmationRequired, true);
+  assert.equal(add.clicked, undefined);
+  add.attrs['aria-label'] = 'Place order';
+  const afterChange = await f.driver.perform('click', { ref }, { confirmed: true, expectedControl });
+  assert.equal(afterChange.error, 'changed_control');
+  assert.equal(add.clicked, undefined);
+  add.attrs['aria-label'] = 'Add to cart';
+  const afterApproval = await f.driver.perform('click', { ref }, { confirmed: true, expectedControl });
+  assert.equal(afterApproval.ok, true);
+  assert.equal(add.clicked, 1);
 });

@@ -21,7 +21,7 @@ const { createBrowserActions } = require('./browser-actions.cjs');
 const { createTaskDiagnostics } = require('./pc-task-diagnostics.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
-const START_URL = 'https://synapses.cloud/?desktop=0.1.11&v=pc-door-location';
+const START_URL = 'https://synapses.cloud/?desktop=0.1.12&v=pc-door-menu';
 const BAR_HEIGHT = 32;
 const remoteShellCss = fs.readFileSync(path.join(__dirname,'remote-shell.css'),'utf8');
 const smoke = process.argv.includes('--smoke-test');
@@ -159,7 +159,8 @@ async function createWindow() {
     authorizeAction:async request=>{
       assertPcActive();
       const generation=pcVoice.generation(),id=pcVoice.state().sessionId;
-      const {response}=await showDialogPreservingWindowState(dialog,win,{type:'question',title:'Confirm Ava action',message:'Allow this action?',detail:request.description,buttons:['Allow this action','Cancel'],defaultId:1,cancelId:1,noLink:true});
+      const parent=request.action==='click'?(browserActions.dialogParent()||win):win;
+      const {response}=await showDialogPreservingWindowState(dialog,parent,{type:'question',title:'Confirm Ava action',message:'Allow this action?',detail:request.description,buttons:['Allow this action','Cancel'],defaultId:1,cancelId:1,noLink:true});
       assertPcActive();return response===0&&generation===pcVoice.generation()&&id===pcVoice.state().sessionId;
     }});
   const taskDiagnostics=createTaskDiagnostics({file:path.join(app.getPath('userData'),'pc-task-status.json'),version:app.getVersion()});

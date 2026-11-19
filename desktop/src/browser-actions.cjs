@@ -17,6 +17,8 @@ async function pageOperation(args) {
   const state = globalThis[key];
   const clip = (value, limit) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
   const label = el => clip(el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.getAttribute('placeholder') || el.getAttribute('name') || el.tagName, 160);
+  const dialogSelector = 'dialog[open],[role="dialog"],[aria-modal="true"]';
+  const headingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"]';
   const kind = el => /^(VIDEO|AUDIO)$/.test(el.tagName) ? 'media' : el.tagName === 'A' ? 'link' : /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable ? 'input' : 'button';
   const playing = el => el.paused === false && el.ended === false && el.readyState >= 2;
   const visible = el => {
@@ -24,26 +26,44 @@ async function pageOperation(args) {
     const css = getComputedStyle(el);
     return r.width > 1 && r.height > 1 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth && css.visibility !== 'hidden' && css.display !== 'none' && Number(css.opacity) !== 0;
   };
+  const dialog = el => {
+    const ancestor = el.closest(dialogSelector);
+    return ancestor?.matches?.(dialogSelector) && visible(ancestor) ? ancestor : null;
+  };
+  const dialogTitle = el => {
+    if (!el) return '';
+    const name = el.getAttribute('aria-label');
+    if (name) return clip(name, 160);
+    const titleIds = (el.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
+    const namedTitle = titleIds.map(id => document.getElementById(id)?.textContent).filter(Boolean).join(' ');
+    const heading = el.querySelector(headingSelector);
+    return clip(namedTitle || heading?.innerText, 160);
+  };
   function describe(el) {
     const type = clip(el.type || '', 30).toLowerCase(), name = label(el);
     const form = el.form || el.closest('form');
     const search = type === 'search' || /search/i.test(form && (form.getAttribute('role') || '') || '') || /^(search|find|look up)(\b|$)/i.test(name);
     const submits = !!form && (el.tagName === 'BUTTON' && (!type || type === 'submit') || type === 'submit' || type === 'image');
     const risky = type === 'password' || /\b(send|post|publish|purchase|pay|buy|order|checkout|book|reserve|delete|remove|confirm|subscribe|submit|transfer|upload|share|apply|sign out|log out)\b/i.test(name) || submits && !search;
-    return { kind: kind(el), label: name, inputType: type, href: el.tagName === 'A' ? String(el.href || '').slice(0, 2048) : '', disabled: !!(el.disabled || el.getAttribute('aria-disabled') === 'true'), risky, search };
+    const controlKind = kind(el);
+    const heading = (controlKind === 'button' || controlKind === 'link') && el.querySelector?.(headingSelector);
+    return { kind: controlKind, label: name, inputType: type, href: el.tagName === 'A' ? String(el.href || '').slice(0, 2048) : '', disabled: !!(el.disabled || el.getAttribute('aria-disabled') === 'true'), risky, search, dialogTitle: dialogTitle(dialog(el)), menuTitle: clip(heading?.innerText, 160) };
   }
-  function fingerprint(info) { return JSON.stringify([info.kind, info.label, info.inputType, info.href, info.disabled, info.risky, info.search]); }
+  function fingerprint(info) { return JSON.stringify([info.kind, info.label, info.inputType, info.href, info.disabled, info.risky, info.search, info.dialogTitle, info.menuTitle]); }
   if (args.mode === 'snapshot') {
     const nodes = Array.from(document.querySelectorAll('a[href],button,input:not([type="hidden"]),textarea,select,[role="button"],[contenteditable="true"],video,audio')).filter(visible).slice(0, 90);
     const refs = new Map(), controls = [], media = [];
+    const panels = Array.from(document.querySelectorAll(dialogSelector)).filter(el => el.matches?.(dialogSelector) && visible(el)).slice(0, 12);
+    const dialogs = panels.map((el, index) => ({ id: `dialog-${index}`, title: dialogTitle(el) }));
     nodes.forEach((el, index) => {
       const ref = args.token + '-' + index, info = describe(el);
+      const panel = dialogs[panels.indexOf(dialog(el))];
       refs.set(ref, el);
-      controls.push({ ref, kind: info.kind, label: info.label, inputType: info.inputType, href: info.href, disabled: info.disabled, needsConfirmation: info.risky });
+      controls.push({ ref, kind: info.kind, label: info.label, inputType: info.inputType, href: info.href, disabled: info.disabled, needsConfirmation: info.risky, dialog: panel?.id || null, menuTitle: info.menuTitle });
       if (info.kind === 'media') media.push({ ref, label: info.label, playing: playing(el), paused: el.paused === true, ended: el.ended === true });
     });
     globalThis[key] = { token: args.token, refs };
-    return { url: String(location.href).slice(0, 2048), title: clip(document.title, 240), text: String(document.body && document.body.innerText || '').slice(0, 14000), controls, media, scroll: { x: Math.round(scrollX), y: Math.round(scrollY) } };
+    return { url: String(location.href).slice(0, 2048), title: clip(document.title, 240), text: String(document.body && document.body.innerText || '').slice(0, 14000), controls, media, dialogs, scroll: { x: Math.round(scrollX), y: Math.round(scrollY) } };
   }
   if (!state || state.token !== args.token) return { ok: false, error: 'stale_ref' };
   if (args.mode === 'scroll') { scrollBy(args.x, args.y); return { ok: true }; }
@@ -80,7 +100,7 @@ async function pageOperation(args) {
 function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host => dns.lookup(host, { all: true, verbatim: true }), partition = 'persist:synapses-agent-browser', pause = ms => new Promise(resolve => setTimeout(resolve, ms)), makeToken = () => crypto.randomBytes(12).toString('hex'), navigationTimeoutMs = 12000, dnsTimeoutMs = 4000 } = {}) {
   if (typeof BrowserWindow !== 'function' || typeof assertActive !== 'function') throw Error('BrowserWindow and assertActive are required.');
   if (!/^persist:synapses-agent-[a-z0-9-]+$/.test(partition)) throw Error('A separate agent browser partition is required.');
-  let win = null, contents = null, lifetime = 0, generation = 0, snapshot = null, token = '', busy = false, pendingPopup = null, disposed = false, detached = false;
+  let win = null, contents = null, lifetime = 0, generation = 0, snapshot = null, token = '', performingTicket = null, pendingPopup = null, disposed = false, detached = false;
   const cancelWaiters = new Set();
   const active = ticket => {
     if (disposed || ticket !== lifetime) throw Object.assign(Error('Browser task is no longer active.'), { code: 'canceled' });
@@ -170,14 +190,24 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
     if (pendingPopup) { const pending = pendingPopup; await guarded(pending, ticket); if (pendingPopup === pending) pendingPopup = null; }
     if (!contents.isLoadingMainFrame()) return;
     const loadingContents = contents;
-    await guarded(new Promise((resolve, reject) => {
-      const cleanup = () => { clearTimeout(timer); loadingContents.removeListener('did-finish-load', done); loadingContents.removeListener('did-fail-load', failed); loadingContents.removeListener('destroyed', done); };
-      const done = () => { cleanup(); resolve(); };
-      const failed = (_event, code) => { if (code !== -3) done(); };
-      const timer = setTimeout(() => { cleanup(); reject(Object.assign(Error('The page is still loading.'), { code: 'navigation_timeout' })); }, navigationTimeoutMs);
-      loadingContents.once('did-finish-load', done); loadingContents.on('did-fail-load', failed); loadingContents.once('destroyed', done);
-      if (!loadingContents.isLoadingMainFrame()) done();
-    }), ticket);
+    let cleanup;
+    try {
+      await guarded(new Promise((resolve, reject) => {
+        const done = () => resolve();
+        const failed = (_event, code) => { if (code !== -3) done(); };
+        const timer = setTimeout(() => reject(Object.assign(Error('The page is still loading.'), { code: 'navigation_timeout' })), navigationTimeoutMs);
+        cleanup = () => {
+          clearTimeout(timer);
+          loadingContents.removeListener('did-finish-load', done);
+          loadingContents.removeListener('did-fail-load', failed);
+          loadingContents.removeListener('destroyed', done);
+        };
+        loadingContents.once('did-finish-load', done);
+        loadingContents.on('did-fail-load', failed);
+        loadingContents.once('destroyed', done);
+        if (!loadingContents.isLoadingMainFrame()) done();
+      }), ticket);
+    } finally { cleanup?.(); }
   }
   async function observe(ticket) {
     active(ticket);
@@ -187,18 +217,18 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
     if (!page || page.url !== contents.getURL() || !Array.isArray(page.controls)) throw Object.assign(Error('The page changed while it was being read.'), { code: 'page_changed' });
     token = nextToken; generation++;
     snapshot = { generation, url: page.url, title: String(page.title || '').slice(0, 240), text: String(page.text || '').slice(0, 14000),
-      controls: page.controls.slice(0, 90), media: Array.isArray(page.media) ? page.media.slice(0, 90) : [], scroll: page.scroll };
+      controls: page.controls.slice(0, 90), media: Array.isArray(page.media) ? page.media.slice(0, 90) : [], dialogs: Array.isArray(page.dialogs) ? page.dialogs.slice(0, 12) : [], scroll: page.scroll };
     return snapshot;
   }
-  const visibleSignature = page => JSON.stringify(page && [page.url, page.title, page.text, page.controls.map(item => [item.kind, item.label, item.inputType, item.href, item.disabled]), page.media.map(item => item.playing), page.scroll]);
+  const visibleSignature = page => JSON.stringify(page && [page.url, page.title, page.text, page.controls.map(item => [item.kind, item.label, item.inputType, item.href, item.disabled, item.dialog, item.menuTitle]), page.media.map(item => item.playing), page.dialogs, page.scroll]);
   function requireRef(ref) {
     if (!snapshot || typeof ref !== 'string' || !snapshot.controls.some(control => control.ref === ref)) throw Object.assign(Error('Read the page again and use an observed control reference.'), { code: 'stale_ref' });
   }
   async function perform(tool, args = {}, trusted = {}) {
     if (!Object.hasOwn(TOOLS, tool) || !args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).some(name => !TOOLS[tool].includes(name))) return { ok: false, error: 'invalid_arguments', message: 'Use a supported tool and its observed references; code and selectors are not accepted.' };
-    if (busy) return { ok: false, error: 'browser_busy', message: 'Wait for the current browser action.' };
-    busy = true;
     const ticket = lifetime;
+    if (performingTicket === ticket) return { ok: false, error: 'browser_busy', message: 'Wait for the current browser action.' };
+    performingTicket = ticket;
     try {
       active(ticket);
       detached = false;
@@ -229,7 +259,16 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
         if (tool === 'type' && (typeof args.text !== 'string' || args.text.length > 4000 || /\u0000/.test(args.text))) return { ok: false, error: 'invalid_text' };
         const inspected = await execute({ mode: 'inspect', token, ref, key: tool === 'press' ? args.key : '' }, ticket);
         if (!inspected.ok) return inspected;
-        if (inspected.needsConfirmation && trusted.confirmed !== true) return { ok: false, needsConfirmation: true, confirmationRequired: true, message: 'Confirm ' + tool + ' on “' + inspected.label.slice(0, 120) + '”.', page: snapshot };
+        const expected = tool === 'click' ? trusted.expectedControl : null;
+        if (expected && (inspected.label !== expected.label || inspected.dialogTitle !== expected.dialogTitle || expected.href !== undefined && inspected.href !== expected.href || expected.menuTitle !== undefined && inspected.menuTitle !== expected.menuTitle)) {
+          return { ok: false, error: 'changed_control', message: 'The page changed before Ava could use that control.' };
+        }
+        if ((inspected.needsConfirmation || expected?.confirm === true) && trusted.confirmed !== true) {
+          const message = expected?.confirm === true && inspected.dialogTitle
+            ? 'Confirm “' + inspected.label.slice(0, 120) + '” for ' + inspected.dialogTitle + '.'
+            : 'Confirm ' + tool + ' on “' + inspected.label.slice(0, 120) + '”.';
+          return { ok: false, needsConfirmation: true, confirmationRequired: true, message, page: snapshot };
+        }
         if (tool === 'click' && inspected.href) await publicTarget(inspected.href, ticket);
         observedFingerprint = inspected.fingerprint;
         const mode = tool === 'press' ? 'focus' : tool;
@@ -249,7 +288,7 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
       const verified = tool === 'type' ? outcome.valueMatches === true : tool === 'media_play' ? outcome.mediaPlaying === true && page.media.some(item => item.playing) : visibleSignature(page) !== signature;
       return { ok: true, verified, page, message: tool === 'media_play' ? verified ? 'Media is playing.' : 'Media playback was not observed.' : verified ? 'Observed the updated browser state.' : 'The action ran; no visible change was detected.' };
     } catch (error) { return { ok: false, verified: false, error: ['canceled', 'blocked_url', 'blocked_address', 'dns_timeout', 'no_public_page', 'stale_ref', 'page_changed', 'navigation_timeout'].includes(error.code) ? error.code : 'browser_error', message: error.code === 'canceled' ? 'Browser task canceled.' : 'The browser action could not be verified.' }; }
-    finally { busy = false; }
+    finally { if (performingTicket === ticket) performingTicket = null; }
   }
   function retireWindow(permanent) {
     if (permanent) disposed = true;
@@ -259,11 +298,11 @@ function createBrowserActions({ BrowserWindow, assertActive, lookupHost = host =
   }
   function close() { retireWindow(true); }
   function cancel({ keepIdleWindow = false } = {}) {
-    if (!keepIdleWindow || busy || pendingPopup) { retireWindow(false); return; }
-    lifetime++; abortPending(); invalidate(); detached = true;
-    if (contents && typeof contents.stop === 'function') contents.stop();
+    if (!keepIdleWindow) { retireWindow(false); return; }
+    lifetime++; abortPending(); invalidate(); pendingPopup = null; detached = true;
+    if (contents && !contents.isDestroyed?.() && typeof contents.stop === 'function') contents.stop();
   }
-  return Object.freeze({ perform, close, cancel });
+  return Object.freeze({ perform, close, cancel, dialogParent: () => win && !win.isDestroyed() ? win : null });
 }
 
 module.exports = { createBrowserActions, pageOperation };

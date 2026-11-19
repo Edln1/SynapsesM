@@ -79,5 +79,6 @@ function isDoorDashRestaurant(value,query){
   const page=snapshot(value),listing=restaurant(page.url);
   return !!listing&&!doorDashBlocked(page)&&!doorDashUnavailable(page)&&(!query||[listing.nameWords.join(' '),page.title,page.text].some(label=>startsWithName(label,query)));
 }
+function isDoorDashPage(value){return !!doorDashUrl(snapshot(value).url);}
 
-module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,doorDashBlocked,doorDashUnavailable};
+module.exports={doorDashSearchUrl,listDoorDashRestaurants,selectDoorDashRestaurant,verifyDoorDashRestaurant,isDoorDashRestaurant,isDoorDashPage,doorDashBlocked,doorDashUnavailable};
