@@ -23,7 +23,8 @@
     suspension: null, force: false, failed: false, ready: false, userKey: null,
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null, homeRequested: true };
   var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
-  var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
+  // The original SVGs are absolutely centered inside this button.
+  var voiceDockStyles = { position: 'relative', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
 
   function emit(name, detail) {

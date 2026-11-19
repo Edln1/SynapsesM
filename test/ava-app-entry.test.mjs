@@ -202,7 +202,8 @@ test('the original animated voice icon docks in the chat header and stops the re
   const dock = f.document.getElementById('avaAppVoiceDock');
   assert.equal(dock.parentNode, f.document.getElementById('acTopActions')); assert.equal(dock.hidden, false);
   assert.equal(mic.parentNode, dock); assert.equal(mic.inert, false); assert.equal(mic.children[0], wave);
-  assert.equal(mic.style.getPropertyValue('position'), 'static'); assert.equal(mic.getAttribute('aria-label'), 'Stop voice conversation');
+  assert.equal(mic.style.getPropertyValue('position'), 'relative', 'the original absolute SVG must be centered against the docked button');
+  assert.equal(mic.getAttribute('aria-label'), 'Stop voice conversation');
   const event = new Event('click', { cancelable: true }); Object.defineProperty(event, 'target', { value: mic }); f.document.dispatchEvent(event);
   await settle(f); assert.equal(stops, 1); assert.equal(dock.hidden, false); assert.equal(f.document.getElementById('acVoice').hidden, false); assert.equal(event.defaultPrevented, true);
   assert.equal(mic.parentNode, originalParent); assert.equal(mic.style.getPropertyValue('position'), 'fixed');
