@@ -69528,12 +69528,8 @@ function speakVoiceReply(text) {
   }
   var _toastShownAt = 0;
   var _toastManualClose = false; // set on any X-close so the self-heal observer below doesn't fight it back open mid-response; cleared on the next fresh toast() call
-  // Purely the persisted "Reply captions" menu toggle now. The X button on an
-  // expanded toast just closes it (keepArmed=true in that toastHide call) and
-  // no longer touches this flag, and hovering the mic no longer force-clears
-  // it either — both used to override this setting, which is what caused the
-  // toast to silently come back on even after the user explicitly turned it
-  // off from the long-press menu.
+  // The menu preference governs both automatic captions and hover previews.
+  // The expanded caption's X closes only the current bubble.
   var _toastUserDismissed = (function(){
     try { return localStorage.getItem('synapses_sts_toast_enabled') === '0'; } catch(e) { return false; }
   })();
@@ -69541,13 +69537,17 @@ function speakVoiceReply(text) {
   window._tnvSetToastEnabled = function(on){
     _toastUserDismissed = !on;
     try { localStorage.setItem('synapses_sts_toast_enabled', on ? '1' : '0'); } catch(e){}
+    if (!on) {
+      toastHide(true, true, true);
+      return;
+    }
     // Turned on mid-response (she's still talking or a reply just landed) —
     // show it right now instead of waiting for the next turn.
-    if (on && _toastFull) toast(_toastFull);
+    if (_toastFull) toast(_toastFull);
   };
-  function toast(msg, peek) {
+  function toast(msg) {
     if (!_on) return;
-    if (_toastUserDismissed && !peek) { try { if (window._toastDebug) console.log('[toast] suppressed — reply captions turned off in menu, staying hidden for:', msg.slice(0,40)); } catch(_dbgU){} _toastFull = msg; return; } // stay hidden until user re-enables via the long-press menu toggle, or peeks via hover
+    if (_toastUserDismissed) { _toastFull = msg; return; }
     _toastManualClose = false; // fresh display — any earlier X-close no longer applies
     _toastShownAt = Date.now();
     try { if (window._toastDebug) console.log('[toast] show:', msg); } catch(_dbg3){}
@@ -69751,7 +69751,7 @@ function speakVoiceReply(text) {
     }, ms || 2500);
   }
 
-  // Hovering the voice button brings back the last bubble if user dismissed it.
+  // Hovering the voice button previews the last bubble while captions are on.
   // Desktop-only: touchscreens fire a synthetic mouseenter on tap with no
   // matching mouseleave ever following, so this would show a toast that then
   // never gets a hide event — exactly what was getting "stuck" on mobile.
@@ -69765,8 +69765,9 @@ function speakVoiceReply(text) {
     var _hoverOpened = false; // true only when toast was reopened via hover, not during normal display
 
     function _maybeShow() {
+      if (_toastUserDismissed) return;
       if (_toastFull && (!_toast || !_toast.classList.contains('show'))) {
-        toast(_toastFull, true); // peek=true: bypass the disabled-menu-setting check just for this hover-triggered look
+        toast(_toastFull);
         _hoverOpened = true; // mark that this was a hover-reopened toast
       }
     }
@@ -69827,9 +69828,7 @@ function speakVoiceReply(text) {
       }
       return true;
     }
-    // Both STS entry points get hover-reveal + perma-on re-arm: the chat
-    // page's top-nav mic (#topNavVoiceBtn) and the fingerprint pad
-    // (#synFpPad) used everywhere else, including Control Centre.
+    // Attach the preview to the top-nav mic and the fingerprint pad.
     ['topNavVoiceBtn', 'synFpPad'].forEach(function(id) {
       if (!_attachHover(id)) {
         var _tnvCheck = setInterval(function() { if (_attachHover(id)) clearInterval(_tnvCheck); }, 500);
