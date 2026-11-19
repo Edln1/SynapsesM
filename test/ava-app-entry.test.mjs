@@ -244,3 +244,16 @@ test('the real chat opener avoids automatic app keyboard focus while preserving 
   assert.equal(await open(true, { focus: true }), 1);
   assert.equal(await open(false), 1);
 });
+
+test('Ava sign-in branding preserves the real form action and restores its original copy on teardown', () => {
+  const f = setup({ signedIn: false, auth: true });
+  const form = f.document.createElement('div'); form.id = 'loginForm'; f.document.body.appendChild(form);
+  const title = f.document.createElement('div'), subtitle = f.document.createElement('div'), submit = f.document.createElement('button');
+  title.textContent = 'Welcome back'; subtitle.textContent = 'Original account copy'; submit.textContent = 'Sign In';
+  const handler = () => {}; submit.onclick = handler;
+  form.querySelector = selector => ({ '.auth-step-title': title, '.auth-step-sub': subtitle, '.modal-btn': submit })[selector];
+  f.window.avaAppEntry.refresh();
+  assert.equal(title.textContent, 'Sign in to Ava'); assert.equal(submit.onclick, handler);
+  f.window.avaAppEntry.destroy();
+  assert.equal(title.textContent, 'Welcome back'); assert.equal(subtitle.textContent, 'Original account copy'); assert.equal(submit.onclick, handler);
+});

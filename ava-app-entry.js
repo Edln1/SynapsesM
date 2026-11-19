@@ -22,7 +22,7 @@
   var state = { stage: 'waiting', destroyed: false, opening: false, initial: true,
     suspension: null, force: false, failed: false, ready: false, userKey: null,
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null };
-  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null;
+  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, authCopy = null, authBrand = null;
   var voiceDockStyles = { position: 'static', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map();
 
@@ -201,6 +201,7 @@
     return refresh('user-returned-to-ava');
   }
   function patchControls() {
+    patchAuthSurface();
     ['acClose', 'acMainChat', 'acNewTop'].forEach(function (id) {
       var control = document.getElementById(id);
       if (!control || patched.has(control)) return;
@@ -210,6 +211,20 @@
       else if (id === 'acClose') control.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>';
       else control.textContent = 'Menu';
     });
+  }
+  function patchAuthSurface() {
+    var form = document.getElementById('loginForm');
+    if (!form || typeof form.querySelector !== 'function' || authCopy) return;
+    var title = form.querySelector('.auth-step-title'), copy = form.querySelector('.auth-step-sub'), submit = form.querySelector('.modal-btn');
+    if (!title || !copy) return;
+    authCopy = [[title, title.textContent], [copy, copy.textContent]];
+    title.textContent = 'Sign in to Ava'; copy.textContent = 'Use your Synapses account to continue.';
+    if (submit) { authCopy.push([submit, submit.textContent]); submit.textContent = 'Sign in'; }
+    var mascot = typeof document.querySelector === 'function' && document.querySelector('#avaCompanionChat .ac-title .ac-mascot');
+    if (mascot && typeof mascot.cloneNode === 'function') {
+      authBrand = document.createElement('div'); authBrand.id = 'avaAppAuthBrand'; authBrand.setAttribute('aria-hidden', 'true');
+      authBrand.appendChild(mascot.cloneNode(true)); form.insertBefore(authBrand, form.firstChild);
+    }
   }
   function watch() {
     if (!observer || !document.body) return;
@@ -310,6 +325,7 @@
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
     restoreVoiceControl(); closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
+    if (authBrand) authBrand.remove(); if (authCopy) authCopy.forEach(function (entry) { entry[0].textContent = entry[1]; });
     patched.forEach(function (before, node) {
       if (before.label == null) node.removeAttribute('aria-label'); else node.setAttribute('aria-label', before.label);
       if (before.title == null) node.removeAttribute('title'); else node.setAttribute('title', before.title);

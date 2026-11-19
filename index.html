@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <script>(function(){try{if(new URLSearchParams(location.search).get('ava-app')==='1'){window._synSkipDailyIntro=true;document.documentElement.classList.add('ava-app-mode','synapses-intro-skipped');document.documentElement.setAttribute('data-ava-app-stage','waiting');}}catch(_){}})();</script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261118-ava4">
+<link rel="stylesheet" href="ava-app-entry.css?v=20261118-ava5">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261118-ava4" defer></script>
+<script src="ava-app-entry.js?v=20261118-ava5" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -21176,11 +21176,15 @@ var allJobs=[],currentUser=null,jobFilter='all';
         var le = localStorage.getItem('synapses_last_email') || '';
         var em = document.getElementById('loginEmail');
         if(typeof authReset==='function') authReset();
-        // Waitlist is the front door for EVERYONE while it's on, every time —
-        // no "recognize returning users and skip it" shortcut. The gate's own
-        // "Already invited? Sign in" link is the only way past it, and it's
-        // prefilled below with the last email if we have one.
-        if(WAITLIST_MODE && typeof authShowWaitlist==='function') authShowWaitlist();
+        // Ava opens the existing credential form directly. Keep the same
+        // waitlist registration policy; signing in still verifies credentials.
+        var avaSignIn = new URLSearchParams(location.search).get('ava-app') === '1';
+        if(avaSignIn && typeof authShowForms==='function'){
+          window._waitlistGateActive = !!WAITLIST_MODE;
+          authShowForms('login');
+        }
+        // The ordinary Synapses front door keeps its existing waitlist route.
+        else if(WAITLIST_MODE && typeof authShowWaitlist==='function') authShowWaitlist();
         else if(le && typeof authShowForms==='function') authShowForms('login'); // returning user — skip straight to sign in
         if(em && le && !em.value) em.value = le;
         // Median native storage may still have email after some updates (not after full uninstall)
@@ -22850,12 +22854,14 @@ function joinWaitlist(){
 }
 window.joinWaitlist = joinWaitlist;
 function authBackToStart(){
+  var avaSignIn = false;
+  try{ avaSignIn = new URLSearchParams(location.search).get('ava-app') === '1'; }catch(_route){}
   try{
     // Gated new users never see the normal start screen — bounce the back
     // arrow to the waitlist step instead of the options screen it would
     // otherwise reveal (which has its own sign-up path and would defeat the
     // gate).
-    if(window._waitlistGateActive){ authShowWaitlist(); return; }
+    if(window._waitlistGateActive && !avaSignIn){ authShowWaitlist(); return; }
     // If mid-registration wizard, step back one instead of leaving entirely
     var forms=document.getElementById('authStepForms');
     var regVisible = forms && forms.style.display!=='none' && document.getElementById('registerForm').style.display!=='none';
@@ -22865,6 +22871,7 @@ function authBackToStart(){
       if(s2 && s2.classList.contains('active')){ authRegGoStep(1); return; }
     }
   }catch(_e){}
+  if(avaSignIn){ authShowForms('login'); return; }
   authReset();
 }
 function authRegGoStep(n){

@@ -96,3 +96,15 @@ html.ava-app-mode #avaAppMenu p:empty { display:none; }
 html.ava-app-mode #avaAppMenu > button:hover,html.ava-app-mode #avaAppMenu .ava-app-menu-close:hover { background:#ffffff08; color:#eeeeef; }
 html.ava-app-mode #avaCallsWorkspace { inset:0!important; width:100%!important; max-width:none!important; height:100dvh!important; max-height:none!important; margin:0!important; border:0!important; border-radius:0!important; }
 html.ava-app-mode #avaCompanionChat .ac-top { min-height:calc(56px + env(safe-area-inset-top,0px)); }
+
+/* Ava owns this entry surface; the real account forms and credential handlers stay mounted. */
+html.ava-app-mode #authModal { padding:0!important; background:#000!important; backdrop-filter:none!important; }
+html.ava-app-mode #authModalInner { width:100%!important; max-width:none!important; height:100dvh!important; max-height:none!important; margin:0!important; border:0!important; border-radius:0!important; background:#000!important; box-shadow:none!important; }
+html.ava-app-mode #authLeftPanel,html.ava-app-mode #authFieldToggle,html.ava-app-mode #authTabsBar,html.ava-app-mode #authModal .auth-guest-link,html.ava-app-mode #authModal .aw-guest-bottom,html.ava-app-mode #authModal .ava-guest-inline,html.ava-app-mode #waitlistGuestBtn,html.ava-app-mode #loginForm .auth-nav-back { display:none!important; }
+html.ava-app-mode #authRightPanel { flex:1!important; width:100%!important; max-height:100%!important; min-height:0; padding:24px!important; justify-content:center!important; box-sizing:border-box; }
+html.ava-app-mode #authStepForms { width:min(100%,360px)!important; }
+html.ava-app-mode #avaAppAuthBrand { margin-bottom:20px; }
+html.ava-app-mode #avaAppAuthBrand svg { width:44px; height:44px; }
+html.ava-app-mode #loginForm .auth-step-title { font:500 24px/1.25 'DM Sans',sans-serif; letter-spacing:-.5px; color:#ededf0; }
+html.ava-app-mode #loginForm .auth-step-sub { font:400 14px/1.6 'DM Sans',sans-serif; color:#85858f; margin-bottom:28px; }
+html.ava-app-mode #authModal input { font-size:16px!important; background:#0d0d10!important; border-color:#ffffff12!important; border-radius:10px!important; }
