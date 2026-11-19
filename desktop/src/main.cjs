@@ -21,7 +21,7 @@ const { createBrowserActions } = require('./browser-actions.cjs');
 const { createTaskDiagnostics } = require('./pc-task-diagnostics.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
-const START_URL = 'https://synapses.cloud/?desktop=0.1.16&v=pc-door-cart-identity';
+const START_URL = 'https://synapses.cloud/?desktop=0.1.17&v=pc-voice-continuation';
 const BAR_HEIGHT = 32;
 const remoteShellCss = fs.readFileSync(path.join(__dirname,'remote-shell.css'),'utf8');
 const smoke = process.argv.includes('--smoke-test');
@@ -175,7 +175,7 @@ async function createWindow() {
         const partition='persist:synapses-agent-'+createHash('sha256').update(owner).digest('hex').slice(0,20);
         browserActions=createBrowserActions({BrowserWindow,partition,lookupHost:host=>dns.lookup(host,{all:true,verbatim:true}),assertActive:assertPcActive});
       }
-      return taskRunner.run(text,options);
+      return taskRunner.run(text,{...options,voiceSessionId:pcVoice.state().sessionId});
     },cancelTask:()=>{taskRunner.cancel();windowsActions.cancel?.();browserActions.cancel({keepIdleWindow:true});},
     onState:state=>{
       updateBackgroundPolicy();

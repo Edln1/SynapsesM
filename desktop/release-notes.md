@@ -1,4 +1,7 @@
-Synapses Desktop 0.1.16 preview verifies the DoorDash item before cart confirmation.
+Synapses Desktop 0.1.17 preview remembers the question Ava is waiting for you to answer.
+
+- Say “Go to Amazon and find 32 GB RAM,” then answer “Yes” when Ava offers to sort by lowest price. Ava resumes the same search. This search and sort run without the general planner.
+- A brief yes or no stays attached to the last PC Voice question in the current session. Purchases and other actions that require confirmation still use their own review.
 
 - “Add an Egg McMuffin to my cart” uses the menu in the Ava browser. Ava stops for ambiguous items. Changed item details require a fresh confirmation.
 - The general planner can browse DoorDash. Cart changes use a separate exact-item workflow. You review and place the order in DoorDash.
