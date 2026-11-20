@@ -12,9 +12,9 @@
   root.setAttribute('data-ava-app-stage','waiting');
 })();
 </script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-voice-volume1">
+<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-call-audio1">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-voice-volume1" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-call-audio1" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -65865,7 +65865,8 @@ var _actx = null;
 var _actxWarm = false; // false right after a (re)created/suspended ctx — first chunk needs a lead-in so hardware isn't still waking up and clipping the start of speech
 var _actxGain = null; // master output gain — muted when avatar uses Anam's own native voice
 var _playbackTime = 0; // when to schedule next buffer (in AudioContext time)
-var _wsReplyIsSpeechToSpeech = false;
+var _wsAndroidCallAudio = null;
+var _wsAndroidCallAudioError = null;
 // Live BufferSources still scheduled/playing — must stop() on session end or
 // cancelled speech leaves a glitch when the next STS session starts.
 var _ttsActiveSources = [];
@@ -65882,59 +65883,109 @@ var _ttsActiveSources = [];
 // here explicitly so _ttsStopAll() has a real list to pause/reset.
 var _ttsAudioEls = [];
 
-var _avaAndroidVoiceOutput = null;
-function _initAvaAndroidVoiceOutput() {
-  if (_avaAndroidVoiceOutput || !window.AndroidAva || !document.documentElement.classList.contains('ava-app-mode')) return;
-  var storageKey = 'avaAndroidVoiceVolume';
-  var level = 100;
-  var pcmGains = new WeakMap();
-  var voiceMedia = new WeakSet();
+var _avaAndroidCallOutput = null;
+var _avaAndroidCallQueue = [];
+var _avaAndroidCallPumpTimer = null;
+var _avaAndroidCallTailMs = null;
+var _avaAndroidCallSilentGains = new WeakMap();
 
-  function normalize(value) {
-    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return level;
-    var number = Number(value);
-    return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : level;
-  }
-  try { level = normalize(localStorage.getItem(storageKey)); } catch (e) {}
-
-  function playbackLevel() { return level / 100; }
-  function setLevel(value) {
-    var next = normalize(value);
-    if (next === level) return level;
-    level = next;
-    try { localStorage.setItem(storageKey, String(level)); } catch (e) {}
-    var gain = _actx && pcmGains.get(_actx);
-    if (gain) gain.gain.setTargetAtTime(playbackLevel(), _actx.currentTime, 0.01);
-    _ttsAudioEls.concat(window._bargeReactAudioEls || []).forEach(function(audio) {
-      if (voiceMedia.has(audio)) audio.volume = playbackLevel();
-    });
-    return level;
-  }
-
-  _avaAndroidVoiceOutput = {
-    level: playbackLevel,
-    media: function(audio) {
-      voiceMedia.add(audio);
-      audio.volume = playbackLevel();
-    },
-    pcmDestination: function(context, output) {
-      var gain = pcmGains.get(context);
-      if (!gain) {
-        // Leave fades, avatar mute and the echo reference on the shared master.
-        gain = context.createGain();
-        gain.gain.value = playbackLevel();
-        gain.connect(output);
-        pcmGains.set(context, gain);
-      }
-      return gain;
-    }
-  };
-  window.avaAndroidVoiceVolume = { get: function() { return level; }, set: setLevel };
-  window.removeEventListener('ava:app-stage-change', _initAvaAndroidVoiceOutput);
+function _getAvaAndroidCallAudio() {
+  if (!window.AndroidAva || !document.documentElement.classList.contains('ava-app-mode')) return null;
+  var output = window.avaAndroidCallAudio;
+  return output && typeof output.isAvailable === 'function' && typeof output.enqueue === 'function' &&
+    typeof output.stop === 'function' ? output : null;
 }
-if (window.AndroidAva) {
-  _initAvaAndroidVoiceOutput();
-  if (!_avaAndroidVoiceOutput) window.addEventListener('ava:app-stage-change', _initAvaAndroidVoiceOutput);
+
+function _stopAvaAndroidCallAudio() {
+  if (_avaAndroidCallPumpTimer !== null) clearTimeout(_avaAndroidCallPumpTimer);
+  _avaAndroidCallPumpTimer = null;
+  _avaAndroidCallQueue.length = 0;
+  _avaAndroidCallTailMs = null;
+  var output = _avaAndroidCallOutput;
+  _avaAndroidCallOutput = null;
+  if (output) { try { output.stop(); } catch (e) {} }
+}
+
+function _pumpAvaAndroidCallAudio() {
+  if (_avaAndroidCallPumpTimer !== null) clearTimeout(_avaAndroidCallPumpTimer);
+  _avaAndroidCallPumpTimer = null;
+  // Keep several seconds ready across background timer throttling while staying
+  // below the platform queue limit even for a long downloaded clip.
+  var lookAheadMs = 6000;
+  while (_avaAndroidCallQueue.length) {
+    var clip = _avaAndroidCallQueue[0];
+    var packetStartMs = clip.startAtMs + clip.offset * 1000 / 48000;
+    var delayMs = packetStartMs - performance.now();
+    if (delayMs > lookAheadMs) {
+      _avaAndroidCallPumpTimer = setTimeout(_pumpAvaAndroidCallAudio, Math.ceil(delayMs - lookAheadMs));
+      return true;
+    }
+    var end = Math.min(clip.offset + 16384, clip.bytes.length);
+    var packet = clip.bytes.subarray(clip.offset, end);
+    var accepted = false;
+    try {
+      var encoded = btoa(String.fromCharCode.apply(null, packet));
+      // Contiguous speech can fill the hardware buffer immediately. Waiting to
+      // write every packet at its own playback timestamp causes underruns.
+      var contiguous = _avaAndroidCallTailMs !== null && packetStartMs <= _avaAndroidCallTailMs + 5;
+      accepted = _avaAndroidCallOutput.enqueue(encoded, contiguous ? 0 : Math.max(0, Math.ceil(delayMs))) === true;
+    } catch (e) {}
+    if (!accepted) {
+      _stopAvaAndroidCallAudio();
+      clip.onError();
+      return false;
+    }
+    _avaAndroidCallTailMs = packetStartMs + packet.length * 1000 / 48000;
+    clip.offset = end;
+    if (end === clip.bytes.length) _avaAndroidCallQueue.shift();
+  }
+  return true;
+}
+
+function _queueAvaAndroidCallAudio(output, pcm, delayMs, onError) {
+  if (_avaAndroidCallOutput !== output) _stopAvaAndroidCallAudio();
+  _avaAndroidCallOutput = output;
+  var available = false;
+  try { available = output.isAvailable() === true; } catch (e) {}
+  if (!available) {
+    _stopAvaAndroidCallAudio();
+    onError();
+    return false;
+  }
+  _avaAndroidCallQueue.push({ bytes: new Uint8Array(pcm), startAtMs: performance.now() + delayMs,
+    offset: 0, onError: onError });
+  return _pumpAvaAndroidCallAudio();
+}
+
+function _avaAndroidCallTimingOutput(context) {
+  var gain = _avaAndroidCallSilentGains.get(context);
+  if (!gain) {
+    // The existing waveform and completion logic still follow the buffer clock.
+    // Android renders the sound itself through the communication audio stream.
+    gain = context.createGain();
+    gain.gain.value = 0;
+    gain.connect(context.destination);
+    _avaAndroidCallSilentGains.set(context, gain);
+  }
+  return gain;
+}
+
+async function _decodeAvaAndroidCallAudio(blob) {
+  var OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  var decoder = new OfflineContext(1, 1, 24000);
+  var decoded = await decoder.decodeAudioData(await blob.arrayBuffer());
+  var channels = [];
+  for (var channel = 0; channel < decoded.numberOfChannels; channel++) channels.push(decoded.getChannelData(channel));
+  if (!decoded.length || !channels.length) throw new Error('Empty voice reply');
+  // Explicit little-endian samples for Android's mono 24 kHz AudioTrack.
+  var pcm = new DataView(new ArrayBuffer(decoded.length * 2));
+  for (var sample = 0; sample < decoded.length; sample++) {
+    var sum = 0;
+    for (var c = 0; c < channels.length; c++) sum += channels[c][sample];
+    var value = Math.max(-1, Math.min(1, sum / channels.length));
+    pcm.setInt16(sample * 2, Math.round(value * (value < 0 ? 32768 : 32767)), true);
+  }
+  return pcm.buffer;
 }
 
 
@@ -67297,6 +67348,9 @@ function _ttsStopAll(force, fadeMs) {
   if (window._topNavVoiceActive && !force) return;
   if (force) fadeMs = 0;
   _ttsAllowSchedule = false;
+  _stopAvaAndroidCallAudio();
+  _wsAndroidCallAudio = null;
+  _wsAndroidCallAudioError = null;
   if (typeof _avaInterruptLipsync === 'function') _avaInterruptLipsync();
   _vmGenId++;
   /* Do NOT resync _wsCurrentGenId here. It's a stamp of which generation the
@@ -68095,9 +68149,11 @@ function _ttsFinalizeSpeechEnd() {
   }catch(_chpV){}
 }
 
-function _scheduleChunk(arrayBuf) {
+function _scheduleChunk(arrayBuf, androidClip) {
+  var callOutput = androidClip ? androidClip.output : _wsAndroidCallAudio;
+  var callError = androidClip ? androidClip.onError : _wsAndroidCallAudioError;
   try {
-    if (!_ttsAllowSchedule || _vmGenId !== _wsCurrentGenId) return;
+    if (androidClip ? androidClip.generation !== _vmGenId : (!_ttsAllowSchedule || _vmGenId !== _wsCurrentGenId)) return;
     // Mirror this same raw PCM audio to Ava's avatar (no-op if avatar isn't connected)
     if (typeof _avaSendLipsyncAudio === 'function') _avaSendLipsyncAudio(arrayBuf);
 
@@ -68123,10 +68179,7 @@ function _scheduleChunk(arrayBuf) {
     var src = _actx.createBufferSource();
     src.buffer = buf;
     var output = _actxGain || _actx.destination;
-    if (_wsReplyIsSpeechToSpeech && _avaAndroidVoiceOutput) {
-      output = _avaAndroidVoiceOutput.pcmDestination(_actx, output);
-    }
-    src.connect(output);
+    src.connect(callOutput ? _avaAndroidCallTimingOutput(_actx) : output);
     try { _ttsActiveSources.push(src); } catch(ePush){}
 
     // When the avatar is on, push the FIRST chunk of an utterance back so the
@@ -68170,6 +68223,12 @@ function _scheduleChunk(arrayBuf) {
       // whatever ended/started the new session already handled its own cleanup.
       // Bail out instead of crashing on _actx.currentTime.
       if (!_actx) return;
+      if (androidClip) {
+        _stopPcmWaveform();
+        if (typeof _avaEndLipsyncUtterance === 'function') _avaEndLipsyncUtterance();
+        androidClip.onEnded();
+        return;
+      }
       if (_playbackTime <= _actx.currentTime + 0.01 && !(_wsResolvers && _wsResolvers.length)) {
         _ttsProcessing = false;
         // Hume can still have more audio chunks in flight for this same sentence
@@ -68187,7 +68246,15 @@ function _scheduleChunk(arrayBuf) {
         _ttsPlayNext(_vmGenId);
       }
     };
+    if (callOutput && !(_avaNativeVoice && _avaAvatarConnected)) {
+      _queueAvaAndroidCallAudio(callOutput, arrayBuf, Math.max(0, (startAt - _actx.currentTime) * 1000), callError);
+    }
   } catch(e) {
+    if (callOutput) {
+      _stopAvaAndroidCallAudio();
+      callError();
+      return;
+    }
     // If anything above throws before src.onended gets attached, that was the
     // only thing that ever flips _ttsProcessing back to false — without this,
     // the whole voice pipeline silently wedges permanently (every future
@@ -68237,7 +68304,8 @@ function _wsSend(text) {
     if (!_wsReady) { resolve('fallback'); return; }
     _wsResolvers.push(resolve);
     _wsCurrentGenId = _vmGenId;
-    _wsReplyIsSpeechToSpeech = false;
+    _wsAndroidCallAudio = null;
+    _wsAndroidCallAudioError = null;
     if (_ttsProvider === 'hume') {
       var humeMsg = { text: text, flush: true };
       if (_humeVoice) humeMsg.voice = { name: _humeVoice, provider: 'HUME_AI' };
@@ -70088,7 +70156,6 @@ function speakVoiceReply(text) {
       try { a.pause(); a.src = ''; a.removeAttribute('src'); } catch (eKill) {}
       return;
     }
-    if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
     _ttsAudioEls.push(a);
     var _unregister = function() {
       var ix = _ttsAudioEls.indexOf(a);
@@ -70345,7 +70412,14 @@ function speakVoiceReply(text) {
         _showToastWithSpeech();
         _ttsAllowSchedule = true;
         _wsCurrentGenId = _vmGenId;
-        _wsReplyIsSpeechToSpeech = true;
+        _wsAndroidCallAudio = _getAvaAndroidCallAudio();
+        _wsAndroidCallAudioError = function() {
+          if (_speakIsStale(_thisTurn, _thisGen)) return;
+          _abandonWsWait();
+          _ttsStopAll(true);
+          _notifyAvaAppVoiceIssue('Ava could not play her reply through Android call audio. Try again.');
+          _endSpeakListen();
+        };
         _wsAudioThisGen = false;
         _wireFlushResolver();
         try {
@@ -70403,6 +70477,25 @@ function speakVoiceReply(text) {
     }
   }
 
+  function _finishAvaAndroidReply() {
+    _busy = false; _busySince = 0; _ttsBusy = false;
+    toastHide(true);
+    if (_on) setTimeout(record, 180);
+  }
+
+  function _playAvaAndroidReply(blob, output, genId, turnId, onEnded) {
+    function failed() {
+      if (_speakIsStale(turnId, genId)) return;
+      _ttsStopAll(true);
+      _notifyAvaAppVoiceIssue('Ava could not play her reply through Android call audio. Try again.');
+      onEnded();
+    }
+    _decodeAvaAndroidCallAudio(blob).then(function(pcm) {
+      if (_speakIsStale(turnId, genId)) return;
+      _scheduleChunk(pcm, { output: output, generation: genId, onEnded: onEnded, onError: failed });
+    }).catch(failed);
+  }
+
   function _elevenSpeakOnce(clean, genId, turnId) {
     if (typeof genId !== 'number') genId = _vmGenId;
     if (typeof turnId !== 'number') turnId = _voiceTurnId;
@@ -70411,6 +70504,11 @@ function speakVoiceReply(text) {
     _registerTurnAbort(_elCtrl);
     _elevenFetchFile(clean, _elCtrl).then(function(blob) {
       if (_speakIsStale(turnId, genId)) return;
+      var callAudio = _getAvaAndroidCallAudio();
+      if (callAudio) {
+        _playAvaAndroidReply(blob, callAudio, genId, turnId, _finishAvaAndroidReply);
+        return;
+      }
       var bu = URL.createObjectURL(blob);
       var a = new Audio(bu);
       _playAudio(a, function() { _busy = false; _busySince = 0; _ttsBusy = false; try { if (window._toastDebug) console.log('[toast][site:playAudio-onEnded-1]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); }, genId, turnId);
@@ -70427,6 +70525,7 @@ function speakVoiceReply(text) {
     if (typeof genId !== 'number') genId = _vmGenId;
     if (typeof turnId !== 'number') turnId = _voiceTurnId;
     if (_speakIsStale(turnId, genId)) return;
+    var callAudio = _getAvaAndroidCallAudio();
     var _speakCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     _registerTurnAbort(_speakCtrl);
     if (_ttsProvider === 'hume') {
@@ -70434,6 +70533,10 @@ function speakVoiceReply(text) {
       // chunked stream we can pump into MediaSource — simple blob playback.
       _ttsRestFetch(clean, _speakCtrl).then(function(blob) {
         if (_speakIsStale(turnId, genId)) return;
+        if (callAudio) {
+          _playAvaAndroidReply(blob, callAudio, genId, turnId, _finishAvaAndroidReply);
+          return;
+        }
         var bu = URL.createObjectURL(blob);
         var a = new Audio(bu);
         _playAudio(a, function() { _busy = false; _busySince = 0; _ttsBusy = false; try { if (window._toastDebug) console.log('[toast][site:playAudio-onEnded-2]', (Date.now()-_toastShownAt)+'ms since shown'); } catch(_dbgT){} toastHide(true); URL.revokeObjectURL(bu); if (_on) setTimeout(record, 180); }, genId, turnId);
@@ -70452,6 +70555,11 @@ function speakVoiceReply(text) {
       clearTimeout(_dgTimer2);
       if (_speakIsStale(turnId, genId)) return;
       if (!r.ok) throw new Error('DG ' + r.status);
+      if (callAudio) {
+        return r.blob().then(function(blob) {
+          if (!_speakIsStale(turnId, genId)) _playAvaAndroidReply(blob, callAudio, genId, turnId, _finishAvaAndroidReply);
+        });
+      }
       var ms = new MediaSource();
       var burl = URL.createObjectURL(ms);
       var a = new Audio(burl);
@@ -70492,7 +70600,6 @@ function speakVoiceReply(text) {
         pump();
       });
       if (!_speakIsStale(turnId, genId)) {
-        if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
         var p = a.play();
         if (p && p.catch) p.catch(function(){});
       }
@@ -72429,9 +72536,13 @@ function speakVoiceReply(text) {
       // would drift out of sync: toast always shows, sound sometimes
       // silently doesn't.
       if (!blob) { _scheduleFinishBargeReact(started); return; }
+      var callAudio = _getAvaAndroidCallAudio();
+      if (callAudio) {
+        _playAvaAndroidReply(blob, callAudio, gen, _voiceTurnId, function() { _scheduleFinishBargeReact(started); });
+        return;
+      }
       var bu = URL.createObjectURL(blob);
       var a = new Audio(bu);
-      if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
       // Own array, NOT _ttsAudioEls — _cutAvaOff() delay-cleans that array
       // ~16ms later to silence Ava's leftover speech, and this line's audio
       // was landing in it right before that cleanup fired, getting killed
@@ -72485,12 +72596,16 @@ function speakVoiceReply(text) {
   // moments earlier, so calling speak() immediately lands in that dead zone.
   // A short delay lets the engine actually settle first.
   function _speakViaBrowserTTS(clean, started) {
+    if (_getAvaAndroidCallAudio()) {
+      _notifyAvaAppVoiceIssue('Ava could not play her reply through Android call audio. Try again.');
+      _scheduleFinishBargeReact(started);
+      return;
+    }
     setTimeout(function() {
       try {
         var voices = window.speechSynthesis.getVoices();
         console.log('[BargeReact] speechSynthesis.speak() firing, voices available:', voices.length, '| text:', clean);
         var u = new SpeechSynthesisUtterance(clean);
-        if (_avaAndroidVoiceOutput) u.volume = _avaAndroidVoiceOutput.level();
         var _spoke = false;
         u.onstart = function(){ _spoke = true; console.log('[BargeReact] speechSynthesis onstart fired'); };
         u.onend = function(){ console.log('[BargeReact] speechSynthesis onend, did it actually start?', _spoke); _scheduleFinishBargeReact(started); };

@@ -28,7 +28,7 @@
   var voiceDockStyles = { position: 'relative', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
   var voiceMenuHome = null, voiceHold = null, suppressVoiceTap = false;
-  var backgroundVoiceToggle = null, backgroundVoiceNotice = '', voiceVolume = null;
+  var backgroundVoiceToggle = null, backgroundVoiceNotice = '';
   var backgroundVoiceStream = null, backgroundVoiceTracks = [], lastBackgroundVoice = null;
 
   function emit(name, detail) {
@@ -191,45 +191,6 @@
     }
     syncBackgroundVoice();
   }
-  function androidVoiceVolume() {
-    var api = window.avaAndroidVoiceVolume;
-    return window.AndroidAva && api && typeof api.get === 'function' && typeof api.set === 'function' ? api : null;
-  }
-  function showVoiceVolume(level) {
-    var value = String(level), percent = value + '%';
-    if (voiceVolume.slider.value !== value) voiceVolume.slider.value = value;
-    voiceVolume.slider.setAttribute('aria-valuetext', percent);
-    voiceVolume.percent.textContent = percent;
-  }
-  function addVoiceVolume(voiceMenu) {
-    var api = androidVoiceVolume();
-    if (!api) {
-      if (voiceVolume) voiceVolume.row.hidden = true;
-      return;
-    }
-    if (!voiceVolume) {
-      var row = document.createElement('label'); row.id = 'avaVoiceVolume';
-      var label = document.createElement('span'); label.textContent = 'Voice volume';
-      var percent = document.createElement('span'); percent.setAttribute('aria-hidden', 'true');
-      var slider = document.createElement('input');
-      slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
-      slider.addEventListener('input', function () {
-        var current = androidVoiceVolume();
-        if (current) showVoiceVolume(current.set(Number(slider.value)));
-      });
-      // The legacy menu closes on document clicks. Keep it open when a drag ends or the label is tapped.
-      row.addEventListener('click', function (event) { event.stopPropagation(); });
-      row.append(label, percent, slider);
-      voiceVolume = { row: row, slider: slider, percent: percent };
-    }
-    if (voiceVolume.row.parentNode !== voiceMenu) {
-      var after = backgroundVoiceToggle && backgroundVoiceToggle.parentNode === voiceMenu ?
-        backgroundVoiceToggle : document.getElementById('avaCxToastToggle');
-      voiceMenu.insertBefore(voiceVolume.row, after && after.parentNode === voiceMenu ? after.nextSibling : null);
-    }
-    voiceVolume.row.hidden = false;
-    showVoiceVolume(api.get());
-  }
   function openVoiceMenu(x) {
     var chat = document.getElementById('avaCompanionChat'), voiceMenu = document.getElementById('avaStsCtxMenu');
     if (document.hidden || state.stage !== 'chat' || !voiceDock || !visible(chat) || !voiceMenu || !voiceMenu.parentNode ||
@@ -241,7 +202,6 @@
     if (voiceMenu.parentNode !== chat) chat.appendChild(voiceMenu);
     voiceMenu.inert = false;
     addBackgroundVoiceToggle(voiceMenu);
-    addVoiceVolume(voiceMenu);
     // Leave the dock outside the menu so the end of a hold cannot land on a setting.
     var rect = voiceDock.getBoundingClientRect();
     var top = Math.ceil(rect.bottom) + 6;
@@ -609,7 +569,6 @@
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
     syncBackgroundVoiceCapture();
     if (backgroundVoiceToggle) backgroundVoiceToggle.remove();
-    if (voiceVolume) voiceVolume.row.remove();
     restoreVoiceMenu();
     restoreVoiceControl();
     if (idleVoice) {
