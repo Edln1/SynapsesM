@@ -95,9 +95,19 @@ html.ava-app-mode .ava-cx-background-switch::after {
 html.ava-app-mode [aria-checked="true"] > .ava-cx-background-switch { background:#00d9a8; }
 html.ava-app-mode [aria-checked="true"] > .ava-cx-background-switch::after { left:14px; background:#0e1715; }
 
+html.ava-app-mode #avaVoiceVolume:not([hidden]) {
+  display:grid; grid-template-columns:1fr auto; align-items:center; gap:2px 10px;
+  padding:8px 12px 4px; color:#e3e3e8; font:13px/1.35 'DM Sans',sans-serif;
+}
+html.ava-app-mode #avaVoiceVolume [aria-hidden] { color:#a7abb5; font-size:12px; font-variant-numeric:tabular-nums; }
+html.ava-app-mode #avaVoiceVolume input {
+  grid-column:1/-1; width:100%; min-width:0; height:34px; margin:0;
+  accent-color:#d8d9df; cursor:pointer; touch-action:pan-y;
+}
+html.ava-app-mode #avaVoiceVolume input:focus-visible { outline:2px solid #a6a8ba; outline-offset:2px; border-radius:7px; }
+
 html.ava-app-mode #avaAppLoading {
-  position:fixed; inset:0; z-index:94000; display:grid; place-content:center; justify-items:center;
-  gap:12px; pointer-events:none; color:#b4b5bf; font:14px/1.4 'DM Sans',sans-serif;
+  position:fixed; inset:0; z-index:94000; display:grid; place-content:center; pointer-events:none;
 }
 html.ava-app-mode #avaAppLoading[hidden] { display:none; }
 html.ava-app-mode #avaAppLoading .ac-mascot { width:72px; height:72px; }

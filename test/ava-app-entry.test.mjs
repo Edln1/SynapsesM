@@ -135,21 +135,28 @@ test('ordinary site and non-exact flags do not initialize app mode', () => {
     const f = setup({ search }); assert.equal(f.window.avaAppEntry, undefined); assert.equal(f.document.documentElement.classList.contains('ava-app-mode'), false); assert.equal(f.opens, 0);
   }
 });
-test('startup displays the existing Ava face and hides it when chat is ready', async () => {
+test('startup displays only the labeled Ava face and hides it when chat is ready', async () => {
   const f = setup({ loadingMascot: true });
   const opening = f.document.getElementById('avaAppLoading');
   const mascot = f.document.querySelector('#avaCompanionChat .ac-title .ac-mascot');
   assert.equal(opening.hidden, false);
   assert.equal(opening.getAttribute('role'), 'status');
+  assert.equal(opening.getAttribute('aria-label'), 'Ava is loading');
+  assert.equal(opening.children.length, 1);
   assert.notEqual(opening.children[0], mascot);
   assert.equal(opening.children[0].getAttribute('viewBox'), mascot.getAttribute('viewBox'));
-  assert.equal(opening.children[1].textContent, 'Opening Ava…');
   assert.equal(f.document.getElementById('avaAppReturn').hidden, true);
   await settle(f);
   assert.equal(f.window.avaAppEntry.stage, 'chat');
   assert.equal(opening.hidden, true);
   f.window.avaAppEntry.destroy();
   assert.equal(f.document.getElementById('avaAppLoading'), null);
+});
+test('waiting for the page to provide the Ava face shows no loading words in the recovery bar', () => {
+  const f = setup({ loadingMascot: false, chatReady: false });
+  assert.equal(f.window.avaAppEntry.stage, 'waiting');
+  assert.equal(f.document.getElementById('avaAppLoading'), null);
+  assert.equal(f.document.getElementById('avaAppStatus').textContent, '');
 });
 test('the loading face hands off to auth and leaves recovery accessible if chat fails to open', async () => {
   const auth = setup({ loadingMascot: true, signedIn: false, auth: true });
@@ -539,6 +546,63 @@ test('background voice appears only with the installed Android capability and re
   assert.equal(f.document.getElementById('avaAppVoiceNotice').textContent, '');
   toggle.click();
   assert.deepEqual(changes, [true, false]);
+});
+
+test('Android voice volume adjusts through the menu slider without dismissing the menu', async () => {
+  const f = setup(); await settle(f);
+  const { menu } = voiceMenuFixture(f);
+  const mic = f.document.getElementById('acVoice');
+  const reopen = () => dispatchControlEvent(f, 'contextmenu', mic);
+  let volume = 70;
+  const changes = [];
+
+  f.window.AndroidAva = {};
+  reopen();
+  assert.equal(f.document.getElementById('avaVoiceVolume'), null, 'older APKs do not show the control without the playback API');
+  delete f.window.AndroidAva;
+  f.window.avaAndroidVoiceVolume = {
+    get: () => volume,
+    set: value => { changes.push(value); return volume = value; }
+  };
+  reopen();
+  assert.equal(f.document.getElementById('avaVoiceVolume'), null, 'the API by itself does not enable the control in a browser');
+
+  f.window.AndroidAva = {};
+  reopen();
+  const control = f.document.getElementById('avaVoiceVolume');
+  const [label, readout, slider] = control.children;
+  assert.equal(menu.contains(control), true);
+  assert.equal(control.tagName, 'label');
+  assert.equal(label.textContent, 'Voice volume');
+  assert.equal(slider.type, 'range');
+  assert.equal(slider.min, '0');
+  assert.equal(slider.max, '100');
+  assert.equal(slider.value, '70');
+  assert.equal(slider.getAttribute('aria-valuetext'), '70%');
+  assert.equal(readout.getAttribute('aria-hidden'), 'true');
+  assert.equal(readout.textContent, '70%');
+
+  for (const level of ['40', '0']) {
+    slider.value = level;
+    slider.dispatchEvent(new Event('input'));
+    assert.equal(readout.textContent, `${level}%`);
+  }
+  assert.deepEqual(changes, [40, 0]);
+  assert.equal(slider.getAttribute('aria-valuetext'), '0%');
+
+  const release = new Event('click', { bubbles: true });
+  control.dispatchEvent(release);
+  assert.equal(release.cancelBubble, true, 'the click at the end of a drag cannot reach the legacy document dismiss handler');
+  assert.equal(menu.style.display, 'block');
+
+  f.window.avaAppEntry.resetVoiceMenu();
+  volume = 85;
+  reopen();
+  assert.equal(f.document.getElementById('avaVoiceVolume'), control, 'reopening reuses the same slider');
+  assert.equal(slider.value, '85');
+  assert.equal(readout.textContent, '85%');
+  f.window.avaAppEntry.destroy();
+  assert.equal(f.document.getElementById('avaVoiceVolume'), null);
 });
 
 test('Android voice sends a live status only for an acquired audio track and releases it on stop', async () => {

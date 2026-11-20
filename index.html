@@ -12,9 +12,9 @@
   root.setAttribute('data-ava-app-stage','waiting');
 })();
 </script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-background1">
+<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-voice-volume1">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-mic-resume1" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-voice-volume1" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -65865,6 +65865,7 @@ var _actx = null;
 var _actxWarm = false; // false right after a (re)created/suspended ctx — first chunk needs a lead-in so hardware isn't still waking up and clipping the start of speech
 var _actxGain = null; // master output gain — muted when avatar uses Anam's own native voice
 var _playbackTime = 0; // when to schedule next buffer (in AudioContext time)
+var _wsReplyIsSpeechToSpeech = false;
 // Live BufferSources still scheduled/playing — must stop() on session end or
 // cancelled speech leaves a glitch when the next STS session starts.
 var _ttsActiveSources = [];
@@ -65880,6 +65881,61 @@ var _ttsActiveSources = [];
 // uses Web Audio gain nodes instead and isn't DOM-based at all). Tracked
 // here explicitly so _ttsStopAll() has a real list to pause/reset.
 var _ttsAudioEls = [];
+
+var _avaAndroidVoiceOutput = null;
+function _initAvaAndroidVoiceOutput() {
+  if (_avaAndroidVoiceOutput || !window.AndroidAva || !document.documentElement.classList.contains('ava-app-mode')) return;
+  var storageKey = 'avaAndroidVoiceVolume';
+  var level = 100;
+  var pcmGains = new WeakMap();
+  var voiceMedia = new WeakSet();
+
+  function normalize(value) {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return level;
+    var number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.min(100, Math.round(number))) : level;
+  }
+  try { level = normalize(localStorage.getItem(storageKey)); } catch (e) {}
+
+  function playbackLevel() { return level / 100; }
+  function setLevel(value) {
+    var next = normalize(value);
+    if (next === level) return level;
+    level = next;
+    try { localStorage.setItem(storageKey, String(level)); } catch (e) {}
+    var gain = _actx && pcmGains.get(_actx);
+    if (gain) gain.gain.setTargetAtTime(playbackLevel(), _actx.currentTime, 0.01);
+    _ttsAudioEls.concat(window._bargeReactAudioEls || []).forEach(function(audio) {
+      if (voiceMedia.has(audio)) audio.volume = playbackLevel();
+    });
+    return level;
+  }
+
+  _avaAndroidVoiceOutput = {
+    level: playbackLevel,
+    media: function(audio) {
+      voiceMedia.add(audio);
+      audio.volume = playbackLevel();
+    },
+    pcmDestination: function(context, output) {
+      var gain = pcmGains.get(context);
+      if (!gain) {
+        // Leave fades, avatar mute and the echo reference on the shared master.
+        gain = context.createGain();
+        gain.gain.value = playbackLevel();
+        gain.connect(output);
+        pcmGains.set(context, gain);
+      }
+      return gain;
+    }
+  };
+  window.avaAndroidVoiceVolume = { get: function() { return level; }, set: setLevel };
+  window.removeEventListener('ava:app-stage-change', _initAvaAndroidVoiceOutput);
+}
+if (window.AndroidAva) {
+  _initAvaAndroidVoiceOutput();
+  if (!_avaAndroidVoiceOutput) window.addEventListener('ava:app-stage-change', _initAvaAndroidVoiceOutput);
+}
 
 
 // ── Text queue ─────────────────────────────────────────────────────────────────
@@ -68066,7 +68122,11 @@ function _scheduleChunk(arrayBuf) {
 
     var src = _actx.createBufferSource();
     src.buffer = buf;
-    src.connect(_actxGain || _actx.destination);
+    var output = _actxGain || _actx.destination;
+    if (_wsReplyIsSpeechToSpeech && _avaAndroidVoiceOutput) {
+      output = _avaAndroidVoiceOutput.pcmDestination(_actx, output);
+    }
+    src.connect(output);
     try { _ttsActiveSources.push(src); } catch(ePush){}
 
     // When the avatar is on, push the FIRST chunk of an utterance back so the
@@ -68177,6 +68237,7 @@ function _wsSend(text) {
     if (!_wsReady) { resolve('fallback'); return; }
     _wsResolvers.push(resolve);
     _wsCurrentGenId = _vmGenId;
+    _wsReplyIsSpeechToSpeech = false;
     if (_ttsProvider === 'hume') {
       var humeMsg = { text: text, flush: true };
       if (_humeVoice) humeMsg.voice = { name: _humeVoice, provider: 'HUME_AI' };
@@ -70027,6 +70088,7 @@ function speakVoiceReply(text) {
       try { a.pause(); a.src = ''; a.removeAttribute('src'); } catch (eKill) {}
       return;
     }
+    if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
     _ttsAudioEls.push(a);
     var _unregister = function() {
       var ix = _ttsAudioEls.indexOf(a);
@@ -70283,6 +70345,7 @@ function speakVoiceReply(text) {
         _showToastWithSpeech();
         _ttsAllowSchedule = true;
         _wsCurrentGenId = _vmGenId;
+        _wsReplyIsSpeechToSpeech = true;
         _wsAudioThisGen = false;
         _wireFlushResolver();
         try {
@@ -70429,6 +70492,7 @@ function speakVoiceReply(text) {
         pump();
       });
       if (!_speakIsStale(turnId, genId)) {
+        if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
         var p = a.play();
         if (p && p.catch) p.catch(function(){});
       }
@@ -72367,6 +72431,7 @@ function speakVoiceReply(text) {
       if (!blob) { _scheduleFinishBargeReact(started); return; }
       var bu = URL.createObjectURL(blob);
       var a = new Audio(bu);
+      if (_avaAndroidVoiceOutput) _avaAndroidVoiceOutput.media(a);
       // Own array, NOT _ttsAudioEls — _cutAvaOff() delay-cleans that array
       // ~16ms later to silence Ava's leftover speech, and this line's audio
       // was landing in it right before that cleanup fired, getting killed
@@ -72425,6 +72490,7 @@ function speakVoiceReply(text) {
         var voices = window.speechSynthesis.getVoices();
         console.log('[BargeReact] speechSynthesis.speak() firing, voices available:', voices.length, '| text:', clean);
         var u = new SpeechSynthesisUtterance(clean);
+        if (_avaAndroidVoiceOutput) u.volume = _avaAndroidVoiceOutput.level();
         var _spoke = false;
         u.onstart = function(){ _spoke = true; console.log('[BargeReact] speechSynthesis onstart fired'); };
         u.onend = function(){ console.log('[BargeReact] speechSynthesis onend, did it actually start?', _spoke); _scheduleFinishBargeReact(started); };
