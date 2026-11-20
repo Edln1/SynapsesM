@@ -1,0 +1,67 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", sans-serif;
+  color: #ededf1;
+  background: #0c0c0e;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { padding: 22px 24px 18px; }
+h1 { margin: 0 0 16px; font: 600 20px/1.2 "Segoe UI", sans-serif; letter-spacing: -.25px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+input {
+  display: block;
+  width: 100%;
+  min-height: 43px;
+  padding: 11px 12px;
+  border: 1px solid #333339;
+  border-radius: 10px;
+  background: #16161a;
+  color: inherit;
+  font: 14px/1.5 "Segoe UI", sans-serif;
+}
+
+input::placeholder { color: #8c8c97; }
+input:focus-visible { outline: 2px solid #a6a2d6; outline-offset: 1px; }
+input[readonly] { color: #aaaab2; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+button {
+  min-width: 64px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #38383f;
+  border-radius: 8px;
+  background: #151518;
+  color: #d8d8df;
+  font: 600 13px "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+button:focus-visible { outline: 2px solid #a6a2d6; outline-offset: 2px; }
+button:not(:disabled):hover { background: #24242b; }
+#pcCommandRun:not(:disabled) { background: #efedf8; border-color: #efedf8; color: #181721; }
+#pcCommandRun:not(:disabled):hover { background: white; }
+button:disabled { color: #767681; cursor: default; }
+
+#pcCommandStatus {
+  max-height: 100px;
+  margin: 14px 0 0;
+  overflow: auto;
+  color: #c5c5ce;
+  font: 13px/1.45 "Segoe UI", sans-serif;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#pcCommandStatus:empty { display: none; }

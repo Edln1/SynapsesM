@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-src 'none'; connect-src 'none'">
+  <title>Synapses · PC command</title>
+  <link rel="stylesheet" href="pc-command.css">
+</head>
+<body>
+  <main>
+    <h1>PC command</h1>
+    <form id="pcCommandForm">
+      <label class="visually-hidden" for="pcCommandInput">Command for Ava</label>
+      <input id="pcCommandInput" type="text" maxlength="1000" autocomplete="off" spellcheck="false" placeholder="Open YouTube" autofocus>
+      <div class="actions">
+        <button id="pcCommandCancel" type="button" hidden>Cancel</button>
+        <button id="pcCommandRun" type="submit" disabled>Run</button>
+      </div>
+    </form>
+    <p id="pcCommandStatus" role="status" aria-live="polite"></p>
+  </main>
+  <script src="pc-command.js"></script>
+</body>
+</html>

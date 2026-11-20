@@ -1,3 +1,8 @@
+Synapses Desktop 0.1.18 preview adds **Type a PC command** to the Windows tray.
+
+- Right-click the tray icon, choose **Type a PC command**, and enter a request such as “Open Steam” or “Search YouTube for Michael Jackson.”
+- Ava shows the result in the command window and keeps follow-up questions there. The microphone stays off for typed commands. Actions that require approval still display their confirmation.
+
 Synapses Desktop 0.1.17 preview remembers the question Ava is waiting for you to answer.
 
 - Say “Go to Amazon and find 32 GB RAM,” then answer “Yes” when Ava offers to sort by lowest price. Ava resumes the same search. This search and sort run without the general planner.
