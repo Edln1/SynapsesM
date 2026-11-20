@@ -7,6 +7,7 @@ const PC_COMMAND_ROUTES = Object.freeze(['/pc-command.html', '/pc-command.css', 
 const RUN = 'pc-command:run';
 const CANCEL = 'pc-command:cancel';
 const PROGRESS = 'pc-command:progress';
+const FOCUS_INPUT = 'pc-command:focus-input';
 const canceled = { ok: false, message: 'Command canceled.' };
 const progressMessages = new Map([
   ['planning', 'Understanding your command…'],
@@ -16,9 +17,10 @@ const progressMessages = new Map([
   ['acting', 'Working on your PC…']
 ]);
 
-function createPcCommandWindow({ BrowserWindow, ipcMain, icon, run, cancel }) {
+function createPcCommandWindow({ BrowserWindow, ipcMain, screen, icon, run, cancel }) {
   let popup = null;
   let ready = false;
+  let openingAnchor = null;
   let pending = null;
   let disposed = false;
 
@@ -74,19 +76,47 @@ function createPcCommandWindow({ BrowserWindow, ipcMain, icon, run, cancel }) {
   });
   ipcMain.handle(CANCEL, event => cancelPending(checkedWindow(event)));
 
-  function reveal(win) {
-    if (win.isMinimized()) win.restore();
-    win.show();
-    win.focus();
+  function positionByTray(win, anchor) {
+    if (!screen || !anchor ||
+        ![anchor.x, anchor.y, anchor.width, anchor.height].every(Number.isFinite) ||
+        anchor.width <= 0 || anchor.height <= 0) return;
+
+    const center = {
+      x: Math.round(anchor.x + anchor.width / 2),
+      y: Math.round(anchor.y + anchor.height / 2)
+    };
+    const { workArea } = screen.getDisplayNearestPoint(center);
+    const { width, height } = win.getBounds();
+    const gap = 8;
+    const clamp = (point, start, end) => Math.min(Math.max(end, start), Math.max(start, point));
+    const above = anchor.y - gap - height;
+    const below = anchor.y + anchor.height + gap;
+    const bottom = workArea.y + workArea.height - height;
+    const y = above >= workArea.y || below > bottom ? above : below;
+    win.setPosition(
+      clamp(Math.round(center.x - width / 2), workArea.x, workArea.x + workArea.width - width),
+      clamp(y, workArea.y, bottom)
+    );
   }
 
-  function open() {
+  function reveal(win, anchor) {
+    const acceptingInput = pending?.win !== win;
+    if (win.isMinimized()) win.restore();
+    if (acceptingInput) positionByTray(win, anchor);
+    win.show();
+    win.focus();
+    if (acceptingInput && !win.webContents.isDestroyed()) win.webContents.send(FOCUS_INPUT);
+  }
+
+  function open({ anchor = null } = {}) {
     if (disposed) return null;
     if (popup && !popup.isDestroyed()) {
-      if (ready) reveal(popup);
+      if (ready) reveal(popup, anchor);
+      else if (anchor) openingAnchor = anchor;
       return popup;
     }
     ready = false;
+    openingAnchor = anchor;
     const win = popup = new BrowserWindow({
       width: 456, height: 250, minWidth: 340, minHeight: 205, useContentSize: true,
       show: false, maximizable: false, fullscreenable: false, autoHideMenuBar: true,
@@ -110,7 +140,9 @@ function createPcCommandWindow({ BrowserWindow, ipcMain, icon, run, cancel }) {
     win.once('ready-to-show', () => {
       if (popup !== win || win.isDestroyed()) return;
       ready = true;
-      reveal(win);
+      const anchor = openingAnchor;
+      openingAnchor = null;
+      reveal(win, anchor);
     });
     win.once('closed', () => {
       if (pending?.win === win) cancelPending(win);
@@ -118,6 +150,7 @@ function createPcCommandWindow({ BrowserWindow, ipcMain, icon, run, cancel }) {
       if (popup === win) {
         popup = null;
         ready = false;
+        openingAnchor = null;
       }
     });
     void win.loadURL(PC_COMMAND_URL).catch(() => { if (!win.isDestroyed()) win.destroy(); });

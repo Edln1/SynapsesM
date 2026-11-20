@@ -1,3 +1,8 @@
+Synapses Desktop 0.1.19 preview makes the tray command bar available in one click.
+
+- Choose **Type a PC command** once from the tray menu. Each tray click then opens the bar and focuses the input while tray typing is enabled.
+- The tray menu offers **Open Synapses** and **Turn off tray typing**.
+
 Synapses Desktop 0.1.18 preview adds **Type a PC command** to the Windows tray.
 
 - Right-click the tray icon, choose **Type a PC command**, and enter a request such as “Open Steam” or “Search YouTube for Michael Jackson.”

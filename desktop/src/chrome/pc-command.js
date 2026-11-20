@@ -50,3 +50,4 @@ cancel.addEventListener('click', async () => {
 });
 
 commands.onProgress(message => { if (running) status.textContent = message; });
+commands.onFocusInput(() => { if (!running) input.focus(); });

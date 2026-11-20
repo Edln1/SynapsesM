@@ -21,9 +21,10 @@ const { createBrowserActions } = require('./browser-actions.cjs');
 const { createTaskDiagnostics } = require('./pc-task-diagnostics.cjs');
 const { createPcTextSession } = require('./pc-text-session.cjs');
 const { createPcCommandWindow, PC_COMMAND_ROUTES } = require('./pc-command-window.cjs');
+const { createTrayTypingMode } = require('./tray-typing-mode.cjs');
 
 const CHROME_URL = 'synapses-shell://app/index.html';
-const START_URL = 'https://synapses.cloud/?desktop=0.1.18&v=pc-typed-command';
+const START_URL = 'https://synapses.cloud/?desktop=0.1.19&v=tray-typing';
 const READ_PC_ACCOUNT = `(() => {
   const bridge = window.avaCompanionChatBridge;
   const user = bridge?.current();
@@ -156,12 +157,15 @@ async function createWindow() {
     const state=pcVoice.state();
     const template=[{label:'Open Synapses',click:()=>lifecycle.restore()}];
     const starting=validTrayIntent();
-    if(process.platform==='win32')template.push(
-      {label:'Type a PC command',click:()=>{void commandWindow.open();}},
-      {label:state.enabled?'Stop PC voice':starting?'Cancel PC voice setup':'Start PC voice',type:'checkbox',checked:state.enabled||starting,enabled:!pcText?.state().busy,click:()=>{if(pcVoice.state().enabled||validTrayIntent())pcVoice.stop();else void startPcVoiceFromTray();}}
-    );
+    if(process.platform==='win32'){
+      template.push({label:trayTyping.isEnabled()?'Open PC command bar':'Type a PC command',
+        enabled:!state.enabled&&!starting,click:()=>trayTyping.enable()});
+      if(trayTyping.isEnabled())template.push({label:'Turn off tray typing',click:()=>trayTyping.disable()});
+      template.push({label:state.enabled?'Stop PC voice':starting?'Cancel PC voice setup':'Start PC voice',type:'checkbox',checked:state.enabled||starting,enabled:!pcText?.state().busy,click:()=>{if(pcVoice.state().enabled||validTrayIntent())pcVoice.stop();else void startPcVoiceFromTray();}});
+    }
     template.push({type:'separator'},{label:'Quit Synapses',click:()=>{void lifecycle.quit();}});
-    trayMenu=Menu.buildFromTemplate(template);tray.setContextMenu(trayMenu);tray.setToolTip(state.listening?'Synapses — PC voice listening':state.enabled||starting?'Synapses — PC voice starting':'Synapses');
+    trayMenu=Menu.buildFromTemplate(template);tray.setContextMenu(trayMenu);
+    tray.setToolTip(state.listening?'Synapses — PC voice listening':state.enabled||starting?'Synapses — PC voice starting':trayTyping.isEnabled()?'Synapses — click to type a PC command':'Synapses');
     if(desktopRuntime)desktopRuntime.trayMenu=trayMenu;
   }
   function assertPcActive(){
@@ -249,13 +253,19 @@ async function createWindow() {
     voiceInUse:()=>pcVoice.state().enabled||validTrayIntent(),
     runTask:runTypedPcTask,cancelTask:cancelPcTask
   });
-  commandWindow=createPcCommandWindow({BrowserWindow,ipcMain,icon:path.join(__dirname,'../assets/app.ico'),
+  commandWindow=createPcCommandWindow({BrowserWindow,ipcMain,screen,icon:path.join(__dirname,'../assets/app.ico'),
     run:text=>{
       const task=pcText.run(text);
       updateBackgroundPolicy();refreshTrayMenu();
       return task.finally(()=>{updateBackgroundPolicy();refreshTrayMenu();});
     },
     cancel:()=>{pcText.cancel();updateBackgroundPolicy();refreshTrayMenu();}
+  });
+  const trayTyping=createTrayTypingMode({
+    openCommand:()=>commandWindow.open({anchor:tray.getBounds()}),
+    closeCommand:()=>commandWindow.close(),
+    openSynapses:()=>lifecycle.restore(),
+    onChange:refreshTrayMenu
   });
   const revokeAndStop=()=>{const enabled=pcVoice.state().enabled;pcVoice.stop();return enabled?pcVoice.waitForStop():stopWebVoice();};
   const unbindDesktopVoice=process.platform==='win32'?bindDesktopVoice({
@@ -270,7 +280,7 @@ async function createWindow() {
       if(!approved){voiceDiagnostics.record('stopped','native_start_denied');return false;}
       if(intent){clearTrayIntent();return intent;}return true;
     },
-    onStartGesture:approval=>{pcText.cancel();lastInput=Date.now();pcStartAt=approval?.beganAt||Date.now();}
+    onStartGesture:approval=>{trayTyping.disable();pcText.cancel();lastInput=Date.now();pcStartAt=approval?.beganAt||Date.now();}
   }):()=>{};
   const trayVoiceStarter=createTrayVoiceStarter({
     beginIntent:()=>{clearTrayIntent();lastInput=Date.now();trayIntent={generation:pcVoice.generation(),frame:contents.mainFrame,beganAt:Date.now(),expiresAt:Date.now()+30000};trayIntentTimer=setTimeout(()=>{if(trayIntent)pcVoice.stop('PC voice setup timed out.','setup_timeout');},30000);voiceDiagnostics.record('tray_start');updateBackgroundPolicy();refreshTrayMenu();},
@@ -294,8 +304,8 @@ async function createWindow() {
   tray = new Tray(path.join(__dirname,'../assets/app.ico'));
   tray.setToolTip('Synapses');
   refreshTrayMenu();
-  tray.on('click',()=>lifecycle.restore());
-  tray.on('double-click',()=>lifecycle.restore());
+  tray.on('click',()=>trayTyping.click());
+  tray.on('double-click',()=>trayTyping.click());
   async function reportVoiceRuntime(){
     let raw=null;
     if(!contents.isDestroyed()&&trustedSite(contents.getURL()))raw=await contents.executeJavaScript(RUNTIME_EXPRESSION,false).catch(()=>null);
