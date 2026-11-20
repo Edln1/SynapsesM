@@ -445,6 +445,76 @@ test('dragging or canceling a mobile mic hold does not open the caption menu', a
   assert.equal(opens.length, 0);
 });
 
+test('background voice appears only with the installed Android capability and reflects native consent', async () => {
+  const f = setup(); await settle(f);
+  const { menu } = voiceMenuFixture(f);
+  const mic = f.document.getElementById('acVoice');
+  f.window.AndroidAva = {};
+  dispatchControlEvent(f, 'contextmenu', mic);
+  assert.equal(f.document.getElementById('avaBackgroundVoiceToggle'), null, 'older shells should not offer this switch');
+
+  const changes = [];
+  let status = { available: true, enabled: false, running: false, message: '' };
+  f.window.avaBackgroundVoice = {
+    getState: () => status, setEnabled: value => changes.push(value), setVoiceLive: () => {}
+  };
+  dispatchControlEvent(f, 'contextmenu', mic);
+  const toggle = f.document.getElementById('avaBackgroundVoiceToggle');
+  assert.equal(menu.contains(toggle), true);
+  assert.equal(toggle.getAttribute('role'), 'switch');
+  assert.equal(toggle.children[0].textContent, 'Keep voice on in background');
+  assert.equal(toggle.getAttribute('aria-checked'), 'false');
+  toggle.click();
+  assert.deepEqual(changes, [true]);
+  assert.equal(toggle.getAttribute('aria-checked'), 'false', 'wait for native consent before enabling');
+
+  status = { ...status, message: 'Allow Ava notifications to use background voice.' };
+  f.window.dispatchEvent(new f.window.CustomEvent('ava:background-voice', { detail: status }));
+  assert.equal(f.document.getElementById('avaAppVoiceNotice').textContent, status.message);
+  status = { ...status, enabled: true, message: '' };
+  f.window.dispatchEvent(new f.window.CustomEvent('ava:background-voice', { detail: status }));
+  assert.equal(toggle.getAttribute('aria-checked'), 'true');
+  assert.equal(f.document.getElementById('avaAppVoiceNotice').textContent, '');
+  toggle.click();
+  assert.deepEqual(changes, [true, false]);
+});
+
+test('Android voice sends a live status only for an acquired audio track and releases it on stop', async () => {
+  const f = setup(); await settle(f);
+  const capture = [];
+  f.window.avaBackgroundVoice = {
+    getState: () => ({ available: true, enabled: true, running: false, message: '' }),
+    setEnabled: () => {}, setVoiceLive: value => capture.push(value)
+  };
+  const changed = () => f.window.dispatchEvent(new Event('ava:voice-capture'));
+  f.window._topNavVoiceActive = true;
+  changed();
+  assert.deepEqual(capture, [], 'the voice toggle alone does not prove microphone input');
+  const track = new EventTarget();
+  track.enabled = true;
+  track.readyState = 'live';
+  f.window._stream = { getAudioTracks: () => [track] };
+  changed();
+  changed();
+  assert.deepEqual(capture, [true], 'bridge receives one live transition for an actual stream');
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.deepEqual(capture, [true], 'minimizing preserves a valid active capture');
+  track.readyState = 'ended';
+  track.dispatchEvent(new Event('ended'));
+  assert.deepEqual(capture, [true, false]);
+
+  const next = new EventTarget();
+  next.enabled = true;
+  next.readyState = 'live';
+  f.window._stream = { getAudioTracks: () => [next] };
+  changed();
+  f.window._topNavVoiceActive = false;
+  f.window._stream = null;
+  changed();
+  assert.deepEqual(capture, [true, false, true, false]);
+});
+
 test('Back to Ava Home closes Calls through its real cleanup handlers and preserves draft/live call state', async () => {
   const f = setup(); await settle(f); f.window.avaAppEntry.action('calls');
   const trace = [], node = (id, tag = 'div') => { const n = f.document.createElement(tag); n.id = id; f.document.body.appendChild(n); return n; };

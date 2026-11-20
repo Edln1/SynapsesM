@@ -12,9 +12,9 @@
   root.setAttribute('data-ava-app-stage','waiting');
 })();
 </script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-loading1">
+<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-background1">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-loading1" defer></script>
+<script src="ava-app-entry.js?v=20261119-ava-background1" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -68626,6 +68626,11 @@ function speakVoiceReply(text) {
   // AVA_MIC_LIFECYCLE_START — shared by initial capture and watchdog recovery.
   var _micSessionGeneration = 0;
   var _micAcquirePending = null;
+  function _notifyAvaVoiceCapture() {
+    if (window.avaBackgroundVoice && typeof window.CustomEvent === 'function' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new window.CustomEvent('ava:voice-capture'));
+    }
+  }
   function _notifyAvaAppVoiceIssue(message) {
     if (!window.document?.documentElement?.classList.contains('ava-app-mode') ||
         typeof window.CustomEvent !== 'function' || typeof window.dispatchEvent !== 'function') return false;
@@ -68646,6 +68651,7 @@ function speakVoiceReply(text) {
     var previous = _stream;
     _stream = null; window._stream = null;
     _stopMicTracks(previous);
+    _notifyAvaVoiceCapture();
     // getUserMedia cannot be cancelled. Keep its pending lease until it settles,
     // so a deliberate restart waits instead of opening a second capture request.
   }
@@ -68678,6 +68684,7 @@ function speakVoiceReply(text) {
       if (!_micSessionCurrent(generation)) { _stopMicTracks(stream); return null; }
       if (_stream !== stream) _stopMicTracks(_stream);
       _stream = stream; window._stream = stream;
+      _notifyAvaVoiceCapture();
       return stream;
     }).then(function(stream) {
       if (_micAcquirePending === attempt) _micAcquirePending = null;

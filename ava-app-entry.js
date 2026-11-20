@@ -28,6 +28,8 @@
   var voiceDockStyles = { position: 'relative', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
   var voiceMenuHome = null, voiceHold = null, suppressVoiceTap = false;
+  var backgroundVoiceToggle = null, backgroundVoiceNotice = '';
+  var backgroundVoiceStream = null, backgroundVoiceTracks = [], lastBackgroundVoice = null;
 
   function emit(name, detail) {
     try { window.dispatchEvent(new window.CustomEvent(name, { detail: detail })); } catch (_) {}
@@ -74,6 +76,7 @@
     if (next !== 'chat' && changed) restoreVoiceMenu();
     state.stage = next; state.lastReason = reason || next;
     html.setAttribute('data-ava-app-stage', next);
+    if (next === 'auth' && changed) syncBackgroundVoiceCapture();
     syncVoiceControl();
     var loading = syncLoading(next);
     if (returnBar) returnBar.hidden = loading || next === 'chat' || next === 'auth' || next === 'welcome' || Boolean(menu && menu.open);
@@ -123,6 +126,68 @@
     saved.parent.insertBefore(saved.node, saved.next && saved.next.parentNode === saved.parent ? saved.next : null);
     saved.node.inert = saved.inert && chatVisible();
   }
+  function backgroundVoiceState() {
+    try {
+      var api = window.avaBackgroundVoice;
+      if (!api || typeof api.getState !== 'function' || typeof api.setEnabled !== 'function' ||
+          typeof api.setVoiceLive !== 'function') return null;
+      var status = api.getState();
+      return status && status.available === true ? { api: api, status: status } : null;
+    } catch (_) { return null; }
+  }
+  function syncBackgroundVoiceCapture() {
+    var native = !state.destroyed && backgroundVoiceState();
+    var stream = native && state.stage !== 'auth' && window._topNavVoiceActive === true ? window._stream || null : null;
+    if (stream !== backgroundVoiceStream) {
+      backgroundVoiceTracks.forEach(function (track) { track.removeEventListener('ended', syncBackgroundVoiceCapture); });
+      backgroundVoiceStream = stream;
+      backgroundVoiceTracks = stream && typeof stream.getAudioTracks === 'function' ? stream.getAudioTracks() : [];
+      backgroundVoiceTracks.forEach(function (track) { track.addEventListener('ended', syncBackgroundVoiceCapture); });
+    }
+    var live = backgroundVoiceTracks.some(function (track) { return track.enabled && track.readyState === 'live'; });
+    var api = native ? native.api : lastBackgroundVoice && lastBackgroundVoice.api;
+    if (!api || (!lastBackgroundVoice && !live) ||
+        (lastBackgroundVoice && lastBackgroundVoice.api === api && lastBackgroundVoice.live === live)) return;
+    // Record the transition first. A bridge can acknowledge it synchronously.
+    lastBackgroundVoice = { api: api, live: live };
+    try { api.setVoiceLive(live); } catch (_) { lastBackgroundVoice = null; }
+  }
+  function syncBackgroundVoice() {
+    var native = backgroundVoiceState();
+    if (backgroundVoiceToggle) {
+      backgroundVoiceToggle.hidden = !native;
+      backgroundVoiceToggle.setAttribute('aria-checked', String(Boolean(native && native.status.enabled)));
+    }
+    var message = native && typeof native.status.message === 'string' ? native.status.message.slice(0, 240) : '';
+    if (message !== backgroundVoiceNotice) {
+      backgroundVoiceNotice = message;
+      syncVoiceControl();
+    }
+    syncBackgroundVoiceCapture();
+  }
+  function addBackgroundVoiceToggle(voiceMenu) {
+    if (!backgroundVoiceState()) return;
+    if (!backgroundVoiceToggle) {
+      backgroundVoiceToggle = button('', function (event) {
+        event.stopPropagation();
+        var native = backgroundVoiceState();
+        if (!native) return;
+        syncBackgroundVoiceCapture();
+        try { native.api.setEnabled(!native.status.enabled); } catch (_) {}
+      }, 'ava-cx-background-voice');
+      backgroundVoiceToggle.id = 'avaBackgroundVoiceToggle';
+      backgroundVoiceToggle.setAttribute('role', 'switch');
+      var label = document.createElement('span');
+      label.textContent = 'Keep voice on in background';
+      var indicator = document.createElement('span');
+      indicator.className = 'ava-cx-background-switch';
+      indicator.setAttribute('aria-hidden', 'true');
+      backgroundVoiceToggle.append(label, indicator);
+      var captions = document.getElementById('avaCxToastToggle');
+      voiceMenu.insertBefore(backgroundVoiceToggle, captions && captions.parentNode === voiceMenu ? captions.nextSibling : null);
+    }
+    syncBackgroundVoice();
+  }
   function openVoiceMenu(x, y) {
     var chat = document.getElementById('avaCompanionChat'), voiceMenu = document.getElementById('avaStsCtxMenu');
     if (state.stage !== 'chat' || !visible(chat) || !voiceMenu || !voiceMenu.parentNode ||
@@ -132,6 +197,7 @@
       chat.appendChild(voiceMenu);
       voiceMenu.inert = false;
     }
+    addBackgroundVoiceToggle(voiceMenu);
     window._tnvOpenVoiceMenu(x, y);
     return true;
   }
@@ -173,7 +239,7 @@
     syncVoiceControl();
   }
   function syncVoiceNotice(connecting) {
-    var message = voiceNotice || (connecting ? 'Connecting microphone…' : '');
+    var message = voiceNotice || backgroundVoiceNotice || (connecting ? 'Connecting microphone…' : '');
     if (!voiceNoticeNode && message) {
       var notice = document.getElementById('acNotice');
       if (!notice || !notice.parentNode) return;
@@ -464,6 +530,9 @@
     listen(document, 'pointerdown', armVoiceHold, true);
     ['pointermove', 'pointerup', 'pointercancel'].forEach(function (name) { listen(document, name, endVoiceHold, true); });
     listen(window, 'ava:voice-error', showVoiceIssue);
+    listen(window, 'ava:background-voice', syncBackgroundVoice);
+    listen(window, 'ava:voice-capture', syncBackgroundVoiceCapture);
+    syncBackgroundVoice();
     ['ava:chat-ready', 'ava:welcome-closed', 'synapses:intro-complete', 'focus', 'pageshow'].forEach(function (name) { listen(window, name, function () { schedule(name, 100); }); });
     listen(document, 'visibilitychange', function () { if (!document.hidden) schedule('visible', 100); });
     refresh('entry-started');
@@ -486,6 +555,8 @@
     if (state.destroyed) return;
     state.destroyed = true; clearTimeout(state.timer); clearTimeout(state.startupTimer);
     if (observer) observer.disconnect(); listeners.forEach(function (remove) { remove(); });
+    syncBackgroundVoiceCapture();
+    if (backgroundVoiceToggle) backgroundVoiceToggle.remove();
     restoreVoiceMenu();
     restoreVoiceControl();
     if (idleVoice) {

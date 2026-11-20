@@ -76,6 +76,24 @@ html.ava-app-mode #avaAppVoiceDock[hidden],
 html.ava-app-mode #avaAppVoiceDock #acVoice[hidden] { display:none!important; }
 /* Keep the original circle, waveform, colours and analyser. Only its location changes. */
 html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #topNavVoiceBtn { width:28px!important; height:28px!important; min-width:28px!important; min-height:28px!important; flex:0 0 28px!important; }
+html.ava-app-mode #avaBackgroundVoiceToggle {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; min-height:40px; padding:8px 12px; border:0; border-radius:7px;
+  background:transparent; color:#e3e3e8; text-align:left; cursor:pointer;
+  font:13px/1.35 'DM Sans',sans-serif;
+}
+html.ava-app-mode #avaBackgroundVoiceToggle[hidden] { display:none; }
+html.ava-app-mode #avaBackgroundVoiceToggle:hover { background:#ffffff0d; }
+html.ava-app-mode #avaBackgroundVoiceToggle:focus-visible { outline:2px solid #a6a8ba; outline-offset:-2px; }
+html.ava-app-mode .ava-cx-background-switch {
+  position:relative; display:block; flex:0 0 26px; height:15px; border-radius:12px; background:#484852;
+}
+html.ava-app-mode .ava-cx-background-switch::after {
+  content:''; position:absolute; top:3px; left:3px; width:9px; height:9px;
+  border-radius:50%; background:#ececf1;
+}
+html.ava-app-mode [aria-checked="true"] > .ava-cx-background-switch { background:#00d9a8; }
+html.ava-app-mode [aria-checked="true"] > .ava-cx-background-switch::after { left:14px; background:#0e1715; }
 
 html.ava-app-mode #avaAppLoading {
   position:fixed; inset:0; z-index:94000; display:grid; place-content:center; justify-items:center;
