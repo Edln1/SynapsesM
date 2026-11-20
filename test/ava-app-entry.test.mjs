@@ -41,7 +41,7 @@ class FakeElement extends EventTarget {
     return null;
   }
 }
-function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome = false, chatReady = true } = {}) {
+function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome = false, chatReady = true, loadingMascot = false } = {}) {
   const document = new EventTarget(); document.nodes = new Map();
   document.documentElement = new FakeElement('html', document); document.body = new FakeElement('body', document);
   document.readyState = 'complete'; document.hidden = false;
@@ -49,6 +49,18 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   document.getElementById = id => document.nodes.get(id) || null;
   function element(id, hidden) { const node = document.createElement(['acClose', 'acMainChat', 'acHistory', 'acNewTop', 'acVoice', 'topNavVoiceBtn'].includes(id) ? 'button' : 'div'); node.id = id; node.hidden = hidden; document.body.append(node); return node; }
   const authNode = element('authModal', !auth), welcomeNode = element('avaWelcome', !welcome), chat = element('avaCompanionChat', true);
+  if (loadingMascot) {
+    const mascot = document.createElement('svg');
+    mascot.setAttribute('viewBox', '24 18 88 88');
+    mascot.setAttribute('aria-hidden', 'true');
+    mascot.cloneNode = deep => {
+      assert.equal(deep, true);
+      const copy = document.createElement('svg');
+      mascot.attrs.forEach((value, name) => copy.setAttribute(name, value));
+      return copy;
+    };
+    document.querySelector = selector => selector === '#avaCompanionChat .ac-title .ac-mascot' ? mascot : null;
+  }
   element('acClose', false); element('acMainChat', false); element('acConfirm', true); element('acNewTop', false); element('acVoice', false);
   chat.appendChild(element('acNotice', false));
   const history = element('acHistory', false), actions = element('acTopActions', false); chat.appendChild(actions); actions.appendChild(history);
@@ -118,6 +130,34 @@ test('ordinary site and non-exact flags do not initialize app mode', () => {
   for (const search of ['', '?ava-app=0', '?ava-app=true', '?not-ava-app=1']) {
     const f = setup({ search }); assert.equal(f.window.avaAppEntry, undefined); assert.equal(f.document.documentElement.classList.contains('ava-app-mode'), false); assert.equal(f.opens, 0);
   }
+});
+test('startup displays the existing Ava face and hides it when chat is ready', async () => {
+  const f = setup({ loadingMascot: true });
+  const opening = f.document.getElementById('avaAppLoading');
+  const mascot = f.document.querySelector('#avaCompanionChat .ac-title .ac-mascot');
+  assert.equal(opening.hidden, false);
+  assert.equal(opening.getAttribute('role'), 'status');
+  assert.notEqual(opening.children[0], mascot);
+  assert.equal(opening.children[0].getAttribute('viewBox'), mascot.getAttribute('viewBox'));
+  assert.equal(opening.children[1].textContent, 'Opening Ava…');
+  assert.equal(f.document.getElementById('avaAppReturn').hidden, true);
+  await settle(f);
+  assert.equal(f.window.avaAppEntry.stage, 'chat');
+  assert.equal(opening.hidden, true);
+  f.window.avaAppEntry.destroy();
+  assert.equal(f.document.getElementById('avaAppLoading'), null);
+});
+test('the loading face hands off to auth and leaves recovery accessible if chat fails to open', async () => {
+  const auth = setup({ loadingMascot: true, signedIn: false, auth: true });
+  assert.equal(auth.window.avaAppEntry.stage, 'auth');
+  assert.equal(auth.document.getElementById('avaAppLoading').hidden, true);
+
+  const failed = setup({ loadingMascot: true, chatReady: false });
+  failed.window.avaCompanionChatOpen = async () => { throw new Error('startup failed'); };
+  await settle(failed);
+  assert.equal(failed.document.getElementById('avaAppLoading').hidden, true);
+  assert.equal(failed.document.getElementById('avaAppReturn').hidden, false);
+  assert.match(failed.document.getElementById('avaAppStatus').textContent, /could not open/i);
 });
 test('the mobile history control becomes a compose shortcut on Home', async () => {
   const f = setup();

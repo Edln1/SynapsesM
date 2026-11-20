@@ -22,7 +22,8 @@
   var state = { stage: 'waiting', destroyed: false, opening: false, initial: true,
     suspension: null, force: false, failed: false, ready: false, userKey: null,
     settledAt: Date.now() + 180, timer: null, startupTimer: null, startupRetries: 0, started: false, lastReason: 'initial', draft: null, homeRequested: true };
-  var observer = null, menu = null, returnBar = null, statusNode = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
+  var observer = null, menu = null, returnBar = null, statusNode = null, loadingSurface = null, voiceDock = null, dockedVoice = null, idleVoice = null, authCopy = null, authBrand = null;
+  var startupRetryLimit = 80;
   // The original SVGs are absolutely centered inside this button.
   var voiceDockStyles = { position: 'relative', left: 'auto', top: 'auto', right: 'auto', bottom: 'auto', transform: 'none', margin: '0px', display: 'flex', visibility: 'visible', opacity: '1', 'pointer-events': 'auto', 'z-index': 'auto' };
   var listeners = [], observed = new Set(), patched = new Map(), voiceNotice = '', voiceNoticeNode = null;
@@ -52,13 +53,30 @@
   function welcomeVisible() {
     return Boolean(window.__avaWelcomePending || window.__avaWelcomeActive || visible(document.getElementById('avaWelcome')));
   }
+  function syncLoading(next) {
+    var opening = next === 'waiting' && !state.ready && !state.failed &&
+      (state.initial || state.opening) && state.startupRetries < startupRetryLimit;
+    if (opening && !loadingSurface && typeof document.querySelector === 'function') {
+      var mascot = document.querySelector('#avaCompanionChat .ac-title .ac-mascot');
+      if (mascot) {
+        loadingSurface = document.createElement('div'); loadingSurface.id = 'avaAppLoading';
+        loadingSurface.setAttribute('role', 'status');
+        var label = document.createElement('span'); label.textContent = 'Opening Ava…';
+        loadingSurface.append(mascot.cloneNode(true), label);
+        document.body.appendChild(loadingSurface);
+      }
+    }
+    if (loadingSurface && loadingSurface.hidden === opening) loadingSurface.hidden = !opening;
+    return opening && !!loadingSurface;
+  }
   function setStage(next, reason) {
     var changed = state.stage !== next;
     if (next !== 'chat' && changed) restoreVoiceMenu();
     state.stage = next; state.lastReason = reason || next;
     html.setAttribute('data-ava-app-stage', next);
     syncVoiceControl();
-    if (returnBar) returnBar.hidden = next === 'chat' || next === 'auth' || next === 'welcome' || Boolean(menu && menu.open);
+    var loading = syncLoading(next);
+    if (returnBar) returnBar.hidden = loading || next === 'chat' || next === 'auth' || next === 'welcome' || Boolean(menu && menu.open);
     if (statusNode) statusNode.textContent = state.failed ? 'Ava could not open. Try again.' : next === 'waiting' ? 'Opening Ava…' : '';
     if (changed) emit('ava:app-stage-change', { stage: next, reason: state.lastReason });
     if (['auth', 'welcome', 'chat'].indexOf(next) !== -1 && !state.ready) {
@@ -436,6 +454,7 @@
     returnBar.setAttribute('aria-label', 'Ava navigation');
     statusNode = document.createElement('span'); statusNode.id = 'avaAppStatus'; statusNode.setAttribute('role', 'status');
     returnBar.append(statusNode, button('Back to Ava', showHome)); document.body.appendChild(returnBar);
+    returnBar.hidden = syncLoading(state.stage);
     observer = new window.MutationObserver(function () {
       if (dockedVoice && state.stage === 'chat' && chatVisible()) syncVoiceControl();
       schedule('surface-changed');
@@ -457,7 +476,7 @@
     // A native/WebView auth bridge may warm without a DOM mutation. Only retry
     // startup readiness for twenty seconds; never poll-reopen a user handoff.
     function startupReadiness() {
-      if (state.destroyed || state.ready || !state.initial || state.startupRetries++ >= 80) return;
+      if (state.destroyed || state.ready || !state.initial || state.startupRetries++ >= startupRetryLimit) return;
       refresh('startup-readiness');
       state.startupTimer = setTimeout(startupReadiness, 250);
     }
@@ -477,6 +496,7 @@
       if (savedTalk.title === null) talk.removeAttribute('title'); else talk.setAttribute('title', savedTalk.title);
     }
     closeOwnMenu(); if (menu) menu.remove(); if (returnBar) returnBar.remove(); if (voiceDock) voiceDock.remove();
+    if (loadingSurface) loadingSurface.remove();
     if (voiceNoticeNode) voiceNoticeNode.remove();
     if (authBrand) authBrand.remove(); if (authCopy) authCopy.forEach(function (entry) { entry[0].textContent = entry[1]; });
     patched.forEach(function (before, node) {

@@ -77,6 +77,28 @@ html.ava-app-mode #avaAppVoiceDock #acVoice[hidden] { display:none!important; }
 /* Keep the original circle, waveform, colours and analyser. Only its location changes. */
 html.ava-app-mode #avaCompanionChat #avaAppVoiceDock #topNavVoiceBtn { width:28px!important; height:28px!important; min-width:28px!important; min-height:28px!important; flex:0 0 28px!important; }
 
+html.ava-app-mode #avaAppLoading {
+  position:fixed; inset:0; z-index:94000; display:grid; place-content:center; justify-items:center;
+  gap:12px; pointer-events:none; color:#b4b5bf; font:14px/1.4 'DM Sans',sans-serif;
+}
+html.ava-app-mode #avaAppLoading[hidden] { display:none; }
+html.ava-app-mode #avaAppLoading .ac-mascot { width:72px; height:72px; }
+html.ava-app-mode #avaAppLoading :is(.ac-eye,.ac-character) { animation:none; }
+@media (prefers-reduced-motion: no-preference) {
+  html.ava-app-mode #avaAppLoading .ac-mascot { animation:ava-app-loading-tilt 3.2s ease-in-out infinite; }
+  html.ava-app-mode #avaAppLoading .ac-eye { animation:ava-app-loading-blink 3.2s ease-in-out infinite; }
+}
+@keyframes ava-app-loading-tilt {
+  0%, 100% { transform:translateY(0) rotate(0); }
+  24% { transform:translateY(-3px) rotate(-7deg); }
+  48% { transform:translateY(-1px) rotate(4deg); }
+  74% { transform:translateY(0) rotate(0); }
+}
+@keyframes ava-app-loading-blink {
+  0%, 16%, 23%, 100% { transform:scaleY(1); }
+  19%, 20% { transform:scaleY(.12); }
+}
+
 html.ava-app-mode #avaAppReturn { position:fixed; z-index:94000; bottom:max(14px,env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:7px 8px 7px 13px; max-width:calc(100% - 28px); background:#0d0e11; border:1px solid #292c33; border-radius:12px; color:#a7abb5; font:12px/1.5 'DM Sans',sans-serif; }
 html.ava-app-mode #avaAppReturn[hidden] { display:none!important; }
 html.ava-app-mode #avaAppStatus:empty { display:none; }
