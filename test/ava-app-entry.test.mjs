@@ -72,6 +72,7 @@ function setup({ search = '?ava-app=1', signedIn = true, auth = false, welcome =
   function advance(ms) { time += ms; for (let count = 0; count < 100; count++) { const entry = [...tasks].filter(([,value]) => value.at <= time).sort((a,b) => a[1].at - b[1].at)[0]; if (!entry) return; tasks.delete(entry[0]); entry[1].fn(); } throw Error('Timer loop did not settle.'); }
   const window = new EventTarget(); let opens = 0, closes = 0;
   window.location = { search };
+  window.innerHeight = 360;
   window.CustomEvent = class extends Event { constructor(name, options) { super(name); this.detail = options.detail; } };
   window.MutationObserver = class { observe() {} disconnect() {} };
   window.getComputedStyle = node => ({ display: node.style.display || 'block', visibility: node.style.visibility || 'visible' });
@@ -95,6 +96,7 @@ function voiceMenuFixture(f) {
   const menu = f.document.createElement('div');
   menu.id = 'avaStsCtxMenu';
   menu.style.display = 'none';
+  menu.style.maxHeight = 'calc(100dvh - 16px)';
   menu.inert = true;
   const originalNext = f.document.createElement('div');
   f.document.body.append(menu, originalNext);
@@ -104,6 +106,8 @@ function voiceMenuFixture(f) {
     assert.equal(menu.inert, false, 'the menu must accept taps after leaving the inert background');
     opens.push({ x, y });
     menu.style.display = 'block';
+    const menuHeight = Math.min(400, parseFloat(menu.style.maxHeight) || 400);
+    menu.style.top = Math.max(8, Math.min(y, f.window.innerHeight - menuHeight - 8)) + 'px';
   };
   f.window._tnvCloseVoiceMenu = () => { menu.style.display = 'none'; };
   return { menu, originalNext, opens };
@@ -416,12 +420,16 @@ test('right-click opens the real voice menu and closing it restores the inert ba
   const talk = f.document.getElementById('acVoice');
 
   assert.equal(dispatchControlEvent(f, 'contextmenu', talk, { clientX: 248, clientY: 26 }).defaultPrevented, true);
-  assert.deepEqual(opens, [{ x: 248, y: 26 }]);
+  assert.deepEqual(opens, [{ x: 248, y: 46 }]);
+  assert.equal(menu.style.top, '46px', 'a tall menu must stay below the mic after viewport clamping');
+  assert.equal(menu.style.maxHeight, '306px', 'the menu must scroll within the available viewport');
   assert.equal(menu.style.display, 'block');
   assert.equal(dispatchControlEvent(f, 'keydown', talk, { key: 'Escape' }).defaultPrevented, true);
   assert.equal(menu.style.display, 'none');
   assert.equal(f.document.getElementById('avaAppMenu'), null, 'Escape closes the voice menu first');
 
+  f.document.body.append(menu);
+  menu.inert = true;
   dispatchControlEvent(f, 'contextmenu', talk, { clientX: 248, clientY: 26 });
   assert.equal(opens.length, 2);
   f.authNode.hidden = false;
@@ -429,6 +437,60 @@ test('right-click opens the real voice menu and closing it restores the inert ba
   assert.equal(menu.style.display, 'none');
   assert.equal(menu.parentNode, f.document.body);
   assert.equal(menu.nextSibling, originalNext);
+  assert.equal(menu.style.maxHeight, 'calc(100dvh - 16px)');
+});
+
+test('the mic menu can reopen after switching away from Ava with the menu open', async () => {
+  const f = setup(); await settle(f);
+  const { menu, originalNext, opens } = voiceMenuFixture(f);
+  const mic = f.document.getElementById('topNavVoiceBtn');
+  let stops = 0;
+  f.window._topNavVoiceActive = true;
+  f.window.stopTopNavVoice = () => { stops++; };
+  f.window.avaAppEntry.refresh();
+
+  dispatchTouch(f, 'pointerdown', mic);
+  f.advance(500);
+  assert.equal(menu.style.display, 'block');
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(menu.style.display, 'none');
+  assert.equal(menu.parentNode, f.document.body);
+  assert.equal(menu.nextSibling, originalNext);
+
+  f.document.hidden = false;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(opens.length, 1);
+  dispatchTouch(f, 'pointerdown', mic, { pointerId: 2 });
+  f.advance(500);
+  dispatchTouch(f, 'pointerup', mic, { pointerId: 2 });
+  assert.equal(opens.length, 2);
+  assert.equal(menu.style.display, 'block');
+  assert.equal(dispatchControlEvent(f, 'click', mic, { detail: 1 }).defaultPrevented, true);
+  assert.equal(stops, 0, 'menu cleanup must preserve the live conversation');
+});
+
+test('page navigation and the Android reset API cancel an unfinished mic hold', async () => {
+  const f = setup(); await settle(f);
+  const { menu, opens } = voiceMenuFixture(f);
+  const talk = f.document.getElementById('acVoice');
+  dispatchTouch(f, 'pointerdown', talk);
+  f.window.dispatchEvent(new Event('pagehide'));
+  f.advance(500);
+  assert.equal(opens.length, 0);
+
+  f.window.dispatchEvent(new Event('pageshow'));
+  dispatchTouch(f, 'pointerdown', talk, { pointerId: 2 });
+  f.window.avaAppEntry.resetVoiceMenu();
+  f.advance(500);
+  assert.equal(opens.length, 0);
+
+  dispatchTouch(f, 'pointerdown', talk, { pointerId: 3 });
+  f.advance(500);
+  assert.equal(menu.style.display, 'block');
+  f.window.avaAppEntry.resetVoiceMenu();
+  assert.equal(menu.style.display, 'none');
+  assert.equal(dispatchControlEvent(f, 'click', talk, { detail: 1 }).defaultPrevented, false);
 });
 
 test('dragging or canceling a mobile mic hold does not open the caption menu', async () => {

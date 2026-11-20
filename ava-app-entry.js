@@ -125,6 +125,7 @@
     voiceMenuHome = null;
     saved.parent.insertBefore(saved.node, saved.next && saved.next.parentNode === saved.parent ? saved.next : null);
     saved.node.inert = saved.inert && chatVisible();
+    saved.node.style.maxHeight = saved.maxHeight;
   }
   function backgroundVoiceState() {
     try {
@@ -183,25 +184,32 @@
       indicator.className = 'ava-cx-background-switch';
       indicator.setAttribute('aria-hidden', 'true');
       backgroundVoiceToggle.append(label, indicator);
+    }
+    if (backgroundVoiceToggle.parentNode !== voiceMenu) {
       var captions = document.getElementById('avaCxToastToggle');
       voiceMenu.insertBefore(backgroundVoiceToggle, captions && captions.parentNode === voiceMenu ? captions.nextSibling : null);
     }
     syncBackgroundVoice();
   }
-  function openVoiceMenu(x, y) {
+  function openVoiceMenu(x) {
     var chat = document.getElementById('avaCompanionChat'), voiceMenu = document.getElementById('avaStsCtxMenu');
-    if (state.stage !== 'chat' || !visible(chat) || !voiceMenu || !voiceMenu.parentNode ||
+    if (document.hidden || state.stage !== 'chat' || !voiceDock || !visible(chat) || !voiceMenu || !voiceMenu.parentNode ||
         typeof window._tnvOpenVoiceMenu !== 'function') return false;
-    if (!voiceMenuHome) {
-      voiceMenuHome = { node: voiceMenu, parent: voiceMenu.parentNode, next: voiceMenu.nextSibling, inert: voiceMenu.inert };
-      chat.appendChild(voiceMenu);
-      voiceMenu.inert = false;
+    if (!voiceMenuHome || voiceMenuHome.node !== voiceMenu) {
+      voiceMenuHome = { node: voiceMenu, parent: voiceMenu.parentNode, next: voiceMenu.nextSibling,
+        inert: voiceMenu.inert, maxHeight: voiceMenu.style.maxHeight };
     }
+    if (voiceMenu.parentNode !== chat) chat.appendChild(voiceMenu);
+    voiceMenu.inert = false;
     addBackgroundVoiceToggle(voiceMenu);
-    window._tnvOpenVoiceMenu(x, y);
+    // Leave the dock outside the menu so the end of a hold cannot land on a setting.
+    var rect = voiceDock.getBoundingClientRect();
+    var top = Math.ceil(rect.bottom) + 6;
+    voiceMenu.style.maxHeight = Math.max(0, Math.floor(window.innerHeight - top - 8)) + 'px';
+    window._tnvOpenVoiceMenu(x > 0 ? x : rect.left, top);
     return true;
   }
-  function inVoiceDock(target) { return state.stage === 'chat' && voiceDock && target && voiceDock.contains(target); }
+  function inVoiceDock(target) { return !document.hidden && state.stage === 'chat' && voiceDock && target && voiceDock.contains(target); }
   function armVoiceHold(event) {
     if (!inVoiceDock(event.target) || event.isPrimary === false || event.button !== 0) return;
     clearVoiceHold();
@@ -211,7 +219,7 @@
     hold.timer = setTimeout(function () {
       if (voiceHold !== hold) return;
       voiceHold = null;
-      suppressVoiceTap = openVoiceMenu(hold.x, hold.y);
+      suppressVoiceTap = openVoiceMenu(hold.x);
     }, 500);
     voiceHold = hold;
   }
@@ -223,7 +231,7 @@
   function captureVoiceContext(event) {
     if (!inVoiceDock(event.target)) return;
     clearVoiceHold();
-    if (!openVoiceMenu(event.clientX, event.clientY)) return;
+    if (!openVoiceMenu(event.clientX)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     suppressVoiceTap = true;
@@ -534,7 +542,11 @@
     listen(window, 'ava:voice-capture', syncBackgroundVoiceCapture);
     syncBackgroundVoice();
     ['ava:chat-ready', 'ava:welcome-closed', 'synapses:intro-complete', 'focus', 'pageshow'].forEach(function (name) { listen(window, name, function () { schedule(name, 100); }); });
-    listen(document, 'visibilitychange', function () { if (!document.hidden) schedule('visible', 100); });
+    listen(window, 'pagehide', restoreVoiceMenu);
+    listen(document, 'visibilitychange', function () {
+      restoreVoiceMenu();
+      if (!document.hidden) schedule('visible', 100);
+    });
     refresh('entry-started');
     if (document.getElementById('appSplash') && !window._splashDone) {
       // Late native injection can occur after the old intro initialized. Its
@@ -584,7 +596,8 @@
     if (beforeIntro.skipped === undefined) delete window._synSkipDailyIntro; else window._synSkipDailyIntro = beforeIntro.skipped;
     delete window.avaAppEntry; delete window.avaMobileEntry; delete window.__avaMobileEntryReady;
   }
-  var api = { version: 1, refresh: refresh, showChat: showChat, open: showHome, home: showHome, openMenu: openMenu, closeVoiceMenu: closeVoiceMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
+  var api = { version: 1, refresh: refresh, showChat: showChat, open: showHome, home: showHome, openMenu: openMenu, closeVoiceMenu: closeVoiceMenu,
+    resetVoiceMenu: restoreVoiceMenu, showIntroduction: showIntroduction, stagePrompt: stagePrompt, destroy: destroy,
     action: function (name) { return ['settings', 'account', 'logout', 'notes', 'calls', 'call-records'].indexOf(name) === -1 ? 'unavailable' : action(name); },
     get stage() { return state.stage; } };
   window.avaAppEntry = window.avaMobileEntry = api;
