@@ -128,6 +128,13 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
   </style>
   <script>
     function _synapsesBaseTheme(theme){return theme==='sun-classic'?'easyview':theme;}
+    function _isSynapsesThemeControl(event){
+      var selector='#dayNightToggle,#avaTopSettingsBtn,#bnavSettingsBtn,#chpUserBtn,[data-chp-act="theme"],[data-chp-set="theme"],.theme-pick';
+      var target=event.target;
+      if(target && target.closest && target.closest(selector)) return true;
+      // Theme pickers can rebuild their buttons before a bubbling handler runs.
+      return typeof event.composedPath==='function' && event.composedPath().some(function(node){return node.matches && node.matches(selector);});
+    }
     function _setSynapsesThemeAttributes(theme){
       var root=document.documentElement;
       root.toggleAttribute('data-sun-classic',theme==='sun-classic');
@@ -9402,21 +9409,19 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   }
   /* Desktop Day palette for the welcome panel, rail and Ava conversation. */
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]){
-    --day-glass:linear-gradient(145deg,rgba(26,29,48,.96),rgba(16,21,34,.97));
-    --day-panel:#151a2b;--day-pane:#101423;--day-control:#171e30;--day-selected:#212942;
-    --day-border:#343b55;--day-label:#b9c6e4;--day-muted:#9ba8c3;--day-text:#e7eaf7;
+    --day-glass:rgba(22,25,40,.96);
+    --day-panel:#18191f;--day-pane:#111216;--day-control:#1c1d24;--day-selected:#242631;
+    --day-border:#343641;--day-label:#b9c6e4;--day-muted:#9ba8c3;--day-text:#e8e8ee;
     --day-icon:#8c9ac5;--day-accent:#d5dffe;--day-hover:rgba(118,145,224,.13);
   }
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) :is(#synWelcomePop,#avaCompanionChat){
-    background:var(--day-glass);border-color:var(--day-border);
-  }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop{background:var(--day-glass);border-color:var(--day-border);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop > .bnav-cc-card{
     background:rgba(126,146,206,.065);border-color:rgba(139,156,215,.22);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop .bnav-cc-card-title{color:var(--day-label);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop :is(.syn-welcome-sub,.bnav-cc-widget-empty,.bnav-cc-mail-subject){color:var(--day-muted);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop .syn-welcome-cc-btn{
-    background:var(--day-control);border-color:var(--day-border);color:var(--day-label);
+    background:rgba(126,146,206,.09);border-color:rgba(139,156,215,.22);color:var(--day-label);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRail > .chp-rail-btn{color:var(--day-icon);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRail .chp-rail-label{color:var(--day-muted);}
@@ -9425,19 +9430,20 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
     background:var(--day-hover);color:var(--day-accent);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat{
-    --ac-cream:var(--day-text);--ac-muted:var(--day-muted);--ac-line:var(--day-border);
+    --ac-cream:var(--day-text);--ac-muted:#a8a9b5;--ac-line:var(--day-border);
+    background:var(--day-pane);border-color:var(--day-border);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-top,.ac-rail){
     background:var(--day-panel);border-color:var(--ac-line);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-main{
-    background:radial-gradient(ellipse at 68% 0,rgba(85,101,162,.13),transparent 70%),var(--day-pane);
+    background:var(--day-pane);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-compose,.ac-search,.ac-new,.ac-voice,.ac-prompts button,.ac-research,.ac-source-link,.ac-task-list button){
     background:var(--day-control);border-color:var(--ac-line);color:var(--ac-cream);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-thread:hover,.ac-icon:hover,.ac-new:hover,.ac-voice:hover,.ac-prompts button:hover,.ac-research:hover,.ac-source-link:hover,.ac-task-list button:hover){
-    background:var(--day-hover);border-color:var(--ac-line);
+    background:var(--day-selected);border-color:var(--ac-line);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-thread[data-active="true"],.ac-research[aria-pressed="true"]),
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat[data-history="true"] .ac-history-toggle{
@@ -9452,6 +9458,29 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-compose:focus-within,.ac-search:focus-visible){border-color:var(--day-icon);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send{background:var(--day-label);color:var(--day-pane)!important;}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send:hover{background:var(--day-accent);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) :is(#avaFloatPopover,#chpRailPop){
+    background:var(--day-panel);border-color:var(--day-border);
+  }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-rail-pop-h{
+    color:var(--day-label);border-bottom-color:var(--day-border);
+  }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-rail-pop-empty{color:#a8a9b5;}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-item:is(:hover,.active,:focus-within){background:var(--day-selected);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatChatForm,#avaFloatStop,#avaFloatTools,.af-actions > button,.af-call-split,.af-call-records > span){
+    background:var(--day-control);border-color:var(--day-border);color:var(--day-text);
+  }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatClose,#avaFloatMinimize,#avaFloatOpenChat,.af-account-actions button){color:#a8a9b5;}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatClose,#avaFloatMinimize,#avaFloatTools,.af-actions button,.af-account-actions button):is(:hover,:focus-visible){
+    background:var(--day-selected);border-color:var(--day-border);color:var(--day-text);
+  }
+  #chpRailPop{display:flex;visibility:hidden;opacity:0;pointer-events:none;}
+  #chpRailPop.open{visibility:visible;opacity:1;pointer-events:auto;}
+  @media (prefers-reduced-motion:no-preference){
+    #synWelcomePop{transition:opacity .2s ease,transform .22s cubic-bezier(.22,.9,.3,1),background-color .18s ease,border-color .18s ease;}
+    #avaFloatPopover{transition:background-color .18s ease,border-color .18s ease;}
+    #chpRailPop{transition:opacity .16s ease,visibility 0s linear .16s,background-color .18s ease,border-color .18s ease;}
+    #chpRailPop.open{transition-delay:0s;}
+  }
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
@@ -13929,7 +13958,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
     var pop = document.getElementById('synWelcomePop');
     var btn = document.getElementById('chpRailWelcomeBtn');
     if(!pop) return;
-    if(pop.contains(e.target) || (btn && btn.contains(e.target))) return;
+    if(_isSynapsesThemeControl(e) || pop.contains(e.target) || (btn && btn.contains(e.target))) return;
     closeWelcomeFeed();
   }
   function _welcomeEscClick(e){ if(e.key === 'Escape') closeWelcomeFeed(); }
@@ -42262,7 +42291,7 @@ function _chpFillRailPop(kind, pop){
   document.addEventListener('click', function(e){
     var pop=document.getElementById('chpRailPop');
     if(!pop || !pop.classList.contains('open')) return;
-    if(pop.contains(e.target)) return;
+    if(_isSynapsesThemeControl(e) || pop.contains(e.target)) return;
     if(e.target.closest && e.target.closest('.chp-rail-saved,.chp-rail-recent,.chp-rail-projects')) return;
     _chpCloseRailPop();
   });
@@ -42796,7 +42825,7 @@ window._bnavOpenMobileSettingsPage = _bnavOpenMobileSettingsPage;
     });
     document.addEventListener('click', function(e){
       if(!dock.classList.contains('open')) return;
-      if(dock.contains(e.target) || btn.contains(e.target)) return;
+      if(_isSynapsesThemeControl(e) || dock.contains(e.target) || btn.contains(e.target)) return;
       dock.classList.remove('open');
       btn.setAttribute('aria-expanded', 'false');
       var header = document.getElementById('chpHeader');
@@ -94751,8 +94780,8 @@ body:has(#bnavCCPanel.bnav-cc-open) #avaFloatingAssistant{z-index:10001;}
  roamControl.onclick=function(){roamEnabled=!roamEnabled;try{localStorage.setItem('synapses_ava_roam_v1',roamEnabled?'roam':'stay');}catch(e){}freezeMotion(0);syncRoam();if(motion.matches)status.textContent='Hopping stays paused while reduced motion is enabled.';};syncRoam();
  button.onclick=function(){if(opened)close(false);else open();};[mini,chatDock,railDock,fullDock].forEach(function(control){control.onclick=function(e){e.stopPropagation();if(opened)close(false);else open();};});document.getElementById('avaFloatClose').onclick=function(){close(true);};sizeControl.onclick=function(){if(minimized)restore();else minimize();};start.onclick=window.avaFloatingStartVoice;stop.onclick=window.avaFloatingStopVoice;
  root.addEventListener('keydown',function(e){if(e.key==='Escape'&&opened){e.preventDefault();e.stopPropagation();close(true);}});
- document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);},true);
- document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target)&&!isDockControl(e.target))close(false);schedule();});
+ document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized&&near(root.getBoundingClientRect(),e.clientX,e.clientY))freezeMotion(1200);if(opened&&!root.contains(e.target)&&!isDockControl(e.target)&&!_isSynapsesThemeControl(e))close(false);},true);
+ document.addEventListener('focusin',function(e){if(opened&&!root.contains(e.target)&&!isDockControl(e.target)&&!_isSynapsesThemeControl(e))close(false);schedule();});
  document.addEventListener('click',function(e){if(!root.contains(e.target))schedule();},true);
  document.addEventListener('transitionend',function(e){if(!root.contains(e.target)&&e.target.matches('#authModal,#avaRecordedPortrait,#avaAvatarBox,#avaTvPopup,#callSuccessOverlay,#bnavCCPanel,.modal-overlay,dialog,[role="dialog"][aria-modal="true"]'))refresh();},true);
  document.addEventListener('focusout',schedule);document.addEventListener('visibilitychange',refresh);window.addEventListener('resize',schedule);if(window.visualViewport)window.visualViewport.addEventListener('resize',schedule);

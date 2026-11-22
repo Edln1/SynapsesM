@@ -153,17 +153,73 @@ test('Day keeps the backdrop continuous behind its minimized navigation', () => 
 
 test('the dark aurora palette styles Welcome, the rail and desktop Ava together', () => {
   const start = html.indexOf('/* Desktop Day palette');
-  const end = html.indexOf('/* True Black only: Studio view', start);
+  const end = html.indexOf('#chpRailPop{display:flex', start);
   const palette = html.slice(start, end);
   const theme = 'html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
   assert.ok(start > html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;}') && end > start);
-  assert.ok(palette.includes(`${theme} :is(#synWelcomePop,#avaCompanionChat){`));
+  assert.ok(palette.includes(`${theme} #synWelcomePop{background:var(--day-glass);`));
+  assert.ok(palette.includes(`${theme} :is(#avaFloatPopover,#chpRailPop){`));
   assert.ok(palette.includes(`${theme} #synWelcomePop > .bnav-cc-card{`));
   assert.ok(palette.includes(`${theme} #chpRail > .chp-rail-btn{color:var(--day-icon);}`));
   assert.ok(palette.includes(`${theme} #avaCompanionChat .ac-main{`));
   assert.match(palette, /#avaCompanionChat :is\(\.ac-compose,\.ac-search,/);
-  assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:var\(--day-muted\);/);
+  assert.match(palette, /--day-panel:#18191f;\s*--day-pane:#111216;/);
+  assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:#a8a9b5;/);
   assert.doesNotMatch(palette, /(?:display|pointer-events|width|height):|\.ac-mascot/);
+});
+
+test('theme controls keep open popups in place while other outside actions dismiss them', () => {
+  const source = html.replaceAll('\r\n', '\n');
+  function section(start, end, from = 0) {
+    const first = source.indexOf(start, from);
+    const last = source.indexOf(end, first + start.length);
+    assert.ok(first >= 0 && last > first, `Could not find ${start}`);
+    return source.slice(first, last);
+  }
+  const helper = section('function _isSynapsesThemeControl(event)', 'function _setSynapsesThemeAttributes(theme)');
+  const welcome = section('function _welcomeOutsideClick(e)', 'async function _welcomeRenderCalendar');
+  const historyCode = section("(function(){\n  document.addEventListener('click'", 'function _chpSyncProjectsRailBtn()', source.indexOf('function _chpFillRailPop'));
+  const accountCode = section("document.addEventListener('click', function(e){\n      if(!dock.classList.contains('open'))", '\n  }\n  if(document.readyState');
+  const avaCode = section("document.addEventListener('pointerdown',function(e){if(!root.hidden&&!minimized", "document.addEventListener('click',function(e){if(!root.contains(e.target))schedule();}");
+
+  const closes = { welcome: 0, history: 0, ava: 0, account: 0 };
+  const handlers = new Map();
+  const history = { classList: { contains: () => true }, contains: () => false };
+  const dock = { classList: { contains: () => true, remove() { closes.account++; } }, contains: () => false };
+  const context = vm.createContext({
+    document: { getElementById(id) {
+      if (id === 'chpRailPop') return history;
+      if (id === 'synWelcomePop') return { contains: () => false };
+      return null;
+    }, addEventListener(type, fn) {
+      if (!handlers.has(type)) handlers.set(type, []);
+      handlers.get(type).push(fn);
+    } },
+    closeWelcomeFeed() { closes.welcome++; }, _chpCloseRailPop() { closes.history++; },
+    root: { hidden: false, getBoundingClientRect: () => ({}), contains: () => false },
+    opened: true, minimized: false, near: () => false, isDockControl: () => false,
+    close() { closes.ava++; }, schedule() {}, dock,
+    btn: { contains: () => false, setAttribute() {} }, setAccountOpen() {},
+  });
+  vm.runInContext([helper, welcome, historyCode, accountCode, avaCode].join('\n'), context);
+  function dispatch(event) {
+    context._welcomeOutsideClick(event);
+    for (const type of ['click', 'pointerdown', 'focusin']) {
+      for (const handle of handlers.get(type) || []) handle(event);
+    }
+  }
+  for (const control of ['#dayNightToggle', '#chpUserBtn', '[data-chp-act="theme"]', '[data-chp-set="theme"]', '.theme-pick']) {
+    dispatch({ target: { closest(selector) { return selector.split(',').includes(control) ? this : null; } } });
+  }
+  // An icon in a replaced theme button may only be identifiable on the event path.
+  dispatch({ target: { closest: () => null }, composedPath: () => [{ matches: selector => selector.split(',').includes('.theme-pick') }] });
+  assert.deepEqual(closes, { welcome: 0, history: 0, ava: 0, account: 0 });
+  dispatch({ target: { closest: () => null } });
+  assert.deepEqual(closes, { welcome: 1, history: 1, ava: 2, account: 1 });
+  context._welcomeEscClick({ key: 'Escape' });
+  for (const handle of handlers.get('keydown')) handle({ key: 'Escape' });
+  assert.equal(closes.welcome, 2);
+  assert.equal(closes.history, 2);
 });
 
 test('True Black and Ava keep the global renderer dormant rather than repainting a CSS-hidden canvas', () => {
