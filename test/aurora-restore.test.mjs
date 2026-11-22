@@ -88,10 +88,10 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.match(html, /html,body\{background:#000000!important/);
   assert.match(html, /html\[data-theme="trueblack"\] #globalBeamsCanvas\{opacity:0!important;\}/);
   assert.doesNotMatch(html.match(/<canvas id="globalBeamsCanvas"[^>]*>/)[0], /opacity:/);
-  const desktop = html.slice(html.indexOf('#sunAuroraHorizon{display:none;'), html.indexOf('/* True Black only: Studio view'));
+  const desktop = html.slice(html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;'), html.indexOf('/* True Black only: Studio view'));
   assert.match(desktop, /@media \(hover:hover\) and \(pointer:fine\)/);
   const dayOnly = 'html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic])';
-  assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.54;}`));
+  assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.12;}`));
   assert.ok(desktop.includes(`${dayOnly} #chatBeamsWrap{opacity:0;}`));
   assert.ok(desktop.includes(`${dayOnly} #sunAuroraHorizon{opacity:1;}`));
   const horizon = desktop.match(/#sunAuroraHorizon\{\s*--sun-horizon-dock:[\s\S]*?\n  \}/)[0];
@@ -105,6 +105,19 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.ok(desktop.includes(`${dayOnly} #bottomNavBar.fullwidth{`));
   assert.match(desktop, /#bottomNavBar\.fullwidth\{\s*background:transparent;/);
   assert.match(html, /<div id="sunAuroraHorizon" aria-hidden="true"><\/div>/);
+});
+
+test('desktop Day holds the reference bands beneath the moving canvas', () => {
+  const start = html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;');
+  const end = html.indexOf('/* Let the navy background extend through the toolbar', start);
+  const sky = html.slice(start, end);
+  assert.match(sky, /@media \(hover:hover\) and \(pointer:fine\)/);
+  assert.match(sky, /--sun-sky-angle:61deg;/);
+  assert.match(sky, /--sun-sky-angle:atan2\(100vh,25vw\);/);
+  assert.match(sky, /linear-gradient\(var\(--sun-sky-angle\),[\s\S]*?#152031 54%/);
+  assert.match(sky, /html:not\(\.ava-app-mode\)\[data-theme="easyview"\]:not\(\[data-sun-classic\]\) #sunAuroraSky\{display:block;\}/);
+  assert.match(html, /<div id="sunAuroraSky" aria-hidden="true"><\/div>\s*<canvas id="globalBeamsCanvas"/);
+  assert.match(html, /body:has\(#appSplash\) #sunAuroraSky,/);
 });
 
 test('the newer navy themes blend their desktop toolbar into the same background', () => {
@@ -121,7 +134,7 @@ test('the newer navy themes blend their desktop toolbar into the same background
 test('Day keeps the backdrop continuous behind its minimized navigation', () => {
   const start = html.indexOf('/* Day\'s minimized controls');
   const end = html.indexOf('/* True Black only: Studio view', start);
-  assert.ok(start > html.indexOf('#sunAuroraHorizon{display:none;}') && end > start);
+  assert.ok(start > html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;}') && end > start);
   const rule = html.slice(start, end);
   const dayTheme = ':not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
   assert.ok(rule.includes(`html${dayTheme} .sidebar.collapsed,`));

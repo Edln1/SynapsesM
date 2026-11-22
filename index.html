@@ -206,6 +206,7 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
       display:none!important;visibility:hidden!important;opacity:0!important;
       width:0!important;min-width:0!important;border:none!important;pointer-events:none!important;
     }
+    body:has(#appSplash) #sunAuroraSky,
     body:has(#appSplash) #globalBeamsCanvas,
     body:has(#appSplash) #sunAuroraHorizon,
     body:has(#appSplash) #deepSpaceLayer{
@@ -9335,10 +9336,24 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   #globalBeamsCanvas{opacity:0.7;filter:blur(38px);}
   #chatBeamsWrap,#chatBeamsCanvas{opacity:0.7;}
 }
-#sunAuroraHorizon{display:none;}
+#sunAuroraSky,#sunAuroraHorizon{display:none;}
 @media (hover:hover) and (pointer:fine){
+  /* Keep the reference bands in place. The old moving canvas adds a little
+     variation over this color, so quiet frames never drop back to flat navy. */
+  #sunAuroraSky{
+    --sun-sky-angle:61deg;
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(var(--sun-sky-angle),
+      #0c0c17 9%,#0f1320 20%,#0c0c18 28%,#101324 35%,#121125 40%,#0e0e1c 47%,
+      #0f111f 50%,#152031 54%,#111927 57%,#0f1421 62%,#0c0c18 67%,#0e101c 71%,
+      #121929 76%,#101221 83%,#0c0c17 90%);
+  }
+  @supports (transform:rotate(atan2(100vh,25vw))){
+    #sunAuroraSky{--sun-sky-angle:atan2(100vh,25vw);}
+  }
+  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraSky{display:block;}
   html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsCanvas{opacity:1;}
-  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #globalBeamsCanvas{opacity:.54;}
+  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #globalBeamsCanvas{opacity:.12;}
   html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chatBeamsWrap{opacity:0;}
   /* Let the navy background extend through the toolbar in either desktop layout. */
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) .top-bar,
@@ -15473,6 +15488,7 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
   </div>
 </div>
 
+<div id="sunAuroraSky" aria-hidden="true"></div>
 <canvas id="globalBeamsCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;filter:blur(38px);"></canvas>
 <div id="sunAuroraHorizon" aria-hidden="true"></div>
 <!-- Deep-space field (Night mode moon right-click) — behind UI, above pure black -->
