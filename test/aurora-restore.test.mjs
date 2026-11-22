@@ -120,7 +120,8 @@ test('the newer navy themes blend their desktop toolbar into the same background
 
 test('collapsed Day sidebar glass fades clear of the horizon without masking its icons', () => {
   const start = html.indexOf('/* Fade the collapsed rail');
-  const end = html.indexOf('/* True Black only: Studio view', start);
+  const end = html.indexOf('/* Void\'s minimized controls', start);
+  assert.ok(start > html.indexOf('#sunAuroraHorizon{display:none;}') && end > start);
   const rule = html.slice(start, end);
   const collapsed = 'html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open)';
   assert.ok(rule.includes(`${collapsed}{`));
@@ -129,6 +130,22 @@ test('collapsed Day sidebar glass fades clear of the horizon without masking its
   assert.match(rule, /linear-gradient\(to top,transparent 148px,#000 192px\)/);
   assert.match(rule, /z-index:-1;pointer-events:none;/);
   assert.match(rule.slice(rule.indexOf('::before')), /mask-image:var\(--sun-rail-fade\)/);
+});
+
+test('Void keeps the backdrop continuous behind its minimized navigation', () => {
+  const start = html.indexOf('/* Void\'s minimized controls');
+  const end = html.indexOf('/* True Black only: Studio view', start);
+  assert.ok(start > html.indexOf('#sunAuroraHorizon{display:none;}') && end > start);
+  const rule = html.slice(start, end);
+  const voidTheme = ':not(.ava-app-mode,.android-status-blend)[data-theme="purple"]';
+  assert.ok(rule.includes(`html${voidTheme} .sidebar.collapsed,`));
+  assert.ok(rule.includes(`html.chp-sidebar-mode${voidTheme} #chpSidebar:not(.open,.fade-open),`));
+  assert.ok(rule.includes(`html${voidTheme} #bottomNavBar.bnav-cloud-collapsed{`));
+  assert.match(rule, /background:transparent!important;border-color:transparent!important;box-shadow:none!important;/);
+  assert.match(rule, /backdrop-filter:none;-webkit-backdrop-filter:none;/);
+  assert.ok(rule.includes(`html${voidTheme} .sidebar.collapsed #sidebarIconRail > :first-child{`));
+  assert.match(rule, /border-bottom-color:transparent!important;/);
+  assert.doesNotMatch(rule, /(?:display|pointer-events|width|height):/);
 });
 
 test('True Black and Ava keep the global renderer dormant rather than repainting a CSS-hidden canvas', () => {
