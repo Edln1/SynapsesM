@@ -119,19 +119,24 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0a0a0e">
   <style>
-    /* Base app chrome is pure black (sun + moon). Do NOT paint easyview as #0d0c15 —
-       that indigo field washed the whole UI with a glowy tint. Atmosphere comes from
-       particles/beams only; moon fades beams out over 1.4s to stay true black. */
+    /* Day and Void use navy. Night and Classic Sun use the black base. */
     html,body{background:#000000!important;background-color:#000000!important;transition:background-color 1.4s ease;}
     html:not(.ava-app-mode)[data-theme="purple"],html:not(.ava-app-mode)[data-theme="purple"] body,
-    html:not(.ava-app-mode)[data-theme="easyview"],html:not(.ava-app-mode)[data-theme="easyview"] body{background:#0c0c17!important;background-color:#0c0c17!important;}
+    html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]),
+    html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) body{background:#0c0c17!important;background-color:#0c0c17!important;}
     html[data-theme="light"],html[data-theme="light"] body{background:#f2f2f7!important;background-color:#f2f2f7!important;}
   </style>
   <script>
+    function _synapsesBaseTheme(theme){return theme==='sun-classic'?'easyview':theme;}
+    function _setSynapsesThemeAttributes(theme){
+      var root=document.documentElement;
+      root.toggleAttribute('data-sun-classic',theme==='sun-classic');
+      root.setAttribute('data-theme',_synapsesBaseTheme(theme));
+    }
     (function(){
       try{
         var t = localStorage.getItem('_appTheme') || 'trueblack';
-        document.documentElement.setAttribute('data-theme', t);
+        _setSynapsesThemeAttributes(t);
       }catch(e){}
       /* Apply bottom-nav BEFORE first paint when user uses the bottom taskbar.
          Otherwise the old left sidebar glass paints under the splash and reads
@@ -202,6 +207,7 @@ html.ava-welcome-boot::after{content:""!important;display:block!important;positi
       width:0!important;min-width:0!important;border:none!important;pointer-events:none!important;
     }
     body:has(#appSplash) #globalBeamsCanvas,
+    body:has(#appSplash) #sunAuroraHorizon,
     body:has(#appSplash) #deepSpaceLayer{
       opacity:0!important;visibility:hidden!important;pointer-events:none!important;
     }
@@ -9324,18 +9330,38 @@ html[data-theme="easyview"] #chatFlowCanvas,html[data-theme="easyview"] #flowCan
 /* Moon: beams fade out over 1.4s (black base already). Sun: original beam strength. */
 #globalBeamsCanvas{transition:opacity 1.4s ease;}
 html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
-html:not(.ava-app-mode)[data-theme="purple"] #globalBeamsCanvas{opacity:0.7;}
-html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
-/* Mobile sun aurora: same beam strength as desktop, hue locked to 212107 indigo */
+/* Mobile and Classic Sun retain the original beam layers and opacity. */
 @media (max-width:900px){
   #globalBeamsCanvas{opacity:0.7;filter:blur(38px);}
-  html[data-theme="easyview"] #globalBeamsCanvas{opacity:0.7;}
   #chatBeamsWrap,#chatBeamsCanvas{opacity:0.7;}
 }
-/* A compact desktop window keeps the original beam strength; phone tuning stays intact. */
+#sunAuroraHorizon{display:none;}
 @media (hover:hover) and (pointer:fine){
-  html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsCanvas,
-  html:not(.ava-app-mode)[data-theme="easyview"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="easyview"] #chatBeamsCanvas{opacity:1;}
+  html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsWrap:not(.hidden),html:not(.ava-app-mode)[data-theme="purple"] #chatBeamsCanvas{opacity:1;}
+  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #globalBeamsCanvas{opacity:.54;}
+  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chatBeamsWrap{opacity:0;}
+  /* Let the navy background extend through the toolbar in either desktop layout. */
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) .top-bar,
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="purple"] .top-bar{
+    background:transparent;border-bottom-color:transparent;box-shadow:none;
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+  }
+  /* The old canvas left color along the lower edge after shrinking the window.
+     Paint that glow directly so resizing the bitmap never builds up light. */
+  #sunAuroraHorizon{
+    --sun-horizon-y:calc(100% - 48px);
+    display:block;position:fixed;inset:auto 0 0;height:clamp(142px,23vh,220px);
+    z-index:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;
+    background:
+      radial-gradient(ellipse 19% 85px at 3% var(--sun-horizon-y),rgba(35,135,126,.28),transparent),
+      radial-gradient(ellipse 20% 91px at 36% var(--sun-horizon-y),rgba(47,150,125,.38),transparent),
+      radial-gradient(ellipse 10% 87px at 52% var(--sun-horizon-y),rgba(103,38,158,.26),transparent),
+      radial-gradient(ellipse 15% 85px at 65% var(--sun-horizon-y),rgba(55,139,151,.28),transparent),
+      radial-gradient(ellipse 20% 82px at 92% var(--sun-horizon-y),rgba(53,134,154,.20),transparent),
+      linear-gradient(to top,rgba(63,85,155,.37),rgba(63,85,155,.53) 48px,
+        rgba(63,85,155,.31) 91px,rgba(63,85,155,.10) 130px,transparent 166px);
+  }
+  html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraHorizon{opacity:1;}
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
    beams layer stayed at full purple-tinted strength — dim them the same way globalBeamsCanvas
@@ -15424,7 +15450,8 @@ html.synapses-intro-skipped #appSplash{display:none!important;}
   </div>
 </div>
 
-<canvas id="globalBeamsCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;filter:blur(38px);opacity:0.7;"></canvas>
+<canvas id="globalBeamsCanvas" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;filter:blur(38px);"></canvas>
+<div id="sunAuroraHorizon" aria-hidden="true"></div>
 <!-- Deep-space field (Night mode moon right-click) — behind UI, above pure black -->
 <div id="deepSpaceLayer" aria-hidden="true">
   <canvas id="deepSpaceCanvas"></canvas>
@@ -24021,7 +24048,7 @@ function setView(id){
   el.classList.add('active');
   try{ if(window._synPwr) window._synPwr.view(id); }catch(_pw){}
   if(!wasAlreadyActive){ el.style.animation='none';el.offsetHeight;el.style.animation=''; }
-  if(!wasAlreadyActive && (localStorage.getItem('_appTheme')||'trueblack')==='easyview'){
+  if(!wasAlreadyActive && document.documentElement.getAttribute('data-theme')==='easyview'){
     var _reinitMap={'sec-welcome':'_reinitFlowCanvas','sec-chat':'_reinitChatFlowCanvas','sec-jobs':'_reinitJobsFlowCanvas','sec-room':'_reinitRoomFlowCanvas'};
     var _rfn=_reinitMap[id];
     if(_rfn && window[_rfn]) setTimeout(window[_rfn], 30);
@@ -42424,7 +42451,7 @@ window._bnavOpenMobileSettingsPage = _bnavOpenMobileSettingsPage;
     }
     function renderThemePane(){
       var themes = (window._getThemes && window._getThemes()) || [
-        {id:'easyview',label:'Sun'},{id:'trueblack',label:'True Black'},{id:'purple',label:'Dark Mode'}
+        {id:'easyview',label:'Sun'},{id:'sun-classic',label:'Classic Sun'},{id:'trueblack',label:'True Black'},{id:'purple',label:'Dark Mode'}
       ];
       var cur = (window._curTheme && window._curTheme()) || 'trueblack';
       var layout = (typeof _chpLayoutGet === 'function') ? _chpLayoutGet() : 'classic';
@@ -49737,7 +49764,10 @@ function _sunAuroraSurface(){
   return !root.classList.contains('ava-app-mode')&&(theme==='purple'||theme==='easyview');
 }
 function _sunAuroraFullPalette(){
-  try{return _sunAuroraSurface()&&!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);}catch(e){return false;}
+  try{
+    return _sunAuroraSurface()&&!document.documentElement.hasAttribute('data-sun-classic')&&
+      !(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
+  }catch(e){return false;}
 }
 function _sunAuroraHue(i, n){
   if(!_sunAuroraFullPalette()&&_sunAuroraMobile()) return 228 + ((i % 8) * 1.5);
@@ -49764,7 +49794,7 @@ function _sunAuroraInitialHue(){
     for(var i=0;i<q.length;i++) try{q[i]();}catch(e){}
   },{passive:true});
   try{
-    new MutationObserver(function(){ window._synPwr.view('*theme*'); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+    new MutationObserver(function(){ window._synPwr.view('*theme*'); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-sun-classic']});
   }catch(e){}
 })();
 function _sunAuroraPaint(hue, a){
@@ -58873,7 +58903,8 @@ function toggleDayNight(){
   // Black or Dark Mode) was last chosen in profile settings, so the toggle always
   // lands back on the person's preferred dark look instead of forcing one.
   var darkVariant = localStorage.getItem('_darkVariant') || 'trueblack';
-  var next = (cur === 'easyview') ? darkVariant : 'easyview';
+  var sunVariant = localStorage.getItem('_sunVariant') === 'sun-classic' ? 'sun-classic' : 'easyview';
+  var next = _synapsesBaseTheme(cur) === 'easyview' ? darkVariant : sunVariant;
   window._applyTheme(next);
   _syncDayNightToggle(next);
   _syncAndroidStatusBarForTheme(next);
@@ -59028,7 +59059,7 @@ function _syncDayNightToggle(t){
     rightIcon = document.getElementById('dnt-right-icon');
   }
 
-  if(t === 'easyview'){
+  if(_synapsesBaseTheme(t) === 'easyview'){
     wrap.style.background  = '#ffffff';
     wrap.style.borderColor = '#e4e4e7';
     left.style.transform   = 'translate3d(32px,0,0)';
@@ -61627,31 +61658,24 @@ function _openNeutralinoWebview(url){
 (function(){
   var THEMES = [
     {id:'easyview',  label:'Day',   desc:'High clarity'},
+    {id:'sun-classic',label:'Classic Sun',desc:'Original black backdrop'},
     {id:'trueblack', label:'Night', desc:'OLED black'},
     {id:'purple',    label:'Void',  desc:'Standard dark'},
   ];
 
   function applyTheme(t){
     if(!THEMES.find(function(x){return x.id===t;})) t='trueblack';
-    // Sun and Void retain the original navy aurora field. Night stays pure black.
+    _setSynapsesThemeAttributes(t);
     try{
-      var bgMap = { purple:'#0c0c17', trueblack:'#000000', easyview:'#0c0c17', ios:'#000000', light:'#f2f2f7' };
-      var toBg = bgMap[t] || '#000000';
-      document.documentElement.setAttribute('data-theme', t);
       // Clear any leftover inline washes from older builds
       document.documentElement.style.removeProperty('background-color');
       document.body.style.removeProperty('background-color');
-      if(t === 'light'){
-        document.documentElement.style.setProperty('background-color', toBg, 'important');
-        document.body.style.setProperty('background-color', toBg, 'important');
-      }
-    }catch(_fade){
-      document.documentElement.setAttribute('data-theme', t);
-    }
+    }catch(_fade){}
     localStorage.setItem('_appTheme', t);
     // Remember which dark theme (True Black or Dark Mode) the person prefers, so the
     // top-right sun/moon toggle knows which one to swap to when leaving Sun mode.
     if(t === 'purple' || t === 'trueblack') localStorage.setItem('_darkVariant', t);
+    if(_synapsesBaseTheme(t) === 'easyview') localStorage.setItem('_sunVariant', t);
     renderThemeCard();
     if(window._patchIosLanding) window._patchIosLanding();
     if(window._syncDayNightToggle) window._syncDayNightToggle(t);
@@ -61660,7 +61684,7 @@ function _openNeutralinoWebview(url){
     if(typeof restyleSciFiNotesPanel === 'function') restyleSciFiNotesPanel();
     if(typeof renderStickyNotes === 'function') renderStickyNotes(false);
     if(typeof _restyleStickyFlyMenu === 'function') _restyleStickyFlyMenu();
-    if(t==='easyview'){
+    if(_synapsesBaseTheme(t)==='easyview'){
       // Canvases sit at 0x0 while hidden (display:none), so re-measure and
       // reinit whichever ones now have visible dimensions in sun mode.
       setTimeout(function(){
@@ -61739,7 +61763,7 @@ function renderThemeCard(){
     themes.map(function(t){
       var active = cur === t.id;
       return '<button type="button" class="theme-pick'+(active?' active':'')+'" onclick="window._applyTheme(\''+t.id+'\')">'+
-        '<span class="theme-ico">'+(icons[t.id]||'')+'</span>'+
+        '<span class="theme-ico">'+(icons[_synapsesBaseTheme(t.id)]||'')+'</span>'+
         '<span style="flex:1;min-width:0;">'+
           '<span style="display:block;font-size:12.5px;font-weight:'+(active?'600':'500')+';color:rgba(245,245,247,'+(active?'0.95':'0.8')+');">'+t.label+'</span>'+
           '<span style="display:block;font-size:10px;color:rgba(150,150,158,0.65);margin-top:2px;letter-spacing:.04em;">'+(t.desc||'')+'</span>'+
