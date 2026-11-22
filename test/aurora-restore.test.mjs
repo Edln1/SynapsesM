@@ -165,8 +165,36 @@ test('the dark aurora palette styles Welcome, the rail and desktop Ava together'
   assert.match(palette, /#avaCompanionChat \.ac-main\{\s*background:transparent;/);
   assert.match(palette, /#avaCompanionChat :is\(\.ac-compose,\.ac-search,/);
   assert.match(palette, /#avaFloatPopover :is\(#avaFloatSend,#avaFloatStart\)\{\s*background:var\(--day-action\);/);
+  assert.ok(palette.includes(`${theme} #callSuccessOverlay .cs-card,`));
+  assert.match(palette, /#callSuccessOverlay \.cs-btn\.primary\{\s*background:var\(--day-action\);/);
   assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:var\(--day-muted\);/);
   assert.doesNotMatch(palette, /(?:display|pointer-events|width|height):|\.ac-mascot/);
+});
+
+test('Ava opens Calendar in Control Centre and dismisses the chat in front of it', () => {
+  const source = html.replaceAll('\r\n', '\n');
+  const start = source.indexOf("if(['tools','inbox','calendar'].indexOf(action)!==-1)");
+  const end = source.indexOf("\n  return 'unavailable';", start);
+  assert.ok(start >= 0 && end > start);
+  const calls = [];
+  const card = {};
+  const panel = { querySelector(selector) {
+    assert.equal(selector, '[data-cc-id="calendar"]');
+    return card;
+  } };
+  const run = vm.runInNewContext(`action => { ${source.slice(start, end)} }`, {
+    openTools() { calls.push('open'); return true; },
+    close(restore) { assert.equal(restore, false); calls.push('close shortcut'); },
+    window: { __avaCompanionChatOpen: true, avaCompanionChatClose(restore) {
+      assert.equal(restore, false);
+      calls.push('close chat');
+    } },
+    document: { getElementById(id) { assert.equal(id, 'bnavCCPanel'); return panel; } },
+    focusWhen(find, scope) { assert.equal(find(), card); assert.equal(scope, panel); calls.push('focus calendar'); },
+  });
+  assert.equal(run('calendar'), 'calendar');
+  assert.deepEqual(calls, ['close chat', 'open', 'close shortcut', 'focus calendar']);
+  assert.match(source, /body:has\(#bnavCCPanel\.bnav-cc-open\) main\.main > \.section\.active:not\(#sec-chat\),\s*body:has\(#bnavCCPanel\.bnav-cc-open\) :is\(#sciFiNotesPanel,#imageGenModal,#agentPanel\)\{visibility:hidden;opacity:0!important;\}/);
 });
 
 test('theme controls keep open popups in place while other outside actions dismiss them', () => {
