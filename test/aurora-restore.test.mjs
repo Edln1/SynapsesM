@@ -94,20 +94,22 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.54;}`));
   assert.ok(desktop.includes(`${dayOnly} #chatBeamsWrap{opacity:0;}`));
   assert.ok(desktop.includes(`${dayOnly} #sunAuroraHorizon{opacity:1;}`));
-  const horizon = desktop.match(/#sunAuroraHorizon::before\{\s*content:[\s\S]*?\n  \}/)[0];
-  const heights = [...horizon.matchAll(/ellipse \d+% (\d+)px at \d+% calc\(100% - (\d+)px\)/g)];
-  assert.ok(new Set(heights.map(([, , peak]) => peak)).size > 3, 'The pools peak at different heights');
-  assert.ok(heights.every(([, size, peak]) => Number(size) + Number(peak) < 130), 'Colors fade out before the layer ends');
-  assert.match(desktop, /inset:auto 0 0;height:130px;overflow:hidden;/);
+  const horizon = desktop.match(/#sunAuroraHorizon\{\s*--sun-horizon-fade:[\s\S]*?\n  \}/)[0];
+  assert.match(horizon, /--sun-horizon-fade:linear-gradient\(to top,/);
+  assert.match(horizon, /rgba\(0,0,0,\.69\) 47px,\s*#000 53px/);
+  assert.match(horizon, /rgba\(0,0,0,\.10\) 121px,rgba\(0,0,0,\.04\) 134px,transparent 148px/);
+  assert.match(horizon, /inset:auto 0 0;height:148px;/);
+  assert.match(horizon, /background:linear-gradient\(to right,/);
+  assert.match(horizon, /mask-image:var\(--sun-horizon-fade\);/);
+  assert.doesNotMatch(desktop, /radial-gradient|sunAuroraDrift/);
   assert.ok(desktop.includes(`${dayOnly} #bottomNavBar.fullwidth{`));
-  assert.match(desktop, /background:linear-gradient\(to bottom,transparent,rgba\(19,18,34,\.20\)\);/);
-  assert.match(desktop, /@media \(prefers-reduced-motion:no-preference\)/);
+  assert.match(desktop, /#bottomNavBar\.fullwidth\{\s*background:transparent;/);
   assert.match(html, /<div id="sunAuroraHorizon" aria-hidden="true"><\/div>/);
 });
 
 test('the newer navy themes blend their desktop toolbar into the same background', () => {
   const start = html.indexOf('/* Let the navy background extend through the toolbar');
-  const end = html.indexOf('/* The old canvas left color', start);
+  const end = html.indexOf('\n  }', start);
   const chrome = html.slice(start, end);
   assert.match(chrome, /html:not\(\.ava-app-mode,\.android-status-blend\)\[data-theme="easyview"\]:not\(\[data-sun-classic\]\) \.top-bar/);
   assert.match(chrome, /html:not\(\.ava-app-mode,\.android-status-blend\)\[data-theme="purple"\] \.top-bar/);

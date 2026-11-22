@@ -9346,32 +9346,28 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
     background:transparent;border-bottom-color:transparent;box-shadow:none;
     backdrop-filter:none;-webkit-backdrop-filter:none;
   }
-  /* The old canvas left color along the lower edge after shrinking the window.
-     Paint overlapping pools of color that can fade across the toolbar edge. */
+  /* The Neutralino reference changes color across the width, with one level
+     brightness profile. The crest sits just above the 52px toolbar. */
   #sunAuroraHorizon{
-    display:block;position:fixed;inset:auto 0 0;height:130px;overflow:hidden;
+    --sun-horizon-fade:linear-gradient(to top,
+      rgba(0,0,0,.59),rgba(0,0,0,.63) 12px,rgba(0,0,0,.69) 28px,rgba(0,0,0,.69) 47px,
+      #000 53px,rgba(0,0,0,.89) 61px,rgba(0,0,0,.72) 71px,rgba(0,0,0,.53) 81px,
+      rgba(0,0,0,.42) 91px,rgba(0,0,0,.28) 101px,rgba(0,0,0,.18) 111px,
+      rgba(0,0,0,.10) 121px,rgba(0,0,0,.04) 134px,transparent 148px);
+    display:block;position:fixed;inset:auto 0 0;height:148px;
     z-index:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;
-  }
-  #sunAuroraHorizon::before{
-    content:"";position:absolute;inset:0 -4%;
-    background:
-      radial-gradient(ellipse 21% 61px at 5% calc(100% - 48px),rgba(42,142,159,.37),transparent),
-      radial-gradient(ellipse 24% 57px at 17% calc(100% - 44px),rgba(68,95,181,.31),transparent),
-      radial-gradient(ellipse 22% 68px at 37% calc(100% - 49px),rgba(56,152,172,.42),transparent),
-      radial-gradient(ellipse 15% 69px at 52% calc(100% - 54px),rgba(108,68,192,.40),transparent),
-      radial-gradient(ellipse 21% 57px at 68% calc(100% - 47px),rgba(64,120,183,.31),transparent),
-      radial-gradient(ellipse 24% 63px at 94% calc(100% - 46px),rgba(56,110,168,.29),transparent),
-      radial-gradient(ellipse 85% 72px at 48% calc(100% - 37px),rgba(54,72,146,.27),transparent);
+    background:linear-gradient(to right,
+      #223f54,#284e66 2%,#294b69 6%,#293e69 10%,#2c4071 15%,#2a3a6b 22%,#2a456d 28%,
+      #29536a 33%,#2a566d 40%,#303b69 46%,#372c6d 50%,#383172 53%,#2e3c6d 57%,
+      #2c5071 63%,#2b3f70 68%,#2b326f 74%,#2a386a 78%,#2b4169 82%,#2f3e6d 90%,#2a506c 98%);
+    -webkit-mask-image:var(--sun-horizon-fade);
+    mask-image:var(--sun-horizon-fade);
   }
   html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraHorizon{opacity:1;}
   html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #bottomNavBar.fullwidth{
-    background:linear-gradient(to bottom,transparent,rgba(19,18,34,.20));
+    background:transparent;
     border-top-color:rgba(173,172,225,.08);
     backdrop-filter:none;-webkit-backdrop-filter:none;
-  }
-  @media (prefers-reduced-motion:no-preference){
-    html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraHorizon::before{animation:sunAuroraDrift 34s ease-in-out infinite alternate;}
-    @keyframes sunAuroraDrift{from{transform:translateX(-1.4%);}to{transform:translateX(1.4%);}}
   }
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
