@@ -82749,6 +82749,27 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     return null;
   }
 
+  async function csCallAuthorization(owner){
+    if(!owner)return null;
+    var client=typeof _supabase!=='undefined'?_supabase:window._supabase;
+    var result=client&&client.auth?await client.auth.getSession():null;
+    var session=result&&!result.error&&result.data&&result.data.session;
+    var email=session&&session.user&&session.user.email;
+    if(!session||!session.access_token||!email||csIdentifier()!==owner||
+       ('web_'+email).toLowerCase()!==owner.toLowerCase())return null;
+    return 'Bearer '+session.access_token;
+  }
+
+  async function csPostCall(body){
+    var authorization=await csCallAuthorization(body.requestingUser);
+    if(!authorization)throw new Error('Sign in again to place a call.');
+    return fetch(CS_BACKEND+'/call-logs/follow-up-call',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:authorization},
+      body:JSON.stringify(body)
+    });
+  }
+
   function csUpdateBadge(){
     var btn = document.getElementById('bnavCallBtn');
     if (!btn) return;
@@ -82880,20 +82901,19 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   async function csFollowUp(type, message){
     if(type==='call'&&!requireAvaCallPro())return;
     if(!csCurrent||csFollowBusy)return;
-    var owner=csIdentifier(),record=csCurrent,url,body;
-    if(type==='call'){
-      url=CS_BACKEND+'/call-logs/follow-up-call';
-      body={requestingUser:owner,contactPhone:record.contact_phone,contactName:record.contact_name,objective:message};
-    }else{
-      url=CS_BACKEND+'/call-logs/follow-up-message';
-      body={contactPhone:record.contact_phone,message:message};
-    }
+    var owner=csIdentifier(),record=csCurrent;
     var status=document.getElementById('csFollowRequestStatus');
     if(!status){status=document.createElement('p');status.id='csFollowRequestStatus';status.style.cssText='font-size:11px;line-height:1.6;color:#a9a69e;margin:8px 0 0;';status.setAttribute('role','status');document.getElementById('csCompose').appendChild(status);}
     status.textContent='Requesting follow-up…';csFollowBusy=true;
     var submit=document.getElementById('csComposeSendBtn');submit.disabled=true;
     try{
-      var response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),data=await response.json();
+      var response=type==='call'
+        ? await csPostCall({requestingUser:owner,contactPhone:record.contact_phone,contactName:record.contact_name,objective:message})
+        : await fetch(CS_BACKEND+'/call-logs/follow-up-message',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contactPhone:record.contact_phone,message:message})
+        });
+      var data=await response.json();
       if(!response.ok||!data||data.error||data.success!==true)throw Error(data&&data.error||'Request was not accepted.');
       if(owner===csIdentifier()&&csCurrent===record)csDismiss();
     }catch(error){
@@ -82915,11 +82935,16 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
   function csPoll(){
     var user = csIdentifier();csSyncOwner(user);
     if (!user) return;
-    fetch(CS_BACKEND + '/call-logs/pending?user=' + encodeURIComponent(user))
-      .then(function(r){ return r.json(); })
+    csCallAuthorization(user)
+      .then(function(authorization){
+        if(!authorization||user!==csIdentifier()||user!==csOwner)return null;
+        return fetch(CS_BACKEND + '/call-logs/pending?user=' + encodeURIComponent(user),{
+          headers:{Authorization:authorization},cache:'no-store'
+        }).then(function(response){return response.ok?response.json():null;});
+      })
       .then(function(data){
         // An account switch must never display/cache the previous request's rows.
-        if(user!==csIdentifier()||user!==csOwner)return;
+        if(!data||user!==csIdentifier()||user!==csOwner)return;
         var calls = data&&Array.isArray(data.calls)?data.calls.filter(function(row){return row&&typeof row==='object'&&row.id!=null;}):[];
         calls.forEach(function(row){if(!row||row.id==null)return;var index=csReceived.findIndex(function(old){return String(old.id)===String(row.id);});if(index<0)csReceived.push(row);else csReceived[index]=row;});
         csReceived=csReceived.slice(-100);
@@ -83005,7 +83030,7 @@ html[data-theme="trueblack"] #synTourFloatBtn:not(.docked){animation:synTourFloa
     var user=csIdentifier();if(!user){status.textContent='Sign in before placing a call.';return;}
     newCallBusy=true;submit.disabled=true;status.textContent='Requesting your call…';
     try{
-      var response=await fetch(CS_BACKEND+'/call-logs/follow-up-call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestingUser:user,contactPhone:phone,contactName:document.getElementById('csNewName').value.trim()||phone,objective:objective})});
+      var response=await csPostCall({requestingUser:user,contactPhone:phone,contactName:document.getElementById('csNewName').value.trim()||phone,objective:objective});
       var data=await response.json();
       if(!response.ok||!data.success)throw Error(data.error||'Call request was not accepted.');
       status.textContent='Call requested. Your summary and transcript will appear here when available.';
