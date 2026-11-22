@@ -9349,17 +9349,18 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   /* The old canvas left color along the lower edge after shrinking the window.
      Paint that glow directly so resizing the bitmap never builds up light. */
   #sunAuroraHorizon{
-    --sun-horizon-y:calc(100% - 48px);
-    display:block;position:fixed;inset:auto 0 0;height:clamp(142px,23vh,220px);
+    --sun-horizon-rise:22px;
+    --sun-horizon-y:calc(100% - var(--sun-horizon-rise));
+    display:block;position:fixed;inset:auto 0 0;height:124px;
     z-index:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;
     background:
-      radial-gradient(ellipse 19% 85px at 3% var(--sun-horizon-y),rgba(35,135,126,.28),transparent),
-      radial-gradient(ellipse 20% 91px at 36% var(--sun-horizon-y),rgba(47,150,125,.38),transparent),
-      radial-gradient(ellipse 10% 87px at 52% var(--sun-horizon-y),rgba(103,38,158,.26),transparent),
-      radial-gradient(ellipse 15% 85px at 65% var(--sun-horizon-y),rgba(55,139,151,.28),transparent),
-      radial-gradient(ellipse 20% 82px at 92% var(--sun-horizon-y),rgba(53,134,154,.20),transparent),
-      linear-gradient(to top,rgba(63,85,155,.37),rgba(63,85,155,.53) 48px,
-        rgba(63,85,155,.31) 91px,rgba(63,85,155,.10) 130px,transparent 166px);
+      radial-gradient(ellipse 19% 71px at 3% var(--sun-horizon-y),rgba(35,135,126,.28),transparent),
+      radial-gradient(ellipse 20% 76px at 36% var(--sun-horizon-y),rgba(47,150,125,.38),transparent),
+      radial-gradient(ellipse 10% 73px at 52% var(--sun-horizon-y),rgba(103,38,158,.26),transparent),
+      radial-gradient(ellipse 15% 71px at 65% var(--sun-horizon-y),rgba(55,139,151,.28),transparent),
+      radial-gradient(ellipse 20% 68px at 92% var(--sun-horizon-y),rgba(53,134,154,.20),transparent),
+      linear-gradient(to top,rgba(63,85,155,.43),rgba(63,85,155,.53) var(--sun-horizon-rise),
+        rgba(63,85,155,.30) 57px,rgba(63,85,155,.10) 89px,transparent);
   }
   html:not(.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraHorizon{opacity:1;}
 }

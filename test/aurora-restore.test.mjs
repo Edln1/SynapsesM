@@ -94,7 +94,9 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.54;}`));
   assert.ok(desktop.includes(`${dayOnly} #chatBeamsWrap{opacity:0;}`));
   assert.ok(desktop.includes(`${dayOnly} #sunAuroraHorizon{opacity:1;}`));
-  assert.match(desktop, /--sun-horizon-y:calc\(100% - 48px\);/);
+  assert.match(desktop, /--sun-horizon-rise:22px;/);
+  assert.match(desktop, /--sun-horizon-y:calc\(100% - var\(--sun-horizon-rise\)\);/);
+  assert.match(desktop, /inset:auto 0 0;height:124px;/);
   assert.match(html, /<div id="sunAuroraHorizon" aria-hidden="true"><\/div>/);
 });
 
