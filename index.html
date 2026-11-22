@@ -4702,6 +4702,19 @@ html[data-theme="easyview"] .syn-cluster-chip canvas{width:28px;height:28px;}
   min-height:52px;height:52px;line-height:20px;
   padding:16px 100px 16px 52px!important; /* (52-20)/2=16 → true vertical center */
   box-sizing:border-box;
+  /* Fade the collapsed rail's glass and divider above the glow. Its buttons
+     stay on the rail so the launcher can still be reached and used. */
+  html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open){
+    background:transparent;border-right-color:transparent;
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+  }
+  html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open)::before{
+    --sun-rail-fade:linear-gradient(to top,transparent 148px,#000 192px);
+    content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:rgba(22,22,32,.18);border-right:1px solid rgba(255,255,255,.06);
+    backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
+    mask-image:var(--sun-rail-fade);-webkit-mask-image:var(--sun-rail-fade);
+  }
 }
 /* True Black only: neutral grey border + a real grey fill (lighter than the pure-black bg,
    darker than the border) instead of the purple-tinted glass outline. */

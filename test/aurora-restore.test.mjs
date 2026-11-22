@@ -118,6 +118,19 @@ test('the newer navy themes blend their desktop toolbar into the same background
   assert.doesNotMatch(chrome, /(?:height|margin|padding|position):/);
 });
 
+test('collapsed Day sidebar glass fades clear of the horizon without masking its icons', () => {
+  const start = html.indexOf('/* Fade the collapsed rail');
+  const end = html.indexOf('/* True Black only: Studio view', start);
+  const rule = html.slice(start, end);
+  const collapsed = 'html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open)';
+  assert.ok(rule.includes(`${collapsed}{`));
+  assert.ok(rule.includes(`${collapsed}::before{`));
+  assert.match(rule, /background:transparent;border-right-color:transparent;\s*backdrop-filter:none;/);
+  assert.match(rule, /linear-gradient\(to top,transparent 148px,#000 192px\)/);
+  assert.match(rule, /z-index:-1;pointer-events:none;/);
+  assert.match(rule.slice(rule.indexOf('::before')), /mask-image:var\(--sun-rail-fade\)/);
+});
+
 test('True Black and Ava keep the global renderer dormant rather than repainting a CSS-hidden canvas', () => {
   for (const options of [{ theme: 'trueblack' }, { theme: 'pitchblack' }, { theme: 'purple', app: true }, { theme: 'easyview', app: true }]) {
     const f = setup(options); assert.equal(f.window._synPwr.beamsOn(), false); assert.equal(f.paints.length, 0); assert.equal(f.frames.length, 0);
