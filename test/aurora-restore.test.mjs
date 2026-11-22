@@ -157,14 +157,15 @@ test('the dark aurora palette styles Welcome, the rail and desktop Ava together'
   const palette = html.slice(start, end);
   const theme = 'html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
   assert.ok(start > html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;}') && end > start);
-  assert.ok(palette.includes(`${theme} #synWelcomePop{background:var(--day-glass);`));
-  assert.ok(palette.includes(`${theme} :is(#avaFloatPopover,#chpRailPop){`));
+  assert.ok(palette.includes(`${theme} :is(#synWelcomePop,#avaCompanionChat,#avaFloatPopover,#chpRailPop){`));
+  assert.match(palette, /--day-glass:rgba\(14,13,24,\.86\);--day-border:rgba\(124,106,247,\.30\);/);
+  assert.match(palette, /background:var\(--day-glass\);border-color:var\(--day-border\);\s*backdrop-filter:blur\(24px\);/);
   assert.ok(palette.includes(`${theme} #synWelcomePop > .bnav-cc-card{`));
   assert.ok(palette.includes(`${theme} #chpRail > .chp-rail-btn{color:var(--day-icon);}`));
-  assert.ok(palette.includes(`${theme} #avaCompanionChat .ac-main{`));
+  assert.match(palette, /#avaCompanionChat \.ac-main\{\s*background:transparent;/);
   assert.match(palette, /#avaCompanionChat :is\(\.ac-compose,\.ac-search,/);
-  assert.match(palette, /--day-panel:#18191f;\s*--day-pane:#111216;/);
-  assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:#a8a9b5;/);
+  assert.match(palette, /#avaFloatPopover :is\(#avaFloatSend,#avaFloatStart\)\{\s*background:var\(--day-action\);/);
+  assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:var\(--day-muted\);/);
   assert.doesNotMatch(palette, /(?:display|pointer-events|width|height):|\.ac-mascot/);
 });
 

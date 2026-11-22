@@ -9409,19 +9409,24 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   }
   /* Desktop Day palette for the welcome panel, rail and Ava conversation. */
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]){
-    --day-glass:rgba(22,25,40,.96);
-    --day-panel:#18191f;--day-pane:#111216;--day-control:#1c1d24;--day-selected:#242631;
-    --day-border:#343641;--day-label:#b9c6e4;--day-muted:#9ba8c3;--day-text:#e8e8ee;
-    --day-icon:#8c9ac5;--day-accent:#d5dffe;--day-hover:rgba(118,145,224,.13);
+    /* Match the main composer's dark glass and violet edge. */
+    --day-glass:rgba(14,13,24,.86);--day-border:rgba(124,106,247,.30);--day-divider:rgba(124,106,247,.17);
+    --day-control:rgba(124,106,247,.065);--day-selected:rgba(124,106,247,.13);
+    --day-action:rgba(99,102,241,.24);--day-action-hover:rgba(99,102,241,.34);
+    --day-label:#c2b9e2;--day-muted:#a8a5bd;--day-text:#eeedf5;
+    --day-icon:#8c9ac5;--day-accent:#ded9f6;--day-hover:rgba(124,106,247,.11);
   }
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop{background:var(--day-glass);border-color:var(--day-border);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) :is(#synWelcomePop,#avaCompanionChat,#avaFloatPopover,#chpRailPop){
+    background:var(--day-glass);border-color:var(--day-border);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop > .bnav-cc-card{
-    background:rgba(126,146,206,.065);border-color:rgba(139,156,215,.22);
+    background:var(--day-control);border-color:var(--day-divider);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop .bnav-cc-card-title{color:var(--day-label);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop :is(.syn-welcome-sub,.bnav-cc-widget-empty,.bnav-cc-mail-subject){color:var(--day-muted);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #synWelcomePop .syn-welcome-cc-btn{
-    background:rgba(126,146,206,.09);border-color:rgba(139,156,215,.22);color:var(--day-label);
+    background:var(--day-control);border-color:var(--day-divider);color:var(--day-label);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRail > .chp-rail-btn{color:var(--day-icon);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRail .chp-rail-label{color:var(--day-muted);}
@@ -9430,18 +9435,21 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
     background:var(--day-hover);color:var(--day-accent);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat{
-    --ac-cream:var(--day-text);--ac-muted:#a8a9b5;--ac-line:var(--day-border);
-    background:var(--day-pane);border-color:var(--day-border);
+    --ac-cream:var(--day-text);--ac-muted:var(--day-muted);--ac-line:var(--day-divider);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-top,.ac-rail){
-    background:var(--day-panel);border-color:var(--ac-line);
+    background:var(--sidebar);border-color:var(--ac-line);
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-main{
-    background:var(--day-pane);
+    background:transparent;
   }
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-compose,.ac-search,.ac-new,.ac-voice,.ac-prompts button,.ac-research,.ac-source-link,.ac-task-list button){
     background:var(--day-control);border-color:var(--ac-line);color:var(--ac-cream);
   }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-account-initial,.ac-message[data-role="user"] .ac-avatar,.ac-code){
+    background:var(--day-control);border-color:var(--ac-line);color:var(--ac-cream);
+  }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-code-head{background:var(--sidebar);color:var(--ac-muted);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-thread:hover,.ac-icon:hover,.ac-new:hover,.ac-voice:hover,.ac-prompts button:hover,.ac-research:hover,.ac-source-link:hover,.ac-task-list button:hover){
     background:var(--day-selected);border-color:var(--ac-line);
   }
@@ -9455,21 +9463,27 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-search-wrap svg{stroke:var(--day-icon);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-top-actions .ac-icon,.ac-main-link,.ac-voice,.ac-prompts button,.ac-thread-delete,.ac-message-tools button){color:var(--day-label)!important;}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-top-actions .ac-icon:hover,.ac-main-link:hover,.ac-voice:hover,.ac-prompts button:hover,.ac-message-tools button:hover){color:var(--day-accent)!important;}
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-compose:focus-within,.ac-search:focus-visible){border-color:var(--day-icon);}
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send{background:var(--day-label);color:var(--day-pane)!important;}
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send:hover{background:var(--day-accent);}
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) :is(#avaFloatPopover,#chpRailPop){
-    background:var(--day-panel);border-color:var(--day-border);
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-compose{border-color:var(--day-border);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat :is(.ac-compose:focus-within,.ac-search:focus-visible),
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover #avaFloatChatForm:focus-within{border-color:var(--day-label);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send,
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatSend,#avaFloatStart){
+    background:var(--day-action);border-color:transparent;
+    box-shadow:inset 0 0 0 1px var(--day-border);color:var(--day-text)!important;
   }
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaCompanionChat .ac-send:hover:not(:disabled),
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatSend,#avaFloatStart):hover:not(:disabled){background:var(--day-action-hover);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-rail-pop-h{
-    color:var(--day-label);border-bottom-color:var(--day-border);
+    color:var(--day-label);border-bottom-color:var(--day-divider);
   }
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-rail-pop-empty{color:#a8a9b5;}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-rail-pop-empty{color:var(--day-muted);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-item-label{color:var(--day-text);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpRailPop .chp-item:is(:hover,.active,:focus-within){background:var(--day-selected);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatChatForm,#avaFloatStop,#avaFloatTools,.af-actions > button,.af-call-split,.af-call-records > span){
-    background:var(--day-control);border-color:var(--day-border);color:var(--day-text);
+    background:var(--day-control);border-color:var(--day-divider);color:var(--day-text);
   }
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatClose,#avaFloatMinimize,#avaFloatOpenChat,.af-account-actions button){color:#a8a9b5;}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover #avaFloatChatForm{border-color:var(--day-border);}
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatClose,#avaFloatMinimize,#avaFloatOpenChat,#avaFloatIdentity,.af-account-actions button){color:var(--day-muted);}
   html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #avaFloatPopover :is(#avaFloatClose,#avaFloatMinimize,#avaFloatTools,.af-actions button,.af-account-actions button):is(:hover,:focus-visible){
     background:var(--day-selected);border-color:var(--day-border);color:var(--day-text);
   }
