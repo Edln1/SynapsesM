@@ -94,9 +94,14 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.54;}`));
   assert.ok(desktop.includes(`${dayOnly} #chatBeamsWrap{opacity:0;}`));
   assert.ok(desktop.includes(`${dayOnly} #sunAuroraHorizon{opacity:1;}`));
-  assert.match(desktop, /--sun-horizon-rise:22px;/);
-  assert.match(desktop, /--sun-horizon-y:calc\(100% - var\(--sun-horizon-rise\)\);/);
-  assert.match(desktop, /inset:auto 0 0;height:124px;/);
+  const horizon = desktop.match(/#sunAuroraHorizon::before\{\s*content:[\s\S]*?\n  \}/)[0];
+  const heights = [...horizon.matchAll(/ellipse \d+% (\d+)px at \d+% calc\(100% - (\d+)px\)/g)];
+  assert.ok(new Set(heights.map(([, , peak]) => peak)).size > 3, 'The pools peak at different heights');
+  assert.ok(heights.every(([, size, peak]) => Number(size) + Number(peak) < 130), 'Colors fade out before the layer ends');
+  assert.match(desktop, /inset:auto 0 0;height:130px;overflow:hidden;/);
+  assert.ok(desktop.includes(`${dayOnly} #bottomNavBar.fullwidth{`));
+  assert.match(desktop, /background:linear-gradient\(to bottom,transparent,rgba\(19,18,34,\.20\)\);/);
+  assert.match(desktop, /@media \(prefers-reduced-motion:no-preference\)/);
   assert.match(html, /<div id="sunAuroraHorizon" aria-hidden="true"><\/div>/);
 });
 
