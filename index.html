@@ -23208,6 +23208,7 @@ function switchAuthTab(t){
 function doLogin(){var email=document.getElementById('loginEmail').value.trim().toLowerCase(),pass=document.getElementById('loginPass').value,err=document.getElementById('loginErr');if(!email||!pass){showErr(err,'Please fill in all fields.');return;}showErr(err,'Signing in...');_supabase.auth.signInWithPassword({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}_supabase.from('profiles').select('*').eq('id',r.data.user.id).single().then(function(pr){var p=pr.data||{};var _lp=null;try{_lp=localStorage.getItem('synapses_postmedia_'+r.data.user.email);}catch(_e){}currentUser={id:r.data.user.id,email:r.data.user.email,name:p.name||r.data.user.email.split('@')[0],roles:p.role?[p.role]:['personal'],color:p.color||'#6366f1',initial:(p.name||r.data.user.email)[0].toUpperCase(),avatar:p.avatar_url||null,coverVideo:p.cover_video_url||null,postMediaPref:_lp||(p.post_media_pref||'photo'),plan:p.plan||'free',planStatus:p.plan_status||'active',stripeCustomerId:p.stripe_customer_id||null};if(p.avatar_url)localStorage.setItem('synapses_avatar_'+r.data.user.email,p.avatar_url);if(p.cover_video_url)localStorage.setItem('synapses_cover_'+r.data.user.email,p.cover_video_url);if(typeof _seedUsageFromRemote==='function')_seedUsageFromRemote(p.usage_count,p.usage_reset_at);try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'login'});});});}
 function doRegister(){var name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim().toLowerCase(),pass=document.getElementById('regPass').value,err=document.getElementById('registerErr');if(!name||!email||!pass){showErr(err,'Please fill in all fields.');return;}if(pass.length<6){showErr(err,'Min 6 characters.');return;}if(!/\S+@\S+\.\S+/.test(email)){showErr(err,'Valid email required.');return;}showErr(err,'Creating account...');var _companyEl=document.getElementById('regCompany'),_company=_companyEl?_companyEl.value.trim():'';_supabase.auth.signUp({email:email,password:pass}).then(function(r){if(r.error){showErr(err,r.error.message);return;}var roles=[...selectedRoles];_supabase.from('profiles').insert({id:r.data.user.id,email:email,name:name,role:roles[0]||'personal',color:'#6366f1'}).then(function(){currentUser={id:r.data.user.id,email:email,name:name,roles:roles,color:'#6366f1',initial:name[0].toUpperCase()};if(_company){try{localStorage.setItem('synapses_company_'+email,_company);}catch(_ce){}currentUser.company=_company;}try{localStorage.setItem('synapses_last_auth','email');}catch(_le){}try{localStorage.removeItem('synapses_tour_v1');localStorage.removeItem('synapses_tour_btn_docked');document.cookie='synapses_tour_v1=;path=/;max-age=0';document.cookie='synapses_tour_v1=;path=/;max-age=0;SameSite=Lax';window.__synTourDone=false;}catch(_tf){}document.getElementById('authModal').style.display='none';onLogin();if(typeof synTrack==='function')synTrack('signup',{method:'register'});});});}
 function logout(){_supabase.auth.signOut().then(function(){try{localStorage.removeItem('synapses_session');}catch(e){}currentUser=null;try{window.currentUser=null;}catch(_w){}try{document.body.classList.remove('syn-authed');}catch(_b){}try{if(typeof window._syncChpUserDock==='function')window._syncChpUserDock();}catch(_cx){}try{if(typeof window._applyDockedTourBtn==='function')window._applyDockedTourBtn();}catch(_t){}chatHistory=[];allJobs=[];recentChats=[];savedChats=[];chatSessions={};feedPosts=[];socialPosts=[];_feedLoaded=false;_feedFetching=false;_avatarCache={};
+if(typeof _ttsStopAll === 'function') _ttsStopAll(true);
 // Clear video banner and avatar so old account's media doesn't show for next user
 var vid=document.getElementById('feedProfileCoverVideo');if(vid){vid.src='';vid.style.display='none';}
 var fav=document.getElementById('feedProfileAv');if(fav){fav.style.backgroundImage='';fav.style.background='linear-gradient(135deg,#6366f1,#4f46e5)';fav.textContent='?';}
@@ -24142,7 +24143,10 @@ function setView(id){
   }
   try{ localStorage.setItem('synapses_last_section', id); }catch(e){}
   // If already on this view, do nothing — avoids flash/re-animation
-  if(_currentViewId === id) return;
+  if(_currentViewId === id){
+    if(typeof window._ttsUpdateFloatingPill === 'function') window._ttsUpdateFloatingPill(id);
+    return;
+  }
   // Clear sticky notes layer immediately when leaving home so old notes don't flash on return
   if(id !== 'sec-welcome' && id !== 'sec-notes'){
     var _snl = document.getElementById('stickyNotesLayer');
@@ -29714,17 +29718,13 @@ function _paintAskBarMicBtn(on){
  * When forced open without silent, saves pref on (user opened Ask via activateAskMe).
  */
 function _hardStopChatVoice(){
-  // NOTE: this used to also call window._stsStopAll() / toggleTopNavVoice()
-  // here, which killed Ava's live top-nav voice session any time the user
-  // hit the plane icon (Ask bar toggle) or the top-left logo (home) while
-  // she was mid-conversation. Those two entry points should only reset the
-  // *ask-bar's own* chat TTS/mic, not end an active voice call — so the
-  // top-nav STS session is left alone and keeps running underneath.
-  try{ if(typeof _vmSpeaking!=='undefined') _vmSpeaking=false; }catch(_e){}
-  try{ if(typeof _ttsStopAll==='function') _ttsStopAll(true); }catch(_e){}
-  try{ if(typeof _chatAbortCtrl!=='undefined' && _chatAbortCtrl) _chatAbortCtrl.abort(); }catch(_e){}
+  // Reset the composer without interrupting an audible reply or live voice.
+  var reading = typeof _ttsChatPlaybackSession === 'function' && _ttsChatPlaybackSession();
+  var live = window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive());
+  if(reading || live) return;
+  try{ if(typeof _ttsStopAll==='function') _ttsStopAll(); }catch(_e){}
+  try{ if(typeof _chatAbortCtrl!=='undefined' && _chatAbortCtrl && isSending){ ++_sendGen; isSending=false; _chatAbortCtrl.abort(); } }catch(_e){}
   try{ if(typeof _stopMicAnim==='function') _stopMicAnim(); }catch(_e){}
-  /* Stop playback only — keep the user's mic on/off pref (refresh + home). */
   try{
     var want = (typeof _prefAskBarMic === 'function') ? _prefAskBarMic() : true;
     if(typeof _vmActive !== 'undefined') _vmActive = want;
@@ -41493,6 +41493,11 @@ function addMsg(cId,role,content,isTyping,mode){
   if(!isTyping && role==='ai' && mode==='chat' && typeof _nbAttachSaveChip==='function'){
     try{ _nbAttachSaveChip(g, _disp); }catch(_chip){}
   }
+  var playback = window._ttsManualPlayback;
+  if(cId==='chatContainer' && role==='ai' && !isTyping && playback &&
+    playback.sessionKey===activeSession && playback.replyText===content && !playback.button.isConnected){
+    window._addSpeakerBtn(g.querySelector('.message-body'), content, activeSession);
+  }
   if(isTyping && typeof window._initSynClusters==='function') window._initSynClusters(g);
   if(_sd.doc && !isTyping){
     var _mb = g.querySelector('.message-body');
@@ -45883,14 +45888,9 @@ async function sendMessage(){
   if(isFirst) activeSession='session_'+Date.now();
   if(isFirst){var _tt3=document.getElementById('topTitle');var _tt3cur=(_tt3.innerText||_tt3.textContent||'').trim();_tt3.style.color='';_tt3.style.letterSpacing='-.02em';_tt3.style.display='';_tt3.style.opacity='1';if(_tt3cur!=='Synapses'){_tt3.innerHTML='Synapses';}}var _htb2=document.getElementById('hubTabBar');if(_htb2)_htb2.style.display='none';
   setView('sec-chat');
-  // Lock in which chat this reply belongs to. Placed AFTER setView() on purpose:
-  // setView() synchronously calls _ttsUpdateFloatingPill(), which — since no
-  // audio is playing yet at this instant — clears window._ttsSpeakingSessionKey
-  // back to null. Setting it here, after that call, means nothing downstream
-  // can wipe it before the reply actually starts speaking. This is what the
-  // "Back to chat" pill uses instead of the live (and later resettable/
-  // reassignable) activeSession global.
-  window._ttsSpeakingSessionKey = activeSession;
+  var replySessionKey = activeSession;
+  var replyHistory = chatHistory;
+  window._ttsChatTurn = { sessionKey: replySessionKey, generation: _vmGenId };
   // Fold any text-extracted attachments (pdf/txt/md/csv/json) into what the AI receives.
   var _textAttachBlock = '';
   sendAttachments.forEach(function(a){
@@ -46111,7 +46111,7 @@ async function sendMessage(){
     if(_cc_stream) _cc_stream.scrollTop = _cc_stream.scrollHeight;
 
     function _onScrollIntent(event){
-      if(!_cc_stream) return;
+      if(!_cc_stream || activeSession !== replySessionKey) return;
       var dist = _cc_stream.scrollHeight - _cc_stream.scrollTop - _cc_stream.clientHeight;
       _userScrolledUp = event && event.type==='wheel' ? (event.deltaY<0 || dist>50) : dist>50;
     }
@@ -46119,12 +46119,12 @@ async function sendMessage(){
 
     function _scrollToBottom(){
       var _cc = document.getElementById('chatContainer');
-      if(!_cc) return;
+      if(!_cc || activeSession !== replySessionKey || _currentViewId !== 'sec-chat') return;
       var dist = _cc.scrollHeight - _cc.scrollTop - _cc.clientHeight;
       if(_userScrolledUp) return;
       requestAnimationFrame(function(){
         var _cc2 = document.getElementById('chatContainer');
-        if(_cc2) _cc2.scrollTop = _cc2.scrollHeight;
+        if(_cc2 && activeSession === replySessionKey && _currentViewId === 'sec-chat') _cc2.scrollTop = _cc2.scrollHeight;
       });
     }
 
@@ -46132,7 +46132,7 @@ async function sendMessage(){
 
     // Sci-fi notes panel: detect note-related queries and fly notes in
     var _isNoteQuery = /\b(show me my notes?|pull up my notes?|open my notes?|see my (saved )?notes?|what (did|have) i (save|saved|write|written|note|noted)|remind me what i (saved|wrote|noted)|read (me )?(back )?my notes?)\b/i.test(text);
-    if(_isNoteQuery){ setTimeout(function(){ showSciFiNotesPanel(); }, 600); }
+    if(_isNoteQuery){ setTimeout(function(){ if(activeSession === replySessionKey && _currentViewId === 'sec-chat') showSciFiNotesPanel(); }, 600); }
     var fullStreamText = '';
     var _finalReplyForSources = '';
     var _storyVoiceQueued = false; // true once story-mode owns TTS (chunk-synced)
@@ -46207,12 +46207,13 @@ async function sendMessage(){
      * real per-item detail, which silently got cut off mid-list (e.g. only
      * 6-7 items rendered) with no error shown. Bumped to give headroom for a
      * full 10+ item list while still being well short of the model's real cap. */
-    var data=await callClaude(sys,chatHistory.slice(-12),4096,function(partial){
+    var data=await callClaude(sys,replyHistory.slice(-12),4096,function(partial){
+      if(mySendGen !== _sendGen || !chatSessions[replySessionKey]) return;
       _ensureStreamGroup();
       // Voice (all modes including storybook): mid-stream TTS — same reliable path
       // as BEFORE storybook changes. Speaks the stream text as sentences complete.
       // Research mutes this and speaks clean body once at the end.
-      if(_vmActive && !window._avaResearchMuteStreamTTS){
+      if(_vmActive && window._ttsChatTurn && window._ttsChatTurn.sessionKey===replySessionKey && !window._avaResearchMuteStreamTTS){
         var _voiceSrc = (typeof _ttsClean === 'function') ? _ttsClean(partial) : String(partial || '');
         if (/@@AVA_SOURCES_HTML@@/i.test(_voiceSrc) && typeof _researchBodyOnly === 'function') {
           _voiceSrc = _researchBodyOnly(_voiceSrc);
@@ -46304,6 +46305,7 @@ async function sendMessage(){
       }
       _scheduleScroll();
     }, _chatAbortCtrl ? _chatAbortCtrl.signal : null, undefined, _imageAttachments);
+    if(mySendGen !== _sendGen || !chatSessions[replySessionKey]) return;
     _ensureStreamGroup();
     // Restore stream pace after this turn
     try{ window._streamPaceMs = _savedPace; }catch(_sp){}
@@ -46334,7 +46336,7 @@ async function sendMessage(){
       try{ if(streamGroup && streamGroup.parentNode) streamGroup.parentNode.removeChild(streamGroup); }catch(_rm){}
       if(mySendGen === _sendGen && /timed out/i.test(String(data.error.message||''))){
         reply = '⚠️ ' + data.error.message;
-        addMsg('chatContainer','ai',reply,false,'chat');
+        if(activeSession === replySessionKey) addMsg('chatContainer','ai',reply,false,'chat');
       } else {
         return; // finally clears isSending only for this gen
       }
@@ -46370,7 +46372,7 @@ async function sendMessage(){
           while(_gotCount>0 && _gotCount<_reqCount && _contAttempts<2){
             _contAttempts++;
             var _contSys = sys + '\n\nCONTINUATION TASK: You already gave items 1 through '+_gotCount+' of a '+_reqCount+'-item list. Continue the SAME list starting at item '+(_gotCount+1)+' and go through item '+_reqCount+'. Output ONLY the remaining numbered items — no repeats of earlier items, no preamble, no closing remarks, no commentary about the list itself.';
-            var _contHistory = chatHistory.slice(-12).concat([
+            var _contHistory = replyHistory.slice(-12).concat([
               {role:'assistant', content: reply},
               {role:'user', content:'Continue the list — give me items '+(_gotCount+1)+' through '+_reqCount+', numbered, nothing else.'}
             ]);
@@ -46438,7 +46440,7 @@ async function sendMessage(){
             // Drop the dangling fragment (bare bullet / lone ** / half heading) before continuing.
             var _base = _tail.replace(/(^|\n)[ \t]*(?:[*\-\u2022]|\d+[.)])?[ \t]*(?:\*\*|__|\*|_)?[ \t]*$/, '').replace(/\s+$/,'');
             var _cSys = sys + '\n\nCONTINUATION TASK: Your previous answer was cut off before it finished. Continue seamlessly from exactly where it stopped and finish the whole answer. Do NOT repeat anything already written, do NOT apologize or mention being cut off, and keep the same format and numbering style.';
-            var _cHist = chatHistory.slice(-12).concat([
+            var _cHist = replyHistory.slice(-12).concat([
               {role:'assistant', content: _base},
               {role:'user', content:'Continue exactly where you left off and finish the answer. Do not repeat what you already wrote.'}
             ]);
@@ -46546,9 +46548,9 @@ async function sendMessage(){
         _removeStreamControls();
       }, 20000);
     }
-    if(_cc_stream){_cc_stream.removeEventListener('wheel',_onScrollIntent);_cc_stream.removeEventListener('touchmove',_onScrollIntent);}
+    if(mySendGen !== _sendGen || !chatSessions[replySessionKey]) return;
     // Auto-speak finalize — same as pre-storybook: finish any unsent tail
-    if(reply && _vmActive && !data.error && !_streamStopped){
+    if(reply && _vmActive && window._ttsChatTurn && window._ttsChatTurn.sessionKey===replySessionKey && !data.error && !_streamStopped){
       if (data && data._avaResearch) {
         // Research was muted mid-stream — speak clean body once (same text as bubble body)
         var _rBody = _researchBodyOnly(reply) || data._avaResearchSpeak || window._avaResearchSpeakText || '';
@@ -46596,32 +46598,38 @@ async function sendMessage(){
       }
     }
     // Add speaker button to stream bubble now that reply is complete
-    if(reply && streamGroup){
+    if(reply && streamGroup && streamGroup.isConnected){
       var _sb = streamGroup.querySelector('.message-body');
       if(_sb){
-        window._addSpeakerBtn(_sb, reply);
+        window._addSpeakerBtn(_sb, reply, replySessionKey);
       }
     }
     if(!_streamStopped && !(data&&data.error) && streamGroup){try{_nbAttachSaveChip(streamGroup,reply);}catch(_chip){}}
-    chatHistory.push({role:'assistant',content:reply});
+    var completedMessage = {role:'assistant',content:reply};
+    replyHistory.push(completedMessage);
+    if(activeSession === replySessionKey && chatHistory !== replyHistory){
+      chatHistory.push(completedMessage);
+      var restoredMessage = addMsg('chatContainer','ai',reply,false,'chat');
+      var restoredBody = restoredMessage && restoredMessage.querySelector('.message-body');
+      if(restoredBody) window._addSpeakerBtn(restoredBody, reply, replySessionKey);
+    }
     // If LLM referenced the user's notes in its reply, pop the notes panel
-    if(reply && !document.getElementById('sciFiNotesPanel')){
+    if(reply && activeSession === replySessionKey && _currentViewId === 'sec-chat' && !document.getElementById('sciFiNotesPanel')){
       // Genuine recall-intent phrasing only. General descriptions of the Notes
       // *feature* ("you can save notes", "the notes feature lets you jot things
       // down") also contain "your notes"/"saved notes" wording and used to
       // false-trigger the panel any time the AI simply described the app.
       var _describesNotesFeature = /\b(you can (save|jot|capture|write)|lets you (save|jot|capture)|allows you to (save|jot|capture)|notes feature|save (a |your )?note|jot (something|it|things)? ?down|capture (a |your )?(thought|idea))\b/i.test(reply);
       var _refNote = !_describesNotesFeature && /\byour (saved|quick) notes?\b|\bas (mentioned|noted) in your notes?\b|\bbased on your notes?\b|\baccording to your notes?\b|\bfrom your notes?\b|\bi can see (in )?your notes?\b|\blooking at your notes?\b/i.test(reply);
-      if(_refNote && typeof showSciFiNotesPanel==='function'){ setTimeout(showSciFiNotesPanel, 400); }
+      if(_refNote && typeof showSciFiNotesPanel==='function'){ setTimeout(function(){ if(activeSession === replySessionKey && _currentViewId === 'sec-chat') showSciFiNotesPanel(); }, 400); }
     }
-    if(!chatSessions[activeSession])chatSessions[activeSession]={history:[],html:''};
-    chatSessions[activeSession].history=[...chatHistory];
+    chatSessions[replySessionKey].history=replyHistory.slice(-100);
     // Don't store raw HTML - rebuild from history when reopening (keeps storage small)
     // Cap chatHistory to last 50 messages to prevent unbounded growth
     if(chatHistory.length>100) chatHistory=chatHistory.slice(chatHistory.length-100);
     // Trim rendered DOM messages to prevent memory bloat over long sessions
     var _cc=document.getElementById('chatContainer');
-    if(_cc){
+    if(_cc && activeSession === replySessionKey){
       var _msgEls=_cc.querySelectorAll('.message-group');
       if(_msgEls.length>60){
         var _toRemove=_msgEls.length-60;
@@ -46633,34 +46641,37 @@ async function sendMessage(){
     refreshChpList();
     try{ if(typeof _chpHadConvoSet === 'function') _chpHadConvoSet(true); }catch(_hc){}
     try{
-      if(window._chpAutoOpenAfterReply && mySendGen === _sendGen && !_streamStopped){
+      if(window._chpAutoOpenAfterReply && mySendGen === _sendGen && !_streamStopped && activeSession === replySessionKey && _currentViewId === 'sec-chat'){
         var _voiceOn = !!(typeof _vmActive !== 'undefined' && _vmActive);
         if(!_voiceOn){
-          setTimeout(function(){ if(mySendGen === _sendGen) _chpMaybeAutoOpenAfterReply(); }, 280);
+          setTimeout(function(){ if(mySendGen === _sendGen && activeSession === replySessionKey && _currentViewId === 'sec-chat') _chpMaybeAutoOpenAfterReply(); }, 280);
         } else {
           setTimeout(function(){
-            if(mySendGen !== _sendGen || !window._chpAutoOpenAfterReply) return;
+            if(mySendGen !== _sendGen || !window._chpAutoOpenAfterReply || activeSession !== replySessionKey || _currentViewId !== 'sec-chat') return;
             var silent = !(typeof _vmSpeaking !== 'undefined' && _vmSpeaking)
               && !(typeof _ttsProcessing !== 'undefined' && _ttsProcessing)
               && !(typeof _ttsQueue !== 'undefined' && _ttsQueue && _ttsQueue.length);
             if(silent) _chpMaybeAutoOpenAfterReply();
           }, 1800);
         }
-      } else if(_streamStopped){
+      } else if(_streamStopped || activeSession !== replySessionKey || _currentViewId !== 'sec-chat'){
         window._chpAutoOpenAfterReply = false;
       }
     }catch(_chpA){}
   }catch(e){
-    if(mySendGen !== _sendGen) return; // superseded — don't touch UI
+    if(mySendGen !== _sendGen || (replySessionKey && !chatSessions[replySessionKey])) return;
     if(typeof typing !== 'undefined' && typing && typing.remove) typing.remove();
     var msg='⚠️ Error: '+e.message;
     if(/abort/i.test(String(e && e.message)) || e.name === 'AbortError'){
       msg = '⚠️ Uncensored model timed out — try again in a moment';
     }
-    chatHistory.push({role:'assistant',content:msg});
-    addMsg('chatContainer','ai',msg,false,'chat');
+    if(!replySessionKey || activeSession === replySessionKey){
+      chatHistory.push({role:'assistant',content:msg});
+      addMsg('chatContainer','ai',msg,false,'chat');
+    }
     try{ window._chpAutoOpenAfterReply = false; }catch(_chpE){}
   }finally{
+    if(_cc_stream && typeof _onScrollIntent==='function'){_cc_stream.removeEventListener('wheel',_onScrollIntent);_cc_stream.removeEventListener('touchmove',_onScrollIntent);}
     try{ clearTimeout(_sendSafetyTimer); }catch(_t){}
     try{ if(typeof _savedPace !== 'undefined') window._streamPaceMs = _savedPace; }catch(_pr){}
     /* Only the latest send owns isSending — aborted older gens must not unlock early */
@@ -46925,6 +46936,7 @@ function loadPersistedChats(){
 }
 function deleteRecentChat(i){
   var wasActive = recentChats[i] && recentChats[i].key === activeSession;
+  if(recentChats[i] && _ttsChatPlaybackSession()===recentChats[i].key) _ttsStopAll();
   recentChats.splice(i,1);persistChats();renderRecentChats();if(typeof refreshChpList==='function')refreshChpList();
   // Deleting the chat currently open on screen: close it back to the empty
   // page and hard-stop any in-progress mic/TTS voice reading the response.
@@ -46932,6 +46944,7 @@ function deleteRecentChat(i){
 }
 function deleteSavedChat(i){
   var wasActive = savedChats[i] && savedChats[i].key === activeSession;
+  if(savedChats[i] && _ttsChatPlaybackSession()===savedChats[i].key) _ttsStopAll();
   savedChats.splice(i,1);renderRecentChats();renderSavedChats();persistChats();if(typeof refreshChpList==='function')refreshChpList();showToast('Removed from saved');
   if(wasActive && typeof newChat==='function') newChat();
 }
@@ -66638,7 +66651,7 @@ function _ttsRestFetch(text, extCtrl) {
 }
 
 // ── Reusable speaker button ──────────────────────────────────────────────────
-window._addSpeakerBtn = function(container, replyText) {
+window._addSpeakerBtn = function(container, replyText, sourceSession) {
   var existing = container.querySelector('.tts-speak-btn');
   if(existing) existing.remove();
   if(!replyText || !replyText.trim()) return;
@@ -66647,10 +66660,19 @@ window._addSpeakerBtn = function(container, replyText) {
   var LOAD = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"/></path></svg>';
   var btn = document.createElement('button');
   btn.className = 'tts-speak-btn';
+  btn.type = 'button';
   btn.title = 'Read aloud';
   btn.innerHTML = SPK;
-  var audio = null, blob = null, fetching = false;
+  var sessionKey = sourceSession || activeSession;
+  var blob = null, fetching = false;
   var plain = replyText.replace(/[#*`~>_]/g,'').replace(/[\r\n]+/g,' ').trim().slice(0,2500);
+  var playing = window._ttsManualPlayback;
+  if(playing && playing.sessionKey === sessionKey && playing.replyText === replyText){
+    blob = playing.blob;
+    playing.button = btn;
+    btn.innerHTML = PAUSE;
+    btn.title = 'Stop';
+  }
 
   // Pre-fetch audio in background immediately so click is instant
   function doFetch(){
@@ -66660,7 +66682,7 @@ window._addSpeakerBtn = function(container, replyText) {
       .catch(function(){ fetching=false; }); // silent fail — will retry on click
   }
   // Small delay so we don't hammer Deepgram while the response is still streaming
-  setTimeout(doFetch, 800);
+  if(!blob) setTimeout(doFetch, 800);
 
   function onErr(msg){
     blob = null; fetching = false;
@@ -66669,17 +66691,36 @@ window._addSpeakerBtn = function(container, replyText) {
     setTimeout(function(){ btn.innerHTML=SPK; btn.title='Read aloud'; }, 2500);
   }
   function playBlob(b){
+    if(!btn.isConnected || activeSession !== sessionKey || _currentViewId !== 'sec-chat' ||
+      window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive())) return;
+    _ttsStopAll();
     var url = URL.createObjectURL(b);
-    audio = new Audio(url);
+    var audio = new Audio(url);
+    var playback = { sessionKey:sessionKey, replyText:replyText, blob:b, button:btn, stop:finish };
+    window._ttsManualPlayback = playback;
     btn.innerHTML=PAUSE; btn.title='Stop'; fetching=false;
-    audio.onended = function(){ audio=null; URL.revokeObjectURL(url); btn.innerHTML=SPK; btn.title='Read aloud'; };
-    audio.onerror = function(){ audio=null; URL.revokeObjectURL(url); onErr('Playback failed'); };
+    function finish(){
+      if(window._ttsManualPlayback !== playback) return;
+      window._ttsManualPlayback = null;
+      audio.onended = null; audio.onerror = null; audio.pause();
+      URL.revokeObjectURL(url);
+      playback.button.innerHTML=SPK; playback.button.title='Read aloud';
+      _ttsUpdateFloatingPill();
+    }
+    function fail(message){
+      if(window._ttsManualPlayback !== playback) return;
+      finish(); onErr(message);
+    }
+    audio.onended = finish;
+    audio.onerror = function(){ fail('Playback failed'); };
     var p = audio.play();
-    if(p && p.catch) p.catch(function(e){ onErr('Blocked: '+e.message); });
+    if(p && p.catch) p.catch(function(e){ fail('Blocked: '+e.message); });
+    _ttsUpdateFloatingPill();
   }
 
   btn.onclick = function(){
-    if(audio){ audio.pause(); audio=null; btn.innerHTML=SPK; btn.title='Read aloud'; return; }
+    var current = window._ttsManualPlayback;
+    if(current && current.sessionKey === sessionKey && current.replyText === replyText){ current.stop(); return; }
     // Already cached — play instantly
     if(blob){ playBlob(blob); return; }
     // Still fetching in background — show spinner and play when ready
@@ -67531,6 +67572,8 @@ function _ttsStopAll(force, fadeMs) {
   // Barge-in always uses force=true. Fade is skipped on force so leftover
   // buffers / <audio> elements can't keep talking after the toast fires.
   if (window._topNavVoiceActive && !force) return;
+  window._ttsChatTurn = null;
+  if (window._ttsManualPlayback) window._ttsManualPlayback.stop();
   if (force) fadeMs = 0;
   _ttsAllowSchedule = false;
   _stopAvaAndroidCallAudio();
@@ -68307,6 +68350,7 @@ function _stopPcmWaveform() {
 // to detect the true end.
 function _ttsFinalizeSpeechEnd() {
   _vmSpeaking = false;
+  if (typeof _ttsUpdateFloatingPill === 'function') _ttsUpdateFloatingPill();
   /* In the showcase Ava is not waiting on a real microphone. When her
      scripted line ends, leave her in the app's animated listening state so
      the demo reads as "your turn" instead of a dead closed-mouth idle pose. */
@@ -68554,14 +68598,6 @@ async function _ttsPlayNext(genId) {
   // through. Clearing it here removes that window entirely rather than just
   // narrowing it.
   if (window._vmSpeakingDrainPoller) { clearInterval(window._vmSpeakingDrainPoller); window._vmSpeakingDrainPoller = null; }
-  // Record source for "Back to chat" pill — STS always lives on chat/home
-  if (window._topNavVoiceActive) {
-    window._ttsSpeakingFromView = 'sec-chat';
-  } else if (typeof _currentViewId !== 'undefined' && _currentViewId) {
-    window._ttsSpeakingFromView = _currentViewId;
-  } else {
-    window._ttsSpeakingFromView = 'sec-chat';
-  }
   setBtnPurple();
   _startMicAnim();
 
@@ -73526,7 +73562,7 @@ function speakVoiceReply(text) {
 })();
 
 
-// ── Floating "back to chat" pill — shown on non-chat pages while TTS is speaking ─
+// Floating return control for an active typed-chat reply.
 (function(){
   var st = document.createElement('style');
   st.textContent = '@keyframes ttsFloatPulse{0%,100%{box-shadow:0 0 18px rgba(124,106,247,0.6),0 2px 12px rgba(0,0,0,0.5);}50%{box-shadow:0 0 32px rgba(124,106,247,1),0 2px 16px rgba(0,0,0,0.6);}}' +
@@ -73536,13 +73572,11 @@ function speakVoiceReply(text) {
 
   var btn = document.createElement('button');
   btn.id = 'ttsFloatMic';
-  btn.title = 'AI is speaking — tap to return to chat';
+  btn.type = 'button';
+  btn.title = 'Return to the chat Ava is reading';
   btn.innerHTML =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">' +
-      '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>' +
-      '<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>' +
-      '<line x1="12" y1="19" x2="12" y2="23"/>' +
-      '<line x1="8" y1="23" x2="16" y2="23"/>' +
+    '<path d="M11 5 6 9H3v6h3l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>' +
     '</svg>' +
     '<span style="font-size:12px;font-family:\'DM Sans\',sans-serif;letter-spacing:.01em">Back to chat</span>';
   btn.style.cssText = [
@@ -73558,19 +73592,17 @@ function speakVoiceReply(text) {
     'white-space:nowrap'
   ].join(';');
   btn.addEventListener('click', function(){
-    // Go ONLY to the chat that was stamped onto this button while it was
-    // visible and speaking — no other source, no guessing. See _showPill().
     var targetKey = btn.dataset.targetSession;
-    var idx = targetKey ? recentChats.findIndex(function(c){ return c.key === targetKey; }) : -1;
-    if(idx >= 0){ openRecentChat(idx); }
-    else if(recentChats.length > 0){ openRecentChat(0); }
-    else if(typeof setView === 'function'){ setView('sec-chat'); }
+    if(!targetKey || targetKey !== _ttsChatPlaybackSession()) return;
+    var recentIndex = recentChats.findIndex(function(c){ return c.key === targetKey; });
+    if(recentIndex >= 0){ openRecentChat(recentIndex); return; }
+    var savedIndex = savedChats.findIndex(function(c){ return c.key === targetKey; });
+    if(savedIndex >= 0) openSavedChat(savedIndex);
   });
   document.addEventListener('DOMContentLoaded', function(){
     document.body.appendChild(btn);
     btn.style.display = 'none';
     if (window._ttsPillPoller) { clearInterval(window._ttsPillPoller); window._ttsPillPoller = null; }
-    window._ttsSpeakingFromView = null;
   });
 })();
 
@@ -73897,131 +73929,27 @@ function renderMatrixCard() {
   body.appendChild(btnRow);
 }
 
+function _ttsChatPlaybackSession() {
+  if(window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive())) return '';
+  if(window._ttsManualPlayback) return window._ttsManualPlayback.sessionKey || '';
+  var turn = window._ttsChatTurn;
+  return turn && turn.generation === _vmGenId &&
+    (_vmSpeaking || (_actx && _playbackTime > _actx.currentTime)) ? turn.sessionKey : '';
+}
 function _ttsUpdateFloatingPill(viewId) {
   var btn = document.getElementById('ttsFloatMic');
-  if (!btn) return;
-  var _cvid = (typeof _currentViewId !== 'undefined' ? _currentViewId : null);
-  var curView = viewId || _cvid;
-  var audioActive = !!(
-    (typeof _vmSpeaking !== 'undefined' && _vmSpeaking) ||
-    (_actx && _playbackTime && _actx.currentTime < _playbackTime)
-  );
-  var stsLive = !!(window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive()));
-
-  /*
-   * "Back to chat" is ONLY for Ask-me-anything / text-chat TTS:
-   * user started a real chat, left the page while Ava is speaking, pill brings them back.
-   *
-   * NEVER show while speech-to-speech (top-nav mic) is active — including on My Notes.
-   * STS has its own mic chrome; the pill is not for voice sessions.
-   */
-  function _hidePill(fade) {
-    if (!btn) return;
-    if (fade) {
-      btn.style.transition = 'opacity 0.35s';
-      btn.style.opacity = '0';
-      setTimeout(function() {
-        if (btn) {
-          btn.style.display = 'none';
-          btn.style.opacity = '1';
-          btn.style.transition = '';
-        }
-      }, 360);
-    } else {
-      btn.style.display = 'none';
-      btn.style.opacity = '1';
-      btn.style.transition = '';
-    }
-  }
-  function _showPill() {
-    if (!btn) return;
-    // Stamp the exact target chat directly onto the button every time it's
-    // shown/refreshed (this runs on every ~50ms poll tick while the pill is
-    // visible), so the click handler never has to guess or fall back to
-    // "whatever activeSession happens to be right now" — it just reads what
-    // was stamped here. Prefer the session snapshotted when the reply was
-    // sent; only fall back to the live activeSession if that snapshot is
-    // missing.
-    btn.dataset.targetSession = (window._ttsSpeakingSessionKey) ? window._ttsSpeakingSessionKey : (activeSession || '');
-    btn.style.opacity = '1';
-    btn.style.transition = '';
-    btn.style.display = 'flex';
-  }
-
-  if (stsLive) {
-    window._ttsSpeakingFromView = 'sec-chat';
-    _hidePill(false);
-    if (window._ttsPillPoller) {
-      clearInterval(window._ttsPillPoller);
-      window._ttsPillPoller = null;
-    }
-    return;
-  }
-
-  if (!audioActive) {
-    window._ttsSpeakingFromView = null;
-  } else if (!window._ttsSpeakingFromView) {
-    // Ask/text TTS only: lock source once when speech starts (not mid-navigation page)
-    window._ttsSpeakingFromView = (curView === 'sec-chat' || !curView) ? 'sec-chat' : curView;
-    // Only meaningful when user left a chat — if speech started off-chat, still treat as chat return target
-    if (window._ttsSpeakingFromView !== 'sec-chat') {
-      // Prefer chat if there's an active session with history
-      try {
-        if (typeof activeSession !== 'undefined' && activeSession && typeof chatHistory !== 'undefined' && chatHistory && chatHistory.length) {
-          window._ttsSpeakingFromView = 'sec-chat';
-        }
-      } catch (_s) {}
-    }
-  }
-
-  var sourceView = window._ttsSpeakingFromView || 'sec-chat';
-  var onSourceView = (curView === sourceView) || (curView === 'sec-chat');
-  // Need a real ask/chat session — empty home with no messages never shows the pill
-  var hasAskChat = false;
-  try {
-    hasAskChat = !!(typeof chatHistory !== 'undefined' && chatHistory && chatHistory.length > 0);
-  } catch (_h) { hasAskChat = false; }
-
-  // Start poller if audio active and not already polling
-  if (audioActive && hasAskChat && !window._ttsPillPoller) {
-    var _pillMissCount = 0;
-    window._ttsPillPoller = setInterval(function() {
-      var stillActive = !!(
-        ((typeof _vmSpeaking !== 'undefined') && _vmSpeaking) ||
-        (_actx && _playbackTime && _actx.currentTime < (_playbackTime + 0.3))
-      );
-      var cv = (typeof _currentViewId !== 'undefined' ? _currentViewId : null);
-      var sts = !!(window._topNavVoiceActive || (window._fpIsSpeechLive && window._fpIsSpeechLive()));
-      // STS took over — kill pill immediately
-      if (sts) {
-        _hidePill(false);
-        clearInterval(window._ttsPillPoller);
-        window._ttsPillPoller = null;
-        window._ttsSpeakingFromView = 'sec-chat';
-        return;
-      }
-      var sv = window._ttsSpeakingFromView || 'sec-chat';
-      var onSrc = (cv === sv) || (cv === 'sec-chat');
-      if (!stillActive) {
-        _pillMissCount++;
-        if (_pillMissCount < 6) return;
-        _hidePill(true);
-        clearInterval(window._ttsPillPoller);
-        window._ttsPillPoller = null;
-        window._ttsSpeakingFromView = null;
-      } else {
-        _pillMissCount = 0;
-        if (onSrc) _hidePill(false);
-        else _showPill();
-      }
-    }, 50);
-  }
-
-  // Immediate show/hide — never without a real chat transcript
-  if (!audioActive || onSourceView || !hasAskChat) {
-    _hidePill(false);
-  } else {
-    _showPill();
+  if(!btn) return;
+  var source = _ttsChatPlaybackSession();
+  var canReturn = source && (recentChats.some(function(c){return c.key === source;}) ||
+    savedChats.some(function(c){return c.key === source;}));
+  var onSource = (viewId || _currentViewId) === 'sec-chat' && activeSession === source;
+  btn.dataset.targetSession = canReturn && !onSource ? source : '';
+  btn.style.display = btn.dataset.targetSession ? 'flex' : 'none';
+  if(source && !window._ttsPillPoller){
+    window._ttsPillPoller = setInterval(_ttsUpdateFloatingPill, 100);
+  }else if(!source && window._ttsPillPoller){
+    clearInterval(window._ttsPillPoller);
+    window._ttsPillPoller = null;
   }
 }
 window._ttsUpdateFloatingPill = _ttsUpdateFloatingPill;
@@ -95174,7 +95102,7 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
  var root=document.getElementById('avaCompanionChat'),bridge=window.avaCompanionChatBridge;if(!root||!bridge)return;
  var input=document.getElementById('acInput'),scroll=document.getElementById('acScroll'),messagesNode=document.getElementById('acMessages'),threadsNode=document.getElementById('acThreads'),notice=document.getElementById('acNotice'),sendButton=document.getElementById('acSend');
   var state={owner:null,threads:[],active:null,homeDraft:''},opened=false,request=null,submitting=false,cooldownUntil=0,focusBefore=null,guestDraft='',search='',deleteId=null,lastUi=bridge.uiKey(),persistTimer=null,openVersion=0,mobileInert=[],bodyOverflow='',researchNext=false,taskNext=false,taskRows=[],taskSyncing=false,homeView=document.documentElement.classList.contains('ava-app-mode');
- var readAloud=null,readAloudButton=null,readAloudNotice='',readAloudObserver=null;
+ var readAloud=null,readAloudButton=null,readAloudNotice='',readAloudObserver=null,readAloudThread=null;
  var deleteTrigger=null,homeActions=null,cancelHomeHold=null;
  window.__avaCompanionChatOpen=false;
  function text(v){return v==null?'':String(v);}
@@ -95182,16 +95110,29 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
  function id(){return window.crypto&&crypto.randomUUID?crypto.randomUUID():'ac-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);}
  function current(){return state.threads.find(function(t){return t.id===state.active;})||null;}
  function ownerValid(){return !!(state.owner&&bridge.isCurrent(state.owner));}
- function syncReadAloudContext(){if(readAloud)readAloud.contextChanged();}
+ function syncReadAloudContext(){if(readAloud)paintReadAloud(readAloud.contextChanged());}
  function stopReadAloud(){if(readAloud)readAloud.stop();}
+ function readAloudSource(){
+  if(!readAloudThread||!ownerValid()||(!homeView&&state.active===readAloudThread))return null;
+  return state.threads.find(function(t){return t.id===readAloudThread;})||null;
+ }
+ function readAloudStateChanged(value){
+  // Once speech starts loading, keep its source in the audio controller while the UI moves.
+  // Android can start reading a streamed reply before the final text arrives.
+  if(!readAloudThread&&(value.status==='loading'||value.status==='speaking')&&opened&&!homeView)readAloudThread=state.active;
+  else if(value.status==='idle'&&readAloudThread){readAloudThread=null;Promise.resolve().then(syncReadAloudContext);}
+  paintReadAloud(value);
+ }
  function paintReadAloud(value){
   if(!readAloudButton)return;
-  readAloudButton.setAttribute('aria-pressed',String(value.enabled));readAloudButton.dataset.state=value.status;
+  var source=readAloudSource();
+  if(source)readAloudButton.removeAttribute('aria-pressed');else readAloudButton.setAttribute('aria-pressed',String(value.enabled));
+  readAloudButton.dataset.state=value.status;
   readAloudButton.dataset.enabled=String(value.enabled);readAloudButton.dataset.playing=String(value.status==='speaking');readAloudButton.dataset.blocked=String(value.status==='blocked');
   readAloudButton.classList.toggle('is-enabled',value.enabled);readAloudButton.classList.toggle('is-playing',value.status==='speaking');readAloudButton.disabled=!ownerValid();
-  var label=value.status==='blocked'?'Play this reply aloud':value.status==='error'?'Retry read aloud':value.enabled?'Turn off read aloud':'Read replies aloud';
+  var label=source?'Return to the chat being read aloud':value.status==='blocked'?'Play this reply aloud':value.status==='error'?'Retry read aloud':value.enabled?'Turn off read aloud':'Read replies aloud';
   readAloudButton.title=label;readAloudButton.setAttribute('aria-label',label);
-  if((value.status==='blocked'||value.status==='error')&&opened&&ownerValid()){readAloudNotice=value.error||'Tap the speaker to try again.';notify(readAloudNotice);}
+  if(!source&&(value.status==='blocked'||value.status==='error')&&opened&&ownerValid()){readAloudNotice=value.error||'Tap the speaker to try again.';notify(readAloudNotice);}
   else if(readAloudNotice){if(notice.textContent===readAloudNotice)notify('');readAloudNotice='';}
  }
  function initReadAloud(){
@@ -95202,12 +95143,21 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
    var speaker=document.createElementNS('http://www.w3.org/2000/svg','path');speaker.setAttribute('d','M11 5 6 9H3v6h3l5 4V5Z');var waves=document.createElementNS('http://www.w3.org/2000/svg','path');waves.setAttribute('d','M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14');svg.append(speaker,waves);readAloudButton.appendChild(svg);sendButton.parentNode.insertBefore(readAloudButton,sendButton);
    var preferenceStorage=null;try{preferenceStorage=window.localStorage||localStorage;}catch(_storage){}
    readAloud=window.AvaReadAloud.create({
-    getContext:function(){var t=current();return {ownerKey:ownerValid()?state.owner.id:'',threadId:opened&&!homeView&&t?t.id:'',voiceActive:!!(window._topNavVoiceActive||window._fpBusy||window._fpNativePendingAttempt||document.body.classList.contains('voice-live'))};},
-    synthesize:function(value,controller){return _ttsRestFetch(value,controller);},cleanText:function(value){return _ttsClean(value);},createAudio:function(){return new Audio();},storage:preferenceStorage,onState:paintReadAloud
+    getContext:function(){
+     var threadId=opened&&!homeView&&current()?state.active:'';
+     if(readAloudThread)threadId=state.threads.some(function(t){return t.id===readAloudThread;})?readAloudThread:'';
+     return {ownerKey:ownerValid()?state.owner.id:'',threadId:threadId,voiceActive:!!(window._topNavVoiceActive||window._fpBusy||window._fpNativePendingAttempt||document.body.classList.contains('voice-live'))};
+    },
+    synthesize:function(value,controller){return _ttsRestFetch(value,controller);},cleanText:function(value){return _ttsClean(value);},createAudio:function(){return new Audio();},storage:preferenceStorage,onState:readAloudStateChanged
    });
-   readAloudButton.onclick=function(){if(!readAloud||!ownerValid())return;var value=readAloud.state;if(value.status==='blocked'||value.status==='error')readAloud.play();else readAloud.toggle();};
+   readAloudButton.onclick=function(){
+    if(!readAloud||!ownerValid())return;
+    var value=readAloud.contextChanged(),source=readAloudSource();
+    if(source){dismissThreadDelete(false);dismissHomeActions(false);rememberDraft();homeView=false;state.active=source.id;save();closeHistory();render();return;}
+    if(value.status==='blocked'||value.status==='error')readAloud.play();else readAloud.toggle();
+   };
    if(window.MutationObserver){readAloudObserver=new window.MutationObserver(syncReadAloudContext);readAloudObserver.observe(document.body,{attributes:true,attributeFilter:['class']});}
-   window.addEventListener('ava:app-stage-change',function(e){if(e.detail&&e.detail.stage!=='chat')stopReadAloud();else syncReadAloudContext();});
+   window.addEventListener('ava:app-stage-change',function(e){if(e.detail&&(e.detail.stage==='auth'||e.detail.stage==='welcome'))stopReadAloud();else syncReadAloudContext();});
   }catch(_readAloud){if(readAloud)readAloud.destroy();readAloud=null;if(readAloudButton)readAloudButton.remove();readAloudButton=null;}
  }
  function key(owner){return 'synapses_ava_companion_v1_'+encodeURIComponent(owner.id);}
@@ -95377,7 +95327,7 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
  function render(){
   var t=current();document.getElementById('acConversationTitle').textContent=t&&t.messages.length?t.title:'A fresh conversation';document.getElementById('acAccountName').textContent=state.owner?state.owner.email:'Sign in';document.getElementById('acAccountInitial').textContent=state.owner?state.owner.email.charAt(0).toUpperCase():'A';document.getElementById('acLogout').hidden=!state.owner;document.getElementById('acDevice').textContent=state.owner?'Chat history is saved on this device.':'Drafts stay here until you send.';
    root.dataset.home=String(appHomeMode()&&homeView);input.value=state.owner?(appHomeMode()&&homeView?state.homeDraft:t&&t.draft||''):guestDraft;document.getElementById('acVoice').disabled=!!request;renderThreads();renderTasks();renderMessages(false);autoSize();updateSendIcon();updateResearchButton();
-  syncReadAloudContext();if(readAloud)paintReadAloud(readAloud.state);
+   syncReadAloudContext();
  }
  function updateSendIcon(){sendButton.replaceChildren();if(request){var square=node('span','','■');square.setAttribute('aria-hidden','true');sendButton.appendChild(square);sendButton.title='Stop response';}else{var arrow=node('span','','↑');arrow.setAttribute('aria-hidden','true');arrow.style.fontSize='22px';arrow.style.lineHeight='1';sendButton.appendChild(arrow);sendButton.title='Send message';}autoSize();}
  function updateResearchButton(){var b=document.getElementById('acResearch');b.setAttribute('aria-pressed',String(researchNext));b.textContent=researchNext?'Research on':'Research';b.title=researchNext?'Turn off research for the next message':'Use web research for the next message';var task=document.getElementById('acTaskMode');task.setAttribute('aria-pressed',String(taskNext));task.textContent=taskNext?'Task on':'Task';}
@@ -95405,7 +95355,7 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
    if(request!==thisRequest||!bridge.isCurrent(owner)||!state.owner||state.owner.id!==owner.id)return;assistant.text=visibleText(full);if(current()&&current().id===t.id)renderMessages(true);
   }}).then(function(result){
    if(request!==thisRequest||!state.owner||state.owner.id!==owner.id||!bridge.isCurrent(owner))return;
-   if(result.status==='complete'){assistant.sources=normalizeSources(result.sources);assistant.text=visibleText(result.text)||assistant.text;if(assistant.text){assistant.status='done';notify('Ava replied.');if(readAloud&&opened&&!homeView&&current()&&current().id===t.id)readAloud.complete({text:assistant.text,ownerKey:owner.id,threadId:t.id,responseId:assistant.id});}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';notify('No reply came through. Your message is still here.');}}
+   if(result.status==='complete'){assistant.sources=normalizeSources(result.sources);assistant.text=visibleText(result.text)||assistant.text;if(assistant.text){assistant.status='done';notify('Ava replied.');if(readAloud&&(readAloudThread===t.id||(opened&&!homeView&&state.active===t.id)))readAloud.complete({text:assistant.text,ownerKey:owner.id,threadId:t.id,responseId:assistant.id});}else{t.messages=t.messages.filter(function(m){return m!==assistant;});human.status='error';notify('No reply came through. Your message is still here.');}}
    else if(result.status==='cancelled'){assistant.status='stopped';notify('Response stopped.');}
    else if(['signin','limit','busy','unavailable'].includes(result.status)){
     // No model request was accepted. Keep the user's text as a draft, never queue a resend.
@@ -95428,7 +95378,7 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
    t.messages=t.messages.slice(-100);if(t.title==='New conversation')t.title=goal.slice(0,55);t.updated=Date.now();t.draft='';input.value='';taskNext=false;taskRows.unshift(task);save();notify('Ava is working. You can close this page and return later.');if(opened)render();syncTasks();return {status:'started',taskId:task.id};
   }finally{submitting=false;}
  }
- function close(restore){stopReadAloud();if(cancelHomeHold)cancelHomeHold();dismissHomeActions(false);dismissThreadDelete(false);rememberDraft();save();researchNext=false;taskNext=false;updateResearchButton();opened=false;window.__avaCompanionChatOpen=false;root.hidden=true;mobileFocusMode();closeHistory();if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});syncReadAloudContext();}
+ function close(restore){if(cancelHomeHold)cancelHomeHold();dismissHomeActions(false);dismissThreadDelete(false);rememberDraft();save();researchNext=false;taskNext=false;updateResearchButton();opened=false;window.__avaCompanionChatOpen=false;root.hidden=true;mobileFocusMode();closeHistory();if(restore!==false&&focusBefore&&focusBefore.isConnected)focusBefore.focus({preventScroll:true});syncReadAloudContext();}
  window.avaCompanionChatClose=close;
  window.avaCompanionChatOpen=async function(options){
   options=options&&typeof options==='object'?options:{};var version=++openVersion,provided=typeof options.message==='string'?options.message.slice(0,12000):null;
@@ -95482,8 +95432,8 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
  window.addEventListener('resize',function(){if(opened)mobileFocusMode();});
  // Account checks use the existing auth subscription; read aloud observes only the body's voice-state class.
  function accountCheck(){var next=bridge.uiKey();if(next!==lastUi){lastUi=next;bridge.invalidate();bridge.verify();}else if(state.owner&&!bridge.isCurrent(state.owner))ownerChanged(null);}
- setInterval(function(){if(opened||request)accountCheck();},1000);setInterval(syncTasks,5000);window.addEventListener('focus',function(){accountCheck();if(opened){bridge.verify();syncTasks();}});
- window.addEventListener('storage',function(e){if(state.owner&&e.key===key(state.owner)&&!request){load(state.owner);if(opened)render();}});
+ setInterval(function(){if(opened||request||readAloudThread)accountCheck();},1000);setInterval(syncTasks,5000);window.addEventListener('focus',function(){accountCheck();if(opened){bridge.verify();syncTasks();}});
+ window.addEventListener('storage',function(e){if(state.owner&&e.key===key(state.owner)&&!request){load(state.owner);if(opened)render();else syncReadAloudContext();}});
  window.addEventListener('pagehide',function(){stopReadAloud();rememberDraft();save();if(request)request.controller.abort();});
  initReadAloud();load(null);render();window.dispatchEvent(new Event('ava:chat-ready'));
 })();

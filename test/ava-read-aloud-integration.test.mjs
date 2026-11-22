@@ -32,6 +32,7 @@ class Element extends EventTarget {
   remove() { if (this.parentNode) this.parentNode.children = this.parentNode.children.filter(x => x !== this); this.document.nodes.delete(this.id); this.parentNode = null; }
   setAttribute(name, value) { this.attrs.set(name, String(value)); }
   getAttribute(name) { return this.attrs.get(name) ?? null; }
+  removeAttribute(name) { this.attrs.delete(name); }
   querySelectorAll() { return []; }
   contains(child) { for (let node = child; node; node = node.parentNode) if (node === this) return true; return false; }
   getClientRects() { return this.hidden ? [] : [{}]; }
@@ -127,10 +128,19 @@ test('blocked playback shows an honest notice and the same speaker retries cache
   assert.equal(button.dataset.state, 'speaking'); assert.equal(f.speech.length, 1); assert.equal(f.node('acNotice').textContent, ''); assert.equal(f.voiceStarts, 0);
 });
 
-test('returning Home cancels in-flight synthesis and a hidden completed reply is not sent to TTS', async () => {
-  const f = setup(); await f.open(); f.node('acReadAloud').click(); await f.submit(); await f.final(); const pending = f.speech[0];
-  await f.window.avaCompanionChatHome(); assert.equal(pending.controller.signal.aborted, true); pending.resolve(new Blob(['stale private audio'])); await settle();
-  assert.equal(f.urls.length, 0); assert.equal(f.node('acReadAloud').dataset.state, 'idle');
+test('Home preserves speech and the lit speaker reopens the exact chat without replaying audio or opening the keyboard', async () => {
+  const f = setup(); await f.open(); const button = f.node('acReadAloud'); button.click();
+  await f.submit('The chat being read'); await f.final(); const pending = f.speech[0];
+  await f.window.avaCompanionChatHome(); assert.equal(pending.controller.signal.aborted, false); await f.audio();
+  assert.equal(f.root.dataset.home, 'true'); assert.equal(button.dataset.state, 'speaking');
+  assert.equal(button.title, 'Return to the chat being read aloud');
+  const audio = f.audios[0], calls = audio.calls.length, pauses = audio.pauses;
+  button.click(); assert.equal(f.root.dataset.home, 'false'); assert.equal(f.node('acConversationTitle').textContent, 'The chat being read');
+  assert.equal(audio.calls.length, calls); assert.equal(audio.pauses, pauses); assert.equal(f.node('acInput').focuses, 0);
+  f.node('acNew').click(); assert.equal(f.node('acConversationTitle').textContent, 'A fresh conversation');
+  button.click(); assert.equal(f.node('acConversationTitle').textContent, 'The chat being read');
+  await f.window.avaCompanionChatHome(); assert.equal(audio.pauses, pauses);
+  audio.onended(); await settle(); assert.equal(button.dataset.state, 'idle'); assert.equal(button.title, 'Turn off read aloud');
   await f.submit('Another question'); await f.window.avaCompanionChatHome(); await f.final(); assert.equal(f.speech.length, 1);
 });
 
@@ -141,10 +151,13 @@ test('account change stops speech, clears its owner toggle and blocks stale synt
   f.owner(null); assert.equal(f.node('acReadAloud').disabled, true); assert.equal(f.voiceStarts, 0);
 });
 
-test('close, pagehide and navigation cancel pending speech and late provider results cannot start playback', async () => {
-  for (const action of ['close', 'pagehide', 'tools']) {
+test('in-app navigation keeps accepted speech alive, while pagehide and auth cancel it', async () => {
+  const navigating = setup(); await navigating.open(); navigating.node('acReadAloud').click(); await navigating.submit(); await navigating.final();
+  navigating.stage('tools'); navigating.window.avaCompanionChatClose(false); await navigating.audio(); await navigating.open();
+  assert.equal(navigating.node('acReadAloud').dataset.state, 'speaking');
+  for (const action of ['pagehide', 'auth']) {
     const f = setup(); await f.open(); f.node('acReadAloud').click(); await f.submit(); await f.final(); const pending = f.speech[0];
-    if (action === 'close') f.window.avaCompanionChatClose(false); else if (action === 'pagehide') f.window.dispatchEvent(new Event('pagehide')); else f.stage(action);
+    if (action === 'pagehide') f.window.dispatchEvent(new Event('pagehide')); else f.stage(action);
     assert.equal(pending.controller.signal.aborted, true, action); pending.resolve(new Blob(['late audio'])); await settle(); assert.equal(f.urls.length, 0, action);
   }
 });
