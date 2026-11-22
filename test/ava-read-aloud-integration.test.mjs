@@ -6,6 +6,7 @@ import vm from 'node:vm';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const controller = await readFile(new URL('../ava-read-aloud.js', import.meta.url), 'utf8');
+const mobileController = await readFile(new URL('../ava-mobile-read-aloud.js', import.meta.url), 'utf8');
 const source = html.match(/<script id="avaCompanionChatScript">([\s\S]*?)<\/script>/)?.[1];
 const markup = html.match(/<section id="avaCompanionChat"[\s\S]*?<\/section>/)?.[0];
 assert.ok(source && markup);
@@ -43,7 +44,7 @@ class Element extends EventTarget {
 const alice = { id: 'owner-a', email: 'alice@example.test' }, bob = { id: 'owner-b', email: 'bob@example.test' };
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 async function settle() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
-function setup({ app = true, owner = alice, factory = 'real', preference = false } = {}) {
+function setup({ app = true, android = false, owner = alice, factory = 'real', preference = false } = {}) {
   let identity = owner, subscription = () => {}, checks = 0, voiceStarts = 0;
   const storage = new Map(); if (preference && owner) storage.set('synapses_ava_read_aloud_v1_' + owner.id, '1');
   const document = new EventTarget(); document.nodes = new Map(); document.documentElement = new Element('html', document);
@@ -58,6 +59,7 @@ function setup({ app = true, owner = alice, factory = 'real', preference = false
   for (const node of document.nodes.values()) if (node !== root) root.append(node);
   document.getElementById('acWelcome').append(document.getElementById('acHomeChats')); document.getElementById('acConfirm').hidden = true;
   const window = new EventTarget(), requests = [], speech = [], audios = [], revoked = [], urls = [], observers = [], timers = new Map(); let timer = 0;
+  if (android) window.AndroidAva = {};
   const localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) };
   const bridge = {
     uiKey: () => identity ? identity.id + '|' + identity.email : 'guest', subscribe(fn) { subscription = fn; }, invalidate() {},
@@ -88,6 +90,7 @@ function setup({ app = true, owner = alice, factory = 'real', preference = false
   });
   if (factory === 'real') vm.runInContext(controller, sandbox);
   else if (factory === 'throws') window.AvaReadAloud = { create() { throw Error('Unavailable'); } };
+  if (android) vm.runInContext(mobileController, sandbox);
   vm.runInContext(source, sandbox);
   const node = id => document.getElementById(id);
   return { window, document, node, root, requests, speech, audios, storage, revoked, urls, observers,
@@ -149,6 +152,23 @@ test('account change stops speech, clears its owner toggle and blocks stale synt
   f.owner(bob); assert.equal(pending.controller.signal.aborted, true); assert.equal(f.node('acReadAloud').getAttribute('aria-pressed'), 'false');
   pending.resolve(new Blob(['Alice audio'])); await settle(); assert.equal(f.urls.length, 0);
   f.owner(null); assert.equal(f.node('acReadAloud').disabled, true); assert.equal(f.voiceStarts, 0);
+});
+
+test('the installed app reads while typing, finishes a revised reply on Home and returns to its conversation', async () => {
+  const f = setup({ android: true, preference: true }); await f.open(); const button = f.node('acReadAloud');
+  assert.equal(button.getAttribute('aria-pressed'), 'false'); button.click(); await f.submit('Read this on my phone');
+  const opener = 'Here is one practical way to get started.';
+  f.requests[0].options.onChunk(opener); await settle(); assert.equal(f.speech[0].text, opener);
+  await f.audio(); const audio = f.audios[0], prior = audio.src;
+  await f.window.avaCompanionChatHome();
+  const remainder = 'Set a time to review it together. Then put your notes in the shared folder.';
+  await f.final(`${opener.slice(0, -1)}! ${remainder}`);
+  assert.equal(audio.src, prior); assert.equal(f.speech[1].text, remainder);
+  await f.audio(); audio.onended(); await settle(); assert.equal(button.dataset.state, 'speaking');
+  button.click(); assert.equal(f.node('acConversationTitle').textContent, 'Read this on my phone');
+  audio.onended(); await settle(); assert.equal(button.dataset.state, 'idle');
+  assert.equal(f.voiceStarts, 0);
+  assert.match(html, /<script src="ava-mobile-read-aloud\.js\?v=[^"]+"><\/script>\s*<script id="avaCompanionChatScript">/);
 });
 
 test('in-app navigation keeps accepted speech alive, while pagehide and auth cancel it', async () => {
