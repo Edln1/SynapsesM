@@ -94,9 +94,9 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.ok(desktop.includes(`${dayOnly} #globalBeamsCanvas{opacity:.54;}`));
   assert.ok(desktop.includes(`${dayOnly} #chatBeamsWrap{opacity:0;}`));
   assert.ok(desktop.includes(`${dayOnly} #sunAuroraHorizon{opacity:1;}`));
-  const horizon = desktop.match(/#sunAuroraHorizon\{\s*--sun-horizon-fade:[\s\S]*?\n  \}/)[0];
-  assert.match(horizon, /--sun-horizon-fade:linear-gradient\(to top,/);
-  assert.match(horizon, /rgba\(0,0,0,\.69\) 47px,\s*#000 53px/);
+  const horizon = desktop.match(/#sunAuroraHorizon\{\s*--sun-horizon-dock:[\s\S]*?\n  \}/)[0];
+  assert.match(horizon, /--sun-horizon-fade:linear-gradient\(to top,var\(--sun-horizon-dock\),/);
+  assert.match(horizon, /--sun-horizon-dock:.*rgba\(0,0,0,\.69\) 47px,#000 53px;/);
   assert.match(horizon, /rgba\(0,0,0,\.10\) 121px,rgba\(0,0,0,\.04\) 134px,transparent 148px/);
   assert.match(horizon, /inset:auto 0 0;height:148px;/);
   assert.match(horizon, /background:linear-gradient\(to right,/);
@@ -118,33 +118,23 @@ test('the newer navy themes blend their desktop toolbar into the same background
   assert.doesNotMatch(chrome, /(?:height|margin|padding|position):/);
 });
 
-test('collapsed Day sidebar glass fades clear of the horizon without masking its icons', () => {
-  const start = html.indexOf('/* Fade the collapsed rail');
-  const end = html.indexOf('/* Void\'s minimized controls', start);
-  assert.ok(start > html.indexOf('#sunAuroraHorizon{display:none;}') && end > start);
-  const rule = html.slice(start, end);
-  const collapsed = 'html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open)';
-  assert.ok(rule.includes(`${collapsed}{`));
-  assert.ok(rule.includes(`${collapsed}::before{`));
-  assert.match(rule, /background:transparent;border-right-color:transparent;\s*backdrop-filter:none;/);
-  assert.match(rule, /linear-gradient\(to top,transparent 148px,#000 192px\)/);
-  assert.match(rule, /z-index:-1;pointer-events:none;/);
-  assert.match(rule.slice(rule.indexOf('::before')), /mask-image:var\(--sun-rail-fade\)/);
-});
-
-test('Void keeps the backdrop continuous behind its minimized navigation', () => {
-  const start = html.indexOf('/* Void\'s minimized controls');
+test('Day keeps the backdrop continuous behind its minimized navigation', () => {
+  const start = html.indexOf('/* Day\'s minimized controls');
   const end = html.indexOf('/* True Black only: Studio view', start);
   assert.ok(start > html.indexOf('#sunAuroraHorizon{display:none;}') && end > start);
   const rule = html.slice(start, end);
-  const voidTheme = ':not(.ava-app-mode,.android-status-blend)[data-theme="purple"]';
-  assert.ok(rule.includes(`html${voidTheme} .sidebar.collapsed,`));
-  assert.ok(rule.includes(`html.chp-sidebar-mode${voidTheme} #chpSidebar:not(.open,.fade-open),`));
-  assert.ok(rule.includes(`html${voidTheme} #bottomNavBar.bnav-cloud-collapsed{`));
+  const dayTheme = ':not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
+  assert.ok(rule.includes(`html${dayTheme} .sidebar.collapsed,`));
+  assert.ok(rule.includes(`html.chp-sidebar-mode${dayTheme} #chpSidebar:not(.open,.fade-open),`));
+  assert.ok(rule.includes(`html${dayTheme} #bottomNavBar.bnav-cloud-collapsed{`));
   assert.match(rule, /background:transparent!important;border-color:transparent!important;box-shadow:none!important;/);
   assert.match(rule, /backdrop-filter:none;-webkit-backdrop-filter:none;/);
-  assert.ok(rule.includes(`html${voidTheme} .sidebar.collapsed #sidebarIconRail > :first-child{`));
+  assert.ok(rule.includes(`html${dayTheme} .sidebar.collapsed #sidebarIconRail > :first-child{`));
   assert.match(rule, /border-bottom-color:transparent!important;/);
+  assert.match(rule, /html\.chp-sidebar-mode:not\(\.chp-apps-board,\.ava-app-mode\).* #sunAuroraHorizon,/);
+  assert.match(rule, /body\.bottom-nav:has\(#bottomNavBar\.bnav-cloud-collapsed\) #sunAuroraHorizon\{/);
+  assert.match(rule, /--sun-horizon-dock:rgba\(0,0,0,\.59\),rgba\(0,0,0,\.71\) 17px,rgba\(0,0,0,\.88\) 35px,#000 53px;/);
+  assert.doesNotMatch(rule, /data-theme="purple"|sun-rail-fade/);
   assert.doesNotMatch(rule, /(?:display|pointer-events|width|height):/);
 });
 

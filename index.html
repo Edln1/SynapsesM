@@ -9349,9 +9349,9 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
   /* The Neutralino reference changes color across the width, with one level
      brightness profile. The crest sits just above the 52px toolbar. */
   #sunAuroraHorizon{
-    --sun-horizon-fade:linear-gradient(to top,
-      rgba(0,0,0,.59),rgba(0,0,0,.63) 12px,rgba(0,0,0,.69) 28px,rgba(0,0,0,.69) 47px,
-      #000 53px,rgba(0,0,0,.89) 61px,rgba(0,0,0,.72) 71px,rgba(0,0,0,.53) 81px,
+    --sun-horizon-dock:rgba(0,0,0,.59),rgba(0,0,0,.63) 12px,rgba(0,0,0,.69) 28px,rgba(0,0,0,.69) 47px,#000 53px;
+    --sun-horizon-fade:linear-gradient(to top,var(--sun-horizon-dock),
+      rgba(0,0,0,.89) 61px,rgba(0,0,0,.72) 71px,rgba(0,0,0,.53) 81px,
       rgba(0,0,0,.42) 91px,rgba(0,0,0,.28) 101px,rgba(0,0,0,.18) 111px,
       rgba(0,0,0,.10) 121px,rgba(0,0,0,.04) 134px,transparent 148px);
     display:block;position:fixed;inset:auto 0 0;height:148px;
@@ -9369,29 +9369,21 @@ html[data-theme="trueblack"] #globalBeamsCanvas{opacity:0!important;}
     border-top-color:rgba(173,172,225,.08);
     backdrop-filter:none;-webkit-backdrop-filter:none;
   }
-  /* Fade the collapsed rail's glass and divider above the glow. Its buttons
-     stay on the rail so the launcher can still be reached and used. */
-  html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open){
-    background:transparent;border-right-color:transparent;
-    backdrop-filter:none;-webkit-backdrop-filter:none;
-  }
-  html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open)::before{
-    --sun-rail-fade:linear-gradient(to top,transparent 148px,#000 192px);
-    content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
-    background:rgba(22,22,32,.18);border-right:1px solid rgba(255,255,255,.06);
-    backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
-    mask-image:var(--sun-rail-fade);-webkit-mask-image:var(--sun-rail-fade);
-  }
-  /* Void's minimized controls sit directly on the scene. In particular a
-     transparent toolbar must also drop its backdrop blur to stop tinting it. */
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="purple"] .sidebar.collapsed,
-  html.chp-sidebar-mode:not(.ava-app-mode,.android-status-blend)[data-theme="purple"] #chpSidebar:not(.open,.fade-open),
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="purple"] #bottomNavBar.bnav-cloud-collapsed{
+  /* Day's minimized controls sit on the same scene as the conversation. */
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) .sidebar.collapsed,
+  html.chp-sidebar-mode:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #chpSidebar:not(.open,.fade-open),
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) #bottomNavBar.bnav-cloud-collapsed{
     background:transparent!important;border-color:transparent!important;box-shadow:none!important;
     backdrop-filter:none;-webkit-backdrop-filter:none;
   }
-  html:not(.ava-app-mode,.android-status-blend)[data-theme="purple"] .sidebar.collapsed #sidebarIconRail > :first-child{
+  html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic]) .sidebar.collapsed #sidebarIconRail > :first-child{
     border-bottom-color:transparent!important;
+  }
+  /* The brighter edge belongs to a visible toolbar. Without one, fade the
+     aurora smoothly through the same space without a horizontal seam. */
+  html.chp-sidebar-mode:not(.chp-apps-board,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) #sunAuroraHorizon,
+  html:not(.chp-sidebar-mode,.ava-app-mode)[data-theme="easyview"]:not([data-sun-classic]) body.bottom-nav:has(#bottomNavBar.bnav-cloud-collapsed) #sunAuroraHorizon{
+    --sun-horizon-dock:rgba(0,0,0,.59),rgba(0,0,0,.71) 17px,rgba(0,0,0,.88) 35px,#000 53px;
   }
 }
 /* True Black only: Studio view's beams/particles and the chat-home ("What's on your mind?")
