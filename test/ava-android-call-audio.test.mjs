@@ -100,6 +100,44 @@ test('WebSocket STS writes raw PCM to Android and keeps timing silent; typed pla
   assert.equal(older.packets.length, 0);
 });
 
+test('warm Android streaming buffers a short lead once, then schedules contiguous packets without gaps', () => {
+  const f = setup();
+  const pcm = new Int16Array(480).buffer;
+  f.context._actxWarm = true;
+  f.context._fireWsSpeak();
+  f.context._scheduleChunk(pcm);
+  assert.ok(f.packets[0].delay >= 75 && f.packets[0].delay <= 76);
+  f.context._actx.currentTime += 0.02;
+  f.advance(20);
+  f.context._scheduleChunk(pcm);
+  assert.ok(Math.abs(f.sources[1].startAt - f.sources[0].startAt - 0.02) < 1e-8);
+  assert.equal(f.packets[1].delay, 0);
+
+  const browser = setup({ bridge: false });
+  browser.context._actxWarm = true;
+  browser.context._fireWsSpeak();
+  browser.context._scheduleChunk(pcm);
+  assert.equal(browser.sources[0].startAt, browser.context._actx.currentTime);
+});
+
+test('live speech sends the same accents, natural pauses and punctuation as typed read-aloud', () => {
+  const f = setup(), messages = [];
+  Object.assign(f.context, {
+    _ttsBusy: false, _busy: false, _busySince: 0, _bargeForceToast: false,
+    btnState() {}, _wsOpen() {}, _avatarLive: () => true,
+  });
+  f.context._ws.send = data => messages.push(JSON.parse(data));
+  vm.runInContext([
+    extract('function _ttsClean(txt)', '/** Escape text for HTML attributes'),
+    extract('  function speak(text, forTurn)', '  function _finishAvaAndroidReply()'),
+  ].join('\n'), f.context);
+  const reply = 'Ask José in São Paulo.\n\n“Déjà vu” — 你好。';
+  f.context.speak(reply + '\u0000@@AVA_SOURCES_HTML@@sources only', 1);
+  assert.equal(messages[0].text, f.context._ttsClean(reply));
+  assert.match(messages[0].text, /José in São Paulo\.\n“Déjà vu” — 你好。/);
+  assert.equal(messages[1].type, 'Flush');
+});
+
 test('long output is paced and a voice interrupt flushes the native buffer and cancels future writes', () => {
   const f = setup();
   const pcm = new Uint8Array(30 * 48000);

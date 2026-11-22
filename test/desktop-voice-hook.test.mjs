@@ -10,6 +10,7 @@ const routeTrace = extract('  var _pcSpeechRouteCount = 0;', '  window.__synapse
 const fallback = extract('  function _desktopVoiceFluxFallback(generation,reasonCode){', '  function _desktopVoiceSpeechError(reasonCode,message){');
 const recording = extract('  function record() {', '  // ── Barge-in:');
 const speaking = extract('function _getAvaAndroidCallAudio()', 'function _stopAvaAndroidCallAudio()') +
+  extract('function _ttsClean(txt)', '/** Escape text for HTML attributes') +
   extract('  function speak(text, forTurn)', '  function _desktopVoiceFluxFallback(generation,reasonCode){');
 const ask = extract('  async function ask(text, speech)', '    // DESKTOP_VOICE_COMMAND_HOOK_END') + '\n normal++;\n}';
 function fixture(client,{native=false}={}) {

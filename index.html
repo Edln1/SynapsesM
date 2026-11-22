@@ -68433,6 +68433,11 @@ function _scheduleChunk(arrayBuf, androidClip) {
     // device is truly awake; every chunk after it just chains off _playbackTime
     // as before, so this adds a one-time ~150ms delay, not per-chunk lag.
     var warmupLead = _actxWarm ? 0 : 0.15;
+    // Let the Android call route buffer streamed packets before starting a run.
+    // Contiguous packets and downloaded replies already have audio ready.
+    if (callOutput && !androidClip && !(_avaNativeVoice && _avaAvatarConnected) && _playbackTime <= _actx.currentTime) {
+      warmupLead = Math.max(warmupLead, 0.075);
+    }
     _actxWarm = true;
     var startAt = Math.max(_actx.currentTime, _playbackTime) + avaDelay + warmupLead;
     src.start(startAt);
@@ -70425,8 +70430,9 @@ function speakVoiceReply(text) {
     }
     if (_speakIsStale(_thisTurn, _thisGen)) return;
     if(typeof groqStripThink === 'function') text = groqStripThink(text);
-    // Empty / whitespace-only — free the mic immediately (prevents permanent ignore)
-    if (!text || !String(text).trim()) {
+    // Keep the same spoken text and pauses as typed replies.
+    var clean = _ttsClean(text).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '').slice(0, 2500).trim();
+    if (!clean) {
       _busy = false; _busySince = 0;
       if (_on) setTimeout(record, 200);
       return;
@@ -70480,24 +70486,6 @@ function speakVoiceReply(text) {
      * the fade feel slower than indexnewest.html. */
     if (_bargeToast) _holdBargeToast(2500);
     _showToastWithSpeech();
-
-    var clean = text
-      .replace(/\*[^*]*\*/g, '')
-      .replace(/\([^)]*\)/g, '')
-      .replace(/\[[^\]]*\]/g, '')
-      .replace(/[#*`~>_]/g, '')
-      // Typographic chars from search-sourced text (Tavily summaries etc.) —
-      // smart quotes/dashes/ellipsis were passing straight through to the WS
-      // TTS request. These are the prime suspect for the "long search reply
-      // → WS never flushes, 6.5s safety timer fires" stall: short hand-written
-      // replies never contain them, only search-augmented ones do, which
-      // matches exactly which replies were getting stuck.
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/[\u2013\u2014]/g, '-')
-      .replace(/\u2026/g, '...')
-      .replace(/[^\x00-\x7F]/g, '')
-      .replace(/\s+/g, ' ').trim().slice(0, 2500);
 
     if (window._elevenSelected) {
       /* Toast immediately (do not wait for TTS download) — user wants bubble ASAP; fix slow voice elsewhere */
