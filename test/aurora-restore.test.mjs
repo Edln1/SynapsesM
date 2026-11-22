@@ -101,7 +101,7 @@ test('Day uses a navy base, dimmer moving beams and a desktop horizon', () => {
   assert.match(horizon, /inset:auto 0 0;height:148px;/);
   assert.match(horizon, /background:linear-gradient\(to right,/);
   assert.match(horizon, /mask-image:var\(--sun-horizon-fade\);/);
-  assert.doesNotMatch(desktop, /radial-gradient|sunAuroraDrift/);
+  assert.doesNotMatch(horizon, /radial-gradient|sunAuroraDrift/);
   assert.ok(desktop.includes(`${dayOnly} #bottomNavBar.fullwidth{`));
   assert.match(desktop, /#bottomNavBar\.fullwidth\{\s*background:transparent;/);
   assert.match(html, /<div id="sunAuroraHorizon" aria-hidden="true"><\/div>/);
@@ -133,7 +133,7 @@ test('the newer navy themes blend their desktop toolbar into the same background
 
 test('Day keeps the backdrop continuous behind its minimized navigation', () => {
   const start = html.indexOf('/* Day\'s minimized controls');
-  const end = html.indexOf('/* True Black only: Studio view', start);
+  const end = html.indexOf('/* Desktop Day palette', start);
   assert.ok(start > html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;}') && end > start);
   const rule = html.slice(start, end);
   const dayTheme = ':not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
@@ -149,6 +149,21 @@ test('Day keeps the backdrop continuous behind its minimized navigation', () => 
   assert.match(rule, /--sun-horizon-dock:rgba\(0,0,0,\.59\),rgba\(0,0,0,\.71\) 17px,rgba\(0,0,0,\.88\) 35px,#000 53px;/);
   assert.doesNotMatch(rule, /data-theme="purple"|sun-rail-fade/);
   assert.doesNotMatch(rule, /(?:display|pointer-events|width|height):/);
+});
+
+test('the dark aurora palette styles Welcome, the rail and desktop Ava together', () => {
+  const start = html.indexOf('/* Desktop Day palette');
+  const end = html.indexOf('/* True Black only: Studio view', start);
+  const palette = html.slice(start, end);
+  const theme = 'html:not(.ava-app-mode,.android-status-blend)[data-theme="easyview"]:not([data-sun-classic])';
+  assert.ok(start > html.indexOf('#sunAuroraSky,#sunAuroraHorizon{display:none;}') && end > start);
+  assert.ok(palette.includes(`${theme} :is(#synWelcomePop,#avaCompanionChat){`));
+  assert.ok(palette.includes(`${theme} #synWelcomePop > .bnav-cc-card{`));
+  assert.ok(palette.includes(`${theme} #chpRail > .chp-rail-btn{color:var(--day-icon);}`));
+  assert.ok(palette.includes(`${theme} #avaCompanionChat .ac-main{`));
+  assert.match(palette, /#avaCompanionChat :is\(\.ac-compose,\.ac-search,/);
+  assert.match(palette, /--ac-cream:var\(--day-text\);--ac-muted:var\(--day-muted\);/);
+  assert.doesNotMatch(palette, /(?:display|pointer-events|width|height):|\.ac-mascot/);
 });
 
 test('True Black and Ava keep the global renderer dormant rather than repainting a CSS-hidden canvas', () => {
