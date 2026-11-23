@@ -28,16 +28,45 @@
   }
 
   /* ── Starfield ── */
-  #stars {
+  #sky {
     position: fixed; inset: 0; z-index: 0;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 50% 40%, var(--bg-mid), var(--bg-deep) 76%, #03040a);
     pointer-events: none;
   }
 
-  /* ── Constellation lines ── */
-  #constellation {
-    position: fixed; inset: 0; z-index: 1;
-    pointer-events: none;
-    opacity: 0.25;
+  .sky-star {
+    position: absolute;
+    width: var(--star-size);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #b5c7e8;
+  }
+
+  .sky-constellation {
+    position: absolute;
+    width: 52px;
+    height: 34px;
+    color: #a69464;
+  }
+
+  .sky-constellation path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: .7;
+    opacity: .25;
+  }
+
+  .sky-constellation circle { fill: currentColor; opacity: .42; }
+
+  .sky-constellation--upper {
+    top: 17%;
+    right: clamp(16px, 7%, 100px);
+  }
+
+  .sky-constellation--lower {
+    bottom: 15%;
+    left: clamp(16px, 6%, 92px);
   }
 
   /* ── Main layout ── */
@@ -311,11 +340,25 @@
 </head>
 <body>
 
-<!-- Starfield canvas -->
-<canvas id="stars"></canvas>
-
-<!-- Constellation SVG -->
-<svg id="constellation" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="sky" aria-hidden="true">
+  <div id="stars"></div>
+  <svg class="sky-constellation sky-constellation--upper" viewBox="0 0 52 34">
+    <path d="M4 18 16 9 28 13 44 5 M28 13l8 13"/>
+    <circle cx="4" cy="18" r=".9"/>
+    <circle cx="16" cy="9" r="1"/>
+    <circle cx="28" cy="13" r="1.25"/>
+    <circle cx="44" cy="5" r="1.1"/>
+    <circle cx="36" cy="26" r=".8"/>
+  </svg>
+  <svg class="sky-constellation sky-constellation--lower" viewBox="0 0 52 34">
+    <path d="M6 22 16 8 31 14 24 27Z M31 14l14 7"/>
+    <circle cx="6" cy="22" r=".8"/>
+    <circle cx="16" cy="8" r="1.2"/>
+    <circle cx="31" cy="14" r="1"/>
+    <circle cx="24" cy="27" r="1"/>
+    <circle cx="45" cy="21" r="1.05"/>
+  </svg>
+</div>
 
 <!-- Scanning line -->
 <div id="scan-line"></div>
@@ -404,95 +447,30 @@
 
 <!-- AVA_VOICE_HISTORY_DATA -->
 <script>
-// ── Stars ────────────────────────────────────────────────────────
+// Use stable percentage positions so the starfield follows the frame as it resizes.
 (function(){
-  var c = document.getElementById('stars');
-  var ctx = c.getContext('2d');
-  var stars = [];
-
-  function resize(){
-    c.width = window.innerWidth;
-    c.height = window.innerHeight;
-    draw();
+  var field = document.createDocumentFragment();
+  var columns = 9;
+  var rows = 8;
+  var seed = 23;
+  function nextValue(){
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
   }
 
-  function init(){
-    stars = [];
-    for(var i=0;i<280;i++){
-      stars.push({
-        x: Math.random()*window.innerWidth,
-        y: Math.random()*window.innerHeight,
-        r: Math.random()*1.4+.2,
-        a: Math.random()*.8+.2,
-        speed: Math.random()*.0003+.0001,
-        phase: Math.random()*Math.PI*2
-      });
-    }
+  for (var index = 0; index < columns * rows; index++){
+    var x = (index % columns + nextValue()) / columns;
+    var y = (Math.floor(index / columns) + nextValue()) / rows;
+    var edge = 2 * Math.max(Math.abs(x - .5), Math.abs(y - .5));
+    var star = document.createElement('span');
+    star.className = 'sky-star';
+    star.style.left = (x * 100).toFixed(2) + '%';
+    star.style.top = (y * 100).toFixed(2) + '%';
+    star.style.setProperty('--star-size', (.55 + nextValue() * 1.05).toFixed(2) + 'px');
+    star.style.opacity = ((.13 + nextValue() * .26) * (.38 + .62 * edge)).toFixed(2);
+    field.appendChild(star);
   }
-
-  var t=0;
-  function draw(){
-    ctx.clearRect(0,0,c.width,c.height);
-    var g = ctx.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,c.width*.8);
-    g.addColorStop(0,'#080c1a');
-    g.addColorStop(1,'#03040a');
-    ctx.fillStyle=g;
-    ctx.fillRect(0,0,c.width,c.height);
-    t += .016;
-    stars.forEach(function(s){
-      var pulse = s.a * (.7 + .3*Math.sin(t*s.speed*200 + s.phase));
-      ctx.beginPath();
-      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-      ctx.fillStyle='rgba(200,215,255,'+pulse+')';
-      ctx.fill();
-    });
-  }
-
-  init(); resize();
-  window.addEventListener('resize', resize);
-  setInterval(draw, 50);
-})();
-
-// ── Constellations ───────────────────────────────────────────────
-(function(){
-  var svg = document.getElementById('constellation');
-  var W = window.innerWidth, H = window.innerHeight;
-  svg.setAttribute('viewBox','0 0 '+W+' '+H);
-
-  var points = [
-    [.08,.15],[.12,.35],[.18,.22],[.07,.48],[.15,.6],
-    [.22,.72],[.3,.55],[.25,.38],[.35,.25],[.42,.4],
-    [.5,.18],[.58,.32],[.65,.15],[.72,.3],[.78,.5],
-    [.85,.35],[.9,.2],[.88,.6],[.75,.68],[.62,.72],
-    [.55,.58],[.45,.65],[.38,.78],[.28,.85],[.18,.88]
-  ].map(function(p){ return [p[0]*W, p[1]*H]; });
-
-  var edges = [
-    [0,1],[1,2],[2,0],[1,3],[3,4],[4,5],[5,6],[6,7],
-    [7,2],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],
-    [13,14],[14,15],[15,16],[14,17],[17,18],[18,19],
-    [19,20],[20,21],[21,22],[22,23],[23,24],[24,4],
-    [6,20],[9,21],[11,19]
-  ];
-
-  edges.forEach(function(e){
-    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', points[e[0]][0]);
-    line.setAttribute('y1', points[e[0]][1]);
-    line.setAttribute('x2', points[e[1]][0]);
-    line.setAttribute('y2', points[e[1]][1]);
-    line.setAttribute('stroke','rgba(180,160,100,.4)');
-    line.setAttribute('stroke-width','.5');
-    svg.appendChild(line);
-  });
-
-  points.forEach(function(p){
-    var c = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    c.setAttribute('cx',p[0]); c.setAttribute('cy',p[1]);
-    c.setAttribute('r', Math.random()>.7?2:1.2);
-    c.setAttribute('fill','rgba(220,200,140,.7)');
-    svg.appendChild(c);
-  });
+  document.getElementById('stars').appendChild(field);
 })();
 
 // ── Clock ────────────────────────────────────────────────────────

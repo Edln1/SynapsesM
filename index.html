@@ -13,9 +13,9 @@
 })();
 </script>
 <link rel="stylesheet" href="ava-app-entry.css?v=20261123-voice-history">
-<link rel="stylesheet" href="ava-voice-history.css?v=20261123-quiet-radar">
+<link rel="stylesheet" href="ava-voice-history.css?v=20261123-classic-centered">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-voice-history.js?v=20261123-quiet-radar" defer></script>
+<script src="ava-voice-history.js?v=20261123-classic-centered" defer></script>
 <script src="ava-app-entry.js?v=20261123-voice-history" defer></script>
 
 <style id="avaWelcomeBootStyles">
@@ -4851,8 +4851,6 @@ html[data-theme="trueblack"] #avaStsCtxMenu{
   box-shadow:0 10px 32px rgba(0,0,0,0.65)!important;
 }
 html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-item{color:rgba(235,235,238,0.88)!important;}
-html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-sec{color:rgba(180,180,186,0.45)!important;}
-html[data-theme="trueblack"] #avaStsCtxMenu .ava-cx-div{background:rgba(255,255,255,0.08)!important;}
 html[data-theme="trueblack"] #avaStsCtxMenu [id$="Chk"]{color:#fff!important;}
 html[data-theme="trueblack"] .ava-life-card{
   background:#0a0a0a!important;
@@ -74327,11 +74325,6 @@ async function srcAgentContact(supplier) {
     '<div class="ava-cx-icon-style"><span id="avaCxIconLabel">Voice icon</span><div class="ava-cx-icon-options" role="group" aria-labelledby="avaCxIconLabel">' +
       '<button id="avaCxIconClassic" type="button" aria-pressed="true" data-voice-icon-choice="classic">Classic</button>' +
       '<button id="avaCxIconRing" type="button" aria-pressed="false" data-voice-icon-choice="ring">Ring only</button></div></div>' +
-    '<div class="ava-cx-div" style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
-    '<div class="ava-cx-sec" style="padding:4px 12px 2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:\'DM Sans\',sans-serif;">Ava mode</div>' +
-    '<div id="avaCxModeSelf" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico">◈</span><span style="flex:1;">Self-aware</span><span id="avaCxModeSelfChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
-    '<div id="avaCxModeComp" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico">♡</span><span style="flex:1;">Companion</span><span id="avaCxModeCompChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
-    '<div id="avaCxModeBlend" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico" title="Blend"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="9.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><circle cx="14.5" cy="12" r="5.25" stroke="rgba(255,255,255,0.92)" stroke-width="1.6"/><path d="M12 8.2a5.25 5.25 0 0 1 0 7.6" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/></svg></span><span style="flex:1;">Blend both</span><span id="avaCxModeBlendChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
     '<div id="avaCx2" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">✕</span><span>Close Window</span></div>';
   document.body.appendChild(ctxMenu);
   var iconStyleButtons = ctxMenu.querySelectorAll('[data-voice-icon-choice]');
@@ -74354,35 +74347,11 @@ async function srcAgentContact(supplier) {
     });
   });
   function _cxHov(el,bg){ if(!el)return; el.onmouseenter=function(){el.style.background=(typeof _isTrueBlackTheme==='function'&&_isTrueBlackTheme())?'rgba(255,255,255,0.07)':bg;}; el.onmouseleave=function(){el.style.background='';}; }
-  function _cxSyncModeChecks(){
-    var m = window._avaVibeMode || 'blend';
-    if (m === 'nodes') m = 'selfaware';
-    if (m === 'cottage') m = 'companion';
-    var map = { selfaware: 'avaCxModeSelfChk', companion: 'avaCxModeCompChk', blend: 'avaCxModeBlendChk' };
-    Object.keys(map).forEach(function(k){
-      var el = ctxMenu.querySelector('#' + map[k]);
-      if (el) el.style.opacity = (k === m) ? '1' : '0';
-    });
-  }
-  function _cxPickMode(mode){
-    return function(e){
-      e.stopPropagation();
-      ctxMenu.style.display = 'none';
-      if (typeof window.setAvaVibeMode === 'function') window.setAvaVibeMode(mode);
-      else {
-        window._avaVibeMode = mode;
-        try { localStorage.setItem('ava_vibe_mode', mode); } catch (err) {}
-      }
-    };
-  }
   _cxHov(ctxMenu.querySelector('#avaCx2'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCx4'),'rgba(124,106,247,0.18)');
   _cxHov(ctxMenu.querySelector('#avaCxVoice'),'rgba(124,106,247,0.16)');
   _cxHov(ctxMenu.querySelector('#avaCxHistory'),'rgba(124,106,247,0.14)');
   _cxHov(ctxMenu.querySelector('#avaCxToastToggle'),'rgba(0,217,168,0.12)');
-  _cxHov(ctxMenu.querySelector('#avaCxModeSelf'),'rgba(124,106,247,0.16)');
-  _cxHov(ctxMenu.querySelector('#avaCxModeComp'),'rgba(232,93,150,0.14)');
-  _cxHov(ctxMenu.querySelector('#avaCxModeBlend'),'rgba(0,217,168,0.12)');
   ctxMenu.querySelector('#avaCx2').onclick = function(){ ctxMenu.style.display='none'; closePopup(); };
   ctxMenu.querySelector('#avaCx4').onclick = function(){
     ctxMenu.style.display='none';
@@ -74423,15 +74392,11 @@ async function srcAgentContact(supplier) {
     var on = (typeof window._tnvToastEnabled === 'function') ? window._tnvToastEnabled() : true;
     el.style.opacity = on ? '1' : '0';
   }
-  ctxMenu.querySelector('#avaCxModeSelf').onclick = _cxPickMode('selfaware');
-  ctxMenu.querySelector('#avaCxModeComp').onclick = _cxPickMode('companion');
-  ctxMenu.querySelector('#avaCxModeBlend').onclick = _cxPickMode('blend');
   function _cxShowMenu(clientX, clientY){
     ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
     var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
     if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
     if(typeof window._updateToggleLabel==='function') window._updateToggleLabel();
-    _cxSyncModeChecks();
     _cxSyncToastCheck();
     ctxMenu.style.display = 'block';
     ctxMenu.style.left = Math.max(8, Math.min(clientX, window.innerWidth - ctxMenu.offsetWidth - 8)) + 'px';

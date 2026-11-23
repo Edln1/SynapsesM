@@ -192,7 +192,7 @@
         classicFrame = null;
         cancelClassic = null;
       };
-      browser.fetch('/ava-voice-history-classic.html?v=20261123-voice-parity1', {
+      browser.fetch('/ava-voice-history-classic.html?v=20261123-classic-centered', {
         mode: 'same-origin', signal: request.signal,
       }).then(function (response) {
         if (!response.ok) throw new Error('Classic history unavailable');
