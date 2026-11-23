@@ -79,6 +79,16 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   line-height: 1;
 }
 #avaVoiceHistory .avh-back { margin-left: -8px; }
+#avaVoiceHistory .avh-fullscreen { display: grid; place-items: center; }
+#avaVoiceHistory .avh-fullscreen svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 #avaVoiceHistory .avh-classic-toggle {
   flex: 0 0 auto;
   padding: 0 9px;
@@ -162,6 +172,16 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   height: min(680px, calc(100dvh - 32px));
   max-height: calc(100dvh - 32px);
 }
+#avaVoiceHistory[data-view="classic"][data-fullscreen="true"] {
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+#avaVoiceHistory[data-fullscreen="true"] .avh-header { padding-top: max(4px, env(safe-area-inset-top, 0px)); }
 #avaVoiceHistory[data-view="classic"] .avh-panel { height: 100%; }
 #avaVoiceHistory[data-view="classic"] .avh-content { display: flex; flex: 1; padding: 0; }
 #avaVoiceHistory[data-view="classic"] .avh-empty { padding: 0 12px; }

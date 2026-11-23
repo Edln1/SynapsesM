@@ -108,6 +108,17 @@
         classic.focus({ preventScroll: true });
       } else openClassic();
     });
+    var fullscreen = button('avh-icon avh-fullscreen', '', function () {
+      setFullscreen(dialog.dataset.fullscreen !== 'true');
+    });
+    fullscreen.setAttribute('aria-label', 'Fullscreen');
+    fullscreen.hidden = true;
+    var fullscreenIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    fullscreenIcon.setAttribute('viewBox', '0 0 24 24');
+    fullscreenIcon.setAttribute('aria-hidden', 'true');
+    var fullscreenPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    fullscreenIcon.appendChild(fullscreenPath);
+    fullscreen.appendChild(fullscreenIcon);
     var dismiss = button('avh-icon avh-close', '×', close);
     dismiss.setAttribute('aria-label', 'Close voice history');
     var content = node('div', 'avh-content');
@@ -120,11 +131,20 @@
     var lastRow = null;
     var classicFrame = null;
     try { sessions = readSessions(readRecords()); } catch (_) { loadFailed = true; }
-    header.append(back, title, classic, dismiss);
+    header.append(back, title, classic, fullscreen, dismiss);
     panel.append(header, content, footer);
     dialog.appendChild(panel);
     dialog.addEventListener('cancel', function (event) { event.preventDefault(); close(); });
     dialog.addEventListener('click', function (event) { if (event.target === dialog) close(); });
+
+    function setFullscreen(enabled) {
+      dialog.dataset.fullscreen = String(enabled);
+      fullscreen.setAttribute('aria-pressed', String(enabled));
+      fullscreen.title = enabled ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenPath.setAttribute('d', enabled
+        ? 'M3 9h6V3m12 6h-6V3M3 15h6v6m12-6h-6v6'
+        : 'M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6');
+    }
 
     function clearClassicHistory() {
       if (classicFrame && classicFrame.contentWindow) {
@@ -141,6 +161,7 @@
       title.textContent = 'Voice history';
       back.hidden = true;
       classic.textContent = 'List view';
+      fullscreen.hidden = false;
       footer.hidden = true;
       var status = node('p', 'avh-empty', 'Opening Classic…');
       status.setAttribute('role', 'status');
@@ -207,6 +228,8 @@
       if (cancelClassic) cancelClassic();
       var lastIndex = lastRow ? Number(lastRow.dataset.index) : -1;
       dialog.dataset.view = 'list';
+      setFullscreen(false);
+      fullscreen.hidden = true;
       title.textContent = 'Voice history';
       back.hidden = true;
       classic.textContent = 'Classic';

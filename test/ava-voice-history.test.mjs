@@ -208,3 +208,26 @@ test('Classic gets the same conversation order as List view and opens the select
   assert.deepEqual(classic.sessions[classic.page].turns, [older, followUp]);
   assert.equal(classic.page, 1);
 });
+
+test('the Classic fullscreen toggle resizes the same archive and resets on List view', async () => {
+  const f = fixture([exchange('2026-11-23T09:00:00Z', 'A voice chat', 'A reply', 'recent')]);
+  f.view.toggle();
+  const expand = f.all('.avh-fullscreen')[0];
+  assert.equal(expand.hidden, true);
+  f.all('.avh-classic-toggle')[0].click();
+  await new Promise(resolve => setImmediate(resolve));
+  const frame = f.all('iframe')[0];
+  assert.ok(frame);
+  assert.equal(expand.hidden, false);
+  expand.click();
+  assert.equal(f.dialog().dataset.fullscreen, 'true');
+  assert.equal(expand.getAttribute('aria-pressed'), 'true');
+  assert.equal(f.all('iframe')[0], frame);
+  expand.click();
+  assert.equal(f.dialog().dataset.fullscreen, 'false');
+  assert.equal(f.all('iframe')[0], frame);
+  expand.click();
+  f.all('.avh-classic-toggle')[0].click();
+  assert.equal(f.dialog().dataset.fullscreen, 'false');
+  assert.equal(expand.hidden, true);
+});
