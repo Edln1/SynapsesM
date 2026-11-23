@@ -7,6 +7,7 @@
   --history-text: #f1f1f3;
   --history-muted: #a7a7b0;
   --history-danger: #f0aeaf;
+  --history-radar-accent: #c9a84c;
   position: fixed;
   inset: 0;
   margin: auto;
@@ -36,6 +37,7 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   --history-text: #202024;
   --history-muted: #64646e;
   --history-danger: #a23036;
+  --history-radar-accent: #896720;
   color-scheme: light;
 }
 #avaVoiceHistory *, #avaVoiceHistory { box-sizing: border-box; }
@@ -92,7 +94,7 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
 #avaVoiceHistory .avh-classic-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   flex: 0 0 auto;
   padding: 0 9px;
   border: 0;
@@ -102,13 +104,16 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   font-size: 12px;
   font-weight: 600;
 }
-#avaVoiceHistory .avh-classic-radar {
-  flex: 0 0 17px;
-  width: 17px;
-  height: 17px;
-  color: #c9a84c;
+#avaVoiceHistory:not([data-view="classic"]) .avh-classic-toggle {
+  flex-basis: 44px;
+  width: 44px;
+  padding: 0;
 }
-html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory .avh-classic-radar { color: #896720; }
+#avaVoiceHistory .avh-classic-radar {
+  width: 14px;
+  height: 14px;
+  color: #797052;
+}
 #avaVoiceHistory .avh-classic-radar path {
   fill: none;
   stroke: currentColor;
@@ -116,7 +121,7 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory .avh-classic-radar 
   stroke-linecap: round;
 }
 #avaVoiceHistory .avh-classic-radar circle { fill: currentColor; }
-#avaVoiceHistory[data-view="classic"] .avh-classic-radar { display: none; }
+#avaVoiceHistory .avh-classic-toggle:focus-visible .avh-classic-radar { color: var(--history-radar-accent); }
 #avaVoiceHistory .avh-content {
   flex: 0 1 auto;
   min-height: 0;
@@ -240,6 +245,7 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory .avh-classic-radar 
 #avaVoiceHistory .avh-classic-frame { flex: 1; width: 100%; min-width: 0; border: 0; }
 @media (hover: hover) {
   #avaVoiceHistory button:hover { background: var(--history-hover); }
+  #avaVoiceHistory .avh-classic-toggle:hover .avh-classic-radar { color: var(--history-radar-accent); }
   #avaVoiceHistory[data-view="classic"] .avh-header button:hover {
     background: rgba(201, 168, 76, .16);
     color: #e7c775;

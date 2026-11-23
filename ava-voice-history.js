@@ -120,8 +120,6 @@
     radarSignal.setAttribute('cy', '15.5');
     radarSignal.setAttribute('r', '1.15');
     radar.append(radarSweep, radarSignal);
-    var classicLabel = node('span', '', 'Classic');
-    classic.append(radar, classicLabel);
     var fullscreen = button('avh-icon avh-fullscreen', '', function () {
       setFullscreen(dialog.dataset.fullscreen !== 'true');
     });
@@ -174,7 +172,9 @@
       dialog.dataset.view = 'classic';
       title.textContent = 'Synapses Transmission Log';
       back.hidden = true;
-      classicLabel.textContent = 'List view';
+      classic.textContent = 'List view';
+      classic.removeAttribute('aria-label');
+      classic.removeAttribute('title');
       fullscreen.hidden = false;
       footer.hidden = true;
       var status = node('p', 'avh-empty', 'Opening Classic…');
@@ -246,7 +246,9 @@
       fullscreen.hidden = true;
       title.textContent = 'Voice history';
       back.hidden = true;
-      classicLabel.textContent = 'Classic';
+      classic.replaceChildren(radar);
+      classic.setAttribute('aria-label', 'Classic voice history');
+      classic.setAttribute('title', 'Classic voice history');
       content.replaceChildren();
       footer.hidden = !sessions.length;
       footer.replaceChildren(clear);
