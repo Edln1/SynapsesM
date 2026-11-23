@@ -228,6 +228,7 @@
     text-align: center;
     font-size: 10px;
     color: var(--gold-dim);
+    overflow-wrap: anywhere;
     letter-spacing: .25em;
     padding: 10px 0 6px;
     opacity: .5;
@@ -381,7 +382,7 @@
 
   <div class="bar-bottom border-bottom" style="grid-column:2;grid-row:3;gap:8px;">
     <div class="bar-line"></div>
-    <div class="bar-symbols" id="msg-count">◈ 0 SIGNALS ◈</div>
+    <div class="bar-symbols" id="msg-count">◈ 0 CHATS ◈</div>
     <div class="bar-dot"></div>
     <div id="page-nav" style="display:flex;align-items:center;gap:10px;"></div>
     <div class="bar-dot"></div>
@@ -506,13 +507,10 @@ setInterval(updateClock,1000);
 updateClock();
 
 // ── Pagination engine ─────────────────────────────────────────────
-var PAGE_SIZE = 8;
-var _allEntries = [];
+var _sessions = [];
 var _currentPage = 0;
 
-function totalPages() { return Math.max(1, Math.ceil(_allEntries.length / PAGE_SIZE)); }
-
-var _pageGeneration = 0;
+function totalPages() { return Math.max(1, _sessions.length); }
 
 function appendMessage(scroll, sender, text, iso, bot) {
   var message = document.createElement('div');
@@ -531,37 +529,29 @@ function appendMessage(scroll, sender, text, iso, bot) {
   time.textContent = fmtTime(iso);
   message.append(label, divider, body, time);
   scroll.appendChild(message);
-  scroll.scrollTop = scroll.scrollHeight;
 }
 
 function renderPage(page) {
   _currentPage = page;
-  var generation = ++_pageGeneration;
   var scroll = document.getElementById('chat-scroll');
-  scroll.replaceChildren();
-
-  var start = page * PAGE_SIZE;
-  var entries = _allEntries.slice(start, start + PAGE_SIZE);
+  var content = document.createDocumentFragment();
+  var session = _sessions[page];
   var system = document.createElement('div');
   system.className = 'msg-system';
-  system.textContent = entries.length
-    ? '\u2014 PAGE ' + (page + 1) + ' OF ' + totalPages() + ' \u2014'
+  system.textContent = session
+    ? session.title || 'Voice conversation'
     : '\u2014 NO TRANSMISSIONS \u2014';
-  scroll.appendChild(system);
-
-  entries.forEach(function(entry, i) {
-    setTimeout(function() {
-      if (generation !== _pageGeneration) return;
-      appendMessage(scroll, 'User', entry.user, entry.date, false);
-      setTimeout(function() {
-        if (generation !== _pageGeneration) return;
-        appendMessage(scroll, 'Entity', entry.ava, entry.date, true);
-      }, 120);
-    }, i * 220);
+  content.appendChild(system);
+  if (session) session.turns.forEach(function(entry) {
+    if (!entry) return;
+    if (entry.user) appendMessage(content, 'User', entry.user, entry.date, false);
+    if (entry.ava) appendMessage(content, 'Entity', entry.ava, entry.date, true);
   });
+  scroll.replaceChildren(content);
+  scroll.scrollTop = 0;
 
-  document.getElementById('msg-count').textContent = '\u25c8 ' + _allEntries.length + ' SIGNALS \u25c8';
-  document.getElementById('clear-btn').disabled = !_allEntries.length;
+  document.getElementById('msg-count').textContent = '\u25c8 ' + _sessions.length + (_sessions.length === 1 ? ' CHAT ' : ' CHATS ') + '\u25c8';
+  document.getElementById('clear-btn').disabled = !_sessions.length;
   updatePageNav();
 }
 
@@ -573,7 +563,7 @@ function updatePageNav() {
 
   if (pg > 0) {
     var pb = document.createElement('button');
-    pb.textContent = '\u25c4 PREV';
+    pb.textContent = '\u25c4 NEWER';
     pb.style.cssText = 'background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);color:rgba(201,168,76,.7);font-family:"Cinzel",serif;font-size:10px;letter-spacing:.1em;padding:4px 12px;border-radius:3px;cursor:pointer;';
     pb.addEventListener('mouseenter', function(){ pb.style.background='rgba(201,168,76,.18)'; pb.style.color='rgba(201,168,76,1)'; });
     pb.addEventListener('mouseleave', function(){ pb.style.background='rgba(201,168,76,.08)'; pb.style.color='rgba(201,168,76,.7)'; });
@@ -588,7 +578,7 @@ function updatePageNav() {
 
   if (pg < tp - 1) {
     var nb = document.createElement('button');
-    nb.textContent = 'NEXT \u25ba';
+    nb.textContent = 'OLDER \u25ba';
     nb.style.cssText = 'background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);color:rgba(201,168,76,.7);font-family:"Cinzel",serif;font-size:10px;letter-spacing:.1em;padding:4px 12px;border-radius:3px;cursor:pointer;';
     nb.addEventListener('mouseenter', function(){ nb.style.background='rgba(201,168,76,.18)'; nb.style.color='rgba(201,168,76,1)'; });
     nb.addEventListener('mouseleave', function(){ nb.style.background='rgba(201,168,76,.08)'; nb.style.color='rgba(201,168,76,.7)'; });
@@ -605,14 +595,14 @@ function fmtTime(iso) {
 }
 
 function clearTranscript() {
-  if (_allEntries.length && parent !== window) parent.postMessage({type: 'COSMIC_CLEAR_TRANSCRIPT'}, '*');
+  if (_sessions.length && parent !== window) parent.postMessage({type: 'COSMIC_CLEAR_TRANSCRIPT'}, '*');
 }
 
-function loadHistory(history) {
-  _allEntries = Array.isArray(history) ? history.filter(function(entry) {
-    return entry && typeof entry === 'object';
+function loadHistory(history, selectedPage) {
+  _sessions = Array.isArray(history) ? history.filter(function(session) {
+    return session && Array.isArray(session.turns) && session.turns.length;
   }) : [];
-  renderPage(totalPages() - 1);
+  renderPage(Number.isInteger(selectedPage) && selectedPage >= 0 && selectedPage < _sessions.length ? selectedPage : 0);
 }
 
 window.addEventListener('message', function(event) {
@@ -621,7 +611,8 @@ window.addEventListener('message', function(event) {
 });
 
 var initialData = document.getElementById('avaClassicHistoryData');
-loadHistory(initialData ? JSON.parse(initialData.textContent) : []);
+var initialHistory = initialData ? JSON.parse(initialData.textContent) : {};
+loadHistory(initialHistory.sessions, initialHistory.page);
 </script>
 </body>
 </html>

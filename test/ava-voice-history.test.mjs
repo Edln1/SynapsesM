@@ -174,7 +174,9 @@ test('Classic and List view share the same history, and only the active Classic 
   assert.equal(f.dialog().dataset.view, 'classic');
   const data = frame.srcdoc.match(/id="avaClassicHistoryData">(.*?)<\/script>/)[1];
   assert.equal(data.includes('<'), false);
-  assert.deepEqual(JSON.parse(data), [saved]);
+  const classic = JSON.parse(data);
+  assert.deepEqual(classic.sessions.map(session => session.turns), [[saved]]);
+  assert.equal(classic.page, 0);
   assert.equal(f.frameMessages.length, 0);
   f.message({}, 'COSMIC_CLEAR_TRANSCRIPT');
   f.message(frame.contentWindow, 'COSMIC_CLEAR_TRANSCRIPT', 'https://example.test');
@@ -188,4 +190,21 @@ test('Classic and List view share the same history, and only the active Classic 
   assert.equal(f.dialog().dataset.view, 'list');
   assert.equal(f.all('iframe').length, 0);
   assert.equal(f.all('.avh-empty').length, 1);
+});
+
+test('Classic gets the same conversation order as List view and opens the selected chat', async () => {
+  const older = exchange('2026-11-20T09:00:00Z', 'An older chat', 'Earlier answer', 'old');
+  const newer = exchange('2026-11-23T09:00:00Z', 'A newer chat', 'Recent answer', 'new');
+  const followUp = exchange('2026-11-20T10:00:00Z', 'An older follow-up', 'One more answer', 'old');
+  const f = fixture([older, newer, followUp]); f.view.toggle();
+  const rowTitles = f.all('.avh-session-title').map(node => node.textContent);
+  assert.deepEqual(rowTitles, ['A newer chat', 'An older chat']);
+  f.all('.avh-session')[1].click();
+  f.all('.avh-classic-toggle')[0].click();
+  await new Promise(resolve => setImmediate(resolve));
+  const data = f.all('iframe')[0].srcdoc.match(/id="avaClassicHistoryData">(.*?)<\/script>/)[1];
+  const classic = JSON.parse(data);
+  assert.deepEqual(classic.sessions.map(session => session.title), rowTitles);
+  assert.deepEqual(classic.sessions[classic.page].turns, [older, followUp]);
+  assert.equal(classic.page, 1);
 });

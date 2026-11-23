@@ -114,12 +114,12 @@
     var footer = node('footer', 'avh-footer');
     var notice = node('p', 'avh-notice');
     notice.setAttribute('role', 'status');
-    var records = [], sessions = [];
+    var sessions = [];
     var loadFailed = false;
     var listScroll = 0;
     var lastRow = null;
     var classicFrame = null;
-    try { records = readRecords(); sessions = readSessions(records); } catch (_) { loadFailed = true; }
+    try { sessions = readSessions(readRecords()); } catch (_) { loadFailed = true; }
     header.append(back, title, classic, dismiss);
     panel.append(header, content, footer);
     dialog.appendChild(panel);
@@ -135,8 +135,11 @@
     function openClassic() {
       var browser = document.defaultView;
       var request = new AbortController();
-      listScroll = content.scrollTop;
+      var page = dialog.dataset.view === 'transcript' && lastRow ? Number(lastRow.dataset.index) : 0;
+      if (dialog.dataset.view === 'list') listScroll = content.scrollTop;
       dialog.dataset.view = 'classic';
+      title.textContent = 'Voice history';
+      back.hidden = true;
       classic.textContent = 'List view';
       footer.hidden = true;
       var status = node('p', 'avh-empty', 'Opening Classic…');
@@ -154,7 +157,7 @@
         classicFrame = null;
         cancelClassic = null;
       };
-      browser.fetch('/ava-voice-history-classic.html?v=20261123-classic1', {
+      browser.fetch('/ava-voice-history-classic.html?v=20261123-voice-parity1', {
         mode: 'same-origin', signal: request.signal,
       }).then(function (response) {
         if (!response.ok) throw new Error('Classic history unavailable');
@@ -162,7 +165,7 @@
       }).then(function (markup) {
         if (request.signal.aborted) return;
         if (!markup.includes(classicDataSlot)) throw new Error('Classic history template unavailable');
-        var data = JSON.stringify(records).replace(/</g, '\\u003c');
+        var data = JSON.stringify({ sessions: sessions, page: page }).replace(/</g, '\\u003c');
         var state = '<script type="application/json" id="avaClassicHistoryData">' + data + '<\/script>';
         classicFrame = node('iframe', 'avh-classic-frame');
         classicFrame.setAttribute('title', 'Classic voice history');
@@ -186,7 +189,6 @@
       var confirm = button('avh-danger', 'Clear history', function () {
         try {
           getStorage().removeItem(storageKey);
-          records = [];
           sessions = [];
           lastRow = null;
           if (inClassic) { footer.hidden = true; clearClassicHistory(); classic.focus(); }
@@ -207,7 +209,6 @@
       dialog.dataset.view = 'list';
       title.textContent = 'Voice history';
       back.hidden = true;
-      classic.hidden = false;
       classic.textContent = 'Classic';
       content.replaceChildren();
       footer.hidden = !sessions.length;
@@ -250,7 +251,6 @@
       dialog.dataset.view = 'transcript';
       title.textContent = session.title || 'Voice conversation';
       back.hidden = false;
-      classic.hidden = true;
       footer.hidden = true;
       var thread = node('div', 'avh-thread');
       var time = timestamp(session.latest);
