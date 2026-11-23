@@ -44,11 +44,12 @@ const storageKey = owner => 'synapses_ava_companion_v1_' + encodeURIComponent(ow
 function thread(id, { title = id, updated = 1, draft = '', messages = [{ id: id + '-m', role: 'user', text: id, status: 'done' }] } = {}) {
   return { id, title, updated, draft, messages };
 }
-function setup({ app = true, owner = alice, threads = [], active = threads[0]?.id ?? null, homeDraft = '', storage = new Map() } = {}) {
+function setup({ app = true, handheld = false, owner = alice, threads = [], active = threads[0]?.id ?? null, homeDraft = '', storage = new Map() } = {}) {
   let identity = owner, subscription = () => {}, writable = true;
   if (owner && !storage.has(storageKey(owner))) storage.set(storageKey(owner), JSON.stringify({ version: 1, owner: owner.id, threads, active, homeDraft }));
   const nodes = new Map(), document = new EventTarget();
   document.documentElement = new Element('html'); if (app) document.documentElement.classList.add('ava-app-mode');
+  if (handheld) document.documentElement.classList.add('ava-app-handheld');
   document.body = new Element('body'); document.activeElement = null; document.hidden = false;
   for (const match of markup.matchAll(/\bid="([^"]+)"/g)) { const node = new Element(); node.id = match[1]; nodes.set(node.id, node); }
   const root = nodes.get('avaCompanionChat'); root.hidden = true; root.dataset.history = 'false'; document.body.appendChild(root);
@@ -130,6 +131,21 @@ test('Home shows every owned nonempty or draft conversation sorted by newest act
   assert.equal(f.rows().length, 30); assert.equal(f.rows()[0].dataset.thread, 'draft');
   assert.equal(f.rows()[1].dataset.thread, 'chat-28');
   f.window.avaCompanionChatClose(false); assert.equal(f.saved().active, 'chat-3');
+});
+
+test('handheld Home leads with Chats and returns to the top of history without opening the keyboard', async () => {
+  const f = setup({ handheld: true, threads: [thread('saved')] });
+  await f.window.avaCompanionChatHome();
+  assert.equal(f.root.dataset.homeHasChats, 'true');
+  assert.equal(f.node('acHomeChats').children[0].textContent, 'Chats');
+  f.rows()[0].click(); f.node('acScroll').scrollTop = 600;
+  await f.window.avaCompanionChatHome();
+  assert.equal(f.node('acScroll').scrollTop, 0);
+  assert.equal(f.input.focuses, 0);
+
+  const empty = setup({ handheld: true }); await empty.window.avaCompanionChatHome();
+  assert.equal(empty.root.dataset.homeHasChats, 'false');
+  assert.equal(empty.node('acHomeChats').children.length, 1);
 });
 
 test('Home omits empty conversations and treats saved titles and drafts as plain text', async () => {

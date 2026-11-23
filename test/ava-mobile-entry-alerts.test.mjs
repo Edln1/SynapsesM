@@ -7,6 +7,8 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const boot = html.match(/<head>\s*<script>([\s\S]+?)<\/script>/)[1];
 const brief = html.slice(html.indexOf('function _synMaybeAutoBrief(force)'), html.indexOf('function onLogin()'));
 const restore = html.match(/\/\* Remember whether Pulse was toggled on[^*]*\*\/([\s\S]*?)document\.addEventListener/)[1];
+const greetingStart = html.indexOf('function showCyberpunkGreeting(name)');
+const greetingGuard = html.slice(greetingStart, html.indexOf("\n  var ex=document.getElementById('cyberGreeting');", greetingStart)) + '\n}';
 
 function launched(search, navigator) {
   const classes = new Set();
@@ -46,4 +48,17 @@ test('regular Synapses and desktop Ava retain their signed-in brief and Pulse pr
   for (const [search, device] of [
     ['', { userAgent: 'Android' }], ['', { userAgent: 'Windows' }], ['?ava-app=1', { userAgent: 'Windows' }],
   ]) assert.deepEqual(launched(search, device).calls, { brief: 1, pulse: 1 });
+});
+
+test('only handheld Ava skips the legacy welcome-back popup before it is created', () => {
+  for (const [search, userAgent, expected] of [
+    ['?ava-app=1', 'Android AvaAndroid/0.1.20', []],
+    ['', 'Android', ['synapses_last_open_at', 'synapses_cyber_greet_at']],
+    ['?ava-app=1', 'Windows', ['synapses_last_open_at', 'synapses_cyber_greet_at']],
+  ]) {
+    const { ctx } = launched(search, { userAgent });
+    const written = []; ctx.localStorage.setItem = key => written.push(key);
+    vm.runInContext(greetingGuard + '\nshowCyberpunkGreeting("Fixture");', ctx);
+    assert.deepEqual(written, expected);
+  }
 });

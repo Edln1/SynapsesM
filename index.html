@@ -12,9 +12,9 @@
   root.setAttribute('data-ava-app-stage','waiting');
 })();
 </script>
-<link rel="stylesheet" href="ava-app-entry.css?v=20261119-ava-call-audio1">
+<link rel="stylesheet" href="ava-app-entry.css?v=20261122-chat-list">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-app-entry.js?v=20261119-ava-call-audio1" defer></script>
+<script src="ava-app-entry.js?v=20261122-quiet-mobile" defer></script>
 
 <style id="avaWelcomeBootStyles">
 /* Explicit welcome/guest entry only. Keep legacy auth/app pixels covered until
@@ -22483,6 +22483,7 @@ function fmtMD(t){
 }
 
 function showCyberpunkGreeting(name){
+  if(document.documentElement.matches('.ava-app-mode.ava-app-handheld'))return;
   /* Only greet after a real gap away — not every app open / refresh / re-login */
   var GREET_KEY = 'synapses_cyber_greet_at';
   var OPEN_KEY = 'synapses_last_open_at';
@@ -95190,7 +95191,9 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
    if(cancelHomeHold)cancelHomeHold();dismissHomeActions(false);
    host.hidden=!(appHomeMode()&&homeView);if(host.hidden)return;host.replaceChildren();
    var owner=state.owner&&ownerValid()?state.owner:null,rows=owner?state.threads.filter(function(t){return t.messages.length||t.draft.trim();}).slice().sort(function(a,b){return b.updated-a.updated;}):[];
-   host.appendChild(node('h4','ac-home-chats-heading','Your conversations'));
+   var mobile=document.documentElement.classList.contains('ava-app-handheld');
+   root.dataset.homeHasChats=String(rows.length>0);
+   if(!mobile||rows.length)host.appendChild(node(mobile?'h3':'h4','ac-home-chats-heading',mobile?'Chats':'Your conversations'));
    if(!rows.length){host.appendChild(node('p','ac-home-empty',owner?'Your conversations will appear here.':'Sign in to see your conversations.'));return;}
    rows.forEach(function(t){
     var row=node('div','ac-home-chat-row'),button=node('button','ac-home-chat');button.type='button';button.dataset.thread=t.id;
@@ -95318,7 +95321,8 @@ html.ava-app-mode #avaCompanionChat .ac-confirm button{min-height:44px;font-size
  }
  function render(){
   var t=current();document.getElementById('acConversationTitle').textContent=t&&t.messages.length?t.title:'A fresh conversation';document.getElementById('acAccountName').textContent=state.owner?state.owner.email:'Sign in';document.getElementById('acAccountInitial').textContent=state.owner?state.owner.email.charAt(0).toUpperCase():'A';document.getElementById('acLogout').hidden=!state.owner;document.getElementById('acDevice').textContent=state.owner?'Chat history is saved on this device.':'Drafts stay here until you send.';
-   root.dataset.home=String(appHomeMode()&&homeView);input.value=state.owner?(appHomeMode()&&homeView?state.homeDraft:t&&t.draft||''):guestDraft;document.getElementById('acVoice').disabled=!!request;renderThreads();renderTasks();renderMessages(false);autoSize();updateSendIcon();updateResearchButton();
+   var home=appHomeMode()&&homeView,enteringHome=home&&root.dataset.home!=='true';
+   root.dataset.home=String(home);input.value=state.owner?(home?state.homeDraft:t&&t.draft||''):guestDraft;document.getElementById('acVoice').disabled=!!request;renderThreads();renderTasks();renderMessages(false);if(enteringHome)scroll.scrollTop=0;autoSize();updateSendIcon();updateResearchButton();
    syncReadAloudContext();
  }
  function updateSendIcon(){sendButton.replaceChildren();if(request){var square=node('span','','■');square.setAttribute('aria-hidden','true');sendButton.appendChild(square);sendButton.title='Stop response';}else{var arrow=node('span','','↑');arrow.setAttribute('aria-hidden','true');arrow.style.fontSize='22px';arrow.style.lineHeight='1';sendButton.appendChild(arrow);sendButton.title='Send message';}autoSize();}

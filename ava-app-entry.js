@@ -284,6 +284,9 @@
       voiceDock.appendChild(talk); talk.setAttribute('aria-label', 'Talk to Ava'); talk.setAttribute('title', 'Talk to Ava');
     }
     var active = state.stage === 'chat' && voiceActive() && voiceDock && mic;
+    var connecting = Boolean(active && window._topNavVoiceActive &&
+      !mic.classList.contains('tnv-on') && !mic.classList.contains('tnv-speak'));
+    var handheld = Boolean(window.AndroidAva || html.classList.contains('ava-app-handheld'));
     if (!active) restoreVoiceControl();
     else {
       if (!dockedVoice) {
@@ -294,14 +297,14 @@
       // retaining its waveform/analyser and escaping the inert body siblings.
       if (mic.parentNode !== voiceDock) voiceDock.appendChild(mic);
       if (mic.inert) mic.inert = false;
-      mic.setAttribute('aria-label', 'Stop voice conversation'); mic.setAttribute('title', 'Stop voice');
+      mic.setAttribute('aria-label', connecting && handheld ? 'Connecting microphone. Tap to stop.' : 'Stop voice conversation');
+      mic.setAttribute('title', 'Stop voice');
       Object.keys(voiceDockStyles).forEach(function (name) { if (mic.style.getPropertyValue(name) !== voiceDockStyles[name] || mic.style.getPropertyPriority(name) !== 'important') mic.style.setProperty(name, voiceDockStyles[name], 'important'); });
     }
     if (talk && talk.hidden !== !!active) talk.hidden = !!active;
     var show = state.stage === 'chat' && Boolean(talk || active);
     if (voiceDock && voiceDock.hidden !== !show) voiceDock.hidden = !show;
-    syncVoiceNotice(Boolean(active && window._topNavVoiceActive &&
-      !mic.classList.contains('tnv-on') && !mic.classList.contains('tnv-speak')));
+    syncVoiceNotice(connecting && !handheld);
   }
   function closeChat() {
     restoreVoiceMenu();
@@ -416,14 +419,14 @@
         expanded: button.getAttribute('aria-expanded'), html: button.innerHTML });
     }
     var onHome = chat.dataset.home === 'true';
-    var label = onHome ? 'New conversation' : 'Back to conversations';
+    var label = onHome ? 'New conversation' : 'Back to chats';
     button.removeAttribute('aria-expanded');
     if (button.getAttribute('aria-label') === label) return;
     button.setAttribute('aria-label', label);
     button.setAttribute('title', label);
     button.innerHTML = onHome
       ? '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>'
-      : patched.get(button).html;
+      : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6"/></svg>';
   }
   function patchAuthSurface() {
     var form = document.getElementById('loginForm');

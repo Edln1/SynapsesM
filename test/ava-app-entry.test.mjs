@@ -192,8 +192,8 @@ test('the mobile history control becomes a compose shortcut on Home', async () =
   assert.equal(f.opens, 1);
   f.chat.dataset.home = 'false';
   f.window.avaAppEntry.refresh();
-  assert.equal(nav.getAttribute('aria-label'), 'Back to conversations');
-  assert.equal(nav.innerHTML, '<svg>history</svg>');
+  assert.equal(nav.getAttribute('aria-label'), 'Back to chats');
+  assert.match(nav.innerHTML, /m14 6-6 6 6 6/);
   const back = new Event('click', { cancelable: true }); Object.defineProperty(back, 'target', { value: nav });
   f.document.dispatchEvent(back);
   assert.equal(back.defaultPrevented, false);
@@ -201,6 +201,7 @@ test('the mobile history control becomes a compose shortcut on Home', async () =
   f.window.avaAppEntry.destroy();
   assert.equal(nav.getAttribute('aria-label'), 'Show conversations');
   assert.equal(nav.getAttribute('aria-expanded'), 'false');
+  assert.equal(nav.innerHTML, '<svg>history</svg>');
 });
 test('signed-in app opens the real existing chat once after legacy startup settles', async () => {
   const f = setup(); assert.equal(f.opens, 0); await settle(f); assert.equal(f.opens, 1); assert.equal(f.window.avaAppEntry.stage, 'chat');
@@ -327,7 +328,7 @@ test('mobile voice errors stay visible in Ava and a retry clears only its own no
   assert.equal(notice.textContent, 'Message saved as a draft.');
 });
 
-test('voice startup waits for listening on the original control and shows failures after it stops', async () => {
+test('desktop Ava retains the inline connection and failure notices', async () => {
   const f = setup(); await settle(f);
   const mic = f.document.getElementById('topNavVoiceBtn');
   f.window._topNavVoiceActive = true;
@@ -344,6 +345,27 @@ test('voice startup waits for listening on the original control and shows failur
   assert.equal(notice.textContent, 'Speech recognition is busy.');
   f.window.avaAppEntry.destroy();
   assert.equal(f.document.getElementById('avaAppVoiceNotice'), null);
+});
+
+test('mobile Ava keeps startup status in the mic control and displays genuine voice errors', async () => {
+  for (const installed of [false, true]) {
+    const f = setup();
+    if (installed) f.window.AndroidAva = {};
+    else f.document.documentElement.classList.add('ava-app-handheld');
+    await settle(f);
+    const mic = f.document.getElementById('topNavVoiceBtn');
+    f.window._topNavVoiceActive = true;
+    f.window.avaAppEntry.refresh();
+    assert.equal(f.document.getElementById('avaAppVoiceNotice'), null);
+    assert.match(mic.getAttribute('aria-label'), /connecting microphone/i);
+    assert.equal(mic.parentNode.id, 'avaAppVoiceDock');
+    mic.classList.add('tnv-on');
+    f.window.avaAppEntry.refresh();
+    assert.equal(mic.getAttribute('aria-label'), 'Stop voice conversation');
+    assert.equal(f.document.getElementById('avaAppVoiceNotice'), null);
+    f.window.dispatchEvent(new f.window.CustomEvent('ava:voice-error', { detail: { message: 'Microphone permission is needed.' } }));
+    assert.equal(f.document.getElementById('avaAppVoiceNotice').textContent, 'Microphone permission is needed.');
+  }
 });
 
 test('legacy mic relocation cannot leave the live icon inert outside the chat', async () => {
