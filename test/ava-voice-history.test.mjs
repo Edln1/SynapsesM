@@ -219,6 +219,7 @@ test('the Classic fullscreen toggle resizes the same archive and resets on List 
   const frame = f.all('iframe')[0];
   assert.ok(frame);
   assert.equal(expand.hidden, false);
+  assert.equal(f.all('.avh-title')[0].textContent, 'Synapses Transmission Log');
   expand.click();
   assert.equal(f.dialog().dataset.fullscreen, 'true');
   assert.equal(expand.getAttribute('aria-pressed'), 'true');
@@ -230,4 +231,5 @@ test('the Classic fullscreen toggle resizes the same archive and resets on List 
   f.all('.avh-classic-toggle')[0].click();
   assert.equal(f.dialog().dataset.fullscreen, 'false');
   assert.equal(expand.hidden, true);
+  assert.equal(f.all('.avh-title')[0].textContent, 'Voice history');
 });

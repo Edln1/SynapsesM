@@ -158,7 +158,7 @@
       var page = dialog.dataset.view === 'transcript' && lastRow ? Number(lastRow.dataset.index) : 0;
       if (dialog.dataset.view === 'list') listScroll = content.scrollTop;
       dialog.dataset.view = 'classic';
-      title.textContent = 'Voice history';
+      title.textContent = 'Synapses Transmission Log';
       back.hidden = true;
       classic.textContent = 'List view';
       fullscreen.hidden = false;

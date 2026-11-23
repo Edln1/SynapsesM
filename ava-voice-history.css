@@ -171,6 +171,9 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   width: min(820px, calc(100% - 32px));
   height: min(680px, calc(100dvh - 32px));
   max-height: calc(100dvh - 32px);
+  background: #03040a;
+  border-color: rgba(201, 168, 76, .22);
+  border-radius: 10px;
 }
 #avaVoiceHistory[data-view="classic"][data-fullscreen="true"] {
   inset: 0;
@@ -181,16 +184,54 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   border: 0;
   border-radius: 0;
 }
-#avaVoiceHistory[data-fullscreen="true"] .avh-header { padding-top: max(4px, env(safe-area-inset-top, 0px)); }
 #avaVoiceHistory[data-view="classic"] .avh-panel { height: 100%; }
+#avaVoiceHistory[data-view="classic"] .avh-header {
+  justify-content: flex-end;
+  gap: 7px;
+  min-height: 0;
+  padding: 6px 9px 2px;
+  border: 0;
+}
+#avaVoiceHistory[data-view="classic"][data-fullscreen="true"] .avh-header {
+  padding-top: max(6px, env(safe-area-inset-top, 0px));
+}
+#avaVoiceHistory[data-view="classic"] .avh-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip-path: inset(50%);
+}
+#avaVoiceHistory[data-view="classic"] .avh-header button {
+  min-height: 34px;
+  border: 1px solid rgba(201, 168, 76, .3);
+  border-radius: 6px;
+  background: rgba(201, 168, 76, .08);
+  color: #c9a84c;
+  font-family: monospace;
+}
+#avaVoiceHistory[data-view="classic"] :is(.avh-fullscreen, .avh-close) {
+  flex-basis: 34px;
+  width: 34px;
+  font-size: 16px;
+}
+#avaVoiceHistory[data-view="classic"] .avh-classic-toggle { font-weight: 400; }
+#avaVoiceHistory[data-view="classic"] .avh-header button:focus-visible { outline-color: #e7c775; }
 #avaVoiceHistory[data-view="classic"] .avh-content { display: flex; flex: 1; padding: 0; }
 #avaVoiceHistory[data-view="classic"] .avh-empty { padding: 0 12px; }
 #avaVoiceHistory .avh-classic-frame { flex: 1; width: 100%; min-width: 0; border: 0; }
 @media (hover: hover) {
   #avaVoiceHistory button:hover { background: var(--history-hover); }
+  #avaVoiceHistory[data-view="classic"] .avh-header button:hover {
+    background: rgba(201, 168, 76, .16);
+    color: #e7c775;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
   #avaVoiceHistory[open] { animation: avh-enter 145ms ease-out; }
+  #avaVoiceHistory[data-view="classic"] {
+    transition: width .3s ease, height .3s ease, max-height .3s ease, border-radius .3s ease;
+  }
   @keyframes avh-enter { from { opacity: .4; transform: translateY(4px); } }
 }
 @media (max-width: 680px) {
@@ -208,4 +249,7 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
     height: 90dvh;
     max-height: 90dvh;
   }
+  #avaVoiceHistory[data-view="classic"][data-fullscreen="true"] { inset: auto 0 0; }
+  #avaVoiceHistory[data-view="classic"] .avh-header button { min-height: 44px; }
+  #avaVoiceHistory[data-view="classic"] :is(.avh-fullscreen, .avh-close) { flex-basis: 44px; width: 44px; }
 }
