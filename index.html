@@ -13,9 +13,9 @@
 })();
 </script>
 <link rel="stylesheet" href="ava-app-entry.css?v=20261123-voice-history">
-<link rel="stylesheet" href="ava-voice-history.css?v=20261123-classic-motion">
+<link rel="stylesheet" href="ava-voice-history.css?v=20261123-classic-radar">
 <link rel="stylesheet" href="star-news.css?v=20261118-desktop3">
-<script src="ava-voice-history.js?v=20261123-classic-motion" defer></script>
+<script src="ava-voice-history.js?v=20261123-classic-radar" defer></script>
 <script src="ava-app-entry.js?v=20261123-voice-history" defer></script>
 
 <style id="avaWelcomeBootStyles">
@@ -40439,7 +40439,7 @@ function _isHostAccount(){
 }
 window._isHostAccount = _isHostAccount;
 
-/** Modal: Ava continuous life state — open from voice-btn right-click menu */
+/** Internal viewer for Ava’s life state. */
 window.openAvaLifeViewer = async function(forceTick) {
   if(!_isHostAccount()) return;
   var old = document.getElementById('avaLifeOverlay');
@@ -40459,7 +40459,7 @@ window.openAvaLifeViewer = async function(forceTick) {
         '<button type="button" id="avaLifeRefreshBtn" style="flex:1;min-width:120px;padding:9px 12px;border-radius:9px;border:1px solid rgba(124,106,247,0.35);background:rgba(124,106,247,0.12);color:#c4b5fd;font-size:12px;font-weight:600;cursor:pointer;">↻ Refresh</button>' +
         '<button type="button" id="avaLifeTickBtn" style="flex:1;min-width:120px;padding:9px 12px;border-radius:9px;border:1px solid rgba(0,217,168,0.35);background:rgba(0,217,168,0.1);color:#00d9a8;font-size:12px;font-weight:600;cursor:pointer;">Run solitude tick</button>' +
       '</div>' +
-      '<div style="margin-top:10px;font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.4;">Right‑click the voice / speech button → Ava Life State. Needs life server + ava_mind table.</div>' +
+      '<div style="margin-top:10px;font-size:10.5px;color:rgba(255,255,255,0.28);line-height:1.4;">Needs life server + ava_mind table.</div>' +
     '</div>';
 
   function esc(s) {
@@ -74327,8 +74327,6 @@ async function srcAgentContact(supplier) {
     '<div class="ava-cx-icon-style"><span id="avaCxIconLabel">Voice icon</span><div class="ava-cx-icon-options" role="group" aria-labelledby="avaCxIconLabel">' +
       '<button id="avaCxIconClassic" type="button" aria-pressed="true" data-voice-icon-choice="classic">Classic</button>' +
       '<button id="avaCxIconRing" type="button" aria-pressed="false" data-voice-icon-choice="ring">Ring only</button></div></div>' +
-    '<div id="avaCxLife" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);transition:background .12s;"><span class="ava-cx-ico">🧬</span><span>Ava Life State</span></div>' +
-    '<div id="avaCxLifeTick" class="ava-cx-item" style="display:none;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.75);transition:background .12s;"><span class="ava-cx-ico">⟳</span><span>Run solitude tick</span></div>' +
     '<div class="ava-cx-div" style="height:1px;margin:4px 8px;background:rgba(255,255,255,0.08);"></div>' +
     '<div class="ava-cx-sec" style="padding:4px 12px 2px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,0.35);font-family:\'DM Sans\',sans-serif;">Ava mode</div>' +
     '<div id="avaCxModeSelf" class="ava-cx-item" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(255,255,255,0.88);transition:background .12s;"><span class="ava-cx-ico">◈</span><span style="flex:1;">Self-aware</span><span id="avaCxModeSelfChk" style="font-size:12px;color:#00d9a8;opacity:0;">✓</span></div>' +
@@ -74382,8 +74380,6 @@ async function srcAgentContact(supplier) {
   _cxHov(ctxMenu.querySelector('#avaCxVoice'),'rgba(124,106,247,0.16)');
   _cxHov(ctxMenu.querySelector('#avaCxHistory'),'rgba(124,106,247,0.14)');
   _cxHov(ctxMenu.querySelector('#avaCxToastToggle'),'rgba(0,217,168,0.12)');
-  _cxHov(ctxMenu.querySelector('#avaCxLife'),'rgba(0,217,168,0.14)');
-  _cxHov(ctxMenu.querySelector('#avaCxLifeTick'),'rgba(0,217,168,0.10)');
   _cxHov(ctxMenu.querySelector('#avaCxModeSelf'),'rgba(124,106,247,0.16)');
   _cxHov(ctxMenu.querySelector('#avaCxModeComp'),'rgba(232,93,150,0.14)');
   _cxHov(ctxMenu.querySelector('#avaCxModeBlend'),'rgba(0,217,168,0.12)');
@@ -74427,17 +74423,6 @@ async function srcAgentContact(supplier) {
     var on = (typeof window._tnvToastEnabled === 'function') ? window._tnvToastEnabled() : true;
     el.style.opacity = on ? '1' : '0';
   }
-  ctxMenu.querySelector('#avaCxLife').onclick = function(e){
-    e.stopPropagation();
-    ctxMenu.style.display='none';
-    if (typeof window.openAvaLifeViewer === 'function') window.openAvaLifeViewer(false);
-  };
-  ctxMenu.querySelector('#avaCxLifeTick').onclick = function(e){
-    e.stopPropagation();
-    ctxMenu.style.display='none';
-    if (typeof window.openAvaLifeViewer === 'function') window.openAvaLifeViewer(true);
-    else if (typeof refreshAvaLife === 'function') refreshAvaLife(true);
-  };
   ctxMenu.querySelector('#avaCxModeSelf').onclick = _cxPickMode('selfaware');
   ctxMenu.querySelector('#avaCxModeComp').onclick = _cxPickMode('companion');
   ctxMenu.querySelector('#avaCxModeBlend').onclick = _cxPickMode('blend');
@@ -74445,11 +74430,6 @@ async function srcAgentContact(supplier) {
     ctxMenu.querySelector('#avaCx2').style.display = isOpen ? 'flex' : 'none';
     var avaCx4Label = ctxMenu.querySelector('#avaCx4Label');
     if (avaCx4Label) avaCx4Label.textContent = (typeof _avaAvatarConnected !== 'undefined' && _avaAvatarConnected) ? 'Turn Off Video Call' : 'Enable Video Call';
-    var host = (typeof window._isHostAccount === 'function') ? window._isHostAccount() : false;
-    var life = ctxMenu.querySelector('#avaCxLife');
-    var tick = ctxMenu.querySelector('#avaCxLifeTick');
-    if(life) life.style.display = host ? 'flex' : 'none';
-    if(tick) tick.style.display = host ? 'flex' : 'none';
     if(typeof window._updateToggleLabel==='function') window._updateToggleLabel();
     _cxSyncModeChecks();
     _cxSyncToastCheck();

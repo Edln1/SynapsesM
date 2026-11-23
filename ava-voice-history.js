@@ -102,21 +102,35 @@
       if (lastRow) lastRow.focus({ preventScroll: true });
     });
     back.setAttribute('aria-label', 'Back to voice history');
-    var classic = button('avh-classic-toggle', 'Classic', function () {
+    var classic = button('avh-classic-toggle', '', function () {
       if (dialog.dataset.view === 'classic') {
         renderList();
         classic.focus({ preventScroll: true });
       } else openClassic();
     });
+    var svgNamespace = 'http://www.w3.org/2000/svg';
+    var radar = document.createElementNS(svgNamespace, 'svg');
+    radar.setAttribute('class', 'avh-classic-radar');
+    radar.setAttribute('viewBox', '0 0 24 24');
+    radar.setAttribute('aria-hidden', 'true');
+    var radarSweep = document.createElementNS(svgNamespace, 'path');
+    radarSweep.setAttribute('d', 'M21 12a9 9 0 1 1-9-9m5 9a5 5 0 1 1-5-5m0 5 7-7');
+    var radarSignal = document.createElementNS(svgNamespace, 'circle');
+    radarSignal.setAttribute('cx', '17');
+    radarSignal.setAttribute('cy', '15.5');
+    radarSignal.setAttribute('r', '1.15');
+    radar.append(radarSweep, radarSignal);
+    var classicLabel = node('span', '', 'Classic');
+    classic.append(radar, classicLabel);
     var fullscreen = button('avh-icon avh-fullscreen', '', function () {
       setFullscreen(dialog.dataset.fullscreen !== 'true');
     });
     fullscreen.setAttribute('aria-label', 'Fullscreen');
     fullscreen.hidden = true;
-    var fullscreenIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var fullscreenIcon = document.createElementNS(svgNamespace, 'svg');
     fullscreenIcon.setAttribute('viewBox', '0 0 24 24');
     fullscreenIcon.setAttribute('aria-hidden', 'true');
-    var fullscreenPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    var fullscreenPath = document.createElementNS(svgNamespace, 'path');
     fullscreenIcon.appendChild(fullscreenPath);
     fullscreen.appendChild(fullscreenIcon);
     var dismiss = button('avh-icon avh-close', '×', close);
@@ -160,7 +174,7 @@
       dialog.dataset.view = 'classic';
       title.textContent = 'Synapses Transmission Log';
       back.hidden = true;
-      classic.textContent = 'List view';
+      classicLabel.textContent = 'List view';
       fullscreen.hidden = false;
       footer.hidden = true;
       var status = node('p', 'avh-empty', 'Opening Classic…');
@@ -232,7 +246,7 @@
       fullscreen.hidden = true;
       title.textContent = 'Voice history';
       back.hidden = true;
-      classic.textContent = 'Classic';
+      classicLabel.textContent = 'Classic';
       content.replaceChildren();
       footer.hidden = !sessions.length;
       footer.replaceChildren(clear);

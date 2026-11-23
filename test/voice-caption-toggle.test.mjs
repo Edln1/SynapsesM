@@ -11,7 +11,7 @@ function extract(start, end) {
   return html.slice(from, to);
 }
 const captions = extract("  var _toastFull = '';", '  function btnState(s) {');
-const menu = extract("  ctxMenu.querySelector('#avaCxToastToggle').onclick", "  ctxMenu.querySelector('#avaCxLife').onclick");
+const menu = extract("  ctxMenu.querySelector('#avaCxToastToggle').onclick", "  ctxMenu.querySelector('#avaCxModeSelf').onclick");
 const preference = 'synapses_sts_toast_enabled';
 
 class Element extends EventTarget {

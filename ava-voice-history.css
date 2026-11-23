@@ -90,6 +90,9 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   stroke-linejoin: round;
 }
 #avaVoiceHistory .avh-classic-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 0 auto;
   padding: 0 9px;
   border: 0;
@@ -99,6 +102,21 @@ html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory {
   font-size: 12px;
   font-weight: 600;
 }
+#avaVoiceHistory .avh-classic-radar {
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  color: #c9a84c;
+}
+html:not(.ava-app-mode)[data-theme="light"] #avaVoiceHistory .avh-classic-radar { color: #896720; }
+#avaVoiceHistory .avh-classic-radar path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+#avaVoiceHistory .avh-classic-radar circle { fill: currentColor; }
+#avaVoiceHistory[data-view="classic"] .avh-classic-radar { display: none; }
 #avaVoiceHistory .avh-content {
   flex: 0 1 auto;
   min-height: 0;
