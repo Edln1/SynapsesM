@@ -192,8 +192,8 @@ test('the mobile history control becomes a compose shortcut on Home', async () =
   assert.equal(f.opens, 1);
   f.chat.dataset.home = 'false';
   f.window.avaAppEntry.refresh();
-  assert.equal(nav.getAttribute('aria-label'), 'Back to chats');
-  assert.match(nav.innerHTML, /m14 6-6 6 6 6/);
+  assert.equal(nav.getAttribute('aria-label'), 'Back to conversations');
+  assert.equal(nav.innerHTML, '<svg>history</svg>');
   const back = new Event('click', { cancelable: true }); Object.defineProperty(back, 'target', { value: nav });
   f.document.dispatchEvent(back);
   assert.equal(back.defaultPrevented, false);
@@ -201,7 +201,6 @@ test('the mobile history control becomes a compose shortcut on Home', async () =
   f.window.avaAppEntry.destroy();
   assert.equal(nav.getAttribute('aria-label'), 'Show conversations');
   assert.equal(nav.getAttribute('aria-expanded'), 'false');
-  assert.equal(nav.innerHTML, '<svg>history</svg>');
 });
 test('signed-in app opens the real existing chat once after legacy startup settles', async () => {
   const f = setup(); assert.equal(f.opens, 0); await settle(f); assert.equal(f.opens, 1); assert.equal(f.window.avaAppEntry.stage, 'chat');
@@ -467,6 +466,16 @@ test('right-click opens the real voice menu and closing it restores the inert ba
   assert.equal(menu.parentNode, f.document.body);
   assert.equal(menu.nextSibling, originalNext);
   assert.equal(menu.style.maxHeight, 'calc(100dvh - 16px)');
+});
+
+test('Android Back dismisses the voice history dialog before returning to Ava Home', async () => {
+  const f = setup(); await settle(f);
+  let open = true;
+  f.window.AvaVoiceHistory = { close() { const wasOpen = open; open = false; return wasOpen; } };
+  assert.equal(f.window.avaAppEntry.closeVoiceMenu(), true);
+  assert.equal(open, false);
+  assert.equal(f.opens, 1);
+  assert.equal(f.window.avaAppEntry.closeVoiceMenu(), false);
 });
 
 test('the mic menu can reopen after switching away from Ava with the menu open', async () => {

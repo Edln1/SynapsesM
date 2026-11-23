@@ -172,41 +172,6 @@ html.ava-app-mode #avaCompanionChat .ac-home-chat-title { font-size:14px; font-w
 html.ava-app-mode #avaCompanionChat .ac-home-chat-preview { grid-column:1; color:#777780; font-size:12px; line-height:1.5; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 html.ava-app-mode #avaCompanionChat .ac-home-chat-time { grid-column:2; grid-row:1; align-self:center; color:#686872; font-size:12px; white-space:nowrap; }
 
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-scroll {
-  padding:20px max(18px,env(safe-area-inset-right,0px)) 18px max(18px,env(safe-area-inset-left,0px));
-  overflow-x:hidden;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] #acWelcome {
-  min-height:0; padding:0; justify-content:flex-start;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"][data-home-has-chats="true"] #acWelcome > :not(#acHomeChats) {
-  display:none;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] #acHomeChats {
-  width:100%; min-width:0; margin:0;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chats-heading {
-  margin:0 0 12px; font:600 22px/1.25 'DM Sans',sans-serif; letter-spacing:-.35px; color:#eeeeef;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row {
-  min-width:0; gap:0; padding:0 3px 0 0; border:1px solid #ffffff0c; border-radius:0; background:#0e0e10;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row + .ac-home-chat-row { border-top:0; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row:first-of-type { border-radius:13px 13px 0 0; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row:last-of-type { border-radius:0 0 13px 13px; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row:only-of-type { border-radius:13px; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-row > .ac-home-chat {
-  min-height:62px; grid-template-columns:minmax(0,1fr) auto; gap:3px 10px;
-  padding:12px 2px 12px 13px; border-radius:10px;
-}
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-title { grid-column:1 / -1; grid-row:1; color:#e9e9eb; font-size:15px; font-weight:600; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-preview { grid-row:2; color:#9b9ba4; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-time { grid-row:2; color:#92929c; font-size:11px; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-chat-more { color:#a4a4ad; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"][data-home-has-chats="false"] #acWelcome { padding-top:24px; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"][data-home-has-chats="false"] #acHomeChats { margin-top:18px; }
-html.ava-app-mode.ava-app-handheld #avaCompanionChat[data-home="true"] .ac-home-empty { margin:0; text-align:center; }
-
 @media (prefers-reduced-motion: no-preference) {
   html.ava-app-mode.ava-app-handheld #avaCompanionChat:not([hidden])[data-home="true"] #acWelcome {
     animation: ava-app-return-to-list 210ms cubic-bezier(.22,.75,.25,1);

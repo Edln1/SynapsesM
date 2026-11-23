@@ -112,7 +112,9 @@
     voiceHold = null;
   }
   function closeVoiceMenu() {
-    if (!voiceMenuHome || voiceMenuHome.node.style.display === 'none') return false;
+    if (!voiceMenuHome || voiceMenuHome.node.style.display === 'none') {
+      return Boolean(window.AvaVoiceHistory && window.AvaVoiceHistory.close());
+    }
     voiceMenuHome.node.style.display = 'none';
     return true;
   }
@@ -419,14 +421,14 @@
         expanded: button.getAttribute('aria-expanded'), html: button.innerHTML });
     }
     var onHome = chat.dataset.home === 'true';
-    var label = onHome ? 'New conversation' : 'Back to chats';
+    var label = onHome ? 'New conversation' : 'Back to conversations';
     button.removeAttribute('aria-expanded');
     if (button.getAttribute('aria-label') === label) return;
     button.setAttribute('aria-label', label);
     button.setAttribute('title', label);
     button.innerHTML = onHome
       ? '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>'
-      : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6"/></svg>';
+      : patched.get(button).html;
   }
   function patchAuthSurface() {
     var form = document.getElementById('loginForm');
