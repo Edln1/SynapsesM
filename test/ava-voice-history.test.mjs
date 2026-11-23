@@ -68,7 +68,14 @@ class Element extends EventTarget {
 
 function fixture(records) {
   const document = new EventTarget();
-  document.createElement = tag => new Element(tag, document);
+  const browser = new EventTarget(), frameMessages = [];
+  browser.fetch = async () => ({ ok: true, text: async () => '<!doctype html><title>Classic</title><!-- AVA_VOICE_HISTORY_DATA -->' });
+  document.defaultView = browser;
+  document.createElement = tag => {
+    const element = new Element(tag, document);
+    if (tag === 'iframe') element.contentWindow = { postMessage: data => frameMessages.push(data) };
+    return element;
+  };
   document.createDocumentFragment = () => document.createElement('#fragment');
   document.createElementNS = (_, tag) => document.createElement(tag);
   document.body = document.createElement('body');
@@ -86,7 +93,10 @@ function fixture(records) {
   const view = create(document, () => storage);
   const dialog = () => document.getElementById('avaVoiceHistory');
   const all = selector => dialog()?.querySelectorAll(selector) || [];
-  return { view, dialog, all, storage };
+  function message(source, type, origin = 'null') {
+    browser.dispatchEvent(Object.assign(new Event('message'), { source, data: { type }, origin }));
+  }
+  return { view, dialog, all, storage, frameMessages, message };
 }
 
 function exchange(date, user, ava, session) { return { date, user, ava, session }; }
@@ -151,5 +161,31 @@ test('clearing voice history requires confirmation and only clears the existing 
   f.all('button').filter(button => button.textContent.trim() === 'Clear history').at(-1).click();
   assert.deepEqual(JSON.parse(f.storage.getItem(transcriptKey) || '[]'), []);
   assert.equal(f.storage.getItem('unrelated-setting'), 'keep me');
+  assert.equal(f.all('.avh-empty').length, 1);
+});
+
+test('Classic and List view share the same history, and only the active Classic frame can request clearing', async () => {
+  const saved = exchange('2026-11-22T14:30:00Z', 'A recent voice chat', '</script>' + unusual, 'latest');
+  const f = fixture([saved]); f.view.toggle();
+  f.all('.avh-classic-toggle')[0].click();
+  await new Promise(resolve => setImmediate(resolve));
+  const frame = f.all('iframe')[0];
+  assert.equal(frame.getAttribute('sandbox'), 'allow-scripts');
+  assert.equal(f.dialog().dataset.view, 'classic');
+  const data = frame.srcdoc.match(/id="avaClassicHistoryData">(.*?)<\/script>/)[1];
+  assert.equal(data.includes('<'), false);
+  assert.deepEqual(JSON.parse(data), [saved]);
+  assert.equal(f.frameMessages.length, 0);
+  f.message({}, 'COSMIC_CLEAR_TRANSCRIPT');
+  f.message(frame.contentWindow, 'COSMIC_CLEAR_TRANSCRIPT', 'https://example.test');
+  assert.equal(f.all('.avh-danger').length, 0);
+  f.message(frame.contentWindow, 'COSMIC_CLEAR_TRANSCRIPT');
+  assert.ok(f.storage.getItem(transcriptKey));
+  f.all('.avh-danger')[0].click();
+  assert.equal(f.storage.getItem(transcriptKey), null);
+  assert.deepEqual(f.frameMessages.at(-1), { type: 'SYNAPSES_HISTORY', history: [] });
+  f.all('.avh-classic-toggle')[0].click();
+  assert.equal(f.dialog().dataset.view, 'list');
+  assert.equal(f.all('iframe').length, 0);
   assert.equal(f.all('.avh-empty').length, 1);
 });
