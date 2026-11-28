@@ -69084,9 +69084,12 @@ function speakVoiceReply(text) {
   }
   // AVA_MIC_LIFECYCLE_END
   var _reacquiringMic = false;
+  function _desktopReplyPending() {
+    return !!window.synapsesDesktopVoice && _busy && _ttsBusy;
+  }
   function _reacquireMic() {
     if (window.__synShowcaseActive || window._synShowcaseMicSuppressed || window._synShowcaseMicSimulation) return;
-    if (_reacquiringMic) return;
+    if (_reacquiringMic || _desktopReplyPending()) return;
     // Initial startup already owns its ready/intro callback. Recovery must not
     // attach a second record callback to that same pending acquisition.
     if (_micAcquirePending && _micAcquirePending.generation === _micSessionGeneration) return;
@@ -69096,19 +69099,20 @@ function speakVoiceReply(text) {
     var generation = _micSessionGeneration;
     _acquireMic().then(function(s) {
       _reacquiringMic = false;
-      if (!s || !_micSessionCurrent(generation)) return;
+      if (!s || !_micSessionCurrent(generation) || _desktopReplyPending()) return;
       _busy = false; _busySince = 0; _ttsBusy = false;
       _bargeTurnActive = false;
       _voiceTurnId++; // abandon whatever turn was in flight
       setTimeout(function() { if (_micSessionCurrent(generation)) record(); }, 300);
     }, function(e) {
       _reacquiringMic = false;
-      _micCaptureFailed(e, generation);
+      if (!_desktopReplyPending()) _micCaptureFailed(e, generation);
     });
   }
   setInterval(function() {
     if (!_on) { _busySince = 0; return; }
-    if (_micTrackDead()) { _reacquireMic(); return; }
+    // The reply can finish through the speakers while microphone capture is unavailable.
+    if (_micTrackDead() && !_desktopReplyPending()) { _reacquireMic(); return; }
     if (!_busy) { _busySince = 0; return; }
     var now = Date.now();
     // The mobile recorder can sit in silence while it waits for the next turn.
@@ -69245,7 +69249,7 @@ function speakVoiceReply(text) {
     // Tab back: NEVER toast, NEVER full network recover.
     // Only quietly reacquire mic if the track died while backgrounded.
     document.addEventListener('visibilitychange', function() {
-      if (document.visibilityState !== 'visible' || !_on) return;
+      if (document.visibilityState !== 'visible' || !_on || _desktopReplyPending()) return;
       if (_micTrackDead() || !_stream) {
         clearTimeout(_stsNetTimer);
         _stsNetTimer = setTimeout(function() {

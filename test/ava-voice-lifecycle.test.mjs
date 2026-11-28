@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const html = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 function extract(start, end) {
   const from = html.indexOf(start), to = html.indexOf(end, from);
   assert.ok(from >= 0 && to > from, `Missing production source boundary: ${start}`);
@@ -11,6 +11,8 @@ function extract(start, end) {
 }
 const lifecycle = extract('  // AVA_MIC_LIFECYCLE_START', '  // AVA_MIC_LIFECYCLE_END');
 const recovery = extract('  var _reacquiringMic = false;', '  setInterval(function() {');
+const watchdog = extract('  setInterval(function() {\n    if (!_on) { _busySince = 0; return; }', '  // ── Network flip recovery');
+const foregroundRecovery = extract('    // Tab back: NEVER toast', '  } catch(eNet) {}');
 const stopping = extract('  function stopAll() {', '  window._stsStopAll = stopAll;');
 
 test('Ava app mode docks the mic immediately without claiming it is listening', () => {
@@ -82,6 +84,49 @@ test('actual watchdog recovery schedules recording for its own current acquisiti
   const mic = stream(); f.requests[0].resolve(mic); await settle();
   assert.equal(f.context._stream, mic); assert.equal(f.context._reacquiringMic, false);
   assert.equal(f.timers.filter(timer => timer.delay === 300).length, 1);
+});
+
+test('returning to the Windows app keeps a long reply alive', () => {
+  const f = setup();
+  const handlers = new Map();
+  let aborted = 0;
+  f.context.document.addEventListener = (name, handler) => handlers.set(name, handler);
+  f.context.window.synapsesDesktopVoice = {};
+  Object.assign(f.context, {
+    _busy: true, _ttsBusy: true, _busySince: Date.now() - 10000, _voiceTurnId: 42,
+    _stream: stream(), _abortAllTurnRequests() { aborted++; },
+  });
+  vm.runInContext(foregroundRecovery, f.context);
+  for (const visibility of ['hidden', 'visible']) {
+    f.context.document.visibilityState = visibility;
+    handlers.get('visibilitychange')();
+  }
+  assert.equal(aborted, 0);
+  assert.equal(f.context._voiceTurnId, 42);
+  assert.equal(f.context._ttsBusy, true);
+});
+
+test('the Windows app waits until a reply finishes before replacing the microphone', () => {
+  const f = setup();
+  let tick;
+  f.context.window.synapsesDesktopVoice = {};
+  Object.assign(f.context, {
+    _busy: true, _ttsBusy: true, _busySince: Date.now() - 18000,
+    _stream: stream({ enabled: false }),
+    _actx: { currentTime: 6 }, _playbackTime: 9,
+    setInterval(callback) { tick = callback; },
+  });
+  vm.runInContext(watchdog, f.context);
+  tick();
+  assert.equal(f.requests.length, 0);
+  assert.equal(f.context._voiceTurnId, 0);
+  assert.equal(f.context._ttsBusy, true);
+  assert.ok(Date.now() - f.context._busySince < 1000);
+
+  f.context._ttsBusy = false;
+  f.context._busy = false;
+  tick();
+  assert.equal(f.requests.length, 1);
 });
 
 test('actual stopAll invalidates pending capture and stops its late returned tracks', async () => {
